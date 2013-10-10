@@ -46,6 +46,28 @@ class TestDSLParser(unittest.TestCase):
         instances = tasks.create_node_instances(node, 2)
         self.assertEqual(instances, expected_instances)
 
+    def test_create_node_expansion_map(self):
+
+        nodes = [
+                {
+                    "id": "multi_instance.db",
+                    "host_id": "multi_instance.host"
+                },
+                {
+                    "id": "multi_instance.host",
+                    "host_id": "multi_instance.host",
+                    "instances" : {
+                        "deploy": 2
+                    }
+                }
+            ]
+
+        expected_expansion_map = { "multi_instance.db" : 2,
+                          "multi_instance.host" : 2 }
+
+        expansion_map = tasks.create_node_expansion_map(nodes)
+        self.assertEqual(expansion_map, expected_expansion_map)
+
     def test_prepare_multi_instance_plan(self):
 
         plan = {
@@ -63,7 +85,6 @@ class TestDSLParser(unittest.TestCase):
                 }
             ]
         }
-
 
         # everything in the new plan stays the same except for nodes that belonged to a tier.
         expected_plan = {

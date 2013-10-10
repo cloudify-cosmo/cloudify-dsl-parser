@@ -21,7 +21,6 @@ __author__ = 'idanmo'
 import json
 
 NODES = "nodes"
-NODES_EXTRA = "nodes_extra"
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
@@ -34,21 +33,17 @@ def prepare_multi_instance_plan(nodes_plan_json):
     """
     plan = json.loads(nodes_plan_json)
 
-    nodes = plan[NODES]
-    nodes_extra = plan[NODES_EXTRA]
-
-    nodes = create_multi_instance_nodes(nodes, nodes_extra)
-
-    plan[NODES] = nodes
+    new_nodes = create_multi_instance_nodes(plan[NODES])
+    plan[NODES] = new_nodes
 
     return plan
 
 
-def create_multi_instance_nodes(nodes, nodes_extra):
+def create_multi_instance_nodes(nodes):
 
     new_nodes = []
 
-    nodes_expansion = create_node_expansion_map(nodes, nodes_extra)
+    nodes_expansion = create_node_expansion_map(nodes)
 
     for node_id, number_of_instances in nodes_expansion.iteritems():
         node = get_node(node_id, nodes)
@@ -58,16 +53,25 @@ def create_multi_instance_nodes(nodes, nodes_extra):
     return new_nodes
 
 
-def create_node_expansion_map(nodes, nodes_extra):
-
+def create_node_expansion_map(nodes):
     """
     This method insepcts the current nodes and creates an expansion map.
     That is, for every node, it should determine how many instances are needed in the final plan.
     """
-    return {
 
-    }
+    expansion_map = {}
+    for node in nodes:
+        if is_host(node):
+            expansion_map[node["id"]] = node["instances"]["deploy"]
 
+    for node in nodes:
+        if not is_host(node):
+            expansion_map[node["id"]] = expansion_map[node["host_id"]]
+
+    return expansion_map
+
+def is_host(node):
+    return node["host_id"] == node["id"]
 
 def get_node(node_id, nodes):
 
