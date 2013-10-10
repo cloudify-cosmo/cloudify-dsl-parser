@@ -26,31 +26,19 @@ class TestDSLParser(unittest.TestCase):
 
         node = {
             "id": "simple_web_server.host",
-            "properties": {
-                "install_agent": "false",
-                "cloudify_runtime": {}
-            },
-            "relationships": [],
+            "properties": { "x" : "y" },
             "host_id": "simple_web_server.host"
         }
 
         expected_instances = [
             {
                 "id": "simple_web_server.host_1",
-                "properties": {
-                    "install_agent": "false",
-                    "cloudify_runtime": {}
-                },
-                "relationships": [],
+                "properties": { "x" : "y" },
                 "host_id": "simple_web_server.host_1"
             },
             {
                 "id": "simple_web_server.host_2",
-                "properties": {
-                    "install_agent": "false",
-                    "cloudify_runtime": {}
-                },
-                "relationships": [],
+                "properties": { "x" : "y" },
                 "host_id": "simple_web_server.host_2"
             }
         ]
