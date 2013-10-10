@@ -10,7 +10,7 @@ setup(
     version='0.1',
     author='elip',
     author_email='elip@gigaspaces.com',
-    packages=['plugin_installer'],
+    packages=['dsl_parser'],
     license='LICENSE',
     description='Plugin for transforming recipe DSLs',
     zip_safe=False,
