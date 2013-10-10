@@ -17,9 +17,8 @@ __author__ = 'idanmo'
 
 import unittest
 
-import tasks
-from testenv import get_resource_as_string
-
+import dsl_parser.tasks as tasks
+import json
 
 class TestDSLParser(unittest.TestCase):
 
@@ -61,7 +60,45 @@ class TestDSLParser(unittest.TestCase):
 
     def test_prepare_multi_instance_plan(self):
 
-        plan = get_resource_as_string('dsl_parser/multi_instance.json')
+        plan = {
+            "nodes_extra": {
+                "multi_instance.host": {
+                    "super_types": [
+                        "cloudify.tosca.types.host",
+                        "node"
+                    ]
+                },
+                "multi_instance.db": {
+                    "super_types": [
+                        "cloudify.tosca.types.db_server",
+                        "cloudify.tosca.types.middleware_server",
+                        "node"
+                    ],
+                    "relationships": [
+                        "multi_instance.host"
+                    ]
+                }
+            },
+            "nodes": [
+                {
+                    "id": "multi_instance.db",
+                    "relationships": [
+                        {
+                            "type": "cloudify.tosca.relationships.contained_in",
+                            "target_id": "multi_instance.host"
+                        }
+                    ],
+                    "host_id": "multi_instance.host"
+                },
+                {
+                    "id": "multi_instance.host",
+                    "relationships": [],
+                    "host_id": "multi_instance.host"
+
+                }
+            ]
+        }
+
 
         # everything in the new plan stays the same except for nodes that belonged to a tier.
         expected_plan = {
@@ -169,5 +206,5 @@ class TestDSLParser(unittest.TestCase):
             ]
         }
 
-        new_plan = tasks.prepare_multi_instance_plan(plan)
+        new_plan = tasks.prepare_multi_instance_plan(json.dumps(plan))
         self.assertEqual(new_plan, expected_plan)
