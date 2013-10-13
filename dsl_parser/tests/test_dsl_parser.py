@@ -19,8 +19,11 @@ import unittest
 
 import dsl_parser.tasks as tasks
 import json
+import random
 
 class TestDSLParser(unittest.TestCase):
+
+    maxDiff = None
 
     def test_create_node_instances(self):
 
@@ -32,21 +35,22 @@ class TestDSLParser(unittest.TestCase):
 
         expected_instances = [
             {
-                "id": "simple_web_server.host_1",
+                "id": "simple_web_server.host_d82c0",
                 "properties": { "x" : "y" },
-                "host_id": "simple_web_server.host_1"
+                "host_id": "simple_web_server.host_d82c0"
             },
             {
-                "id": "simple_web_server.host_2",
+                "id": "simple_web_server.host_c2094",
                 "properties": { "x" : "y" },
-                "host_id": "simple_web_server.host_2"
+                "host_id": "simple_web_server.host_c2094"
             }
         ]
 
-        instances = tasks.create_node_instances(node, 2)
+        suffix_map = { 'simple_web_server.host' : ['d82c0' , 'c2094'] }
+        instances = tasks.create_node_instances(node, suffix_map)
         self.assertEqual(instances, expected_instances)
 
-    def test_create_node_expansion_map(self):
+    def test_create_node_suffix_map(self):
 
         nodes = [
                 {
@@ -62,11 +66,13 @@ class TestDSLParser(unittest.TestCase):
                 }
             ]
 
-        expected_expansion_map = { "multi_instance.db" : 2,
-                          "multi_instance.host" : 2 }
+        expected_suffix_map = {
+            "multi_instance.host" : ["d82c0","c2094"],
+            "multi_instance.db" : ["6baa9", "42485"] }
 
-        expansion_map = tasks.create_node_expansion_map(nodes)
-        self.assertEqual(expansion_map, expected_expansion_map)
+        random.seed(0)
+        suffix_map = tasks.create_node_suffixes_map(nodes)
+        self.assertEqual(suffix_map, expected_suffix_map)
 
     def test_prepare_multi_instance_plan(self):
 
@@ -90,23 +96,23 @@ class TestDSLParser(unittest.TestCase):
         expected_plan = {
             "nodes": [
                 {
-                    "id": "multi_instance.db_1",
-                    "host_id": "multi_instance.host_1"
+                    "id": "multi_instance.db_6baa9",
+                    "host_id": "multi_instance.host_d82c0"
                 },
                 {
-                    "id": "multi_instance.db_2",
-                    "host_id": "multi_instance.host_2"
+                    "id": "multi_instance.db_42485",
+                    "host_id": "multi_instance.host_c2094"
                 },
                 {
-                    "id": "multi_instance.host_1",
-                    "host_id": "multi_instance.host_1",
+                    "id": "multi_instance.host_d82c0",
+                    "host_id": "multi_instance.host_d82c0",
                     "instances" : {
                         "deploy": 2
                     }
                 },
                 {
-                    "id": "multi_instance.host_2",
-                    "host_id": "multi_instance.host_2",
+                    "id": "multi_instance.host_c2094",
+                    "host_id": "multi_instance.host_c2094",
                     "instances" : {
                         "deploy": 2
                     }
@@ -114,5 +120,10 @@ class TestDSLParser(unittest.TestCase):
             ]
         }
 
-        new_plan = tasks.prepare_multi_instance_plan(json.dumps(plan))
+        new_plan = _prepare_multi_instance_plan(plan)
         self.assertEqual(new_plan, expected_plan)
+
+def _prepare_multi_instance_plan(plan):
+    random.seed(0)
+    json_plan = json.dumps(plan)
+    return tasks.prepare_multi_instance_plan(json_plan)
