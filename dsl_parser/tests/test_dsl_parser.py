@@ -120,10 +120,6 @@ class TestDSLParser(unittest.TestCase):
             ]
         }
 
-        new_plan = _prepare_multi_instance_plan(plan)
+        random.seed(0)
+        new_plan = tasks.prepare_multi_instance_plan(plan)
         self.assertEqual(new_plan, expected_plan)
-
-def _prepare_multi_instance_plan(plan):
-    random.seed(0)
-    json_plan = json.dumps(plan)
-    return tasks.prepare_multi_instance_plan(json_plan)
