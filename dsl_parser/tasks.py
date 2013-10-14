@@ -28,7 +28,7 @@ logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
 @task
-def prepare_multi_instance_plan(nodes_plan_json):
+def prepare_multi_instance_plan(nodes_plan_json, **kwargs):
 
     """
     JSON should include "nodes" and "nodes_extra".
