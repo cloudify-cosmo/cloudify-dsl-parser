@@ -15,6 +15,7 @@
 
 import logging
 from celery.utils.log import get_task_logger
+from celery import task
 
 __author__ = 'idanmo'
 
@@ -25,7 +26,7 @@ NODES = "nodes"
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
-
+@task
 def prepare_multi_instance_plan(nodes_plan_json):
 
     """
