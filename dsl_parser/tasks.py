@@ -20,6 +20,7 @@ from celery import task
 __author__ = 'idanmo'
 
 import json
+import random
 
 NODES = "nodes"
 
@@ -44,32 +45,37 @@ def create_multi_instance_nodes(nodes):
 
     new_nodes = []
 
-    nodes_expansion = create_node_expansion_map(nodes)
+    nodes_suffixes_map = create_node_suffixes_map(nodes)
+    node_ids = create_node_suffixes_map(nodes).iterkeys()
 
-    for node_id, number_of_instances in nodes_expansion.iteritems():
+    for node_id in node_ids:
         node = get_node(node_id, nodes)
-        instances = create_node_instances(node, number_of_instances)
+        instances = create_node_instances(node, nodes_suffixes_map)
         new_nodes.extend(instances)
 
     return new_nodes
 
 
-def create_node_expansion_map(nodes):
+def create_node_suffixes_map(nodes):
     """
-    This method insepcts the current nodes and creates an expansion map.
-    That is, for every node, it should determine how many instances are needed in the final plan.
+    This method insepcts the current nodes and creates a list of random suffixes.
+    That is, for every node, it determines how many instances are needed
+    and generates a random number (later used as id suffix) for each instance.
     """
 
-    expansion_map = {}
+    suffix_map = {}
     for node in nodes:
         if is_host(node):
-            expansion_map[node["id"]] = node["instances"]["deploy"]
+            number_of_hosts = node["instances"]["deploy"]
+            suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
 
     for node in nodes:
         if not is_host(node):
-            expansion_map[node["id"]] = expansion_map[node["host_id"]]
+            host_id = node["host_id"]
+            number_of_hosts = len (suffix_map[host_id])
+            suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
 
-    return expansion_map
+    return suffix_map
 
 def is_host(node):
     return node["host_id"] == node["id"]
@@ -85,36 +91,38 @@ def get_node(node_id, nodes):
     raise RuntimeError("Could not find a node with id {0} in nodes".format(node_id))
 
 
-def create_node_instances(node, number_of_instances):
+def create_node_instances(node, suffixes_map):
 
     """
     This method duplicates the given node 'number_of_instances' times and return an array with the duplicated instance.
     Each instance has a different id and each instance has a different host_id.
-    id's are generated with an incremental index suffixed to the original id.
-    For example: app.host --> [app.host_1, app.host_2] in case of 2 instances.
+    id's are generated with an random index suffixed to the original id.
+    For example: app.host --> [app.host_ab54ef, app.host_2_12345] in case of 2 instances.
     """
-
-    if number_of_instances == 1:
-
-        # no need to duplicate. just return the original node
-        return node
 
     instances = []
 
+    node_id = node['id']
+    node_suffixes = suffixes_map[node_id]
+    host_id = node['host_id']
+    host_suffixes = suffixes_map[host_id]
+    number_of_instances = len(node_suffixes)
+
     for i in range(number_of_instances):
-
-        # clone the original node
         node_copy = node.copy()
-
-        # and change its id
-        new_id = "{0}_{1}".format(node['id'], i + 1)
-        node_copy['id'] = new_id
-
-        # and change the host_id
-        node_copy['host_id'] = "{0}_{1}".format(node_copy['host_id'], i + 1)
-
+        node_copy['id'] = node_id + '_' + node_suffixes[i]
+        node_copy['host_id'] = host_id + '_' + host_suffixes[i]
         logger.debug("generated new node instance {0}".format(node_copy))
 
         instances.append(node_copy)
 
     return instances
+
+def _generate_unique_ids(number_of_ids):
+    ids = set([])
+    while (len(ids) < number_of_ids):
+        id = '%05x' % random.randrange(16**5)
+        if (id not in ids):
+            ids.add(id)
+
+    return list(ids)
