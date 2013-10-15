@@ -29,14 +29,12 @@ logger.level = logging.DEBUG
 
 @task
 def prepare_multi_instance_plan(plan, **kwargs):
-
     """
-    JSON should include "nodes" and "nodes_extra".
+    Expand node instances based on number of instances to deploy
     """
 
     new_nodes = create_multi_instance_nodes(plan[NODES])
     plan[NODES] = new_nodes
-
     return json.dumps(plan)
 
 
