@@ -7,7 +7,7 @@ COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0
 
 setup(
     name='cosmo-plugin-dsl-parser',
-    version='0.1.3',
+    version='0.1.4',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['dsl_parser'],
