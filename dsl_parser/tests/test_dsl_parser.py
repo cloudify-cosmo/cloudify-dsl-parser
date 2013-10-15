@@ -18,8 +18,8 @@ __author__ = 'idanmo'
 import unittest
 
 import dsl_parser.tasks as tasks
-import json
 import random
+import json
 
 class TestDSLParser(unittest.TestCase):
 
@@ -121,5 +121,5 @@ class TestDSLParser(unittest.TestCase):
         }
 
         random.seed(0)
-        new_plan = tasks.prepare_multi_instance_plan(plan)
+        new_plan = json.loads(tasks.prepare_multi_instance_plan(plan))
         self.assertEqual(new_plan, expected_plan)

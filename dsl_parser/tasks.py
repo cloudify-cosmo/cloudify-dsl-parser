@@ -37,7 +37,7 @@ def prepare_multi_instance_plan(plan, **kwargs):
     new_nodes = create_multi_instance_nodes(plan[NODES])
     plan[NODES] = new_nodes
 
-    return plan
+    return json.dumps(plan)
 
 
 def create_multi_instance_nodes(nodes):
