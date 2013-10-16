@@ -24,17 +24,22 @@ from yaml.parser import ParserError
 def parse_from_file(dsl_file_path):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-        return parse(dsl_string)
+        return _parse(dsl_string, dsl_file_path)
+
 
 def parse(dsl_string):
+    return _parse(dsl_string)
+
+
+def _parse(dsl_string, dsl_file_path=None):
     try:
         parsed_dsl = yaml.safe_load(dsl_string)
-    except ParserError:
+    except ParserError, ex:
         raise DSLParsingFormatException(-1, 'Failed to parse DSL: Illegal yaml file')
     if parsed_dsl is None:
         raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml file')
 
-    combined_parsed_dsl = _combine_imports(parsed_dsl)
+    combined_parsed_dsl = _combine_imports(parsed_dsl, dsl_file_path)
 
     #TODO: validate before imports? treat them dif?
     if 'imports' in combined_parsed_dsl:
@@ -129,7 +134,7 @@ def _autowire_plugin(plugins, interface_name, type_name):
     return matching_plugins[0]
 
 
-def _combine_imports(parsed_dsl):
+def _combine_imports(parsed_dsl, dsl_file_path):
     merge_no_override = {'interfaces', 'plugins'}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
@@ -137,7 +142,7 @@ def _combine_imports(parsed_dsl):
         return combined_parsed_dsl
 
     ordered_imports_list = []
-    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, [])
+    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, [], dsl_file_path)
 
     for single_import in ordered_imports_list:
         with open(single_import, 'r') as f:
@@ -165,24 +170,36 @@ def _combine_imports(parsed_dsl):
     return combined_parsed_dsl
 
 
-def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, current_path_imports_list):
+def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, current_path_imports_list, current_import):
+    if current_import is not None:
+        current_path_imports_list.append(current_import)
+        ordered_imports_list.append(current_import)
+
     if 'imports' not in parsed_dsl:
         return
 
     for another_import in parsed_dsl['imports']:
-        current_path_imports_list.append(another_import)
         if another_import not in ordered_imports_list:
-            ordered_imports_list.append(another_import)
             with open(another_import, 'r') as f:
                 imported_dsl = yaml.safe_load(f)
-                _build_ordered_imports_list(imported_dsl, ordered_imports_list, [])
+                _build_ordered_imports_list(imported_dsl, ordered_imports_list,
+                                            current_path_imports_list, another_import)
         elif another_import in current_path_imports_list:
             raise DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}-->{1}'.format(
                 "-->".join(current_path_imports_list), another_import))
-        current_path_imports_list.pop()
+    current_path_imports_list.pop()
 
 
 def _validate_dsl_schema(parsed_dsl):
+    # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
+    # since no good YAML schema validator could be found (both for Python and at all).
+    #
+    # Python implementation documentation: http://python-jsonschema.readthedocs.org/en/latest/
+    # A one-stop-shop for easy API explanation: http://jsonary.com/documentation/json-schema/?
+    # A website which can create a schema from a given JSON automatically: http://www.jsonschema.net/#
+    #   (Note: the website was not used for creating the schema below, as among other things, its syntax seems a bit
+    #   different than the one used here, and should only be used as a reference)
+
     schema = {
         'type': 'object',
         'properties': {
@@ -308,7 +325,8 @@ def _validate_dsl_schema(parsed_dsl):
     try:
         validate(parsed_dsl, schema)
     except ValidationError, ex:
-        raise DSLParsingFormatException(1, ex.message)
+        raise DSLParsingFormatException(1, '{0}; Path to error: {1}'.format(ex.message, '.'.join((str(x) for x in ex
+                                                                                                .path))))
 
 
 class DSLParsingException(Exception):

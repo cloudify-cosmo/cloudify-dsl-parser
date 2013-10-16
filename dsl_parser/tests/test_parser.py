@@ -93,9 +93,10 @@ imports:"""
     -   {0}""".format(filename)
         return yaml
 
-    def assert_dsl_parsing_exception_error_code(self, dsl, expected_error_code, exception_type=DSLParsingException):
+    def assert_dsl_parsing_exception_error_code(self, dsl, expected_error_code, exception_type=DSLParsingException,
+                                                parsing_method=parse):
         try:
-            parse(dsl)
+            parsing_method(dsl)
             self.fail()
         except exception_type, ex:
             self.assertEquals(expected_error_code, ex.err_code)
@@ -172,25 +173,22 @@ application_template:
         """
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
-    def test_single_node_application_template(self):
-        result = parse(self.MINIMAL_APPLICATION_TEMPLATE)
+    def _assert_minimal_application_template(self, result):
         self.assertEquals('testApp', result['name'])
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('testApp.testNode', node['id'])
         self.assertEquals('test_type', node['type'])
         self.assertEquals('val', node['properties']['key'])
+
+    def test_single_node_application_template(self):
+        result = parse(self.MINIMAL_APPLICATION_TEMPLATE)
+        self._assert_minimal_application_template(result)
 
     def test_type_without_interface(self):
         yaml = self.MINIMAL_APPLICATION_TEMPLATE
         result = parse(yaml)
-        self.assertEquals('testApp', result['name'])
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('testApp.testNode', node['id'])
-        self.assertEquals('test_type', node['type'])
-        self.assertEquals('val', node['properties']['key'])
-
+        self._assert_minimal_application_template(result)
 
     def test_explicit_interface_with_missing_plugin(self):
         yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
@@ -238,12 +236,19 @@ interfaces:
     def test_import_from_path(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_APPLICATION_TEMPLATE])
         result = parse(yaml)
-        self.assertEquals('testApp', result['name'])
-        self.assertEquals(1, len(result['nodes']))
+        self._assert_minimal_application_template(result)
+
+    def _assert_application_template(self, result):
         node = result['nodes'][0]
-        self.assertEquals('testApp.testNode', node['id'])
         self.assertEquals('test_type', node['type'])
-        self.assertEquals('val', node['properties']['key'])
+        plugin_props = node['plugins']['test_plugin']['properties']
+        self.assertEquals('test_interface1', plugin_props['interface'])
+        self.assertEquals('http://test_url.zip', plugin_props['url'])
+        operations = node['operations']
+        self.assertEquals('test_plugin', operations['install'])
+        self.assertEquals('test_plugin', operations['test_interface1.install'])
+        self.assertEquals('test_plugin', operations['terminate'])
+        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
 
     def test_type_with_single_explicit_interface_and_plugin(self):
         yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
@@ -256,16 +261,7 @@ types:
             """
 
         result = parse(yaml)
-        node = result['nodes'][0]
-        self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins']['test_plugin']['properties']
-        self.assertEquals('test_interface1', plugin_props['interface'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        operations = node['operations']
-        self.assertEquals('test_plugin', operations['install'])
-        self.assertEquals('test_plugin', operations['test_interface1.install'])
-        self.assertEquals('test_plugin', operations['terminate'])
-        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        self._assert_application_template(result)
 
     def test_type_with_interface_with_explicit_illegal_plugin(self):
         #testing to see what happens when the plugin which is explicitly declared for an interface is in fact
@@ -349,16 +345,7 @@ plugins:
     def test_type_with_single_implicit_interface_and_plugin(self):
         yaml = self.APPLICATION_TEMPLATE
         result = parse(yaml)
-        node = result['nodes'][0]
-        self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins']['test_plugin']['properties']
-        self.assertEquals('test_interface1', plugin_props['interface'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        operations = node['operations']
-        self.assertEquals('test_plugin', operations['install'])
-        self.assertEquals('test_plugin', operations['test_interface1.install'])
-        self.assertEquals('test_plugin', operations['terminate'])
-        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        self._assert_application_template(result)
 
     def test_dsl_with_explicit_interface_mapped_to_two_plugins(self):
         yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
@@ -396,15 +383,7 @@ plugins:
 """
         result = parse(yaml)
         node = result['nodes'][0]
-
-        plugin_props = node['plugins']['test_plugin']['properties']
-        self.assertEquals('test_interface1', plugin_props['interface'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        operations = node['operations']
-        self.assertEquals('test_plugin', operations['install'])
-        self.assertEquals('test_plugin', operations['test_interface1.install'])
-        self.assertEquals('test_plugin', operations['terminate'])
-        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        self._assert_application_template(result)
 
         plugin_props = node['plugins']['other_test_plugin']['properties']
         self.assertEquals('test_interface2', plugin_props['interface'])
@@ -448,15 +427,7 @@ interfaces:
         """
         result = parse(yaml)
         node = result['nodes'][0]
-
-        plugin_props = node['plugins']['test_plugin']['properties']
-        self.assertEquals('test_interface1', plugin_props['interface'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        operations = node['operations']
-        self.assertEquals('test_plugin', operations['install'])
-        self.assertEquals('test_plugin', operations['test_interface1.install'])
-        self.assertEquals('test_plugin', operations['terminate'])
-        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        self._assert_application_template(result)
 
         plugin_props = node['plugins']['other_test_plugin']['properties']
         self.assertEquals('test_interface2', plugin_props['interface'])
@@ -514,16 +485,7 @@ imports:
 imports:
     -   {0}""".format(mid_file_name)
         result = parse(top_level_yaml)
-        node = result['nodes'][0]
-        self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins']['test_plugin']['properties']
-        self.assertEquals('test_interface1', plugin_props['interface'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        operations = node['operations']
-        self.assertEquals('test_plugin', operations['install'])
-        self.assertEquals('test_plugin', operations['test_interface1.install'])
-        self.assertEquals('test_plugin', operations['terminate'])
-        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        self._assert_application_template(result)
 
 
     def test_recursive_imports_with_inner_circular(self):
@@ -544,40 +506,51 @@ imports:
 
         self.assert_dsl_parsing_exception_error_code(top_level_yaml, 8, DSLParsingLogicException)
 
+
     def test_parse_dsl_from_file(self):
         filename = self.make_yaml_file(self.MINIMAL_APPLICATION_TEMPLATE)
         result = parse_from_file(filename)
-        self.assertEquals('testApp', result['name'])
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('testApp.testNode', node['id'])
-        self.assertEquals('test_type', node['type'])
-        self.assertEquals('val', node['properties']['key'])
+        self._assert_minimal_application_template(result)
 
-#     def test_recursive_imports_with_complete_circle(self):
-#         bottom_level_yaml = """
-# imports:
-#     -   top_level.yaml
-#
-# types:
-#     test_type:
-#         interfaces:
-#             -   test_interface1
-#             """
-#         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
-#
-#         mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
-# imports:
-#     -   {0}""".format(bottom_file_name)
-#         mid_file_name = self.make_yaml_file(mid_level_yaml)
-#
-#         top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
-# imports:
-#     -   {0}""".format(mid_file_name)
-#                                             #'mid_level.yaml'
-#         self.assert_dsl_parsing_exception_error_code(top_level_yaml, 8, DSLParsingLogicException)
+    def test_recursive_imports_with_complete_circle(self):
+        bottom_level_yaml = """
+imports:
+    -   {0}/top_level.yaml
+            """.format(self._temp_dir) + self.BASIC_TYPE
+        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
+
+        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+imports:
+    -   {0}""".format(bottom_file_name)
+        mid_file_name = self.make_yaml_file(mid_level_yaml)
+
+        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
+imports:
+    -   {0}""".format(mid_file_name)
+        filename = self.make_yaml_file_with_name(top_level_yaml, 'top_level.yaml')
+        self.assert_dsl_parsing_exception_error_code(filename, 8, DSLParsingLogicException, parse_from_file)
+
+    def test_diamond_imports(self):
+        bottom_level_yaml = self.BASIC_TYPE
+        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
+
+        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+imports:
+    -   {0}""".format(bottom_file_name)
+        mid_file_name = self.make_yaml_file(mid_level_yaml)
+
+        mid_level_yaml2 = """
+imports:
+    -   {0}""".format(bottom_file_name)
+        mid_file_name2 = self.make_yaml_file(mid_level_yaml2)
+
+        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE +     """
+imports:
+    -   {0}
+    -   {1}""".format(mid_file_name, mid_file_name2)
+        result = parse(top_level_yaml)
+        self._assert_application_template(result)
 
 
-#test for diamond
 #tests for non-existent dsl file path?
 #test for relative import
