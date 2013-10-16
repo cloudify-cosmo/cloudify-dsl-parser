@@ -15,7 +15,9 @@ setup(
     description='Plugin for transforming recipe DSLs',
     zip_safe=False,
     install_requires=[
-        "cosmo-celery-common"
+        "cosmo-celery-common",
+        "PyYAML",
+        'jsonschema'
     ],
 
     dependency_links=["{0}#egg=cosmo-celery-common-{1}".format(COSMO_CELERY, COSMO_CELERY_VERSION)]
