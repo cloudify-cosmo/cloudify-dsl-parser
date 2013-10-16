@@ -80,7 +80,13 @@ class TestDSLParser(unittest.TestCase):
             "nodes": [
                 {
                     "id": "multi_instance.db",
-                    "host_id": "multi_instance.host"
+                    "host_id": "multi_instance.host",
+                    "relationships": [
+                        {
+                            "type": "cloudify.tosca.relationships.contained_in",
+                            "target_id": "multi_instance.host",
+                        }
+                    ],
                 },
                 {
                     "id": "multi_instance.host",
@@ -97,11 +103,23 @@ class TestDSLParser(unittest.TestCase):
             "nodes": [
                 {
                     "id": "multi_instance.db_6baa9",
-                    "host_id": "multi_instance.host_d82c0"
+                    "host_id": "multi_instance.host_d82c0",
+                    "relationships": [
+                        {
+                            "type": "cloudify.tosca.relationships.contained_in",
+                            "target_id": "multi_instance.host_d82c0",
+                        }
+                    ],
                 },
                 {
                     "id": "multi_instance.db_42485",
-                    "host_id": "multi_instance.host_c2094"
+                    "host_id": "multi_instance.host_c2094",
+                    "relationships": [
+                        {
+                        "type": "cloudify.tosca.relationships.contained_in",
+                        "target_id": "multi_instance.host_c2094",
+                        }
+                    ],
                 },
                 {
                     "id": "multi_instance.host_d82c0",
