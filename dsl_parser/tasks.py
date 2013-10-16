@@ -110,6 +110,15 @@ def create_node_instances(node, suffixes_map):
         node_copy['id'] = node_id + '_' + node_suffixes[i]
         node_copy['host_id'] = host_id + '_' + host_suffixes[i]
         logger.debug("generated new node instance {0}".format(node_copy))
+        if 'relationships' in node_copy:
+            new_relationships = []
+            for relationship in node_copy['relationships']:
+                new_relationship = relationship
+                if relationship['type'].endswith('relationships.contained_in') and relationship['target_id'] == host_id:
+                    new_relationship = relationship.copy()
+                    new_relationship['target_id'] = node_copy['host_id']
+                new_relationships.append(new_relationship)
+            node_copy['relationships'] = new_relationships
 
         instances.append(node_copy)
 
