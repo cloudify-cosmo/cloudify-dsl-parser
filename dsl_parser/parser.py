@@ -191,7 +191,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, current_path_i
 
 
 def _validate_dsl_schema(parsed_dsl):
-    # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
+    # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ) ,
     # since no good YAML schema validator could be found (both for Python and at all).
     #
     # Python implementation documentation: http://python-jsonschema.readthedocs.org/en/latest/
