@@ -50,6 +50,22 @@ plugins:
             url: "http://test_url.zip"
             """
 
+    BASIC_TYPE = """
+types:
+    test_type:
+        interfaces:
+            -   test_interface1
+        properties:
+            install_agent: 'false'
+            """
+
+    MINIMAL_APPLICATION_TEMPLATE = BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type: {}
+    """
+
+    APPLICATION_TEMPLATE = BASIC_APPLICATION_TEMPLATE + BASIC_INTERFACE_AND_PLUGIN + BASIC_TYPE
+
 
 
     def setUp(self):
@@ -157,9 +173,7 @@ application_template:
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_single_node_application_template(self):
-        result = parse(self.BASIC_APPLICATION_TEMPLATE + """
-types:
-    test_type: {}""")
+        result = parse(self.MINIMAL_APPLICATION_TEMPLATE)
         self.assertEquals('testApp', result['name'])
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
@@ -168,9 +182,7 @@ types:
         self.assertEquals('val', node['properties']['key'])
 
     def test_type_without_interface(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE + """
-types:
-    test_type: {}"""])
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE
         result = parse(yaml)
         self.assertEquals('testApp', result['name'])
         self.assertEquals(1, len(result['nodes']))
@@ -181,7 +193,7 @@ types:
 
 
     def test_explicit_interface_with_missing_plugin(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -192,7 +204,7 @@ types:
         self.assert_dsl_parsing_exception_error_code(yaml, 10, DSLParsingLogicException)
 
     def test_missing_interface_definition(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -209,14 +221,14 @@ plugins:
         self.assert_dsl_parsing_exception_error_code(yaml, 9, DSLParsingLogicException)
 
     def test_interface_with_no_operations(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
 interfaces:
     test_interface1:
         """
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_interface_with_empty_operations_list(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
 interfaces:
     test_interface1:
         operations:
@@ -224,9 +236,7 @@ interfaces:
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_import_from_path(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE + """
-types:
-    test_type: {}"""])
+        yaml = self.create_yaml_with_imports([self.MINIMAL_APPLICATION_TEMPLATE])
         result = parse(yaml)
         self.assertEquals('testApp', result['name'])
         self.assertEquals(1, len(result['nodes']))
@@ -236,14 +246,15 @@ types:
         self.assertEquals('val', node['properties']['key'])
 
     def test_type_with_single_explicit_interface_and_plugin(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
             -   test_interface1: "test_plugin"
         properties:
             install_agent: 'false'
-"""
+            """
+
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
@@ -260,7 +271,7 @@ types:
         #testing to see what happens when the plugin which is explicitly declared for an interface is in fact
         #a plugin which doesn't implement the said interface (even if it supports another interface with same
         # name operations)
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
 interfaces:
     test_interface1:
         operations:
@@ -286,7 +297,7 @@ types:
 
 
     def test_type_with_illegal_interface_declaration(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -297,7 +308,7 @@ types:
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_illegal_interface_declaration_2(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -309,7 +320,7 @@ types:
 
 
     def test_implicit_interface_with_no_matching_plugins(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -326,14 +337,7 @@ interfaces:
         self.assert_dsl_parsing_exception_error_code(yaml, 11, DSLParsingLogicException)
 
     def test_implicit_interface_with_ambiguous_matches(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
-types:
-    test_type:
-        interfaces:
-            -   test_interface1
-        properties:
-            install_agent: 'false'
-
+        yaml = self.create_yaml_with_imports([self.APPLICATION_TEMPLATE]) + """
 plugins:
     other_test_plugin:
         properties:
@@ -343,14 +347,7 @@ plugins:
         self.assert_dsl_parsing_exception_error_code(yaml, 12, DSLParsingLogicException)
 
     def test_type_with_single_implicit_interface_and_plugin(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
-types:
-    test_type:
-        interfaces:
-            -   test_interface1
-        properties:
-            install_agent: 'false'
-"""
+        yaml = self.APPLICATION_TEMPLATE
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
@@ -364,7 +361,7 @@ types:
         self.assertEquals('test_plugin', operations['test_interface1.terminate'])
 
     def test_dsl_with_explicit_interface_mapped_to_two_plugins(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -420,12 +417,7 @@ plugins:
 
 
     def test_dsl_with_interface_without_plugin(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE]) + """
-types:
-    test_type:
-        interfaces:
-            -   test_interface1
-
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_TYPE + """
 interfaces:
     test_interface1:
         operations:
@@ -510,12 +502,7 @@ interfaces:
 
 
     def test_recursive_imports(self):
-        bottom_level_yaml = """
-types:
-    test_type:
-        interfaces:
-            -   test_interface1
-            """
+        bottom_level_yaml = self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
         mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
@@ -542,13 +529,8 @@ imports:
     def test_recursive_imports_with_inner_circular(self):
         bottom_level_yaml = """
 imports:
-    -   mid_level.yaml
-
-types:
-    test_type:
-        interfaces:
-            -   test_interface1
-            """
+    -   {0}/mid_level.yaml
+        """.format(self._temp_dir) + self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
         mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
@@ -563,9 +545,7 @@ imports:
         self.assert_dsl_parsing_exception_error_code(top_level_yaml, 8, DSLParsingLogicException)
 
     def test_parse_dsl_from_file(self):
-        filename = self.make_yaml_file(self.BASIC_APPLICATION_TEMPLATE + """
-types:
-    test_type: {}""")
+        filename = self.make_yaml_file(self.MINIMAL_APPLICATION_TEMPLATE)
         result = parse_from_file(filename)
         self.assertEquals('testApp', result['name'])
         self.assertEquals(1, len(result['nodes']))
@@ -600,3 +580,4 @@ types:
 
 #test for diamond
 #tests for non-existent dsl file path?
+#test for relative import
