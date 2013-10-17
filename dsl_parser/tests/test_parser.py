@@ -100,6 +100,7 @@ imports:"""
             self.fail()
         except exception_type, ex:
             self.assertEquals(expected_error_code, ex.err_code)
+            return ex
 
     def test_empty_dsl(self):
         self.assert_dsl_parsing_exception_error_code('', 0, DSLParsingFormatException)
@@ -226,10 +227,21 @@ interfaces:
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_interface_with_empty_operations_list(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
 interfaces:
     test_interface1:
         operations:
+        """
+        self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_interface_with_duplicate_operations(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+            -   "terminate"
+            -   "install"
         """
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -438,6 +450,14 @@ interfaces:
         self.assertEquals('other_test_plugin', operations['shutdown'])
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
 
+    def test_node_extra_properties(self):
+        #testing for additional properties directly under node (i.e. not within the node's 'properties' section)
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+            extra_property: "val"
+            """
+        self.assert_dsl_parsing_exception_error_code(yaml, 1)
+
+
     def test_merge_non_mergeable_properties_on_import(self):
         yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 application_template:
@@ -504,7 +524,9 @@ imports:
 imports:
     -   {0}""".format(mid_file_name)
 
-        self.assert_dsl_parsing_exception_error_code(top_level_yaml, 8, DSLParsingLogicException)
+        ex = self.assert_dsl_parsing_exception_error_code(top_level_yaml, 8, DSLParsingLogicException)
+        expected_circular_path = [mid_file_name, bottom_file_name, mid_file_name]
+        self.assertEquals(expected_circular_path, ex.circular_path)
 
 
     def test_parse_dsl_from_file(self):
@@ -527,8 +549,10 @@ imports:
         top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
 imports:
     -   {0}""".format(mid_file_name)
-        filename = self.make_yaml_file_with_name(top_level_yaml, 'top_level.yaml')
-        self.assert_dsl_parsing_exception_error_code(filename, 8, DSLParsingLogicException, parse_from_file)
+        top_file_name = self.make_yaml_file_with_name(top_level_yaml, 'top_level.yaml')
+        ex = self.assert_dsl_parsing_exception_error_code(top_file_name, 8, DSLParsingLogicException, parse_from_file)
+        expected_circular_path = [top_file_name, mid_file_name, bottom_file_name, top_file_name]
+        self.assertEquals(expected_circular_path, ex.circular_path)
 
     def test_diamond_imports(self):
         bottom_level_yaml = self.BASIC_TYPE
@@ -544,13 +568,76 @@ imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name2 = self.make_yaml_file(mid_level_yaml2)
 
-        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE +     """
+        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
 imports:
     -   {0}
     -   {1}""".format(mid_file_name, mid_file_name2)
         result = parse(top_level_yaml)
         self._assert_application_template(result)
 
+    def test_node_get_type_properties_including_overriding_properties(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type:
+        properties:
+            key: "not_val"
+            key2: "val2"
+    """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result) #this will also check property "key" = "val"
+        node = result['nodes'][0]
+        self.assertEquals('val2', node['properties']['key2'])
+
+    def test_type_multiple_derivation(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type:
+        properties:
+            key: "not_val"
+        derived_from:
+            -   "test_type_parent"
+            -   "test_type_parent2"
+
+    test_type_parent:
+        properties:
+            key: "val1_parent"
+    test_type_parent2:
+        properties:
+            key: "val1_parent2"
+    """
+        self.assert_dsl_parsing_exception_error_code(yaml, 1)
+
+#     def test_type_properties_derivation(self):
+#         yaml = self.BASIC_APPLICATION_TEMPLATE + """
+# types:
+#     test_type:
+#         properties:
+#             key: "not_val"
+#             key2: "val2"
+#         derived_from: "test_type_parent"
+#
+#     test_type_parent:
+#         properties:
+#             key: "val1_parent"
+#             key2: "val2_parent"
+#             key3: "val3_parent"
+#     """
+#         result = parse(yaml)
+#         self._assert_minimal_application_template(result) #this will also check property "key" = "val"
+#         node = result['nodes'][0]
+#         self.assertEquals('val2', node['properties']['key2'])
+#         self.assertEquals('val3_parent', node['properties']['key3'])
+
+
+
+
+#check super type name exists
+# interfaces same name when derived
 
 #tests for non-existent dsl file path?
 #test for relative import
+#tests for bad imports? (non list of string?)
+#tests for same interface twice / arrays with same values in general
+
+
+########################################################################

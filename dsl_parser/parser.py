@@ -59,12 +59,11 @@ def _parse(dsl_string, dsl_file_path=None):
     return plan
 
 
+
 def _process_node(node, parsed_dsl):
     processed_node = {}
     processed_node['id'] = '{0}.{1}'.format(parsed_dsl['application_template']['name'], node['name'])
     processed_node['type'] = node['type']
-    if 'properties' in node:
-        processed_node['properties'] = node['properties']
 
     plugins = {}
     operations = {}
@@ -75,11 +74,13 @@ def _process_node(node, parsed_dsl):
         raise DSLParsingLogicException(7, err_message)
 
     node_type = parsed_dsl['types'][node['type']]
-    if 'interfaces' in node_type:
+    complete_node_type = _extract_complete_type(node_type, parsed_dsl)
+
+    if 'interfaces' in complete_node_type:
         if 'plugins' not in parsed_dsl:
             raise DSLParsingLogicException(5, 'Must provide plugins section when providing interfaces section')
 
-        implementation_interfaces = node_type['interfaces']
+        implementation_interfaces = complete_node_type['interfaces']
         for implementation_interface in implementation_interfaces:
             if type(implementation_interface) == dict: #explicit declaration
                 interface_name = implementation_interface.iterkeys().next()
@@ -112,7 +113,25 @@ def _process_node(node, parsed_dsl):
 
         processed_node['plugins'] = plugins
         processed_node['operations'] = operations
+
+    if 'properties' in complete_node_type:
+        processed_node['properties'] = complete_node_type['properties']
+        if 'properties' in node:
+            processed_node['properties'] = dict(processed_node['properties'].items() + node['properties'].items())
+    elif 'properties' in node:
+        processed_node['properties'] = node['properties']
+
     return processed_node
+
+
+def _extract_complete_type(type, parsed_dsl):
+    if 'derived_from' not in type:
+        return type
+
+    super_type_name = type['derived_from']
+    super_type = parsed_dsl['types'][super_type_name]
+    complete_super_type = _extract_complete_type(super_type, parsed_dsl)
+
 
 
 def _autowire_plugin(plugins, interface_name, type_name):
@@ -185,13 +204,16 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, current_path_i
                 _build_ordered_imports_list(imported_dsl, ordered_imports_list,
                                             current_path_imports_list, another_import)
         elif another_import in current_path_imports_list:
-            raise DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}-->{1}'.format(
-                "-->".join(current_path_imports_list), another_import))
+            current_path_imports_list.append(another_import)
+            ex = DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}'.format(
+                "-->".join(current_path_imports_list)))
+            ex.circular_path = current_path_imports_list
+            raise ex
     current_path_imports_list.pop()
 
 
 def _validate_dsl_schema(parsed_dsl):
-    # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ) ,
+    # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
     # since no good YAML schema validator could be found (both for Python and at all).
     #
     # Python implementation documentation: http://python-jsonschema.readthedocs.org/en/latest/
@@ -311,6 +333,9 @@ def _validate_dsl_schema(parsed_dsl):
                             #the below 'properties' is our own "properties" and not the schema's meta language
                             'properties': {
                                 'type': 'object'
+                            },
+                            'derived_from': {
+                                'type': 'string'
                             }
                         },
                         'additionalProperties': False
