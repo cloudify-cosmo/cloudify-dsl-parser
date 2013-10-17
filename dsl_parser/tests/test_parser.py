@@ -607,6 +607,20 @@ types:
     """
         self.assert_dsl_parsing_exception_error_code(yaml, 1)
 
+
+
+
+#check super type name exists
+# interfaces same name when derived
+
+#tests for non-existent dsl file path?
+#test for relative import
+#tests for bad imports? (non list of string?)
+#tests for same interface twice / arrays with same values in general
+
+
+########################################################################
+
 #     def test_type_properties_derivation(self):
 #         yaml = self.BASIC_APPLICATION_TEMPLATE + """
 # types:
@@ -627,17 +641,3 @@ types:
 #         node = result['nodes'][0]
 #         self.assertEquals('val2', node['properties']['key2'])
 #         self.assertEquals('val3_parent', node['properties']['key3'])
-
-
-
-
-#check super type name exists
-# interfaces same name when derived
-
-#tests for non-existent dsl file path?
-#test for relative import
-#tests for bad imports? (non list of string?)
-#tests for same interface twice / arrays with same values in general
-
-
-########################################################################
