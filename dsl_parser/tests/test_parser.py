@@ -622,23 +622,163 @@ types:
 
 ########################################################################
 
-#     def test_type_properties_derivation(self):
-#         yaml = self.BASIC_APPLICATION_TEMPLATE + """
-# types:
-#     test_type:
-#         properties:
-#             key: "not_val"
-#             key2: "val2"
-#         derived_from: "test_type_parent"
-#
-#     test_type_parent:
-#         properties:
-#             key: "val1_parent"
-#             key2: "val2_parent"
-#             key3: "val3_parent"
-#     """
-#         result = parse(yaml)
-#         self._assert_minimal_application_template(result) #this will also check property "key" = "val"
-#         node = result['nodes'][0]
-#         self.assertEquals('val2', node['properties']['key2'])
-#         self.assertEquals('val3_parent', node['properties']['key3'])
+    def test_type_properties_derivation(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type:
+        properties:
+            key: "not_val"
+            key2: "val2"
+        derived_from: "test_type_parent"
+
+    test_type_parent:
+        properties:
+            key: "val1_parent"
+            key2: "val2_parent"
+            key3: "val3_parent"
+    """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result) #this will also check property "key" = "val"
+        node = result['nodes'][0]
+        self.assertEquals('val2', node['properties']['key2'])
+        self.assertEquals('val3_parent', node['properties']['key3'])
+
+    def test_type_properties_recursive_derivation(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type:
+        properties:
+            key: "not_val"
+            key2: "val2"
+        derived_from: "test_type_parent"
+
+    test_type_parent:
+        properties:
+            key: "val_parent"
+            key2: "val2_parent"
+            key4: "val4_parent"
+        derived_from: "test_type_grandparent"
+
+    test_type_grandparent:
+        properties:
+            key: "val1_grandparent"
+            key2: "val2_grandparent"
+            key3: "val3_grandparent"
+        derived_from: "test_type_grandgrandparent"
+
+    test_type_grandgrandparent: {}
+    """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result) #this will also check property "key" = "val"
+        node = result['nodes'][0]
+        self.assertEquals('val2', node['properties']['key2'])
+        self.assertEquals('val3_grandparent', node['properties']['key3'])
+        self.assertEquals('val4_parent', node['properties']['key4'])
+
+    def test_type_interface_derivation(self):
+        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+types:
+    test_type:
+        interfaces:
+            -   test_interface1
+            -   test_interface2: test_plugin2
+            -   test_interface3
+        derived_from: "test_type_parent"
+
+    test_type_parent:
+        interfaces:
+            -   test_interface1: nop-plugin
+            -   test_interface2
+            -   test_interface3
+            -   test_interface4
+
+interfaces:
+    test_interface2:
+        operations:
+            -   "start"
+            -   "stop"
+    test_interface3:
+        operations:
+            -   "op1"
+    test_interface4:
+        operations:
+            -   "op2"
+
+plugins:
+    test_plugin2:
+        properties:
+            interface: "test_interface2"
+            url: "http://test_url2.zip"
+    test_plugin3:
+        properties:
+            interface: "test_interface3"
+            url: "http://test_url3.zip"
+    test_plugin4:
+        properties:
+            interface: "test_interface4"
+            url: "http://test_url4.zip"
+    """
+
+        result = parse(yaml)
+        self._assert_application_template(result)
+        node = result['nodes'][0]
+        plugin_props = node['plugins']['test_plugin2']['properties']
+        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals('http://test_url2.zip', plugin_props['url'])
+        operations = node['operations']
+        self.assertEquals(12, len(operations))
+        self.assertEquals('test_plugin2', operations['start'])
+        self.assertEquals('test_plugin2', operations['test_interface2.start'])
+        self.assertEquals('test_plugin2', operations['stop'])
+        self.assertEquals('test_plugin2', operations['test_interface2.stop'])
+        self.assertEquals('test_plugin3', operations['op1'])
+        self.assertEquals('test_plugin3', operations['test_interface3.op1'])
+        self.assertEquals('test_plugin4', operations['op2'])
+        self.assertEquals('test_plugin4', operations['test_interface4.op2'])
+        self.assertEquals(4, len(node['plugins']))
+
+    def test_type_interface_recursive_derivation(self):
+        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+types:
+    test_type:
+        interfaces:
+            -   test_interface1
+        derived_from: "test_type_parent"
+
+    test_type_parent:
+        derived_from: "test_type_grandparent"
+
+    test_type_grandparent:
+        interfaces:
+            -   test_interface1: "non_plugin"
+            -   test_interface2: "test_plugin2"
+
+interfaces:
+    test_interface2:
+        operations:
+            -   "start"
+            -   "stop"
+
+plugins:
+    test_plugin2:
+        properties:
+            interface: "test_interface2"
+            url: "http://test_url2.zip"
+        """
+
+        result = parse(yaml)
+        self._assert_application_template(result)
+        node = result['nodes'][0]
+        plugin_props = node['plugins']['test_plugin2']['properties']
+        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals('http://test_url2.zip', plugin_props['url'])
+        operations = node['operations']
+        self.assertEquals(8, len(operations))
+        self.assertEquals('test_plugin2', operations['start'])
+        self.assertEquals('test_plugin2', operations['test_interface2.start'])
+        self.assertEquals('test_plugin2', operations['stop'])
+        self.assertEquals('test_plugin2', operations['test_interface2.stop'])
+        self.assertEquals(2, len(node['plugins']))
+
+#TODO: protect from cyclic deriving
+#TODO: test for explicit interface with same operation name

@@ -77,7 +77,7 @@ def _process_node(node, parsed_dsl):
     complete_node_type = _extract_complete_type(node_type, parsed_dsl)
 
     if 'interfaces' in complete_node_type:
-        if 'plugins' not in parsed_dsl:
+        if complete_node_type['interfaces'] and 'plugins' not in parsed_dsl:
             raise DSLParsingLogicException(5, 'Must provide plugins section when providing interfaces section')
 
         implementation_interfaces = complete_node_type['interfaces']
@@ -124,14 +124,56 @@ def _process_node(node, parsed_dsl):
     return processed_node
 
 
-def _extract_complete_type(type, parsed_dsl):
-    if 'derived_from' not in type:
-        return type
+def _extract_complete_type(dsl_type, parsed_dsl):
+    current_level_type = copy.deepcopy(dsl_type)
+    #halt condition
+    if 'derived_from' not in current_level_type:
+        return current_level_type
 
-    super_type_name = type['derived_from']
+    super_type_name = current_level_type['derived_from']
     super_type = parsed_dsl['types'][super_type_name]
     complete_super_type = _extract_complete_type(super_type, parsed_dsl)
+    merged_type = current_level_type
+    #derive properties
+    complete_super_type_properties = _get_dict_prop(complete_super_type, 'properties')
+    current_level_type_properties = _get_dict_prop(merged_type, 'properties')
+    merged_properties = dict(complete_super_type_properties.items() + current_level_type_properties.items())
+    merged_type['properties'] = merged_properties
+    #derive interfaces
+    complete_super_type_interfaces = _get_list_prop(complete_super_type, 'interfaces')
+    current_level_type_interfaces = _get_list_prop(merged_type, 'interfaces')
+    merged_interfaces = complete_super_type_interfaces
 
+    for interface_element in current_level_type_interfaces:
+        #we need to replace interface elements in the merged_interfaces if their interface name
+        #matches this interface_element
+        _replace_or_add_interface(merged_interfaces, interface_element)
+
+    merged_type['interfaces'] = merged_interfaces
+
+    return merged_type
+
+
+def _replace_or_add_interface(merged_interfaces, interface_element):
+    matching_interface = next((x for x in merged_interfaces if _get_interface_name(x) == _get_interface_name(
+        interface_element)), None)
+    if matching_interface is None:
+        merged_interfaces.append(interface_element)
+    else:
+        index_of_interface = merged_interfaces.index(matching_interface)
+        merged_interfaces[index_of_interface] = interface_element
+
+
+def _get_interface_name(interface_element):
+    return interface_element if type(interface_element) == str else interface_element.iterkeys().next()
+
+
+def _get_list_prop(dictionary, prop_name):
+    return dictionary[prop_name] if prop_name in dictionary else []
+
+
+def _get_dict_prop(dictionary, prop_name):
+    return dictionary[prop_name] if prop_name in dictionary else {}
 
 
 def _autowire_plugin(plugins, interface_name, type_name):
