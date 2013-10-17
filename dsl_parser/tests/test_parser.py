@@ -609,11 +609,6 @@ types:
         self.assert_dsl_parsing_exception_error_code(yaml, 1)
 
 
-
-
-#check super type name exists
-# interfaces same name when derived
-
 #tests for non-existent dsl file path?
 #test for relative import
 #tests for bad imports? (non list of string?)
@@ -780,5 +775,14 @@ plugins:
         self.assertEquals('test_plugin2', operations['test_interface2.stop'])
         self.assertEquals(2, len(node['plugins']))
 
+    def test_type_derive_non_from_none_existing(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type:
+        interfaces:
+            -   test_interface1
+        derived_from: "non_existing_type_parent"
+        """
+        self.assert_dsl_parsing_exception_error_code(yaml, 14, DSLParsingLogicException)
 #TODO: protect from cyclic deriving
 #TODO: test for explicit interface with same operation name

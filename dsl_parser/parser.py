@@ -74,7 +74,7 @@ def _process_node(node, parsed_dsl):
         raise DSLParsingLogicException(7, err_message)
 
     node_type = parsed_dsl['types'][node['type']]
-    complete_node_type = _extract_complete_type(node_type, parsed_dsl)
+    complete_node_type = _extract_complete_type(node_type, node['type'], parsed_dsl)
 
     if 'interfaces' in complete_node_type:
         if complete_node_type['interfaces'] and 'plugins' not in parsed_dsl:
@@ -124,15 +124,19 @@ def _process_node(node, parsed_dsl):
     return processed_node
 
 
-def _extract_complete_type(dsl_type, parsed_dsl):
+def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
     current_level_type = copy.deepcopy(dsl_type)
     #halt condition
     if 'derived_from' not in current_level_type:
         return current_level_type
 
     super_type_name = current_level_type['derived_from']
+    if super_type_name not in parsed_dsl['types']:
+        raise DSLParsingLogicException(14, 'Missing definition for type {0} which is declared as derived by type {1}'
+                                       .format(super_type_name, dsl_type_name))
+
     super_type = parsed_dsl['types'][super_type_name]
-    complete_super_type = _extract_complete_type(super_type, parsed_dsl)
+    complete_super_type = _extract_complete_type(super_type, super_type_name, parsed_dsl)
     merged_type = current_level_type
     #derive properties
     complete_super_type_properties = _get_dict_prop(complete_super_type, 'properties')
@@ -155,10 +159,13 @@ def _extract_complete_type(dsl_type, parsed_dsl):
 
 
 def _replace_or_add_interface(merged_interfaces, interface_element):
+    #locate if this interface exists in the list
     matching_interface = next((x for x in merged_interfaces if _get_interface_name(x) == _get_interface_name(
         interface_element)), None)
+    #add if not
     if matching_interface is None:
         merged_interfaces.append(interface_element)
+    #replace with current interface element
     else:
         index_of_interface = merged_interfaces.index(matching_interface)
         merged_interfaces[index_of_interface] = interface_element
