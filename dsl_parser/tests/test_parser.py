@@ -20,8 +20,9 @@ import shutil
 import unittest
 import os
 import uuid
-from parser import DSLParsingException, DSLParsingFormatException, DSLParsingLogicException
-from parser import parse, parse_from_file
+
+from dsl_parser.parser import DSLParsingException, DSLParsingFormatException, DSLParsingLogicException
+from dsl_parser.parser import parse, parse_from_file
 
 
 class TestParser(unittest.TestCase):
@@ -511,8 +512,8 @@ imports:
     def test_recursive_imports_with_inner_circular(self):
         bottom_level_yaml = """
 imports:
-    -   {0}/mid_level.yaml
-        """.format(self._temp_dir) + self.BASIC_TYPE
+    -   {0}
+        """.format(os.path.join(self._temp_dir, "mid_level.yaml")) + self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
         mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
@@ -537,8 +538,8 @@ imports:
     def test_recursive_imports_with_complete_circle(self):
         bottom_level_yaml = """
 imports:
-    -   {0}/top_level.yaml
-            """.format(self._temp_dir) + self.BASIC_TYPE
+    -   {0}
+            """.format(os.path.join(self._temp_dir, "top_level.yaml")) + self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
         mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
