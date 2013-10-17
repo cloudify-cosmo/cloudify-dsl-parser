@@ -17,6 +17,7 @@ __author__ = 'ran'
 
 import yaml
 import copy
+from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 
@@ -276,142 +277,8 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, current_path_i
 
 
 def _validate_dsl_schema(parsed_dsl):
-    # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
-    # since no good YAML schema validator could be found (both for Python and at all).
-    #
-    # Python implementation documentation: http://python-jsonschema.readthedocs.org/en/latest/
-    # A one-stop-shop for easy API explanation: http://jsonary.com/documentation/json-schema/?
-    # A website which can create a schema from a given JSON automatically: http://www.jsonschema.net/#
-    #   (Note: the website was not used for creating the schema below, as among other things, its syntax seems a bit
-    #   different than the one used here, and should only be used as a reference)
-
-    schema = {
-        'type': 'object',
-        'properties': {
-            'application_template': {
-                'type': 'object',
-                'properties': {
-                    'name': {
-                        'type': 'string'
-                    },
-                    'topology': {
-                        'type': 'array',
-                        'minItems': 1,
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'name': {
-                                    'type': 'string'
-                                },
-                                #the below 'type' is our own "type" and not the schema's meta language
-                                'type': {
-                                    'type': 'string'
-                                },
-                                #the below 'properties' is our own "properties" and not the schema's meta language
-                                'properties': {
-                                    'type': 'object'
-                                }
-                            },
-                            'required': ['name', 'type'],
-                            'additionalProperties': False
-                        }
-                    }
-                },
-                'required': ['name', 'topology'],
-                'additionalProperties': False
-            },
-            'interfaces': {
-                'type': 'object',
-                'patternProperties': {
-                    '^': {
-                        'type': 'object',
-                        'properties': {
-                            'operations': {
-                                'type': 'array',
-                                'items': {
-                                    'type': 'string'
-                                },
-                                'uniqueItems': True,
-                                'minItems': 1
-                            }
-                        },
-                        'required': ['operations'],
-                        'additionalProperties': False
-                    }
-                }
-            },
-            'plugins': {
-                'type': 'object',
-                'patternProperties': {
-                    '^': {
-                        'type': 'object',
-                        'properties': {
-                            #the below 'properties' is our own "properties" and not the schema's meta language
-                            'properties': {
-                                'type': 'object',
-                                'properties': {
-                                    'interface': {
-                                        'type': 'string'
-                                    },
-                                    'url': {
-                                        'type': 'string'
-                                    }
-                                },
-                                'required': ['interface', 'url'],
-                                'additionalProperties': False
-                            }
-                        },
-                        'required': ['properties'],
-                        'additionalProperties': False
-                    }
-                }
-            },
-            'types': {
-                'type': 'object',
-                'patternProperties': {
-                    '^': {
-                        'type': 'object',
-                        'properties': {
-                            'interfaces': {
-                                'type': 'array',
-                                'items': {
-                                    'oneOf': [
-                                        {
-                                            'type': 'object',
-                                            'patternProperties': {
-                                                '^': {
-                                                    'type': 'string'
-                                                }
-                                            },
-                                            'maxProperties': 1,
-                                            'minProperties': 1
-                                        },
-                                        {
-                                            'type': 'string'
-                                        }
-                                    ],
-                                    'minItems': 1
-                                }
-                            },
-                            #the below 'properties' is our own "properties" and not the schema's meta language
-                            'properties': {
-                                'type': 'object'
-                            },
-                            'derived_from': {
-                                'type': 'string'
-                            }
-                        },
-                        'additionalProperties': False
-                    }
-                }
-            }
-        },
-        'required': ['application_template'],
-        'additionalProperties': False
-    }
-
     try:
-        validate(parsed_dsl, schema)
+        validate(parsed_dsl, DSL_SCHEMA)
     except ValidationError, ex:
         raise DSLParsingFormatException(1, '{0}; Path to error: {1}'.format(ex.message, '.'.join((str(x) for x in ex
                                                                                                 .path))))
@@ -420,16 +287,8 @@ def _validate_dsl_schema(parsed_dsl):
 def _validate_imports_section(imports_section, filename):
     #imports section is validated separately from the main schema since it is validated for each file separately,
     #while the standard validation runs only after combining all imports together
-    schema = {
-        'type': 'array',
-        'items': {
-            'type': 'string'
-        },
-        'uniqueItems': True
-    }
-
     try:
-        validate(imports_section, schema)
+        validate(imports_section, IMPORTS_SCHEMA)
     except ValidationError, ex:
         raise DSLParsingFormatException(2, 'Improper "imports" section in file {0}; {1}; Path to error: {2}'.format(
             filename, ex.message, '.'.join((str(x) for x in ex.path))))
