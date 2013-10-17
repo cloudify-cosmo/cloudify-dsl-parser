@@ -153,6 +153,8 @@ def _autowire_plugin(plugins, interface_name, type_name):
     return matching_plugins[0]
 
 
+
+
 def _combine_imports(parsed_dsl, dsl_file_path):
     merge_no_override = {'interfaces', 'plugins'}
 
@@ -160,12 +162,18 @@ def _combine_imports(parsed_dsl, dsl_file_path):
     if 'imports' not in parsed_dsl:
         return combined_parsed_dsl
 
+    _validate_imports_section(parsed_dsl['imports'], dsl_file_path)
+
     ordered_imports_list = []
     _build_ordered_imports_list(parsed_dsl, ordered_imports_list, [], dsl_file_path)
 
     for single_import in ordered_imports_list:
-        with open(single_import, 'r') as f:
-            parsed_imported_dsl = yaml.safe_load(f)
+        try: #(note that this check is only to verify nothing went wrong in the meanwhile, as we've already read
+             # from all imported files earlier)
+            with open(single_import, 'r') as f:
+                parsed_imported_dsl = yaml.safe_load(f)
+        except EnvironmentError:
+            raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}'.format(single_import))
 
         #combine the current file with the combined parsed dsl we have thus far
         for key, value in parsed_imported_dsl.iteritems():
@@ -195,21 +203,27 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, current_path_i
         ordered_imports_list.append(current_import)
 
     if 'imports' not in parsed_dsl:
+        if current_import is not None:
+            current_path_imports_list.pop()
         return
 
     for another_import in parsed_dsl['imports']:
         if another_import not in ordered_imports_list:
-            with open(another_import, 'r') as f:
-                imported_dsl = yaml.safe_load(f)
-                _build_ordered_imports_list(imported_dsl, ordered_imports_list,
-                                            current_path_imports_list, another_import)
+            try:
+                with open(another_import, 'r') as f:
+                    imported_dsl = yaml.safe_load(f)
+                    _build_ordered_imports_list(imported_dsl, ordered_imports_list,
+                                                current_path_imports_list, another_import)
+            except EnvironmentError:
+                raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}'.format(another_import))
         elif another_import in current_path_imports_list:
             current_path_imports_list.append(another_import)
             ex = DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}'.format(
-                "-->".join(current_path_imports_list)))
+                " --> ".join(current_path_imports_list)))
             ex.circular_path = current_path_imports_list
             raise ex
-    current_path_imports_list.pop()
+    if current_import is not None:
+        current_path_imports_list.pop()
 
 
 def _validate_dsl_schema(parsed_dsl):
@@ -352,6 +366,24 @@ def _validate_dsl_schema(parsed_dsl):
     except ValidationError, ex:
         raise DSLParsingFormatException(1, '{0}; Path to error: {1}'.format(ex.message, '.'.join((str(x) for x in ex
                                                                                                 .path))))
+
+
+def _validate_imports_section(imports_section, filename):
+    #imports section is validated separately from the main schema since it is validated for each file separately,
+    #while the standard validation runs only after combining all imports together
+    schema = {
+        'type': 'array',
+        'items': {
+            'type': 'string'
+        },
+        'uniqueItems': True
+    }
+
+    try:
+        validate(imports_section, schema)
+    except ValidationError, ex:
+        raise DSLParsingFormatException(2, 'Improper "imports" section in file {0}; {1}; Path to error: {2}'.format(
+            filename, ex.message, '.'.join((str(x) for x in ex.path))))
 
 
 class DSLParsingException(Exception):

@@ -109,8 +109,8 @@ imports:"""
         yaml = """
 interfaces:
     test_interface:
-        -   item1:
-    -   bad_format
+        -   item1: {}
+    -   bad_format: {}
         """
         self.assert_dsl_parsing_exception_error_code(yaml, -1, DSLParsingFormatException)
 
@@ -222,7 +222,7 @@ plugins:
     def test_interface_with_no_operations(self):
         yaml = self.BASIC_APPLICATION_TEMPLATE + """
 interfaces:
-    test_interface1:
+    test_interface1: {}
         """
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -230,7 +230,7 @@ interfaces:
         yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
 interfaces:
     test_interface1:
-        operations:
+        operations: {}
         """
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -326,6 +326,13 @@ types:
             """
         self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
+    def test_type_with_empty_interfaces_declaration(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+types:
+    test_type:
+        interfaces: {}
+            """
+        self.assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_implicit_interface_with_no_matching_plugins(self):
         yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
@@ -457,6 +464,49 @@ interfaces:
             """
         self.assert_dsl_parsing_exception_error_code(yaml, 1)
 
+    def test_plugin_without_url(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+
+plugins:
+    test_plugin:
+        properties:
+            interface: "test_interface1"
+            """
+        self.assert_dsl_parsing_exception_error_code(yaml, 1)
+
+    def test_plugin_without_interface(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+
+plugins:
+    test_plugin:
+        properties:
+            url: "http://test_url.zip"
+            """
+        self.assert_dsl_parsing_exception_error_code(yaml, 1)
+
+    def test_plugin_with_extra_properties(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+
+plugins:
+    test_plugin:
+        properties:
+            url: "http://test_url.zip"
+            interface: "test_interface1"
+            extra_prop: "some_val"
+            """
+        self.assert_dsl_parsing_exception_error_code(yaml, 1)
 
     def test_merge_non_mergeable_properties_on_import(self):
         yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
@@ -533,6 +583,52 @@ imports:
         filename = self.make_yaml_file(self.MINIMAL_APPLICATION_TEMPLATE)
         result = parse_from_file(filename)
         self._assert_minimal_application_template(result)
+
+    def test_parse_dsl_from_file_bad_path(self):
+        self.assertRaises(EnvironmentError, parse_from_file, 'fake-file.yaml')
+
+    def test_import_bad_path(self):
+        yaml = """
+imports:
+    -   fake-file.yaml
+        """
+        self.assert_dsl_parsing_exception_error_code(yaml, 13)
+
+    def test_import_bad_syntax(self):
+        yaml = """
+imports: fake-file.yaml
+        """
+        self.assert_dsl_parsing_exception_error_code(yaml, 2)
+
+    def test_import_bad_syntax2(self):
+        yaml = """
+imports:
+    first_file: fake-file.yaml
+        """
+        self.assert_dsl_parsing_exception_error_code(yaml, 2)
+
+    def test_import_bad_syntax3(self):
+        yaml = """
+imports:
+    -   first_file: fake-file.yaml
+        """
+        self.assert_dsl_parsing_exception_error_code(yaml, 2)
+
+    def test_import_empty_list(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+imports: []
+        """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+
+    def test_duplicate_import_in_same_file(self):
+        yaml = """
+imports:
+    -   fake-file.yaml
+    -   fake-file2.yaml
+    -   fake-file.yaml
+        """
+        self.assert_dsl_parsing_exception_error_code(yaml, 2)
 
     def test_recursive_imports_with_complete_circle(self):
         bottom_level_yaml = """
@@ -613,9 +709,7 @@ types:
 #check super type name exists
 # interfaces same name when derived
 
-#tests for non-existent dsl file path?
 #test for relative import
-#tests for bad imports? (non list of string?)
 #tests for same interface twice / arrays with same values in general
 
 
