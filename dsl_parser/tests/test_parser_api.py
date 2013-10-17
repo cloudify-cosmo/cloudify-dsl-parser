@@ -370,3 +370,4 @@ plugins:
         #TODO: test for relative import
         #TODO: tests for same interface twice / arrays with same values in general (node name,
         # implicit/explicit interfaces)
+        #TODO: need to add pyyaml's exception when error 0 / maybe add nested error in more places

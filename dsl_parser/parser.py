@@ -12,6 +12,13 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+APPLICATION_TEMPLATE = 'application_template'
+IMPORTS = 'imports'
+TYPES = 'types'
+PLUGINS = 'plugins'
+INTERFACES = 'interfaces'
+PROPERTIES = 'properties'
+
 
 __author__ = 'ran'
 
@@ -43,11 +50,11 @@ def _parse(dsl_string, dsl_file_path=None):
     combined_parsed_dsl = _combine_imports(parsed_dsl, dsl_file_path)
 
     #TODO: validate before imports? treat them dif?
-    if 'imports' in combined_parsed_dsl:
-        del combined_parsed_dsl['imports']
+    if IMPORTS in combined_parsed_dsl:
+        del combined_parsed_dsl[IMPORTS]
     _validate_dsl_schema(combined_parsed_dsl)
 
-    application_template = combined_parsed_dsl['application_template']
+    application_template = combined_parsed_dsl[APPLICATION_TEMPLATE]
     app_name = application_template['name']
 
     processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl), application_template["topology"])
@@ -63,64 +70,65 @@ def _parse(dsl_string, dsl_file_path=None):
 
 def _process_node(node, parsed_dsl):
     processed_node = {}
-    processed_node['id'] = '{0}.{1}'.format(parsed_dsl['application_template']['name'], node['name'])
-    processed_node['type'] = node['type']
+    processed_node['id'] = '{0}.{1}'.format(parsed_dsl[APPLICATION_TEMPLATE]['name'], node['name'])
+    node_type_name = node['type']
+    processed_node['type'] = node_type_name
 
     plugins = {}
     operations = {}
-    if 'types' not in parsed_dsl or node['type'] not in parsed_dsl['types']:
-        err_message = 'Could not locate node type: {0}; existing types: {1}'.format(node['type'],
-                                                                                    parsed_dsl['types'].keys() if
-                                                                                    'types' in parsed_dsl else 'None')
+    if TYPES not in parsed_dsl or node_type_name not in parsed_dsl[TYPES]:
+        err_message = 'Could not locate node type: {0}; existing types: {1}'.format(node_type_name,
+                                                                                    parsed_dsl[TYPES].keys() if
+                                                                                    TYPES in parsed_dsl else 'None')
         raise DSLParsingLogicException(7, err_message)
 
-    node_type = parsed_dsl['types'][node['type']]
-    complete_node_type = _extract_complete_type(node_type, node['type'], parsed_dsl)
+    node_type = parsed_dsl[TYPES][node_type_name]
+    complete_node_type = _extract_complete_type(node_type, node_type_name, parsed_dsl)
 
-    if 'interfaces' in complete_node_type:
-        if complete_node_type['interfaces'] and 'plugins' not in parsed_dsl:
+    if INTERFACES in complete_node_type:
+        if complete_node_type[INTERFACES] and PLUGINS not in parsed_dsl:
             raise DSLParsingLogicException(5, 'Must provide plugins section when providing interfaces section')
 
-        implementation_interfaces = complete_node_type['interfaces']
+        implementation_interfaces = complete_node_type[INTERFACES]
         for implementation_interface in implementation_interfaces:
             if type(implementation_interface) == dict: #explicit declaration
                 interface_name = implementation_interface.iterkeys().next()
                 plugin_name = implementation_interface.itervalues().next()
                 #validate the explicit plugin declared is defined in the DSL
-                if plugin_name not in parsed_dsl['plugins']:
+                if plugin_name not in parsed_dsl[PLUGINS]:
                     raise DSLParsingLogicException(10, 'Missing definition for plugin {0} which is explicitly declared '
                                                        'to implement interface {1} for type {2}'.format(plugin_name,
                                                                                                         interface_name,
-                                                                                                        node['type']))
+                                                                                                        node_type_name))
                     #validate the explicit plugin does indeed implement the right interface
-                if parsed_dsl['plugins'][plugin_name]['properties']['interface'] != interface_name:
+                if parsed_dsl[PLUGINS][plugin_name][PROPERTIES]['interface'] != interface_name:
                     raise DSLParsingLogicException(6, 'Illegal explicit plugin declaration for type {0}: the plugin {'
-                                                      '1} does not implement interface {2}'.format(node['type'],
+                                                      '1} does not implement interface {2}'.format(node_type_name,
                                                                                                    plugin_name,
                                                                                                    interface_name))
             else: #implicit declaration ('autowiring')
                 interface_name = implementation_interface
-                plugin_name = _autowire_plugin(parsed_dsl['plugins'], interface_name, node['type'])
-            plugin = parsed_dsl['plugins'][plugin_name]
+                plugin_name = _autowire_plugin(parsed_dsl[PLUGINS], interface_name, node_type_name)
+            plugin = parsed_dsl[PLUGINS][plugin_name]
             plugins[plugin_name] = plugin
 
             #put operations into node
-            if interface_name not in parsed_dsl['interfaces']:
+            if interface_name not in parsed_dsl[INTERFACES]:
                 raise DSLParsingLogicException(9, 'Missing interface {0} definition'.format(interface_name))
-            interface = parsed_dsl['interfaces'][interface_name]
+            interface = parsed_dsl[INTERFACES][interface_name]
             for operation in interface['operations']:
                 operations[operation] = plugin_name
                 operations['{0}.{1}'.format(interface_name, operation)] = plugin_name
 
-        processed_node['plugins'] = plugins
+        processed_node[PLUGINS] = plugins
         processed_node['operations'] = operations
 
-    if 'properties' in complete_node_type:
-        processed_node['properties'] = complete_node_type['properties']
-        if 'properties' in node:
-            processed_node['properties'] = dict(processed_node['properties'].items() + node['properties'].items())
-    elif 'properties' in node:
-        processed_node['properties'] = node['properties']
+    if PROPERTIES in complete_node_type:
+        processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
+        if PROPERTIES in node:
+            processed_node[PROPERTIES] = dict(processed_node[PROPERTIES].items() + node[PROPERTIES].items())
+    elif PROPERTIES in node:
+        processed_node[PROPERTIES] = node[PROPERTIES]
 
     return processed_node
 
@@ -132,21 +140,21 @@ def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
         return current_level_type
 
     super_type_name = current_level_type['derived_from']
-    if super_type_name not in parsed_dsl['types']:
+    if super_type_name not in parsed_dsl[TYPES]:
         raise DSLParsingLogicException(14, 'Missing definition for type {0} which is declared as derived by type {1}'
                                        .format(super_type_name, dsl_type_name))
 
-    super_type = parsed_dsl['types'][super_type_name]
+    super_type = parsed_dsl[TYPES][super_type_name]
     complete_super_type = _extract_complete_type(super_type, super_type_name, parsed_dsl)
     merged_type = current_level_type
     #derive properties
-    complete_super_type_properties = _get_dict_prop(complete_super_type, 'properties')
-    current_level_type_properties = _get_dict_prop(merged_type, 'properties')
+    complete_super_type_properties = _get_dict_prop(complete_super_type, PROPERTIES)
+    current_level_type_properties = _get_dict_prop(merged_type, PROPERTIES)
     merged_properties = dict(complete_super_type_properties.items() + current_level_type_properties.items())
-    merged_type['properties'] = merged_properties
+    merged_type[PROPERTIES] = merged_properties
     #derive interfaces
-    complete_super_type_interfaces = _get_list_prop(complete_super_type, 'interfaces')
-    current_level_type_interfaces = _get_list_prop(merged_type, 'interfaces')
+    complete_super_type_interfaces = _get_list_prop(complete_super_type, INTERFACES)
+    current_level_type_interfaces = _get_list_prop(merged_type, INTERFACES)
     merged_interfaces = complete_super_type_interfaces
 
     for interface_element in current_level_type_interfaces:
@@ -154,7 +162,7 @@ def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
         #matches this interface_element
         _replace_or_add_interface(merged_interfaces, interface_element)
 
-    merged_type['interfaces'] = merged_interfaces
+    merged_type[INTERFACES] = merged_interfaces
 
     return merged_type
 
@@ -186,7 +194,7 @@ def _get_dict_prop(dictionary, prop_name):
 
 def _autowire_plugin(plugins, interface_name, type_name):
     matching_plugins = [plugin_name for plugin_name, plugin_data in plugins.items() if
-                        plugin_data['properties']['interface'] == interface_name]
+                        plugin_data[PROPERTIES]['interface'] == interface_name]
 
     num_of_matches = len(matching_plugins)
     if num_of_matches == 0:
@@ -206,13 +214,13 @@ def _autowire_plugin(plugins, interface_name, type_name):
 
 
 def _combine_imports(parsed_dsl, dsl_file_path):
-    merge_no_override = {'interfaces', 'plugins'}
+    merge_no_override = {INTERFACES, PLUGINS}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
-    if 'imports' not in parsed_dsl:
+    if IMPORTS not in parsed_dsl:
         return combined_parsed_dsl
 
-    _validate_imports_section(parsed_dsl['imports'], dsl_file_path)
+    _validate_imports_section(parsed_dsl[IMPORTS], dsl_file_path)
 
     ordered_imports_list = []
     _build_ordered_imports_list(parsed_dsl, ordered_imports_list, [], dsl_file_path)
@@ -227,7 +235,7 @@ def _combine_imports(parsed_dsl, dsl_file_path):
 
         #combine the current file with the combined parsed dsl we have thus far
         for key, value in parsed_imported_dsl.iteritems():
-            if key == 'imports':
+            if key == IMPORTS:
                 continue
             if key not in combined_parsed_dsl:
                 #simply add this first level property to the dsl
@@ -252,12 +260,12 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, current_path_i
         current_path_imports_list.append(current_import)
         ordered_imports_list.append(current_import)
 
-    if 'imports' not in parsed_dsl:
+    if IMPORTS not in parsed_dsl:
         if current_import is not None:
             current_path_imports_list.pop()
         return
 
-    for another_import in parsed_dsl['imports']:
+    for another_import in parsed_dsl[IMPORTS]:
         if another_import not in ordered_imports_list:
             try:
                 with open(another_import, 'r') as f:
