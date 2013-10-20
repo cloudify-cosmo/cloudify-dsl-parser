@@ -365,9 +365,45 @@ plugins:
         self.assertEquals('test_plugin2', operations['test_interface2.stop'])
         self.assertEquals(2, len(node['plugins']))
 
-        #TODO: protect from cyclic deriving
-        #TODO: test for explicit interface with same operation name
-        #TODO: test for relative import
-        #TODO: tests for same interface twice / arrays with same values in general (node name,
-        # implicit/explicit interfaces)
-        #TODO: need to add pyyaml's exception when error 0 / maybe add nested error in more places
+    def test_two_explicit_interfaces_with_same_operation_name(self):
+        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+types:
+    test_type:
+        interfaces:
+            -   test_interface1: "test_plugin"
+            -   test_interface2: "other_test_plugin"
+
+interfaces:
+    test_interface2:
+        operations:
+            -   "install"
+            -   "shutdown"
+
+plugins:
+    other_test_plugin:
+        properties:
+            interface: "test_interface2"
+            url: "http://test_url2.zip"
+    """
+        result = parse(yaml)
+        node = result['nodes'][0]
+        self.assertEquals('test_type', node['type'])
+        plugin_props = node['plugins']['test_plugin']['properties']
+        self.assertEquals('test_interface1', plugin_props['interface'])
+        self.assertEquals('http://test_url.zip', plugin_props['url'])
+        operations = node['operations']
+        self.assertEquals('test_plugin', operations['test_interface1.install'])
+        self.assertEquals('test_plugin', operations['terminate'])
+        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        plugin_props = node['plugins']['other_test_plugin']['properties']
+        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals('http://test_url2.zip', plugin_props['url'])
+        self.assertEquals('other_test_plugin', operations['test_interface2.install'])
+        self.assertEquals('other_test_plugin', operations['shutdown'])
+        self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
+        self.assertEquals(6, len(operations))
+
+#TODO: test for relative import
+#TODO: tests for same interface twice / arrays with same values in general (node name,
+# implicit/explicit interfaces)
+#TODO: need to add pyyaml's exception when error 0 / maybe add nested error in more places
