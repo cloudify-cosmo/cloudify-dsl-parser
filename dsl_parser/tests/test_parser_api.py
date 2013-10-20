@@ -403,7 +403,21 @@ plugins:
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
         self.assertEquals(6, len(operations))
 
-#TODO: test for relative import
+    def test_relative_path_import(self):
+        bottom_level_yaml = self.BASIC_TYPE
+        self.make_yaml_file_with_name(bottom_level_yaml, 'buttom_level.yaml')
+
+        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+imports:
+    -   \"buttom_level.yaml\""""
+        mid_file_name = self.make_yaml_file(mid_level_yaml)
+
+        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
+imports:
+    -   {0}""".format(mid_file_name)
+        result = parse(top_level_yaml)
+        self._assert_application_template(result)
+
 #TODO: tests for same interface twice / arrays with same values in general (node name,
 # implicit/explicit interfaces)
 #TODO: need to add pyyaml's exception when error 0 / maybe add nested error in more places
