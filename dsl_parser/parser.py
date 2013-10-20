@@ -87,10 +87,9 @@ def _process_top_level_workflows(workflows, alias_mapping):
 
 
 def _process_node(node, parsed_dsl):
-    processed_node = {}
-    processed_node['id'] = '{0}.{1}'.format(parsed_dsl[APPLICATION_TEMPLATE]['name'], node['name'])
     node_type_name = node['type']
-    processed_node['type'] = node_type_name
+    processed_node = {'id': '{0}.{1}'.format(parsed_dsl[APPLICATION_TEMPLATE]['name'], node['name']),
+                      'type': node_type_name}
 
     plugins = {}
     operations = {}
@@ -109,7 +108,8 @@ def _process_node(node, parsed_dsl):
 
         implementation_interfaces = complete_node_type[INTERFACES]
         for implementation_interface in implementation_interfaces:
-            if type(implementation_interface) == dict: #explicit declaration
+            if type(implementation_interface) == dict:
+                #explicit declaration
                 interface_name = implementation_interface.iterkeys().next()
                 plugin_name = implementation_interface.itervalues().next()
                 #validate the explicit plugin declared is defined in the DSL
@@ -124,7 +124,8 @@ def _process_node(node, parsed_dsl):
                                                       '1} does not implement interface {2}'.format(node_type_name,
                                                                                                    plugin_name,
                                                                                                    interface_name))
-            else: #implicit declaration ('autowiring')
+            else:
+                #implicit declaration ('autowiring')
                 interface_name = implementation_interface
                 plugin_name = _autowire_plugin(parsed_dsl[PLUGINS], interface_name, node_type_name)
             plugin = parsed_dsl[PLUGINS][plugin_name]
@@ -135,9 +136,15 @@ def _process_node(node, parsed_dsl):
                 raise DSLParsingLogicException(9, 'Missing interface {0} definition'.format(interface_name))
             interface = parsed_dsl[INTERFACES][interface_name]
             for operation in interface['operations']:
-                operations[operation] = plugin_name
+                if operation in operations:
+                    #Indicate this implicit operation name needs to be removed as we can only support explicit
+                    # implementation in this case
+                    operations[operation] = None
+                else:
+                    operations[operation] = plugin_name
                 operations['{0}.{1}'.format(interface_name, operation)] = plugin_name
 
+        operations = dict((operation, plugin) for operation, plugin in operations.iteritems() if plugin is not None)
         processed_node[PLUGINS] = plugins
         processed_node['operations'] = operations
 
@@ -152,6 +159,17 @@ def _process_node(node, parsed_dsl):
 
 
 def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
+    return _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, [])
+
+
+def _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, visited_dsl_types_names):
+    if dsl_type_name in visited_dsl_types_names:
+        visited_dsl_types_names.append(dsl_type_name)
+        ex = DSLParsingLogicException(100, 'Failed parsing type {0}, Circular dependency detected: {1}'.format(
+            dsl_type_name, ' --> '.join(visited_dsl_types_names)))
+        ex.circular_dependency = visited_dsl_types_names
+        raise ex
+    visited_dsl_types_names.append(dsl_type_name)
     current_level_type = copy.deepcopy(dsl_type)
     #halt condition
     if 'derived_from' not in current_level_type:
@@ -160,10 +178,11 @@ def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
     super_type_name = current_level_type['derived_from']
     if super_type_name not in parsed_dsl[TYPES]:
         raise DSLParsingLogicException(14, 'Missing definition for type {0} which is declared as derived by type {1}'
-        .format(super_type_name, dsl_type_name))
+                                       .format(super_type_name, dsl_type_name))
 
     super_type = parsed_dsl[TYPES][super_type_name]
-    complete_super_type = _extract_complete_type(super_type, super_type_name, parsed_dsl)
+    complete_super_type = _extract_complete_type_recursive(super_type, super_type_name, parsed_dsl,
+                                                           visited_dsl_types_names)
     merged_type = current_level_type
     #derive properties
     complete_super_type_properties = _get_dict_prop(complete_super_type, PROPERTIES)
@@ -249,11 +268,12 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
     _validate_imports_section(parsed_dsl[IMPORTS], dsl_file_path)
 
     ordered_imports_list = []
-    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, [], dsl_file_path)
+    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, dsl_file_path)
 
     for single_import in ordered_imports_list:
-        try: #(note that this check is only to verify nothing went wrong in the meanwhile, as we've already read
-        # from all imported files earlier)
+        try:
+            #(note that this check is only to verify nothing went wrong in the meanwhile, as we've already read
+            # from all imported files earlier)
             with open(single_import, 'r') as f:
                 parsed_imported_dsl = yaml.safe_load(f)
         except EnvironmentError:
@@ -284,8 +304,12 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
     return combined_parsed_dsl
 
 
-def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_path_imports_list,
-                                current_import):
+def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import):
+    _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, [], current_import)
+
+
+def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, current_path_imports_list,
+                                          current_import):
     if current_import is not None:
         current_path_imports_list.append(current_import)
         ordered_imports_list.append(current_import)
@@ -303,8 +327,8 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
             try:
                 with open(another_import, 'r') as f:
                     imported_dsl = yaml.safe_load(f)
-                    _build_ordered_imports_list(imported_dsl, ordered_imports_list, alias_mapping,
-                                                current_path_imports_list, another_import)
+                    _build_ordered_imports_list_recursive(imported_dsl, ordered_imports_list, alias_mapping,
+                                                          current_path_imports_list, another_import)
             except EnvironmentError:
                 raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}'.format(another_import))
         elif another_import in current_path_imports_list:

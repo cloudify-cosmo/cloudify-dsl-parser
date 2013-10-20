@@ -207,3 +207,19 @@ imports:
     -   fake-file.yaml
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 13, DSLParsingLogicException)
+
+    def test_cyclic_dependency(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type:
+        derived_from: "test_type_parent"
+
+    test_type_parent:
+        derived_from: "test_type_grandparent"
+
+    test_type_grandparent:
+        derived_from: "test_type"
+    """
+        ex = self._assert_dsl_parsing_exception_error_code(yaml, 100, DSLParsingLogicException)
+        expected_circular_dependency = ['test_type', 'test_type_parent', 'test_type_grandparent', 'test_type']
+        self.assertEquals(expected_circular_dependency, ex.circular_dependency)
