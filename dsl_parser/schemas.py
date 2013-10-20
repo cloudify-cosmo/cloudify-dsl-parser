@@ -142,7 +142,36 @@ DSL_SCHEMA = {
                     'additionalProperties': False
                 }
             }
-        }
+        },
+        'workflows': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'oneOf': [
+                        {
+                            'type': 'object',
+                            'properties': {
+                                'radial': {
+                                    'type': 'string'
+                                }
+                            },
+                            'required': ['radial'],
+                            'additionalProperties': False
+                        },
+                        {
+                            'type': 'object',
+                            'properties': {
+                                'ref': {
+                                    'type': 'string'
+                                }
+                            },
+                            'required': ['ref'],
+                            'additionalProperties': False
+                        }
+                    ]
+                }
+            }
+        },
     },
     'required': ['application_template'],
     'additionalProperties': False

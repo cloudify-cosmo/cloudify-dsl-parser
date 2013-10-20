@@ -72,7 +72,7 @@ types:
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
 
-    def make_yaml_file_with_name(self, content, filename):
+    def make_file_with_name(self, content, filename):
         filename_path = os.path.join(self._temp_dir, filename)
         with open(filename_path, 'w') as f:
             f.write(content)
@@ -80,7 +80,7 @@ types:
 
     def make_yaml_file(self, content):
         filename = 'tempfile{0}.yaml'.format(uuid.uuid4())
-        return self.make_yaml_file_with_name(content, filename)
+        return self.make_file_with_name(content, filename)
 
     def create_yaml_with_imports(self, contents):
         yaml = """

@@ -161,7 +161,7 @@ imports:
         mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
 imports:
     -   {0}""".format(bottom_file_name)
-        mid_file_name = self.make_yaml_file_with_name(mid_level_yaml, 'mid_level.yaml')
+        mid_file_name = self.make_file_with_name(mid_level_yaml, 'mid_level.yaml')
 
         top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
 imports:
@@ -186,7 +186,7 @@ imports:
         top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
 imports:
     -   {0}""".format(mid_file_name)
-        top_file_name = self.make_yaml_file_with_name(top_level_yaml, 'top_level.yaml')
+        top_file_name = self.make_file_with_name(top_level_yaml, 'top_level.yaml')
         ex = self._assert_dsl_parsing_exception_error_code(top_file_name, 8, DSLParsingLogicException, parse_from_file)
         expected_circular_path = [top_file_name, mid_file_name, bottom_file_name, top_file_name]
         self.assertEquals(expected_circular_path, ex.circular_path)
