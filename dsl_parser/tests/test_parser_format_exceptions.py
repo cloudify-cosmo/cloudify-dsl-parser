@@ -257,3 +257,29 @@ plugins:
             extra_prop: "some_val"
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_first_level_workflows_no_ref_or_radial(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+workflows:
+    install:
+        some_other_prop: "val"
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_first_level_workflows_extra_properties(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+workflows:
+    install:
+        radial: "custom radial"
+        some_other_prop: "val"
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_first_level_workflows_both_ref_and_radial(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+workflows:
+    install:
+        radial: "custom radial"
+        ref: "custom_ref"
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)

@@ -19,9 +19,9 @@ PLUGINS = 'plugins'
 INTERFACES = 'interfaces'
 PROPERTIES = 'properties'
 
-
 __author__ = 'ran'
 
+import os
 import yaml
 import copy
 from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
@@ -29,17 +29,23 @@ from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 
 
-def parse_from_file(dsl_file_path):
+filepath = os.path.join(os.path.join(os.path.dirname(__file__), os.pardir), os.path.join('resources',
+                                                                                         'alias-mappings.yaml'))
+with open(filepath, 'r') as f:
+    default_alias_mapping = yaml.safe_load(f.read())
+
+
+def parse_from_file(dsl_file_path, alias_mapping=default_alias_mapping):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-        return _parse(dsl_string, dsl_file_path)
+        return _parse(dsl_string, alias_mapping, dsl_file_path)
 
 
-def parse(dsl_string):
-    return _parse(dsl_string)
+def parse(dsl_string, alias_mapping=default_alias_mapping):
+    return _parse(dsl_string, alias_mapping)
 
 
-def _parse(dsl_string, dsl_file_path=None):
+def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     try:
         parsed_dsl = yaml.safe_load(dsl_string)
     except ParserError, ex:
@@ -47,11 +53,8 @@ def _parse(dsl_string, dsl_file_path=None):
     if parsed_dsl is None:
         raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml file')
 
-    combined_parsed_dsl = _combine_imports(parsed_dsl, dsl_file_path)
+    combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping, dsl_file_path)
 
-    #TODO: validate before imports? treat them dif?
-    if IMPORTS in combined_parsed_dsl:
-        del combined_parsed_dsl[IMPORTS]
     _validate_dsl_schema(combined_parsed_dsl)
 
     application_template = combined_parsed_dsl[APPLICATION_TEMPLATE]
@@ -59,13 +62,28 @@ def _parse(dsl_string, dsl_file_path=None):
 
     processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl), application_template["topology"])
 
+    top_level_workflows = _process_top_level_workflows(combined_parsed_dsl['workflows'], alias_mapping) if 'workflows'\
+                                                        in combined_parsed_dsl else {}
+
     plan = {
         'name': app_name,
-        'nodes': processed_nodes
+        'nodes': processed_nodes,
+        'workflows': top_level_workflows
     }
 
     return plan
 
+
+def _process_top_level_workflows(workflows, alias_mapping):
+    processed_workflows = {}
+    for name, flow_obj in workflows.iteritems():
+        if flow_obj.keys()[0] == 'ref':
+            filename = flow_obj.values()[0]
+            processed_workflows[name] = _apply_ref(filename, alias_mapping)
+        else: #flow_obj.keys()[0] == 'radial'
+            processed_workflows[name] = flow_obj.values()[0]
+
+    return processed_workflows
 
 
 def _process_node(node, parsed_dsl):
@@ -142,7 +160,7 @@ def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
     super_type_name = current_level_type['derived_from']
     if super_type_name not in parsed_dsl[TYPES]:
         raise DSLParsingLogicException(14, 'Missing definition for type {0} which is declared as derived by type {1}'
-                                       .format(super_type_name, dsl_type_name))
+        .format(super_type_name, dsl_type_name))
 
     super_type = parsed_dsl[TYPES][super_type_name]
     complete_super_type = _extract_complete_type(super_type, super_type_name, parsed_dsl)
@@ -165,6 +183,16 @@ def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
     merged_type[INTERFACES] = merged_interfaces
 
     return merged_type
+
+
+def _apply_ref(filename, alias_mapping):
+    if filename in alias_mapping:
+        filename = alias_mapping[filename]
+    try:
+        with open(filename, 'r') as f:
+            return f.read()
+    except EnvironmentError:
+        raise DSLParsingLogicException(15, 'Failed on ref - Unable to open file {0}'.format(filename))
 
 
 def _replace_or_add_interface(merged_interfaces, interface_element):
@@ -211,9 +239,7 @@ def _autowire_plugin(plugins, interface_name, type_name):
     return matching_plugins[0]
 
 
-
-
-def _combine_imports(parsed_dsl, dsl_file_path):
+def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
     merge_no_override = {INTERFACES, PLUGINS}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
@@ -223,11 +249,11 @@ def _combine_imports(parsed_dsl, dsl_file_path):
     _validate_imports_section(parsed_dsl[IMPORTS], dsl_file_path)
 
     ordered_imports_list = []
-    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, [], dsl_file_path)
+    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, [], dsl_file_path)
 
     for single_import in ordered_imports_list:
         try: #(note that this check is only to verify nothing went wrong in the meanwhile, as we've already read
-             # from all imported files earlier)
+        # from all imported files earlier)
             with open(single_import, 'r') as f:
                 parsed_imported_dsl = yaml.safe_load(f)
         except EnvironmentError:
@@ -252,10 +278,14 @@ def _combine_imports(parsed_dsl, dsl_file_path):
                         raise DSLParsingLogicException(4, 'Failed on import: Could not merge {0} due to conflict on '
                                                           'key {1}'.format(key, inner_key))
 
+    #clean the now unnecessary 'imports' section from the combined dsl
+    if IMPORTS in combined_parsed_dsl:
+        del combined_parsed_dsl[IMPORTS]
     return combined_parsed_dsl
 
 
-def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, current_path_imports_list, current_import):
+def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_path_imports_list,
+                                current_import):
     if current_import is not None:
         current_path_imports_list.append(current_import)
         ordered_imports_list.append(current_import)
@@ -266,11 +296,14 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, current_path_i
         return
 
     for another_import in parsed_dsl[IMPORTS]:
+        if another_import in alias_mapping:
+            another_import = alias_mapping[another_import]
+
         if another_import not in ordered_imports_list:
             try:
                 with open(another_import, 'r') as f:
                     imported_dsl = yaml.safe_load(f)
-                    _build_ordered_imports_list(imported_dsl, ordered_imports_list,
+                    _build_ordered_imports_list(imported_dsl, ordered_imports_list, alias_mapping,
                                                 current_path_imports_list, another_import)
             except EnvironmentError:
                 raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}'.format(another_import))
@@ -289,7 +322,7 @@ def _validate_dsl_schema(parsed_dsl):
         validate(parsed_dsl, DSL_SCHEMA)
     except ValidationError, ex:
         raise DSLParsingFormatException(1, '{0}; Path to error: {1}'.format(ex.message, '.'.join((str(x) for x in ex
-                                                                                                .path))))
+        .path))))
 
 
 def _validate_imports_section(imports_section, filename):

@@ -202,6 +202,62 @@ types:
         node = result['nodes'][0]
         self.assertEquals('val2', node['properties']['key2'])
 
+    def test_alias_mapping_imports(self):
+        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE
+        imported_filename = self.make_yaml_file(imported_yaml)
+        imported_alias = 'imported_alias'
+        yaml = """
+imports:
+    -   {0}""".format(imported_alias)
+        result = parse(yaml, {'{0}'.format(imported_alias): '{0}'.format(imported_filename)})
+        self._assert_minimal_application_template(result)
+
+    def test_empty_first_level_workflows(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+workflows: {}
+        """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+
+    def test_first_level_workflows_radial(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+workflows:
+        install:
+            radial: "my custom radial"
+        """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+        self.assertEquals('my custom radial', result['workflows']['install'])
+
+    def test_first_level_workflows_ref(self):
+        ref_alias = 'ref_alias'
+        radial_file_path = self.make_file_with_name('my custom radial', 'radial_file.radial')
+
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+workflows:
+        install:
+            ref: {0}
+        """.format(ref_alias)
+        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        self._assert_minimal_application_template(result)
+        self.assertEquals('my custom radial', result['workflows']['install'])
+
+    def test_first_level_workflows_both_radial_and_ref(self):
+        ref_alias = 'ref_alias'
+        radial_file_path = self.make_file_with_name('custom ref', 'radial_file.radial')
+
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+workflows:
+        install:
+            radial: "my custom radial"
+        uninstall:
+            ref: {0}
+        """.format(ref_alias)
+        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        self._assert_minimal_application_template(result)
+        self.assertEquals('my custom radial', result['workflows']['install'])
+        self.assertEquals('custom ref', result['workflows']['uninstall'])
+
 
 ########################################################################
 
