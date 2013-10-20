@@ -71,19 +71,23 @@ def _parse(dsl_string, dsl_file_path=None):
 
 
 def _validate_no_duplicate_nodes(nodes):
-    keyfunc = lambda node: node['name']
-    nodes.sort(key=keyfunc)
+    duplicate = _validate_no_duplicate_element(nodes, lambda node: node['name'])
+    if duplicate is not None:
+        ex = DSLParsingLogicException(101, 'Duplicate node definition detected, there are {0} nodes with name {'
+                                           '1} defined'.format(duplicate[1], duplicate[0]))
+        ex.duplicate_node_name = duplicate[0]
+        raise ex
+
+
+def _validate_no_duplicate_element(elements, keyfunc):
+    elements.sort(key=keyfunc)
     groups = []
     from itertools import groupby
-    for key, group in groupby(nodes, key=keyfunc):
+    for key, group in groupby(elements, key=keyfunc):
         groups.append(list(group))
     for group in groups:
         if len(group) > 1:
-            duplicate_node_name = group[0]['name']
-            ex = DSLParsingLogicException(101, 'Duplicate node definition detected, there are {0} nodes with name {'
-                                               '1} defined'.format(len(group), duplicate_node_name))
-            ex.duplicate_node_name = duplicate_node_name
-            raise ex
+            return keyfunc(group[0]), len(group)
 
 
 def _process_node(node, parsed_dsl):
@@ -107,6 +111,7 @@ def _process_node(node, parsed_dsl):
             raise DSLParsingLogicException(5, 'Must provide plugins section when providing interfaces section')
 
         implementation_interfaces = complete_node_type[INTERFACES]
+        _validate_no_duplicate_interfaces(implementation_interfaces, node['name'])
         for implementation_interface in implementation_interfaces:
             if type(implementation_interface) == dict:
                 #explicit declaration
@@ -156,6 +161,17 @@ def _process_node(node, parsed_dsl):
         processed_node[PROPERTIES] = node[PROPERTIES]
 
     return processed_node
+
+
+def _validate_no_duplicate_interfaces(implementation_interfaces, node_name):
+    duplicate = _validate_no_duplicate_element(implementation_interfaces, lambda interface: _get_interface_name(
+        interface))
+    if duplicate is not None:
+        ex = DSLParsingLogicException(102, 'Duplicate interface definition detected on node {0}, '
+                                           'interface {1} has duplicate definition'.format(node_name, duplicate[0]))
+        ex.duplicate_interface_name = duplicate[0]
+        ex.node_name = node_name
+        raise ex
 
 
 def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):

@@ -243,3 +243,15 @@ types:
 """
         ex = self._assert_dsl_parsing_exception_error_code(yaml, 101, DSLParsingLogicException)
         self.assertEquals('testNode', ex.duplicate_node_name)
+
+    def test_type_duplicate_interface(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+types:
+    test_type:
+        interfaces:
+            -   test_interface1
+            -   test_interface1: test_plugin
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(yaml, 102, DSLParsingLogicException)
+        self.assertEquals('testNode', ex.node_name)
+        self.assertEquals('test_interface1', ex.duplicate_interface_name)

@@ -418,6 +418,4 @@ imports:
         result = parse(top_level_yaml)
         self._assert_application_template(result)
 
-#TODO: tests for same interface twice / arrays with same values in general (node name,
-# implicit/explicit interfaces)
 #TODO: need to add pyyaml's exception when error 0 / maybe add nested error in more places
