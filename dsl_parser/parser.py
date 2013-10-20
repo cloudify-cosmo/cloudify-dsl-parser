@@ -19,6 +19,7 @@ PLUGINS = 'plugins'
 INTERFACES = 'interfaces'
 PROPERTIES = 'properties'
 
+
 __author__ = 'ran'
 
 import os
@@ -60,7 +61,9 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     application_template = combined_parsed_dsl[APPLICATION_TEMPLATE]
     app_name = application_template['name']
 
-    processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl), application_template["topology"])
+    nodes = application_template["topology"]
+    _validate_no_duplicate_nodes(nodes)
+    processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl), nodes)
 
     top_level_workflows = _process_top_level_workflows(combined_parsed_dsl['workflows'], alias_mapping) if 'workflows'\
                                                         in combined_parsed_dsl else {}
@@ -84,6 +87,22 @@ def _process_top_level_workflows(workflows, alias_mapping):
             processed_workflows[name] = flow_obj.values()[0]
 
     return processed_workflows
+
+
+def _validate_no_duplicate_nodes(nodes):
+    keyfunc = lambda node: node['name']
+    nodes.sort(key=keyfunc)
+    groups = []
+    from itertools import groupby
+    for key, group in groupby(nodes, key=keyfunc):
+        groups.append(list(group))
+    for group in groups:
+        if len(group) > 1:
+            duplicate_node_name = group[0]['name']
+            ex = DSLParsingLogicException(101, 'Duplicate node definition detected, there are {0} nodes with name {'
+                                               '1} defined'.format(len(group), duplicate_node_name))
+            ex.duplicate_node_name = duplicate_node_name
+            raise ex
 
 
 def _process_node(node, parsed_dsl):
@@ -276,8 +295,9 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
             # from all imported files earlier)
             with open(single_import, 'r') as f:
                 parsed_imported_dsl = yaml.safe_load(f)
-        except EnvironmentError:
-            raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}'.format(single_import))
+        except EnvironmentError, ex:
+            raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'.format(
+                                           single_import, ex.message))
 
         #combine the current file with the combined parsed dsl we have thus far
         for key, value in parsed_imported_dsl.iteritems():
@@ -310,6 +330,20 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
 
 def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, current_path_imports_list,
                                           current_import):
+    def _locate_import(another_import):
+        searched_locations = []
+        if os.path.exists(another_import):
+            return another_import
+        searched_locations.append(another_import)
+        if current_import is not None:
+            relative_path = os.path.join(os.path.dirname(current_import), another_import)
+            if os.path.exists(relative_path):
+                return relative_path
+            searched_locations.append(relative_path)
+        raise DSLParsingLogicException(13,
+                                       'Failed on import - Unable to locate import file; searched in {0}'
+                                       .format(searched_locations))
+
     if current_import is not None:
         current_path_imports_list.append(current_import)
         ordered_imports_list.append(current_import)
@@ -324,13 +358,15 @@ def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alia
             another_import = alias_mapping[another_import]
 
         if another_import not in ordered_imports_list:
+            import_path = _locate_import(another_import)
             try:
-                with open(another_import, 'r') as f:
+                with open(import_path, 'r') as f:
                     imported_dsl = yaml.safe_load(f)
                     _build_ordered_imports_list_recursive(imported_dsl, ordered_imports_list, alias_mapping,
-                                                          current_path_imports_list, another_import)
-            except EnvironmentError:
-                raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}'.format(another_import))
+                                                          current_path_imports_list, import_path)
+            except EnvironmentError, ex:
+                raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'
+                                                   ''.format(import_path, ex.message))
         elif another_import in current_path_imports_list:
             current_path_imports_list.append(another_import)
             ex = DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}'.format(

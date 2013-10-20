@@ -223,3 +223,23 @@ types:
         ex = self._assert_dsl_parsing_exception_error_code(yaml, 100, DSLParsingLogicException)
         expected_circular_dependency = ['test_type', 'test_type_parent', 'test_type_grandparent', 'test_type']
         self.assertEquals(expected_circular_dependency, ex.circular_dependency)
+
+    def test_node_duplicate_name(self):
+        yaml = """
+application_template:
+    name: testApp
+    topology:
+    -   name: testNode
+        type: test_type
+        properties:
+            key: "val"
+    -   name: testNode
+        type: test_type
+        properties:
+            key: "val"
+
+types:
+    test_type: {}
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(yaml, 101, DSLParsingLogicException)
+        self.assertEquals('testNode', ex.duplicate_node_name)
