@@ -107,8 +107,8 @@ def create_node_instances(node, suffixes_map):
 
     for i in range(number_of_instances):
         node_copy = node.copy()
-        node_copy['id'] = node_id + '_' + node_suffixes[i]
-        node_copy['host_id'] = host_id + '_' + host_suffixes[i]
+        node_copy['id'] = node_id + node_suffixes[i]
+        node_copy['host_id'] = host_id + host_suffixes[i]
         logger.debug("generated new node instance {0}".format(node_copy))
         if 'relationships' in node_copy:
             new_relationships = []
@@ -125,10 +125,14 @@ def create_node_instances(node, suffixes_map):
     return instances
 
 def _generate_unique_ids(number_of_ids):
-    ids = set([])
-    while (len(ids) < number_of_ids):
-        id = '%05x' % random.randrange(16**5)
-        if (id not in ids):
-            ids.add(id)
+
+    if number_of_ids == 1:
+        return [""]
+
+    ids = []
+    while len(ids) < number_of_ids:
+        id = '_%05x' % random.randrange(16**5)
+        if id not in ids:
+            ids.append(id)
 
     return list(ids)
