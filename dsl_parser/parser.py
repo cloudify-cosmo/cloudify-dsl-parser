@@ -17,8 +17,8 @@ IMPORTS = 'imports'
 TYPES = 'types'
 PLUGINS = 'plugins'
 INTERFACES = 'interfaces'
+WORKFLOWS = 'workflows'
 PROPERTIES = 'properties'
-
 
 __author__ = 'ran'
 
@@ -30,19 +30,17 @@ from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 
 
-filepath = os.path.join(os.path.join(os.path.dirname(__file__), os.pardir), os.path.join('resources',
-                                                                                         'alias-mappings.yaml'))
-with open(filepath, 'r') as f:
-    default_alias_mapping = yaml.safe_load(f.read())
-
-
-def parse_from_file(dsl_file_path, alias_mapping=default_alias_mapping):
+def parse_from_file(dsl_file_path, alias_mapping=None):
+    if alias_mapping is None:
+        alias_mapping = _get_default_alias_mapping()
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
         return _parse(dsl_string, alias_mapping, dsl_file_path)
 
 
-def parse(dsl_string, alias_mapping=default_alias_mapping):
+def parse(dsl_string, alias_mapping=None):
+    if alias_mapping is None:
+        alias_mapping = _get_default_alias_mapping()
     return _parse(dsl_string, alias_mapping)
 
 
@@ -63,22 +61,23 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
 
     nodes = application_template["topology"]
     _validate_no_duplicate_nodes(nodes)
-    processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl), nodes)
+    processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, alias_mapping), nodes)
 
-    top_level_workflows = _process_top_level_workflows(combined_parsed_dsl['workflows'], alias_mapping) if 'workflows'\
-                                                        in combined_parsed_dsl else {}
+    top_level_workflows = _process_workflows(combined_parsed_dsl[WORKFLOWS], alias_mapping) if WORKFLOWS in \
+                                                                                       combined_parsed_dsl else {}
 
     plan = {
         'name': app_name,
         'nodes': processed_nodes,
-        'workflows': top_level_workflows
+        WORKFLOWS: top_level_workflows
     }
 
     return plan
 
 
-def _process_top_level_workflows(workflows, alias_mapping):
+def _process_workflows(workflows, alias_mapping):
     processed_workflows = {}
+
     for name, flow_obj in workflows.iteritems():
         if flow_obj.keys()[0] == 'ref':
             filename = flow_obj.values()[0]
@@ -94,6 +93,7 @@ def _validate_no_duplicate_nodes(nodes):
     nodes.sort(key=keyfunc)
     groups = []
     from itertools import groupby
+
     for key, group in groupby(nodes, key=keyfunc):
         groups.append(list(group))
     for group in groups:
@@ -105,7 +105,7 @@ def _validate_no_duplicate_nodes(nodes):
             raise ex
 
 
-def _process_node(node, parsed_dsl):
+def _process_node(node, parsed_dsl, alias_mapping):
     node_type_name = node['type']
     processed_node = {'id': '{0}.{1}'.format(parsed_dsl[APPLICATION_TEMPLATE]['name'], node['name']),
                       'type': node_type_name}
@@ -167,12 +167,16 @@ def _process_node(node, parsed_dsl):
         processed_node[PLUGINS] = plugins
         processed_node['operations'] = operations
 
-    if PROPERTIES in complete_node_type:
-        processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
-        if PROPERTIES in node:
-            processed_node[PROPERTIES] = dict(processed_node[PROPERTIES].items() + node[PROPERTIES].items())
-    elif PROPERTIES in node:
-        processed_node[PROPERTIES] = node[PROPERTIES]
+    #merge properties
+    type_properties = _get_dict_prop(complete_node_type, PROPERTIES)
+    node_properties = _get_dict_prop(node, PROPERTIES)
+    processed_node[PROPERTIES] = dict(type_properties.items() + node_properties.items())
+
+    #merge workflows
+    type_workflows = _get_dict_prop(complete_node_type, WORKFLOWS)
+    node_workflows = _get_dict_prop(node, WORKFLOWS)
+    merged_workflows = dict(type_workflows.items() + node_workflows.items())
+    processed_node[WORKFLOWS] = _process_workflows(merged_workflows, alias_mapping)
 
     return processed_node
 
@@ -197,7 +201,7 @@ def _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, visite
     super_type_name = current_level_type['derived_from']
     if super_type_name not in parsed_dsl[TYPES]:
         raise DSLParsingLogicException(14, 'Missing definition for type {0} which is declared as derived by type {1}'
-                                       .format(super_type_name, dsl_type_name))
+        .format(super_type_name, dsl_type_name))
 
     super_type = parsed_dsl[TYPES][super_type_name]
     complete_super_type = _extract_complete_type_recursive(super_type, super_type_name, parsed_dsl,
@@ -208,6 +212,11 @@ def _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, visite
     current_level_type_properties = _get_dict_prop(merged_type, PROPERTIES)
     merged_properties = dict(complete_super_type_properties.items() + current_level_type_properties.items())
     merged_type[PROPERTIES] = merged_properties
+    #derive workflows
+    complete_super_type_workflows = _get_dict_prop(complete_super_type, WORKFLOWS)
+    current_level_type_workflows = _get_dict_prop(merged_type, WORKFLOWS)
+    merged_workflows = dict(complete_super_type_workflows.items() + current_level_type_workflows.items())
+    merged_type[WORKFLOWS] = merged_workflows
     #derive interfaces
     complete_super_type_interfaces = _get_list_prop(complete_super_type, INTERFACES)
     current_level_type_interfaces = _get_list_prop(merged_type, INTERFACES)
@@ -224,8 +233,7 @@ def _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, visite
 
 
 def _apply_ref(filename, alias_mapping):
-    if filename in alias_mapping:
-        filename = alias_mapping[filename]
+    filename = _apply_alias_mapping_if_available(filename, alias_mapping)
     try:
         with open(filename, 'r') as f:
             return f.read()
@@ -278,7 +286,7 @@ def _autowire_plugin(plugins, interface_name, type_name):
 
 
 def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
-    merge_no_override = {INTERFACES, PLUGINS}
+    merge_no_override = {INTERFACES, PLUGINS, WORKFLOWS}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
     if IMPORTS not in parsed_dsl:
@@ -297,7 +305,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
                 parsed_imported_dsl = yaml.safe_load(f)
         except EnvironmentError, ex:
             raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'.format(
-                                           single_import, ex.message))
+                single_import, ex.message))
 
         #combine the current file with the combined parsed dsl we have thus far
         for key, value in parsed_imported_dsl.iteritems():
@@ -325,6 +333,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
 
 
 def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import):
+    current_import = _apply_alias_mapping_if_available(current_import, alias_mapping)
     _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, [], current_import)
 
 
@@ -354,9 +363,7 @@ def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alia
         return
 
     for another_import in parsed_dsl[IMPORTS]:
-        if another_import in alias_mapping:
-            another_import = alias_mapping[another_import]
-
+        another_import = _apply_alias_mapping_if_available(another_import, alias_mapping)
         if another_import not in ordered_imports_list:
             import_path = _locate_import(another_import)
             try:
@@ -393,6 +400,18 @@ def _validate_imports_section(imports_section, filename):
     except ValidationError, ex:
         raise DSLParsingFormatException(2, 'Improper "imports" section in file {0}; {1}; Path to error: {2}'.format(
             filename, ex.message, '.'.join((str(x) for x in ex.path))))
+
+
+def _get_default_alias_mapping():
+    filepath = os.path.join(os.path.join(os.path.dirname(__file__), os.pardir), os.path.join('resources',
+                                                                                             'alias-mappings.yaml'))
+    with open(filepath, 'r') as f:
+        default_alias_mapping = yaml.safe_load(f.read())
+        return default_alias_mapping
+
+
+def _apply_alias_mapping_if_available(name, alias_mapping):
+    return alias_mapping[name] if name in alias_mapping else name
 
 
 class DSLParsingException(Exception):

@@ -16,7 +16,7 @@
 __author__ = 'ran'
 
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.parser import parse, parse_from_file
+from dsl_parser.parser import parse, parse_from_file, _get_default_alias_mapping
 
 
 class TestParserApi(AbstractTestParser):
@@ -139,19 +139,35 @@ interfaces:
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
 
     def test_recursive_imports(self):
-        bottom_level_yaml = self.BASIC_TYPE
+        bottom_level_yaml = self.BASIC_TYPE + """
+workflows:
+    install1:
+        radial: "bottom radial install1"
+                """
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
         mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+workflows:
+    install2:
+        radial: "mid radial install2"
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
         top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
+workflows:
+    install3:
+        radial: "top radial install3"
 imports:
     -   {0}""".format(mid_file_name)
+
         result = parse(top_level_yaml)
+
         self._assert_application_template(result)
+        self.assertEquals('bottom radial install1', result['workflows']['install1'])
+        self.assertEquals('mid radial install2', result['workflows']['install2'])
+        self.assertEquals('top radial install3', result['workflows']['install3'])
+        self.assertEquals(3, len(result['workflows']))
 
     def test_parse_dsl_from_file(self):
         filename = self.make_yaml_file(self.MINIMAL_APPLICATION_TEMPLATE)
@@ -212,6 +228,9 @@ imports:
         result = parse(yaml, {'{0}'.format(imported_alias): '{0}'.format(imported_filename)})
         self._assert_minimal_application_template(result)
 
+    def test_default_alias_mapping_file(self):
+        self.assertTrue(len(_get_default_alias_mapping()) > 0)
+
     def test_empty_first_level_workflows(self):
         yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
 workflows: {}
@@ -258,10 +277,174 @@ workflows:
         self.assertEquals('my custom radial', result['workflows']['install'])
         self.assertEquals('custom ref', result['workflows']['uninstall'])
 
+    def test_type_empty_workflows(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type:
+        workflows: {}
+    """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
 
-########################################################################
+    def test_type_workflows_both_radial_and_ref(self):
+        ref_alias = 'ref_alias'
+        radial_file_path = self.make_file_with_name('custom ref', 'radial_file.radial')
 
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type:
+        workflows:
+            install:
+                radial: "my custom radial"
+            uninstall:
+                ref: {0}
+            """.format(ref_alias)
+        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        self._assert_minimal_application_template(result)
+        node = result['nodes'][0]
+        self.assertEquals('my custom radial', node['workflows']['install'])
+        self.assertEquals('custom ref', node['workflows']['uninstall'])
+        self.assertEquals(2, len(node['workflows']))
 
+    def test_instance_empty_workflows(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+            workflows: {}
+types:
+    test_type: {}
+    """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+
+    def test_instance_workflows_both_radial_and_ref(self):
+        ref_alias = 'ref_alias'
+        radial_file_path = self.make_file_with_name('custom ref', 'radial_file.radial')
+
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+            workflows:
+                install:
+                    radial: "my custom radial"
+                uninstall:
+                    ref: {0}""".format(ref_alias) + """
+types:
+    test_type: {}
+    """
+
+        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        self._assert_minimal_application_template(result)
+        node = result['nodes'][0]
+        self.assertEquals('my custom radial', node['workflows']['install'])
+        self.assertEquals('custom ref', node['workflows']['uninstall'])
+        self.assertEquals(2, len(node['workflows']))
+
+    def test_type_workflows_recursive_inheritance(self):
+        #tests for multiple-hierarchy workflows inheritance between types,
+        #including back and forth switches between radial and ref overrides,
+        #as well as overridden non-existent ref values
+        ref_alias1 = 'ref_alias1'
+        radial_file1_path = self.make_file_with_name('ref install2', 'radial_file1.radial')
+        ref_alias2 = 'ref_alias2'
+        radial_file2_path = self.make_file_with_name('parent ref install5', 'radial_file2.radial')
+
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+types:
+    test_type:
+        derived_from: "test_type_parent"
+        workflows:
+            install1:
+                radial: "radial install1"
+            install2:
+                ref: {0}""".format(ref_alias1) + """
+            install4:
+                radial: "radial install4"
+
+    test_type_parent:
+        derived_from: "test_type_grandparent"
+        workflows:
+            install1:
+                ref: "parent ref install1"
+            install2:
+                radial: "parent radial install2"
+            install5:
+                ref: {0}""".format(ref_alias2) + """
+    test_type_grandparent:
+        workflows:
+            install1:
+                radial: "grandparent radial install1"
+            install2:
+                ref: "grandparent ref install2"
+            install3:
+                radial: "grandparent radial install3"
+            install4:
+                ref: "grandparent ref install4"
+            """
+
+        result = parse(yaml, {
+            '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
+            '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
+        })
+
+        self._assert_minimal_application_template(result)
+        node = result['nodes'][0]
+        self.assertEquals('radial install1', node['workflows']['install1'])
+        self.assertEquals('ref install2', node['workflows']['install2'])
+        self.assertEquals('grandparent radial install3', node['workflows']['install3'])
+        self.assertEquals('radial install4', node['workflows']['install4'])
+        self.assertEquals('parent ref install5', node['workflows']['install5'])
+        self.assertEquals(5, len(node['workflows']))
+
+    def test_type_and_node_workflows_recursive_inheritance(self):
+        #tests for multiple-hierarchy workflows inheritance between types and an instance,
+        #including back and forth switches between radial and ref overrides,
+        #as well as overridden non-existent ref values
+        ref_alias1 = 'ref_alias1'
+        radial_file1_path = self.make_file_with_name('node ref install2', 'radial_file1.radial')
+        ref_alias2 = 'ref_alias2'
+        radial_file2_path = self.make_file_with_name('ref install5', 'radial_file2.radial')
+
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+            workflows:
+                install1:
+                    radial: "node radial install1"
+                install2:
+                    ref: {0}""".format(ref_alias1) + """
+                install4:
+                    radial: "node radial install4"
+types:
+    test_type:
+        derived_from: "test_type_parent"
+        workflows:
+            install1:
+                ref: "ref install1"
+            install2:
+                radial: "radial install2"
+            install5:
+                ref: {0}""".format(ref_alias2) + """
+
+    test_type_parent:
+        workflows:
+            install1:
+                radial: "parent radial install1"
+            install2:
+                ref: "parent ref install2"
+            install3:
+                radial: "parent radial install3"
+            install4:
+                ref: "parent ref install4"
+            """
+
+        result = parse(yaml, {
+            '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
+            '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
+        })
+
+        self._assert_minimal_application_template(result)
+        node = result['nodes'][0]
+        self.assertEquals('node radial install1', node['workflows']['install1'])
+        self.assertEquals('node ref install2', node['workflows']['install2'])
+        self.assertEquals('parent radial install3', node['workflows']['install3'])
+        self.assertEquals('node radial install4', node['workflows']['install4'])
+        self.assertEquals('ref install5', node['workflows']['install5'])
+        self.assertEquals(5, len(node['workflows']))
 
     def test_type_properties_derivation(self):
         yaml = self.BASIC_APPLICATION_TEMPLATE + """

@@ -243,3 +243,12 @@ types:
 """
         ex = self._assert_dsl_parsing_exception_error_code(yaml, 101, DSLParsingLogicException)
         self.assertEquals('testNode', ex.duplicate_node_name)
+
+    def test_first_level_workflows_unavailable_ref(self):
+        ref_alias = 'custom_ref_alias'
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+workflows:
+        install:
+            ref: {0}
+        """.format(ref_alias)
+        self._assert_dsl_parsing_exception_error_code(yaml, 15)

@@ -15,6 +15,38 @@
 
 __author__ = 'ran'
 
+
+WORKFLOWS_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'oneOf': [
+                {
+                    'type': 'object',
+                    'properties': {
+                        'radial': {
+                            'type': 'string'
+                        }
+                    },
+                    'required': ['radial'],
+                    'additionalProperties': False
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'ref': {
+                            'type': 'string'
+                        }
+                    },
+                    'required': ['ref'],
+                    'additionalProperties': False
+                }
+            ]
+        }
+    }
+}
+
+
 # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
 # since no good YAML schema validator could be found (both for Python and at all).
 #
@@ -45,6 +77,7 @@ DSL_SCHEMA = {
                             'type': {
                                 'type': 'string'
                             },
+                            'workflows': WORKFLOWS_SCHEMA,
                             #the below 'properties' is our own "properties" and not the schema's meta language
                             'properties': {
                                 'type': 'object'
@@ -131,6 +164,7 @@ DSL_SCHEMA = {
                                 'minItems': 1
                             }
                         },
+                        'workflows': WORKFLOWS_SCHEMA,
                         #the below 'properties' is our own "properties" and not the schema's meta language
                         'properties': {
                             'type': 'object'
@@ -143,39 +177,12 @@ DSL_SCHEMA = {
                 }
             }
         },
-        'workflows': {
-            'type': 'object',
-            'patternProperties': {
-                '^': {
-                    'oneOf': [
-                        {
-                            'type': 'object',
-                            'properties': {
-                                'radial': {
-                                    'type': 'string'
-                                }
-                            },
-                            'required': ['radial'],
-                            'additionalProperties': False
-                        },
-                        {
-                            'type': 'object',
-                            'properties': {
-                                'ref': {
-                                    'type': 'string'
-                                }
-                            },
-                            'required': ['ref'],
-                            'additionalProperties': False
-                        }
-                    ]
-                }
-            }
-        },
+        'workflows': WORKFLOWS_SCHEMA,
     },
     'required': ['application_template'],
     'additionalProperties': False
 }
+
 
 IMPORTS_SCHEMA = {
     'type': 'array',
