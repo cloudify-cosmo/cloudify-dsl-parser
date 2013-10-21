@@ -224,54 +224,52 @@ def _validate_no_duplicate_interfaces(implementation_interfaces, node_name):
 
 
 def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
-    return _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, [])
-
-
-def _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, visited_dsl_types_names):
-    if dsl_type_name in visited_dsl_types_names:
+    def _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, visited_dsl_types_names):
+        if dsl_type_name in visited_dsl_types_names:
+            visited_dsl_types_names.append(dsl_type_name)
+            ex = DSLParsingLogicException(100, 'Failed parsing type {0}, Circular dependency detected: {1}'.format(
+                dsl_type_name, ' --> '.join(visited_dsl_types_names)))
+            ex.circular_dependency = visited_dsl_types_names
+            raise ex
         visited_dsl_types_names.append(dsl_type_name)
-        ex = DSLParsingLogicException(100, 'Failed parsing type {0}, Circular dependency detected: {1}'.format(
-            dsl_type_name, ' --> '.join(visited_dsl_types_names)))
-        ex.circular_dependency = visited_dsl_types_names
-        raise ex
-    visited_dsl_types_names.append(dsl_type_name)
-    current_level_type = copy.deepcopy(dsl_type)
-    #halt condition
-    if 'derived_from' not in current_level_type:
-        return current_level_type
+        current_level_type = copy.deepcopy(dsl_type)
+        #halt condition
+        if 'derived_from' not in current_level_type:
+            return current_level_type
 
-    super_type_name = current_level_type['derived_from']
-    if super_type_name not in parsed_dsl[TYPES]:
-        raise DSLParsingLogicException(14, 'Missing definition for type {0} which is declared as derived by type {1}'
-        .format(super_type_name, dsl_type_name))
+        super_type_name = current_level_type['derived_from']
+        if super_type_name not in parsed_dsl[TYPES]:
+            raise DSLParsingLogicException(14, 'Missing definition for type {0} which is declared as derived by type {1}'
+            .format(super_type_name, dsl_type_name))
 
-    super_type = parsed_dsl[TYPES][super_type_name]
-    complete_super_type = _extract_complete_type_recursive(super_type, super_type_name, parsed_dsl,
-                                                           visited_dsl_types_names)
-    merged_type = current_level_type
-    #derive properties
-    complete_super_type_properties = _get_dict_prop(complete_super_type, PROPERTIES)
-    current_level_type_properties = _get_dict_prop(merged_type, PROPERTIES)
-    merged_properties = dict(complete_super_type_properties.items() + current_level_type_properties.items())
-    merged_type[PROPERTIES] = merged_properties
-    #derive workflows
-    complete_super_type_workflows = _get_dict_prop(complete_super_type, WORKFLOWS)
-    current_level_type_workflows = _get_dict_prop(merged_type, WORKFLOWS)
-    merged_workflows = dict(complete_super_type_workflows.items() + current_level_type_workflows.items())
-    merged_type[WORKFLOWS] = merged_workflows
-    #derive interfaces
-    complete_super_type_interfaces = _get_list_prop(complete_super_type, INTERFACES)
-    current_level_type_interfaces = _get_list_prop(merged_type, INTERFACES)
-    merged_interfaces = complete_super_type_interfaces
+        super_type = parsed_dsl[TYPES][super_type_name]
+        complete_super_type = _extract_complete_type_recursive(super_type, super_type_name, parsed_dsl,
+                                                               visited_dsl_types_names)
+        merged_type = current_level_type
+        #derive properties
+        complete_super_type_properties = _get_dict_prop(complete_super_type, PROPERTIES)
+        current_level_type_properties = _get_dict_prop(merged_type, PROPERTIES)
+        merged_properties = dict(complete_super_type_properties.items() + current_level_type_properties.items())
+        merged_type[PROPERTIES] = merged_properties
+        #derive workflows
+        complete_super_type_workflows = _get_dict_prop(complete_super_type, WORKFLOWS)
+        current_level_type_workflows = _get_dict_prop(merged_type, WORKFLOWS)
+        merged_workflows = dict(complete_super_type_workflows.items() + current_level_type_workflows.items())
+        merged_type[WORKFLOWS] = merged_workflows
+        #derive interfaces
+        complete_super_type_interfaces = _get_list_prop(complete_super_type, INTERFACES)
+        current_level_type_interfaces = _get_list_prop(merged_type, INTERFACES)
+        merged_interfaces = complete_super_type_interfaces
 
-    for interface_element in current_level_type_interfaces:
-        #we need to replace interface elements in the merged_interfaces if their interface name
-        #matches this interface_element
-        _replace_or_add_interface(merged_interfaces, interface_element)
+        for interface_element in current_level_type_interfaces:
+            #we need to replace interface elements in the merged_interfaces if their interface name
+            #matches this interface_element
+            _replace_or_add_interface(merged_interfaces, interface_element)
 
-    merged_type[INTERFACES] = merged_interfaces
+        merged_type[INTERFACES] = merged_interfaces
 
-    return merged_type
+        return merged_type
+    return _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, [])
 
 
 def _apply_ref(filename, alias_mapping):
@@ -390,55 +388,54 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
 
 
 def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import):
-    current_import = _apply_alias_mapping_if_available(current_import, alias_mapping)
-    _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, [], current_import)
+    def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, current_path_imports_list,
+                                              current_import):
+        def _locate_import(another_import):
+            searched_locations = []
+            if os.path.exists(another_import):
+                return another_import
+            searched_locations.append(another_import)
+            if current_import is not None:
+                relative_path = os.path.join(os.path.dirname(current_import), another_import)
+                if os.path.exists(relative_path):
+                    return relative_path
+                searched_locations.append(relative_path)
+            raise DSLParsingLogicException(13,
+                                           'Failed on import - Unable to locate import file; searched in {0}'
+                                           .format(searched_locations))
 
-
-def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, current_path_imports_list,
-                                          current_import):
-    def _locate_import(another_import):
-        searched_locations = []
-        if os.path.exists(another_import):
-            return another_import
-        searched_locations.append(another_import)
         if current_import is not None:
-            relative_path = os.path.join(os.path.dirname(current_import), another_import)
-            if os.path.exists(relative_path):
-                return relative_path
-            searched_locations.append(relative_path)
-        raise DSLParsingLogicException(13,
-                                       'Failed on import - Unable to locate import file; searched in {0}'
-                                       .format(searched_locations))
+            current_path_imports_list.append(current_import)
+            ordered_imports_list.append(current_import)
 
-    if current_import is not None:
-        current_path_imports_list.append(current_import)
-        ordered_imports_list.append(current_import)
+        if IMPORTS not in parsed_dsl:
+            if current_import is not None:
+                current_path_imports_list.pop()
+            return
 
-    if IMPORTS not in parsed_dsl:
+        for another_import in parsed_dsl[IMPORTS]:
+            another_import = _apply_alias_mapping_if_available(another_import, alias_mapping)
+            if another_import not in ordered_imports_list:
+                import_path = _locate_import(another_import)
+                try:
+                    with open(import_path, 'r') as f:
+                        imported_dsl = yaml.safe_load(f)
+                        _build_ordered_imports_list_recursive(imported_dsl, ordered_imports_list, alias_mapping,
+                                                              current_path_imports_list, import_path)
+                except EnvironmentError, ex:
+                    raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'
+                                                       ''.format(import_path, ex.message))
+            elif another_import in current_path_imports_list:
+                current_path_imports_list.append(another_import)
+                ex = DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}'.format(
+                    " --> ".join(current_path_imports_list)))
+                ex.circular_path = current_path_imports_list
+                raise ex
         if current_import is not None:
             current_path_imports_list.pop()
-        return
 
-    for another_import in parsed_dsl[IMPORTS]:
-        another_import = _apply_alias_mapping_if_available(another_import, alias_mapping)
-        if another_import not in ordered_imports_list:
-            import_path = _locate_import(another_import)
-            try:
-                with open(import_path, 'r') as f:
-                    imported_dsl = yaml.safe_load(f)
-                    _build_ordered_imports_list_recursive(imported_dsl, ordered_imports_list, alias_mapping,
-                                                          current_path_imports_list, import_path)
-            except EnvironmentError, ex:
-                raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'
-                                                   ''.format(import_path, ex.message))
-        elif another_import in current_path_imports_list:
-            current_path_imports_list.append(another_import)
-            ex = DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}'.format(
-                " --> ".join(current_path_imports_list)))
-            ex.circular_path = current_path_imports_list
-            raise ex
-    if current_import is not None:
-        current_path_imports_list.pop()
+    current_import = _apply_alias_mapping_if_available(current_import, alias_mapping)
+    _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, [], current_import)
 
 
 def _validate_dsl_schema(parsed_dsl):
