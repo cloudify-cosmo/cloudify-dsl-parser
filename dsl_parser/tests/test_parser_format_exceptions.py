@@ -347,3 +347,72 @@ types:
     test_type: {}
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_policies_extra_properties(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        custom_policy:
+            message: "custom message"
+            policy: "custom closure code"
+            extra_prop: "extra prop value"
+    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_policies_both_policy_and_ref(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        custom_policy:
+            message: "custom message"
+            policy: "custom closure code"
+            ref: "ref value"
+    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_policies_no_policy_and_ref(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        custom_policy:
+            message: "custom message"
+    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_policies_no_message(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        custom_policy:
+            ref: "ref value"
+    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_policies_rules_no_message(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+policies:
+    rules:
+        custom_rule:
+            rule: "custom closure code"
+    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_policies_rules_no_rule(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+policies:
+    rules:
+        custom_rule:
+            message: "custom message"
+    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_policies_rules_extra_prop(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+policies:
+    rules:
+        custom_rule:
+            message: "custom message"
+            rule: "custom closure code"
+            extra_prop: "extra prop value"
+    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)

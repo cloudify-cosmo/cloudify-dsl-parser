@@ -48,9 +48,9 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     try:
         parsed_dsl = yaml.safe_load(dsl_string)
     except ParserError, ex:
-        raise DSLParsingFormatException(-1, 'Failed to parse DSL: Illegal yaml file')
+        raise DSLParsingFormatException(-1, 'Failed to parse DSL: Illegal yaml')
     if parsed_dsl is None:
-        raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml file')
+        raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml')
 
     combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping, dsl_file_path)
 
@@ -64,28 +64,54 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, alias_mapping), nodes)
 
     top_level_workflows = _process_workflows(combined_parsed_dsl[WORKFLOWS], alias_mapping) if WORKFLOWS in \
-                                                                                       combined_parsed_dsl else {}
+                                                                                           combined_parsed_dsl else {}
+
+    top_level_policies_and_rules_tuple = _process_policies(combined_parsed_dsl['policies'], alias_mapping) if \
+        'policies' in combined_parsed_dsl else ({}, {})
 
     plan = {
         'name': app_name,
         'nodes': processed_nodes,
-        WORKFLOWS: top_level_workflows
+        WORKFLOWS: top_level_workflows,
+        'policies_events': top_level_policies_and_rules_tuple[0],
+        'rules': top_level_policies_and_rules_tuple[1]
     }
 
     return plan
+
+
+def _process_policies(policies, alias_mapping):
+    processed_policies_events = {}
+    processed_rules = {}
+
+    if 'types' in policies:
+        for name, policy_event_obj in policies['types'].iteritems():
+            processed_policies_events[name] = {}
+            processed_policies_events[name]['message'] = policy_event_obj['message']
+            processed_policies_events[name]['policy'] = _process_ref_or_inline_value(policy_event_obj, 'policy',
+                                                                                     alias_mapping)
+    if 'rules' in policies:
+        for name, rule_obj in policies['rules'].iteritems():
+            processed_rules[name] = copy.copy(rule_obj)
+
+    return processed_policies_events, processed_rules
 
 
 def _process_workflows(workflows, alias_mapping):
     processed_workflows = {}
 
     for name, flow_obj in workflows.iteritems():
-        if flow_obj.keys()[0] == 'ref':
-            filename = flow_obj.values()[0]
-            processed_workflows[name] = _apply_ref(filename, alias_mapping)
-        else: #flow_obj.keys()[0] == 'radial'
-            processed_workflows[name] = flow_obj.values()[0]
+        processed_workflows[name] = _process_ref_or_inline_value(flow_obj, 'radial', alias_mapping)
 
     return processed_workflows
+
+
+def _process_ref_or_inline_value(ref_or_inline_obj, inline_key_name, alias_mapping):
+    if 'ref' in ref_or_inline_obj:
+        filename = ref_or_inline_obj['ref']
+        return _apply_ref(filename, alias_mapping)
+    else: #inline
+        return ref_or_inline_obj[inline_key_name]
 
 
 def _validate_no_duplicate_nodes(nodes):
@@ -101,6 +127,7 @@ def _validate_no_duplicate_element(elements, keyfunc):
     elements.sort(key=keyfunc)
     groups = []
     from itertools import groupby
+
     for key, group in groupby(elements, key=keyfunc):
         groups.append(list(group))
     for group in groups:
@@ -301,7 +328,18 @@ def _autowire_plugin(plugins, interface_name, type_name):
 
 
 def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
+    def merge_into_dict_or_throw_on_duplicate(from_dict, to_dict, top_level_key, path):
+        if not path: path = []
+        for key, value in from_dict.iteritems():
+            if key not in to_dict:
+                to_dict[key] = value
+            else:
+                path.append(key)
+                raise DSLParsingLogicException(4, 'Failed on import: Could not merge {0} due to conflict '
+                                                  'on path {1}'.format(top_level_key, ' --> '.join(path)))
+
     merge_no_override = {INTERFACES, PLUGINS, WORKFLOWS}
+    merge_one_nested_level_no_override = {'policies'}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
     if IMPORTS not in parsed_dsl:
@@ -324,22 +362,26 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
 
         #combine the current file with the combined parsed dsl we have thus far
         for key, value in parsed_imported_dsl.iteritems():
-            if key == IMPORTS:
+            if key == IMPORTS: #no need to merge those..
                 continue
             if key not in combined_parsed_dsl:
                 #simply add this first level property to the dsl
                 combined_parsed_dsl[key] = value
             else:
-                if key not in merge_no_override:
+                if key in merge_no_override:
+                    #this section will combine dictionary entries of the top level only, with no overrides
+                    merge_into_dict_or_throw_on_duplicate(value, combined_parsed_dsl[key], key, [])
+                elif key in merge_one_nested_level_no_override:
+                    #this section will combine dictionary entries on up to one nested level, yet without overrides
+                    for nested_key, nested_value in value.iteritems():
+                        if nested_key not in combined_parsed_dsl[key]:
+                            combined_parsed_dsl[key][nested_key] = nested_value
+                        else:
+                            merge_into_dict_or_throw_on_duplicate(nested_value, combined_parsed_dsl[key][nested_key],
+                                                                  key, [nested_key])
+                else:
                     #first level property is not white-listed for merge - throw an exception
                     raise DSLParsingLogicException(3, 'Failed on import: non-mergeable field {0}'.format(key))
-                    #going over the key-value pairs of the property we're merging
-                for inner_key, inner_value in value.iteritems():
-                    if inner_key not in combined_parsed_dsl[key]:
-                        combined_parsed_dsl[key][inner_key] = inner_value
-                    else:
-                        raise DSLParsingLogicException(4, 'Failed on import: Could not merge {0} due to conflict on '
-                                                          'key {1}'.format(key, inner_key))
 
     #clean the now unnecessary 'imports' section from the combined dsl
     if IMPORTS in combined_parsed_dsl:

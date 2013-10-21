@@ -138,23 +138,22 @@ interfaces:
         self.assertEquals('other_test_plugin', operations['shutdown'])
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
 
-    def test_recursive_imports(self):
-        bottom_level_yaml = self.BASIC_TYPE + """
+    def test_workflows_recursive_imports(self):
+        bottom_level_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
 workflows:
     install1:
         radial: "bottom radial install1"
-                """
-        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
+        """
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
+        mid_level_yaml = """
 workflows:
     install2:
         radial: "mid radial install2"
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
-
-        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        top_level_yaml = """
 workflows:
     install3:
         radial: "top radial install3"
@@ -162,12 +161,82 @@ imports:
     -   {0}""".format(mid_file_name)
 
         result = parse(top_level_yaml)
-
-        self._assert_application_template(result)
+        self._assert_minimal_application_template(result)
+        self.assertEquals(3, len(result['workflows']))
         self.assertEquals('bottom radial install1', result['workflows']['install1'])
         self.assertEquals('mid radial install2', result['workflows']['install2'])
         self.assertEquals('top radial install3', result['workflows']['install3'])
-        self.assertEquals(3, len(result['workflows']))
+
+    def test_policies_and_rules_recursive_imports(self):
+        bottom_level_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        policy1:
+            message: "bottom policy1"
+            policy: "bottom closure policy1"
+    rules:
+        rule1:
+            message: "bottom rule1"
+            rule: "bottom closure rule1"
+        """
+
+        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
+        mid_level_yaml = """
+policies:
+    types:
+        policy2:
+            message: "mid policy2"
+            policy: "mid closure policy2"
+        policy3:
+            message: "mid policy3"
+            policy: "mid closure policy3"
+imports:
+    -   {0}""".format(bottom_file_name)
+        mid_file_name = self.make_yaml_file(mid_level_yaml)
+        top_level_yaml = """
+policies:
+    rules:
+        rule2:
+            message: "top rule2"
+            rule: "top closure rule2"
+        rule3:
+            message: "top rule3"
+            rule: "top closure rule3"
+imports:
+    -   {0}""".format(mid_file_name)
+
+        result = parse(top_level_yaml)
+        self._assert_minimal_application_template(result)
+        self.assertEquals(3, len(result['policies_events']))
+        self.assertEquals(3, len(result['rules']))
+        self.assertEquals('bottom policy1', result['policies_events']['policy1']['message'])
+        self.assertEquals('bottom closure policy1', result['policies_events']['policy1']['policy'])
+        self.assertEquals('mid policy2', result['policies_events']['policy2']['message'])
+        self.assertEquals('mid closure policy2', result['policies_events']['policy2']['policy'])
+        self.assertEquals('mid policy3', result['policies_events']['policy3']['message'])
+        self.assertEquals('mid closure policy3', result['policies_events']['policy3']['policy'])
+        self.assertEquals('bottom rule1', result['rules']['rule1']['message'])
+        self.assertEquals('bottom closure rule1', result['rules']['rule1']['rule'])
+        self.assertEquals('top rule2', result['rules']['rule2']['message'])
+        self.assertEquals('top closure rule2', result['rules']['rule2']['rule'])
+        self.assertEquals('top rule3', result['rules']['rule3']['message'])
+        self.assertEquals('top closure rule3', result['rules']['rule3']['rule'])
+
+    def test_recursive_imports(self):
+        bottom_level_yaml = self.BASIC_TYPE
+        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
+
+        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+imports:
+    -   {0}""".format(bottom_file_name)
+        mid_file_name = self.make_yaml_file(mid_level_yaml)
+
+        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
+imports:
+    -   {0}""".format(mid_file_name)
+
+        result = parse(top_level_yaml)
+        self._assert_application_template(result)
 
     def test_parse_dsl_from_file(self):
         filename = self.make_yaml_file(self.MINIMAL_APPLICATION_TEMPLATE)
@@ -644,11 +713,11 @@ plugins:
 
     def test_relative_path_import(self):
         bottom_level_yaml = self.BASIC_TYPE
-        self.make_file_with_name(bottom_level_yaml, 'buttom_level.yaml')
+        self.make_file_with_name(bottom_level_yaml, 'bottom_level.yaml')
 
         mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
 imports:
-    -   \"buttom_level.yaml\""""
+    -   \"bottom_level.yaml\""""
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
         top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
@@ -657,4 +726,94 @@ imports:
         result = parse(top_level_yaml)
         self._assert_application_template(result)
 
-#TODO: need to add pyyaml's exception when error 0 / maybe add nested error in more places
+    def test_empty_top_level_policies(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies: {}
+        """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+        self.assertEquals(0, len(result['policies_events']))
+        self.assertEquals(0, len(result['rules']))
+
+    def test_empty_top_level_policies_events_and_rules(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    types: {}
+    rules: {}
+        """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+        self.assertEquals(0, len(result['policies_events']))
+        self.assertEquals(0, len(result['rules']))
+
+    def test_top_level_policies_with_inline_policy(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        custom_policy:
+            message: "custom message"
+            policy: "custom closure code"
+        """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+        self.assertEquals('custom message', result['policies_events']['custom_policy']['message'])
+        self.assertEquals('custom closure code', result['policies_events']['custom_policy']['policy'])
+
+    def test_top_level_policies_with_ref(self):
+        ref_alias = 'ref_alias'
+        closure_file_path = self.make_file_with_name('custom closure code', 'closure_file.clj')
+
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        custom_policy:
+            message: "custom message"
+            ref: {0}
+            """.format(ref_alias)
+        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(closure_file_path)})
+        self._assert_minimal_application_template(result)
+        self.assertEquals('custom message', result['policies_events']['custom_policy']['message'])
+        self.assertEquals('custom closure code', result['policies_events']['custom_policy']['policy'])
+
+    def test_top_level_policies_with_both_ref_and_inline_policy(self):
+        ref_alias = 'ref_alias'
+        closure_file_path = self.make_file_with_name('custom closure code 2', 'closure_file.clj')
+
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        custom_policy:
+            message: "custom message"
+            policy: "custom closure code"
+        custom_policy2:
+            message: "custom message 2"
+            ref: "{0}"
+        """.format(ref_alias)
+        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(closure_file_path)})
+        self._assert_minimal_application_template(result)
+        self.assertEquals('custom message', result['policies_events']['custom_policy']['message'])
+        self.assertEquals('custom closure code', result['policies_events']['custom_policy']['policy'])
+        self.assertEquals('custom message 2', result['policies_events']['custom_policy2']['message'])
+        self.assertEquals('custom closure code 2', result['policies_events']['custom_policy2']['policy'])
+
+    def test_top_level_rules(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    rules:
+        custom_rule:
+            message: "custom message"
+            rule: "custom closure code"
+        custom_rule2:
+            message: "custom message 2"
+            rule: "custom closure code 2"
+        """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+        self.assertEquals('custom message', result['rules']['custom_rule']['message'])
+        self.assertEquals('custom closure code', result['rules']['custom_rule']['rule'])
+        self.assertEquals('custom message 2', result['rules']['custom_rule2']['message'])
+        self.assertEquals('custom closure code 2', result['rules']['custom_rule2']['rule'])
+
+
+# policies = same as node policies + inheritance
+# node/type policies/rules ref stuff from policies section

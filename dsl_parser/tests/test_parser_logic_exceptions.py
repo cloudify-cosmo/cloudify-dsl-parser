@@ -151,6 +151,40 @@ interfaces:
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
 
+    def test_illegal_merge_on_nested_mergeable_policies_events_on_import(self):
+        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        policy1:
+            message: "custom message"
+            policy: "custom closure code"
+            """
+        yaml = self.create_yaml_with_imports([imported_yaml]) + """
+policies:
+    types:
+        policy1:
+            message: "some other message"
+            policy: "some other code"
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+
+    def test_illegal_merge_on_nested_mergeable_rules_on_import(self):
+        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    rules:
+        rule1:
+            message: "custom message"
+            rule: "custom closure code"
+            """
+        yaml = self.create_yaml_with_imports([imported_yaml]) + """
+policies:
+    rules:
+        rule1:
+            message: "some other message"
+            rule: "some other code"
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+
     def test_recursive_imports_with_inner_circular(self):
         bottom_level_yaml = """
 imports:
@@ -248,8 +282,8 @@ types:
         ref_alias = 'custom_ref_alias'
         yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
 workflows:
-        install:
-            ref: {0}
+    install:
+        ref: {0}
         """.format(ref_alias)
         self._assert_dsl_parsing_exception_error_code(yaml, 15)
 
@@ -264,3 +298,14 @@ types:
         ex = self._assert_dsl_parsing_exception_error_code(yaml, 102, DSLParsingLogicException)
         self.assertEquals('testNode', ex.node_name)
         self.assertEquals('test_interface1', ex.duplicate_interface_name)
+
+    def test_first_level_policy_unavailable_ref(self):
+        ref_alias = 'custom_ref_alias'
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        custom_policy:
+            message: "custom message"
+            ref: {0}
+        """.format(ref_alias)
+        self._assert_dsl_parsing_exception_error_code(yaml, 15)

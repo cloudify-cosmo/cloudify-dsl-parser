@@ -137,6 +137,65 @@ DSL_SCHEMA = {
                 }
             }
         },
+        'policies': {
+            'type': 'object',
+            'properties': {
+                'types': {
+                    'type': 'object',
+                    'patternProperties': {
+                        '^': {
+                            'oneOf': [
+                                {
+                                    'type': 'object',
+                                    'properties': {
+                                        'message': {
+                                            'type': 'string'
+                                        },
+                                        'policy': {
+                                            'type': 'string'
+                                        }
+                                    },
+                                    'required': ['message', 'policy'],
+                                    'additionalProperties': False
+                                },
+                                {
+                                    'type': 'object',
+                                    'properties': {
+                                        'message': {
+                                            'type': 'string'
+                                        },
+                                        'ref': {
+                                            'type': 'string'
+                                        }
+                                    },
+                                    'required': ['message', 'ref'],
+                                    'additionalProperties': False
+                                }
+                            ]
+                        }
+                    }
+                },
+                'rules': {
+                    'type': 'object',
+                    'patternProperties': {
+                        '^': {
+                            'type': 'object',
+                            'properties': {
+                                'message': {
+                                    'type': 'string'
+                                },
+                                'rule': {
+                                    'type': 'string'
+                                }
+                            },
+                            'required': ['message', 'rule'],
+                            'additionalProperties': False
+                        }
+                    }
+                }
+            },
+            'additionalProperties': False
+        },
         'types': {
             'type': 'object',
             'patternProperties': {
