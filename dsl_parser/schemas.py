@@ -20,6 +20,7 @@ WORKFLOWS_SCHEMA = {
     'type': 'object',
     'patternProperties': {
         '^': {
+            'type': 'object',
             'oneOf': [
                 {
                     'type': 'object',
@@ -46,6 +47,47 @@ WORKFLOWS_SCHEMA = {
     }
 }
 
+INSTANCE_OR_TYPE_POLICIES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'properties': {
+                'rules': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            #non-meta 'type'
+                            'type': {
+                                'type': 'string'
+                            },
+                            #non-meta 'properties'
+                            'properties': {
+                                'type': 'object',
+                                'properties': {
+                                    'state': {
+                                        'type': 'string'
+                                    },
+                                    'value': {
+                                        'type': 'string'
+                                    }
+                                },
+                                'required': ['state', 'value'],
+                                'additionalProperties': False
+                            }
+                        },
+                        'required': ['type', 'properties'],
+                        'additionalProperties': False
+                    },
+                    'minItems': 1
+                }
+            },
+            'required': ['rules'],
+            'additionalProperties': False
+        }
+    }
+}
 
 # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
 # since no good YAML schema validator could be found (both for Python and at all).
@@ -73,12 +115,13 @@ DSL_SCHEMA = {
                             'name': {
                                 'type': 'string'
                             },
-                            #the below 'type' is our own "type" and not the schema's meta language
+                            #non-meta 'type'
                             'type': {
                                 'type': 'string'
                             },
                             'workflows': WORKFLOWS_SCHEMA,
-                            #the below 'properties' is our own "properties" and not the schema's meta language
+                            'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
+                            #non-meta 'properties'
                             'properties': {
                                 'type': 'object'
                             }
@@ -117,7 +160,7 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        #the below 'properties' is our own "properties" and not the schema's meta language
+                        #non-meta 'properties'
                         'properties': {
                             'type': 'object',
                             'properties': {
@@ -144,6 +187,7 @@ DSL_SCHEMA = {
                     'type': 'object',
                     'patternProperties': {
                         '^': {
+                            'type': 'object',
                             'oneOf': [
                                 {
                                     'type': 'object',
@@ -204,6 +248,7 @@ DSL_SCHEMA = {
                     'properties': {
                         'interfaces': {
                             'type': 'array',
+                            'minItems': 1,
                             'items': {
                                 'oneOf': [
                                     {
@@ -219,12 +264,12 @@ DSL_SCHEMA = {
                                     {
                                         'type': 'string'
                                     }
-                                ],
-                                'minItems': 1
+                                ]
                             }
                         },
                         'workflows': WORKFLOWS_SCHEMA,
-                        #the below 'properties' is our own "properties" and not the schema's meta language
+                        'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
+                        #non-meta 'properties'
                         'properties': {
                             'type': 'object'
                         },

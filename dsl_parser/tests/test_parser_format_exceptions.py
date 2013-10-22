@@ -47,7 +47,7 @@ interfaces:
         yaml = """
 application_template:
     topology:
-        -   name: testNode
+        -   name: test_node
             type: test_type
             properties:
                 key: "val"
@@ -58,7 +58,7 @@ application_template:
         yaml = """
 application_template:
     topology:
-        -   name: testNode
+        -   name: test_node
             type: test_type
             properties:
                 key: "val"
@@ -71,7 +71,7 @@ illegal_property:
     def test_node_without_name(self):
         yaml = """
 application_template:
-    name: testApp
+    name: test_app
     topology:
         -   type: test_type
             properties:
@@ -82,16 +82,16 @@ application_template:
     def test_node_without_type_declaration(self):
         yaml = """
 application_template:
-    name: testApp
+    name: test_app
     topology:
-        -   name: testNode
+        -   name: test_node
             properties:
                 key: "val"
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_interface_with_no_operations(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 interfaces:
     test_interface1: {}
         """
@@ -117,7 +117,7 @@ interfaces:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_illegal_interface_declaration(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -128,7 +128,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_illegal_interface_declaration_2(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -139,7 +139,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_empty_interfaces_declaration(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces: {}
@@ -147,7 +147,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_dsl_with_explicit_interface_mapped_to_two_plugins(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -161,7 +161,7 @@ types:
 
     def test_node_extra_properties(self):
         #testing for additional properties directly under node (i.e. not within the node's 'properties' section)
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
             extra_property: "val"
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
@@ -210,7 +210,7 @@ imports:
         self._assert_dsl_parsing_exception_error_code(yaml, 2, DSLParsingFormatException)
 
     def test_type_multiple_derivation(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 types:
     test_type:
         properties:
@@ -285,7 +285,7 @@ workflows:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_workflows_no_ref_or_radial(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 types:
     test_type:
         workflows:
@@ -295,7 +295,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_workflows_extra_properties(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 types:
     test_type:
         workflows:
@@ -306,7 +306,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_workflows_both_ref_and_radial(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 types:
     test_type:
         workflows:
@@ -317,61 +317,63 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_instance_workflows_no_ref_or_radial(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
             workflows:
                 install:
                     some_other_prop: "val"
-types:
-    test_type: {}
                     """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_instance_workflows_extra_properties(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
             workflows:
                 install:
                     radial: "custom radial"
                     some_other_prop: "val"
-types:
-    test_type: {}
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_instance_workflows_both_ref_and_radial(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
             workflows:
                 install:
                     radial: "custom radial"
                     ref: "custom_ref"
-types:
-    test_type: {}
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_extra_properties(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 policies:
     types:
         custom_policy:
             message: "custom message"
-            policy: "custom closure code"
+            policy: "custom clojure code"
             extra_prop: "extra prop value"
     """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_both_policy_and_ref(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 policies:
     types:
         custom_policy:
             message: "custom message"
-            policy: "custom closure code"
+            policy: "custom clojure code"
             ref: "ref value"
     """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
+    def test_top_level_policies_empty_policy(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+policies:
+    types:
+        custom_policy: {}
+    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
     def test_top_level_policies_no_policy_and_ref(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 policies:
     types:
         custom_policy:
@@ -380,7 +382,7 @@ policies:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_no_message(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 policies:
     types:
         custom_policy:
@@ -388,17 +390,26 @@ policies:
     """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
+    def test_top_level_policies_empty_rule(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+policies:
+    types:
+        custom_policy:
+            message: "custom message"
+    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
     def test_top_level_policies_rules_no_message(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 policies:
     rules:
         custom_rule:
-            rule: "custom closure code"
+            rule: "custom clojure code"
     """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_rules_no_rule(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 policies:
     rules:
         custom_rule:
@@ -407,12 +418,245 @@ policies:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_rules_extra_prop(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 policies:
     rules:
         custom_rule:
             message: "custom message"
-            rule: "custom closure code"
+            rule: "custom clojure code"
             extra_prop: "extra prop value"
     """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_policies_empty_policy(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy: {}
+                    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_policies_policy_with_empty_rules(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy:
+                    rules: []
+                    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_policies_policy_with_empty_rules(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy:
+                    rules: []
+                    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_policies_policy_with_extra_prop(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy:
+                    extra_prop: "value"
+                    rules:
+                        -   type: "custom type"
+                            properties:
+                                state: "custom state"
+                                value: "custom value"
+                    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_policies_rule_with_extra_prop(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy:
+                    rules:
+                        -   type: "custom type"
+                            extra_prop: "value"
+                            properties:
+                                state: "custom state"
+                                value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_policies_rule_without_type(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy:
+                    rules:
+                        -   properties:
+                                state: "custom state"
+                                value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_policies_rule_without_properties(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy:
+                    rules:
+                        -   type: "custom type"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+
+    def test_instance_policies_rule_properties_extra_prop(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy:
+                    rules:
+                        -   type: "custom type"
+                            properties:
+                                state: "custom state"
+                                value: "custom value"
+                                extra_prop: "value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_policies_rule_properties_without_value(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy:
+                    rules:
+                        -   type: "custom type"
+                            properties:
+                                state: "custom state"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_policies_rule_properties_without_state(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                custom_policy:
+                    rules:
+                        -   type: "custom type"
+                            properties:
+                                value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+
+
+
+    def test_type_policies_empty_policy(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy: {}
+                    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_policies_policy_with_empty_rules(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy:
+                rules: []
+                    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_policies_policy_with_empty_rules(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy:
+                rules: []
+                    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_policies_policy_with_extra_prop(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy:
+                extra_prop: "value"
+                rules:
+                    -   type: "custom type"
+                        properties:
+                            state: "custom state"
+                            value: "custom value"
+                    """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_policies_rule_with_extra_prop(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy:
+                rules:
+                    -   type: "custom type"
+                        extra_prop: "value"
+                        properties:
+                            state: "custom state"
+                            value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_policies_rule_without_type(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy:
+                rules:
+                    -   properties:
+                            state: "custom state"
+                            value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_policies_rule_without_properties(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy:
+                rules:
+                    -   type: "custom type"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+
+    def test_type_policies_rule_properties_extra_prop(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy:
+                rules:
+                    -   type: "custom type"
+                        properties:
+                            state: "custom state"
+                            value: "custom value"
+                            extra_prop: "value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_policies_rule_properties_without_value(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy:
+                rules:
+                    -   type: "custom type"
+                        properties:
+                            state: "custom state"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_policies_rule_properties_without_state(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            custom_policy:
+                rules:
+                    -   type: "custom type"
+                        properties:
+                            value: "custom value"
+                """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)

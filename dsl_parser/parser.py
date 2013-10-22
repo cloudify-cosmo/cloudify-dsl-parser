@@ -18,6 +18,7 @@ TYPES = 'types'
 PLUGINS = 'plugins'
 INTERFACES = 'interfaces'
 WORKFLOWS = 'workflows'
+POLICIES = 'policies'
 PROPERTIES = 'properties'
 
 __author__ = 'ran'
@@ -59,25 +60,38 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     application_template = combined_parsed_dsl[APPLICATION_TEMPLATE]
     app_name = application_template['name']
 
-    nodes = application_template["topology"]
+    nodes = application_template['topology']
     _validate_no_duplicate_nodes(nodes)
-    processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, alias_mapping), nodes)
+
+    top_level_policies_and_rules_tuple = _process_policies(combined_parsed_dsl[POLICIES], alias_mapping) if \
+        POLICIES in combined_parsed_dsl else ({}, {})
+
+    processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
+                                                     alias_mapping), nodes)
 
     top_level_workflows = _process_workflows(combined_parsed_dsl[WORKFLOWS], alias_mapping) if WORKFLOWS in \
                                                                                            combined_parsed_dsl else {}
 
-    top_level_policies_and_rules_tuple = _process_policies(combined_parsed_dsl['policies'], alias_mapping) if \
-        'policies' in combined_parsed_dsl else ({}, {})
+    response_policies_section = _create_response_policies_section(processed_nodes)
 
     plan = {
         'name': app_name,
         'nodes': processed_nodes,
         WORKFLOWS: top_level_workflows,
+        POLICIES: response_policies_section,
         'policies_events': top_level_policies_and_rules_tuple[0],
         'rules': top_level_policies_and_rules_tuple[1]
     }
 
     return plan
+
+
+def _create_response_policies_section(processed_nodes):
+    response_policies_section = {}
+    for processed_node in processed_nodes:
+        if POLICIES in processed_node:
+            response_policies_section[processed_node['id']] = copy.deepcopy(processed_node[POLICIES])
+    return response_policies_section
 
 
 def _process_policies(policies, alias_mapping):
@@ -92,7 +106,7 @@ def _process_policies(policies, alias_mapping):
                                                                                      alias_mapping)
     if 'rules' in policies:
         for name, rule_obj in policies['rules'].iteritems():
-            processed_rules[name] = copy.copy(rule_obj)
+            processed_rules[name] = copy.deepcopy(rule_obj)
 
     return processed_policies_events, processed_rules
 
@@ -135,13 +149,13 @@ def _validate_no_duplicate_element(elements, keyfunc):
             return keyfunc(group[0]), len(group)
 
 
-def _process_node(node, parsed_dsl, alias_mapping):
+def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, alias_mapping):
     node_type_name = node['type']
-    processed_node = {'id': '{0}.{1}'.format(parsed_dsl[APPLICATION_TEMPLATE]['name'], node['name']),
+    node_name = node['name']
+    processed_node = {'id': '{0}.{1}'.format(parsed_dsl[APPLICATION_TEMPLATE]['name'], node_name),
                       'type': node_type_name}
 
-    plugins = {}
-    operations = {}
+    #handle types
     if TYPES not in parsed_dsl or node_type_name not in parsed_dsl[TYPES]:
         err_message = 'Could not locate node type: {0}; existing types: {1}'.format(node_type_name,
                                                                                     parsed_dsl[TYPES].keys() if
@@ -151,12 +165,15 @@ def _process_node(node, parsed_dsl, alias_mapping):
     node_type = parsed_dsl[TYPES][node_type_name]
     complete_node_type = _extract_complete_type(node_type, node_type_name, parsed_dsl)
 
+    #handle plugins and operations
+    plugins = {}
+    operations = {}
     if INTERFACES in complete_node_type:
         if complete_node_type[INTERFACES] and PLUGINS not in parsed_dsl:
             raise DSLParsingLogicException(5, 'Must provide plugins section when providing interfaces section')
 
         implementation_interfaces = complete_node_type[INTERFACES]
-        _validate_no_duplicate_interfaces(implementation_interfaces, node['name'])
+        _validate_no_duplicate_interfaces(implementation_interfaces, node_name)
         for implementation_interface in implementation_interfaces:
             if type(implementation_interface) == dict:
                 #explicit declaration
@@ -199,17 +216,34 @@ def _process_node(node, parsed_dsl, alias_mapping):
         processed_node['operations'] = operations
 
     #merge properties
-    type_properties = _get_dict_prop(complete_node_type, PROPERTIES)
-    node_properties = _get_dict_prop(node, PROPERTIES)
-    processed_node[PROPERTIES] = dict(type_properties.items() + node_properties.items())
+    processed_node[PROPERTIES] = _merge_sub_dicts(complete_node_type, node, PROPERTIES)
 
     #merge workflows
-    type_workflows = _get_dict_prop(complete_node_type, WORKFLOWS)
-    node_workflows = _get_dict_prop(node, WORKFLOWS)
-    merged_workflows = dict(type_workflows.items() + node_workflows.items())
+    merged_workflows = _merge_sub_dicts(complete_node_type, node, WORKFLOWS)
     processed_node[WORKFLOWS] = _process_workflows(merged_workflows, alias_mapping)
 
+    #merge policies
+    processed_node[POLICIES] = _merge_sub_dicts(complete_node_type, node, POLICIES)
+    _validate_node_policies(processed_node[POLICIES], node_name, top_level_policies_and_rules_tuple)
+
     return processed_node
+
+
+def _validate_node_policies(policies, node_name, top_level_policies_and_rules_tuple):
+    #validating all policies and rules declared are indeed defined in the top level policies section
+    for policy_name, policy in policies.iteritems():
+        if policy_name not in top_level_policies_and_rules_tuple[0]:
+            raise DSLParsingLogicException(16, 'Failed to parse node {0}: policy {1} not defined'.format(node_name,
+                                                                                                         policy_name))
+        for rule in policy['rules']:
+            if rule['type'] not in top_level_policies_and_rules_tuple[1]:
+                raise DSLParsingLogicException(17, 'Failed to parse node {0}: rule {1} under policy {2} not '
+                                                   'defined'.format(node_name, rule['type'], policy_name))
+
+def _merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
+    overridden_sub_dict = _get_dict_prop(overridden_dict, sub_dict_key)
+    overriding_sub_dict = _get_dict_prop(overriding_dict, sub_dict_key)
+    return dict(overridden_sub_dict.items() + overriding_sub_dict.items())
 
 
 def _validate_no_duplicate_interfaces(implementation_interfaces, node_name):
@@ -247,15 +281,11 @@ def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
                                                                visited_dsl_types_names)
         merged_type = current_level_type
         #derive properties
-        complete_super_type_properties = _get_dict_prop(complete_super_type, PROPERTIES)
-        current_level_type_properties = _get_dict_prop(merged_type, PROPERTIES)
-        merged_properties = dict(complete_super_type_properties.items() + current_level_type_properties.items())
-        merged_type[PROPERTIES] = merged_properties
+        merged_type[PROPERTIES] = _merge_sub_dicts(complete_super_type, merged_type, PROPERTIES)
         #derive workflows
-        complete_super_type_workflows = _get_dict_prop(complete_super_type, WORKFLOWS)
-        current_level_type_workflows = _get_dict_prop(merged_type, WORKFLOWS)
-        merged_workflows = dict(complete_super_type_workflows.items() + current_level_type_workflows.items())
-        merged_type[WORKFLOWS] = merged_workflows
+        merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type, merged_type, WORKFLOWS)
+        #derive policies
+        merged_type[POLICIES] = _merge_sub_dicts(complete_super_type, merged_type, POLICIES)
         #derive interfaces
         complete_super_type_interfaces = _get_list_prop(complete_super_type, INTERFACES)
         current_level_type_interfaces = _get_list_prop(merged_type, INTERFACES)
@@ -326,8 +356,7 @@ def _autowire_plugin(plugins, interface_name, type_name):
 
 
 def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
-    def merge_into_dict_or_throw_on_duplicate(from_dict, to_dict, top_level_key, path):
-        if not path: path = []
+    def _merge_into_dict_or_throw_on_duplicate(from_dict, to_dict, top_level_key, path):
         for key, value in from_dict.iteritems():
             if key not in to_dict:
                 to_dict[key] = value
@@ -337,7 +366,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
                                                   'on path {1}'.format(top_level_key, ' --> '.join(path)))
 
     merge_no_override = {INTERFACES, PLUGINS, WORKFLOWS}
-    merge_one_nested_level_no_override = {'policies'}
+    merge_one_nested_level_no_override = {POLICIES}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
     if IMPORTS not in parsed_dsl:
@@ -368,14 +397,14 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
             else:
                 if key in merge_no_override:
                     #this section will combine dictionary entries of the top level only, with no overrides
-                    merge_into_dict_or_throw_on_duplicate(value, combined_parsed_dsl[key], key, [])
+                    _merge_into_dict_or_throw_on_duplicate(value, combined_parsed_dsl[key], key, [])
                 elif key in merge_one_nested_level_no_override:
                     #this section will combine dictionary entries on up to one nested level, yet without overrides
                     for nested_key, nested_value in value.iteritems():
                         if nested_key not in combined_parsed_dsl[key]:
                             combined_parsed_dsl[key][nested_key] = nested_value
                         else:
-                            merge_into_dict_or_throw_on_duplicate(nested_value, combined_parsed_dsl[key][nested_key],
+                            _merge_into_dict_or_throw_on_duplicate(nested_value, combined_parsed_dsl[key][nested_key],
                                                                   key, [nested_key])
                 else:
                     #first level property is not white-listed for merge - throw an exception

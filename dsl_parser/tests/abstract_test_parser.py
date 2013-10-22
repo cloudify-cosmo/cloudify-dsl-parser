@@ -25,12 +25,11 @@ from dsl_parser.parser import parse, parse_from_file
 
 
 class AbstractTestParser(unittest.TestCase):
-
-    BASIC_APPLICATION_TEMPLATE = """
+    BASIC_APPLICATION_TEMPLATE_SECTION = """
 application_template:
-    name: testApp
+    name: test_app
     topology:
-        -   name: testNode
+        -   name: test_node
             type: test_type
             properties:
                 key: "val"
@@ -59,12 +58,26 @@ types:
             install_agent: 'false'
             """
 
-    MINIMAL_APPLICATION_TEMPLATE = BASIC_APPLICATION_TEMPLATE + """
+    POLICIES_SECTION = """
+policies:
+    types:
+        test_policy:
+            message: "test policy message"
+            policy: "test policy code"
+    rules:
+        test_rule:
+            message: "test rule message"
+            rule: "test rule code"
+            """
+
+    #note that some tests extend the BASIC_APPLICATION_TEMPLATE 'inline', which is why it's appended in the end
+    MINIMAL_APPLICATION_TEMPLATE = """
 types:
     test_type: {}
-    """
+    """ + BASIC_APPLICATION_TEMPLATE_SECTION
 
-    APPLICATION_TEMPLATE = BASIC_APPLICATION_TEMPLATE + BASIC_INTERFACE_AND_PLUGIN + BASIC_TYPE
+    APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS = BASIC_APPLICATION_TEMPLATE_SECTION + \
+                                                       BASIC_INTERFACE_AND_PLUGIN + BASIC_TYPE
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
@@ -92,7 +105,7 @@ imports:"""
         return yaml
 
     def _assert_dsl_parsing_exception_error_code(self, dsl, expected_error_code, exception_type=DSLParsingException,
-                                                parsing_method=parse):
+                                                 parsing_method=parse):
         try:
             parsing_method(dsl)
             self.fail()
