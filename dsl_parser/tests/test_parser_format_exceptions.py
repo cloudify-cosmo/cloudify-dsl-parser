@@ -175,6 +175,7 @@ interfaces:
 
 plugins:
     test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface1"
             """
@@ -237,8 +238,25 @@ interfaces:
 
 plugins:
     test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             url: "http://test_url.zip"
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_plugin_without_derived_from_field(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+
+plugins:
+    test_plugin:
+        properties:
+            url: "http://test_url.zip"
+            interface: "test_interface1"
+            extra_prop: "some_val"
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -251,6 +269,7 @@ interfaces:
 
 plugins:
     test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             url: "http://test_url.zip"
             interface: "test_interface1"

@@ -46,6 +46,7 @@ class TestParserApi(AbstractTestParser):
     def _assert_application_template(self, result):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
+        self.assertEquals(True, node['plugins']['test_plugin']['agent_plugin'])
         plugin_props = node['plugins']['test_plugin']['properties']
         self.assertEquals('test_interface1', plugin_props['interface'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
@@ -89,6 +90,7 @@ interfaces:
 
 plugins:
     other_test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -110,6 +112,7 @@ plugins:
         yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 plugins:
     other_test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -594,14 +597,17 @@ interfaces:
 
 plugins:
     test_plugin2:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
     test_plugin3:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface3"
             url: "http://test_url3.zip"
     test_plugin4:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface4"
             url: "http://test_url4.zip"
@@ -649,6 +655,7 @@ interfaces:
 
 plugins:
     test_plugin2:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -684,6 +691,7 @@ interfaces:
 
 plugins:
     other_test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -705,6 +713,39 @@ plugins:
         self.assertEquals('other_test_plugin', operations['shutdown'])
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
         self.assertEquals(6, len(operations))
+
+    def test_plugins_derived_from_field(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        interfaces:
+            -   test_interface1: "test_plugin1"
+            -   test_interface2: "test_plugin2"
+
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+    test_interface2:
+        operations:
+            -   "install"
+
+plugins:
+    test_plugin1:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        properties:
+            interface: "test_interface1"
+            url: "http://test_url1.zip"
+    test_plugin2:
+        derived_from: "cloudify.tosca.artifacts.remote_plugin"
+        properties:
+            interface: "test_interface2"
+            url: "http://test_url2.zip"
+    """
+        result = parse(yaml)
+        node = result['nodes'][0]
+        self.assertEquals(True, node['plugins']['test_plugin1']['agent_plugin'])
+        self.assertEquals(False, node['plugins']['test_plugin2']['agent_plugin'])
 
     def test_relative_path_import(self):
         bottom_level_yaml = self.BASIC_TYPE

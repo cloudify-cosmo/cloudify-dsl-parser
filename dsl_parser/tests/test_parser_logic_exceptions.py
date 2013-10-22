@@ -47,6 +47,7 @@ types:
 
 plugins:
     test_plugin2:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "missing_interface"
             url: "http://test_url2.zip"
@@ -70,6 +71,7 @@ interfaces:
 
 plugins:
     test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url.zip"
@@ -102,6 +104,7 @@ interfaces:
         yaml = self.create_yaml_with_imports([self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS]) + """
 plugins:
     other_test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface1"
             url: "http://other_test_url.zip"
@@ -361,3 +364,24 @@ types:
                             value: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 17, DSLParsingLogicException)
+
+    def test_plugin_with_wrongful_derived_from_field(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+
+plugins:
+    test_plugin:
+        derived_from: "bad value"
+        properties:
+            interface: "test_interface1"
+            url: "http://test_url.zip"
+
+types:
+    test_type:
+        interfaces:
+            -   test_interface1: "test_plugin"
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 18, DSLParsingLogicException)

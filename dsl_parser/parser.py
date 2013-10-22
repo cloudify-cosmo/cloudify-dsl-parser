@@ -196,7 +196,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, alias_ma
                 interface_name = implementation_interface
                 plugin_name = _autowire_plugin(parsed_dsl[PLUGINS], interface_name, node_type_name)
             plugin = parsed_dsl[PLUGINS][plugin_name]
-            plugins[plugin_name] = plugin
+            plugins[plugin_name] = _process_plugin(plugin, plugin_name)
 
             #put operations into node
             if interface_name not in parsed_dsl[INTERFACES]:
@@ -229,6 +229,20 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, alias_ma
     return processed_node
 
 
+def _process_plugin(plugin, plugin_name):
+    if plugin['derived_from'] not in ('cloudify.tosca.artifacts.agent_plugin', 'cloudify.tosca.artifacts'
+                                                                               '.remote_plugin'):
+        #TODO: consider changing the below exception to type DSLParsingFormatException..?
+        raise DSLParsingLogicException(18, 'plugin {0} has an illegal "derived_from" value {1}; value must be'
+                                           ' either {2} or {3}', plugin_name, plugin['derived_from'],
+                                       'cloudify.tosca.artifacts.agent_plugin', 'cloudify.tosca.artifacts'
+                                                                                '.remote_plugin')
+    processed_plugin = copy.deepcopy(plugin)
+    processed_plugin['agent_plugin'] = plugin['derived_from'] == 'cloudify.tosca.artifacts.agent_plugin'
+    del(processed_plugin['derived_from'])
+    return processed_plugin
+
+
 def _validate_node_policies(policies, node_name, top_level_policies_and_rules_tuple):
     #validating all policies and rules declared are indeed defined in the top level policies section
     for policy_name, policy in policies.iteritems():
@@ -239,6 +253,7 @@ def _validate_node_policies(policies, node_name, top_level_policies_and_rules_tu
             if rule['type'] not in top_level_policies_and_rules_tuple[1]:
                 raise DSLParsingLogicException(17, 'Failed to parse node {0}: rule {1} under policy {2} not '
                                                    'defined'.format(node_name, rule['type'], policy_name))
+
 
 def _merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
     overridden_sub_dict = _get_dict_prop(overridden_dict, sub_dict_key)

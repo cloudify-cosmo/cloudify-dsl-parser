@@ -160,6 +160,9 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
+                        'derived_from': {
+                            'type': 'string'
+                        },
                         #non-meta 'properties'
                         'properties': {
                             'type': 'object',
@@ -175,7 +178,7 @@ DSL_SCHEMA = {
                             'additionalProperties': False
                         }
                     },
-                    'required': ['properties'],
+                    'required': ['derived_from', 'properties'],
                     'additionalProperties': False
                 }
             }
