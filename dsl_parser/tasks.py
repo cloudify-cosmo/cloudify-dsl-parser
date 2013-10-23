@@ -55,7 +55,7 @@ def create_multi_instance_nodes(nodes):
 
 def create_node_suffixes_map(nodes):
     """
-    This method insepcts the current nodes and creates a list of random suffixes.
+    This method inspects the current nodes and creates a list of random suffixes.
     That is, for every node, it determines how many instances are needed
     and generates a random number (later used as id suffix) for each instance.
     """
@@ -74,8 +74,10 @@ def create_node_suffixes_map(nodes):
 
     return suffix_map
 
+
 def is_host(node):
     return node["host_id"] == node["id"]
+
 
 def get_node(node_id, nodes):
 
@@ -117,6 +119,11 @@ def create_node_instances(node, suffixes_map):
                 if relationship['type'].endswith('relationships.contained_in') and relationship['target_id'] == host_id:
                     new_relationship = relationship.copy()
                     new_relationship['target_id'] = node_copy['host_id']
+                elif relationship['type'].endswith('relationships.connected_to'):
+                    target_id = relationship['target_id']
+                    new_relationship = relationship.copy()
+                    # currently only 1 instance for connected_to is supported
+                    new_relationship['target_id'] = target_id + suffixes_map[target_id][0]
                 new_relationships.append(new_relationship)
             node_copy['relationships'] = new_relationships
 
@@ -124,15 +131,13 @@ def create_node_instances(node, suffixes_map):
 
     return instances
 
-def _generate_unique_ids(number_of_ids):
 
-    if number_of_ids == 1:
-        return [""]
+def _generate_unique_ids(number_of_ids):
 
     ids = []
     while len(ids) < number_of_ids:
-        id = '_%05x' % random.randrange(16**5)
-        if id not in ids:
-            ids.append(id)
+        rand_id = '_%05x' % random.randrange(16**5)
+        if rand_id not in ids:
+            ids.append(rand_id)
 
     return list(ids)

@@ -91,8 +91,8 @@ class TestDSLParser(unittest.TestCase):
         ]
 
         expected_suffix_map = {
-            "multi_instance.host" : [""],
-            "multi_instance.db" : [""] }
+            "multi_instance.host" : ["_d82c0"],
+            "multi_instance.db" : ["_c2094"] }
 
         random.seed(0)
         suffix_map = tasks.create_node_suffixes_map(nodes)
@@ -190,22 +190,21 @@ class TestDSLParser(unittest.TestCase):
             ]
         }
 
-        # everything in the new plan stays the same for backwards compatibility
         expected_plan = {
             "nodes": [
                 {
-                    "id": "multi_instance.db",
-                    "host_id": "multi_instance.host",
+                    "id": "multi_instance.db_c2094",
+                    "host_id": "multi_instance.host_d82c0",
                     "relationships": [
                         {
                             "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host",
+                            "target_id": "multi_instance.host_d82c0",
                         }
                     ],
                 },
                 {
-                    "id": "multi_instance.host",
-                    "host_id": "multi_instance.host",
+                    "id": "multi_instance.host_d82c0",
+                    "host_id": "multi_instance.host_d82c0",
                     "instances" : {
                         "deploy": 1
                     }
@@ -215,4 +214,97 @@ class TestDSLParser(unittest.TestCase):
     
         random.seed(0)
         new_plan = json.loads(tasks.prepare_multi_instance_plan(plan))
-        self.assertEqual(new_plan, expected_plan)        
+        self.assertEqual(new_plan, expected_plan)
+
+    def test_prepare_single_instance_plan_with_connected_to(self):
+
+        plan = {
+            "nodes": [
+                {
+                    "id": "multi_instance.host1",
+                    "host_id": "multi_instance.host1",
+                    "instances": {
+                        "deploy": 1
+                    }
+                },
+                {
+                    "id": "multi_instance.host2",
+                    "host_id": "multi_instance.host2",
+                    "instances": {
+                        "deploy": 1
+                    }
+                },
+                {
+                    "id": "multi_instance.db",
+                    "host_id": "multi_instance.host1",
+                    "relationships": [
+                        {
+                            "type": "cloudify.relationships.contained_in",
+                            "target_id": "multi_instance.host1",
+                        }
+                    ],
+                },
+                {
+                    "id": "multi_instance.webserver",
+                    "host_id": "multi_instance.host2",
+                    "relationships": [
+                        {
+                            "type": "cloudify.relationships.contained_in",
+                            "target_id": "multi_instance.host2",
+                        },
+                        {
+                            "type": "cloudify.relationships.connected_to",
+                            "target_id": "multi_instance.db",
+                        }
+                    ],
+                }
+            ]
+        }
+
+        expected_plan = {
+            "nodes": [
+                {
+                    "id": "multi_instance.db_6baa9",
+                    "host_id": "multi_instance.host1_d82c0",
+                    "relationships": [
+                        {
+                            "type": "cloudify.relationships.contained_in",
+                            "target_id": "multi_instance.host1_d82c0",
+                        }
+                    ],
+                },
+                {
+                    "id": "multi_instance.host2_c2094",
+                    "host_id": "multi_instance.host2_c2094",
+                    "instances": {
+                        "deploy": 1
+                    }
+                },
+                {
+                    "id": "multi_instance.host1_d82c0",
+                    "host_id": "multi_instance.host1_d82c0",
+                    "instances": {
+                        "deploy": 1
+                    }
+                },
+                {
+                    "id": "multi_instance.webserver_42485",
+                    "host_id": "multi_instance.host2_c2094",
+                    "relationships": [
+                        {
+                            "type": "cloudify.relationships.contained_in",
+                            "target_id": "multi_instance.host2_c2094",
+                        },
+                        {
+                            "type": "cloudify.relationships.connected_to",
+                            "target_id": "multi_instance.db_6baa9",
+                        }
+                    ],
+                }
+            ]
+        }
+
+        random.seed(0)
+        new_plan = json.loads(tasks.prepare_multi_instance_plan(plan))
+
+        self.assertEqual(new_plan, expected_plan)
