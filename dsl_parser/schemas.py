@@ -16,34 +16,36 @@
 __author__ = 'ran'
 
 
+SINGLE_WORKFLOW_SCHEMA = {
+    'type': 'object',
+    'oneOf': [
+        {
+            'type': 'object',
+            'properties': {
+                'radial': {
+                    'type': 'string'
+                }
+            },
+            'required': ['radial'],
+            'additionalProperties': False
+        },
+        {
+            'type': 'object',
+            'properties': {
+                'ref': {
+                    'type': 'string'
+                }
+            },
+            'required': ['ref'],
+            'additionalProperties': False
+        }
+    ]
+}
+
 WORKFLOWS_SCHEMA = {
     'type': 'object',
     'patternProperties': {
-        '^': {
-            'type': 'object',
-            'oneOf': [
-                {
-                    'type': 'object',
-                    'properties': {
-                        'radial': {
-                            'type': 'string'
-                        }
-                    },
-                    'required': ['radial'],
-                    'additionalProperties': False
-                },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'ref': {
-                            'type': 'string'
-                        }
-                    },
-                    'required': ['ref'],
-                    'additionalProperties': False
-                }
-            ]
-        }
+        '^': SINGLE_WORKFLOW_SCHEMA
     }
 }
 
@@ -285,6 +287,48 @@ DSL_SCHEMA = {
             }
         },
         'workflows': WORKFLOWS_SCHEMA,
+        'relationships': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'type': 'object',
+                    'properties': {
+                        'plugin': {
+                            'type': 'string'
+                        },
+                        'bind_at': {
+                            'type': 'string'
+                        },
+                        'run_on_node': {
+                            'type': 'string'
+                        },
+                        'derived_from': {
+                            'type': 'string'
+                        },
+                        'workflow': SINGLE_WORKFLOW_SCHEMA,
+                        'interface': {
+                            'type': 'object',
+                            'properties': {
+                                'name': {
+                                    'type': 'string'
+                                },
+                                'operations': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'string'
+                                    },
+                                    'uniqueItems': True,
+                                    'minItems': 1
+                                }
+                            },
+                            'required': ['name', 'operations'],
+                            'additionalProperties': False
+                        }
+                    },
+                    'additionalProperties': False
+                }
+            }
+        }
     },
     'required': ['application_template'],
     'additionalProperties': False

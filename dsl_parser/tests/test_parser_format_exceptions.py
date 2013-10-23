@@ -280,8 +280,7 @@ plugins:
     def test_first_level_workflows_no_ref_or_radial(self):
         yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
 workflows:
-    install:
-        some_other_prop: "val"
+    install: {}        
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -299,7 +298,7 @@ workflows:
 workflows:
     install:
         radial: "custom radial"
-        ref: "custom_ref"
+        ref: "custom ref"
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -308,8 +307,7 @@ workflows:
 types:
     test_type:
         workflows:
-            install:
-                some_other_prop: "val"
+            install: {}
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -331,7 +329,7 @@ types:
         workflows:
             install:
                 radial: "custom radial"
-                ref: "custom_ref"
+                ref: "custom ref"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -357,7 +355,7 @@ types:
             workflows:
                 install:
                     radial: "custom radial"
-                    ref: "custom_ref"
+                    ref: "custom ref"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -677,5 +675,111 @@ types:
                     -   type: "custom type"
                         properties:
                             value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_bad_format(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    extra_prop: "val"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_extra_property(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        extra_prop: "val"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_empty_interface(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        interface: {}
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_interface_without_name(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        interface:
+            operations:
+                -   "install"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_interface_without_operations(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        interface:
+            name: "test_rel_interface"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_interface_with_empty_operations(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        interface:
+            name: "test_rel_interface"
+            operations: []
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_interface_with_operations_string(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        interface:
+            name: "test_rel_interface"
+            operations: "install"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_interface_with_duplicate_operations(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        interface:
+            name: "test_rel_interface"
+            operations:
+                -   "install"
+                -   "remove"
+                -   "install"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_workflow_with_no_ref_or_radial(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        workflow:
+            install: {}
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_workflow_with_no_ref_or_radial(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        workflow:
+            install:
+                radial: "custom radial"
+                some_other_prop: "val"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_top_level_relationships_workflow_with_both_ref_or_radial(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        workflow:
+            install:
+                radial: "custom radial"
+                ref: "custom ref"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)

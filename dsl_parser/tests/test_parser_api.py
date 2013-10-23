@@ -1275,3 +1275,171 @@ policies:
         self.assertEquals('value3', node_policies['policy2']['rules'][1]['properties']['value'])
         #verifying the top-level policies section in the response also contains the same values
         self.assertDictEqual(node['policies'], result['policies']['test_app.test_node'])
+
+    def test_empty_top_level_relationships(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships: {}
+                        """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+        self.assertEquals(0, len(result['relationships']))
+
+    def test_empty_top_level_relationships_empty_relationship(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship: {}
+                        """
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+        self.assertDictEqual({'name': 'test_relationship'}, result['relationships']['test_relationship'])
+
+    def test_top_level_relationships_single_complete_relationship(self):
+        yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+relationships:
+    empty_rel: {}
+    test_relationship:
+        plugin: "test_plugin"
+        bind_at: "pre_started"
+        run_on_node: "source"
+        derived_from: "empty_rel"
+        workflow:
+            radial: "custom radial"
+        interface:
+            name: "test_interface2"
+            operations:
+                -   "install"
+                -   "terminate"
+        """
+        result = parse(yaml)
+        self._assert_application_template(result)
+        test_relationship = result['relationships']['test_relationship']
+        self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
+        self.assertEquals('test_relationship', test_relationship['name'])
+        self.assertEquals('test_plugin', test_relationship['plugin'])
+        self.assertEquals('pre_started', test_relationship['bind_at'])
+        self.assertEquals('source', test_relationship['run_on_node'])
+        self.assertEquals('custom radial', test_relationship['workflow'])
+        self.assertEquals(2, len(test_relationship['interface']['operations']))
+
+    def test_top_level_relationships_relationship_with_ref_workflow(self):
+        ref_alias = 'ref_alias'
+        radial_file_path = self.make_file_with_name('ref custom radial', 'radial_file.radial')
+
+        yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+relationships:
+    test_relationship:
+        workflow:
+            ref: "{0}\"""".format(ref_alias)
+        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        self._assert_application_template(result)
+        test_relationship = result['relationships']['test_relationship']
+        self.assertEquals('ref custom radial', test_relationship['workflow'])
+
+    def test_top_level_relationships_recursive_imports(self):
+        bottom_level_yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+relationships:
+    empty_rel: {}
+    test_relationship:
+        plugin: "test_plugin"
+        bind_at: "pre_started"
+        run_on_node: "source"
+        derived_from: "empty_rel"
+        workflow:
+            radial: "custom radial"
+        interface:
+            name: "test_interface2"
+            operations:
+                -   "install"
+                -   "terminate"
+        """
+
+        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
+        mid_level_yaml = """
+relationships:
+    test_relationship2:
+        plugin: "test_plugin"
+        bind_at: "pre_started"
+        run_on_node: "source"
+        derived_from: "test_relationship3"
+imports:
+    -   {0}""".format(bottom_file_name)
+        mid_file_name = self.make_yaml_file(mid_level_yaml)
+        top_level_yaml = """
+relationships:
+    test_relationship3:
+        bind_at: "post_started"
+        run_on_node: "target"
+imports:
+    -   {0}""".format(mid_file_name)
+
+        result = parse(top_level_yaml)
+        self._assert_application_template(result)
+        test_relationship = result['relationships']['test_relationship']
+        self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
+        self.assertEquals('test_relationship', test_relationship['name'])
+        self.assertEquals('test_plugin', test_relationship['plugin'])
+        self.assertEquals('pre_started', test_relationship['bind_at'])
+        self.assertEquals('source', test_relationship['run_on_node'])
+        self.assertEquals('custom radial', test_relationship['workflow'])
+        self.assertEquals(2, len(test_relationship['interface']['operations']))
+        self.assertEquals(6, len(test_relationship))
+        test_relationship2 = result['relationships']['test_relationship2']
+        self.assertEquals('test_relationship2', test_relationship2['name'])
+        self.assertEquals('test_plugin', test_relationship2['plugin'])
+        self.assertEquals('pre_started', test_relationship2['bind_at'])
+        self.assertEquals('source', test_relationship2['run_on_node'])
+        self.assertEquals(4, len(test_relationship2))
+        test_relationship3 = result['relationships']['test_relationship3']
+        self.assertEquals('test_relationship3', test_relationship3['name'])
+        self.assertEquals('post_started', test_relationship3['bind_at'])
+        self.assertEquals('target', test_relationship3['run_on_node'])
+        self.assertEquals(3, len(test_relationship3))
+
+    def test_top_level_relationships_inheritance(self):
+        yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+relationships:
+    empty_rel: {}
+    test_relationship:
+        plugin: "test_plugin"
+        bind_at: "pre_started"
+        run_on_node: "source"
+        derived_from: "empty_rel"
+
+
+    test_relationship2:
+        plugin: "test_plugin"
+        bind_at: "post_started"
+        derived_from: "test_relationship"
+        interface:
+            name: "test_interface2"
+            operations:
+                -   "install"
+                -   "terminate"
+
+    test_relationship3:
+        derived_from: "test_relationship2"
+        workflow:
+            radial: "custom radial"
+        """
+        result = parse(yaml)
+        self._assert_application_template(result)
+        test_relationship = result['relationships']['test_relationship']
+        test_relationship2 = result['relationships']['test_relationship2']
+        test_relationship3 = result['relationships']['test_relationship3']
+        self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
+        self.assertEquals('test_relationship', test_relationship['name'])
+        self.assertEquals('test_relationship2', test_relationship2['name'])
+        self.assertEquals('test_relationship3', test_relationship3['name'])
+
+        self.assertEquals('test_plugin', test_relationship['plugin'])
+        self.assertEquals('pre_started', test_relationship['bind_at'])
+        self.assertEquals('source', test_relationship['run_on_node'])
+        self.assertEquals('test_plugin', test_relationship2['plugin'])
+        self.assertEquals('post_started', test_relationship2['bind_at'])
+        self.assertEquals('source', test_relationship2['run_on_node'])
+        self.assertEquals(2, len(test_relationship2['interface']['operations']))
+        self.assertEquals('test_plugin', test_relationship3['plugin'])
+        self.assertEquals('post_started', test_relationship3['bind_at'])
+        self.assertEquals('source', test_relationship3['run_on_node'])
+        self.assertEquals(2, len(test_relationship3['interface']['operations']))
+        self.assertEquals('custom radial', test_relationship3['workflow'])

@@ -385,3 +385,61 @@ types:
             -   test_interface1: "test_plugin"
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 18, DSLParsingLogicException)
+
+    def test_top_level_relationships_relationship_with_undefined_plugin(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        plugin: "undefined_plugin"
+                        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 19, DSLParsingLogicException)
+
+    def test_top_level_relationships_relationship_with_bad_bind_at_value(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        bind_at: "bad_value"
+                        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+
+    def test_top_level_relationships_relationship_with_bad_run_on_node_value(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        run_on_node: "bad_value"
+                        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 21, DSLParsingLogicException)
+
+    def test_top_level_relationships_import_same_name_relationship(self):
+        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship: {}
+            """
+        yaml = self.create_yaml_with_imports([imported_yaml]) + """
+relationships:
+    test_relationship: {}
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+
+    def test_top_level_relationships_circular_inheritance(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship1:
+        derived_from: test_relationship2
+    test_relationship2:
+        derived_from: test_relationship3
+    test_relationship3:
+        derived_from: test_relationship1
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 100, DSLParsingLogicException)
+
+    def test_top_level_relationships_duplicate_interface_to_top_level_interfaces(self):
+        yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+relationships:
+    test_relationship:
+        interface:
+            name: "test_interface1"
+            operations:
+                -   "install"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 22, DSLParsingLogicException)
