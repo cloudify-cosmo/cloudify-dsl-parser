@@ -124,14 +124,14 @@ def create_node_instances(node, suffixes_map):
             new_relationships = []
             for relationship in node_copy['relationships']:
                 new_relationship = relationship
-                if relationship['type'].endswith('relationships.contained_in') and relationship['target_id'] == host_id:
+                target_id = relationship['target_id']
+                if relationship['type'].endswith('relationships.contained_in'):
                     new_relationship = relationship.copy()
-                    new_relationship['target_id'] = node_copy['host_id']
+                    new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][i])
                 elif relationship['type'].endswith('relationships.connected_to'):
-                    target_id = relationship['target_id']
                     new_relationship = relationship.copy()
                     # currently only 1 instance for connected_to is supported
-                    new_relationship['target_id'] = _build_node_instance_id(target_id ,suffixes_map[target_id][0])
+                    new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][0])
                 new_relationships.append(new_relationship)
             node_copy['relationships'] = new_relationships
 
