@@ -128,9 +128,10 @@ def create_node_instances(node, suffixes_map):
                 if relationship['type'].endswith('relationships.contained_in'):
                     new_relationship = relationship.copy()
                     new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][i])
-                elif relationship['type'].endswith('relationships.connected_to'):
+                elif (relationship['type'].endswith('relationships.connected_to') or
+                      relationship['type'].endswith('relationships.depends_on')):
                     new_relationship = relationship.copy()
-                    # currently only 1 instance for connected_to is supported
+                    # currently only 1 instance for connected_to (and depends_on) is supported
                     new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][0])
                 new_relationships.append(new_relationship)
             node_copy['relationships'] = new_relationships

@@ -292,7 +292,17 @@ class TestDSLParser(unittest.TestCase):
                             "target_id": "multi_instance.db",
                         }
                     ],
-                }
+                },
+                {
+                    "id": "multi_instance.db_dependent",
+                    "host_id": "multi_instance.host1",
+                    "relationships": [
+                        {
+                            "type": "cloudify.relationships.depends_on",
+                            "target_id": "multi_instance.db",
+                        }
+                    ],
+                },
             ],
             "policies": {
                 "multi_instance.host1": "stub",
@@ -341,7 +351,17 @@ class TestDSLParser(unittest.TestCase):
                             "target_id": "multi_instance.db_6baa9",
                         }
                     ],
-                }
+                },
+                {
+                    "id": "multi_instance.db_dependent_82e2e",
+                    "host_id": "multi_instance.host1_d82c0",
+                    "relationships": [
+                        {
+                            "type": "cloudify.relationships.depends_on",
+                            "target_id": "multi_instance.db_6baa9",
+                            }
+                    ],
+                },
             ],
             "policies": {
                 "multi_instance.host1_d82c0": "stub",
