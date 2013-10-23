@@ -23,6 +23,7 @@ import json
 import random
 
 NODES = "nodes"
+POLICIES = "policies"
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
@@ -32,15 +33,17 @@ def prepare_multi_instance_plan(plan, **kwargs):
     """
     Expand node instances based on number of instances to deploy
     """
-
-    new_nodes = create_multi_instance_nodes(plan[NODES])
-    plan[NODES] = new_nodes
+    modify_to_multi_instance_plan(plan)
     return json.dumps(plan)
 
 
-def create_multi_instance_nodes(nodes):
+def modify_to_multi_instance_plan(plan):
+
+    nodes = plan[NODES]
+    policies = plan[POLICIES]
 
     new_nodes = []
+    new_policies = {}
 
     nodes_suffixes_map = create_node_suffixes_map(nodes)
     node_ids = create_node_suffixes_map(nodes).iterkeys()
@@ -49,8 +52,13 @@ def create_multi_instance_nodes(nodes):
         node = get_node(node_id, nodes)
         instances = create_node_instances(node, nodes_suffixes_map)
         new_nodes.extend(instances)
+        instances_policies = create_node_instances_policies(node_id,
+                                                            policies,
+                                                            nodes_suffixes_map)
+        new_policies.update(instances_policies)
 
-    return new_nodes
+    plan[NODES] = new_nodes
+    plan[POLICIES] = new_policies
 
 
 def create_node_suffixes_map(nodes):
@@ -109,8 +117,8 @@ def create_node_instances(node, suffixes_map):
 
     for i in range(number_of_instances):
         node_copy = node.copy()
-        node_copy['id'] = node_id + node_suffixes[i]
-        node_copy['host_id'] = host_id + host_suffixes[i]
+        node_copy['id'] = _build_node_instance_id(node_id, node_suffixes[i])
+        node_copy['host_id'] = _build_node_instance_id(host_id, host_suffixes[i])
         logger.debug("generated new node instance {0}".format(node_copy))
         if 'relationships' in node_copy:
             new_relationships = []
@@ -123,13 +131,31 @@ def create_node_instances(node, suffixes_map):
                     target_id = relationship['target_id']
                     new_relationship = relationship.copy()
                     # currently only 1 instance for connected_to is supported
-                    new_relationship['target_id'] = target_id + suffixes_map[target_id][0]
+                    new_relationship['target_id'] = _build_node_instance_id(target_id ,suffixes_map[target_id][0])
                 new_relationships.append(new_relationship)
             node_copy['relationships'] = new_relationships
 
         instances.append(node_copy)
 
     return instances
+
+
+def create_node_instances_policies(node_id, policies, node_suffixes_map):
+    if not node_id in policies:
+        return {}
+
+    node_suffixes = node_suffixes_map[node_id]
+    node_policies = policies[node_id]
+    node_instances_policies = {}
+    number_of_instances = len(node_suffixes)
+    for i in range(number_of_instances):
+        the_id = _build_node_instance_id(node_id, node_suffixes[i])
+        node_instances_policies[the_id] = node_policies
+    return node_instances_policies
+
+
+def _build_node_instance_id(node_id, node_suffix):
+    return node_id + node_suffix
 
 
 def _generate_unique_ids(number_of_ids):
