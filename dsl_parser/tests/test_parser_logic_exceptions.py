@@ -23,10 +23,10 @@ from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 class TestParserLogicExceptions(AbstractTestParser):
 
     def test_no_type_definition(self):
-        self._assert_dsl_parsing_exception_error_code(self.BASIC_APPLICATION_TEMPLATE, 7, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(self.BASIC_APPLICATION_TEMPLATE_SECTION, 7, DSLParsingLogicException)
 
     def test_explicit_interface_with_missing_plugin(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -37,7 +37,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 10, DSLParsingLogicException)
 
     def test_missing_interface_definition(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -47,6 +47,7 @@ types:
 
 plugins:
     test_plugin2:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "missing_interface"
             url: "http://test_url2.zip"
@@ -57,7 +58,7 @@ plugins:
         #testing to see what happens when the plugin which is explicitly declared for an interface is in fact
         #a plugin which doesn't implement the said interface (even if it supports another interface with same
         # name operations)
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 interfaces:
     test_interface1:
         operations:
@@ -70,6 +71,7 @@ interfaces:
 
 plugins:
     test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url.zip"
@@ -82,7 +84,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 6, DSLParsingLogicException)
 
     def test_implicit_interface_with_no_matching_plugins(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -99,9 +101,10 @@ interfaces:
         self._assert_dsl_parsing_exception_error_code(yaml, 11, DSLParsingLogicException)
 
     def test_implicit_interface_with_ambiguous_matches(self):
-        yaml = self.create_yaml_with_imports([self.APPLICATION_TEMPLATE]) + """
+        yaml = self.create_yaml_with_imports([self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS]) + """
 plugins:
     other_test_plugin:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
         properties:
             interface: "test_interface1"
             url: "http://other_test_url.zip"
@@ -109,7 +112,7 @@ plugins:
         self._assert_dsl_parsing_exception_error_code(yaml, 12, DSLParsingLogicException)
 
     def test_dsl_with_interface_without_plugin(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_TYPE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_TYPE + """
 interfaces:
     test_interface1:
         operations:
@@ -119,36 +122,32 @@ interfaces:
         self._assert_dsl_parsing_exception_error_code(yaml, 5, DSLParsingLogicException)
 
     def test_merge_non_mergeable_properties_on_import(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 application_template:
-    name: testApp2
+    name: test_app2
     topology:
-        -   name: testNode2
+        -   name: test_node2
             type: test_type
             properties:
                 key: "val"
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 3, DSLParsingLogicException)
 
-    def test_illegal_merge_on_mergeable_properties_on_import(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE, self.BASIC_INTERFACE_AND_PLUGIN]) + """
-plugins:
-    test_plugin:
-        properties:
-            interface: "test_interface2"
-            url: "http://test_url2.zip"
-types:
-    test_type:
-        interfaces:
-            -   test_interface1
-            -   test_interface2
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "shutdown"
-        """
+    def test_illegal_merge_on_nested_mergeable_rules_on_import(self):
+        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    rules:
+        rule1:
+            message: "custom message"
+            rule: "custom clojure code"
+            """
+        yaml = self.create_yaml_with_imports([imported_yaml]) + """
+policies:
+    rules:
+        rule1:
+            message: "some other message"
+            rule: "some other code"
+            """
         self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
 
     def test_recursive_imports_with_inner_circular(self):
@@ -163,7 +162,7 @@ imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_file_with_name(mid_level_yaml, 'mid_level.yaml')
 
-        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
 
@@ -183,7 +182,7 @@ imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
-        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
         top_file_name = self.make_file_with_name(top_level_yaml, 'top_level.yaml')
@@ -192,7 +191,7 @@ imports:
         self.assertEquals(expected_circular_path, ex.circular_path)
 
     def test_type_derive_non_from_none_existing(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 types:
     test_type:
         interfaces:
@@ -209,7 +208,7 @@ imports:
         self._assert_dsl_parsing_exception_error_code(yaml, 13, DSLParsingLogicException)
 
     def test_cyclic_dependency(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 types:
     test_type:
         derived_from: "test_type_parent"
@@ -227,13 +226,13 @@ types:
     def test_node_duplicate_name(self):
         yaml = """
 application_template:
-    name: testApp
+    name: test_app
     topology:
-    -   name: testNode
+    -   name: test_node
         type: test_type
         properties:
             key: "val"
-    -   name: testNode
+    -   name: test_node
         type: test_type
         properties:
             key: "val"
@@ -242,10 +241,19 @@ types:
     test_type: {}
 """
         ex = self._assert_dsl_parsing_exception_error_code(yaml, 101, DSLParsingLogicException)
-        self.assertEquals('testNode', ex.duplicate_node_name)
+        self.assertEquals('test_node', ex.duplicate_node_name)
+
+    def test_first_level_workflows_unavailable_ref(self):
+        ref_alias = 'custom_ref_alias'
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+workflows:
+    install:
+        ref: {0}
+        """.format(ref_alias)
+        self._assert_dsl_parsing_exception_error_code(yaml, 15)
 
     def test_type_duplicate_interface(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -253,5 +261,185 @@ types:
             -   test_interface1: test_plugin
 """
         ex = self._assert_dsl_parsing_exception_error_code(yaml, 102, DSLParsingLogicException)
-        self.assertEquals('testNode', ex.node_name)
+        self.assertEquals('test_node', ex.node_name)
         self.assertEquals('test_interface1', ex.duplicate_interface_name)
+
+    def test_first_level_policy_unavailable_ref(self):
+        ref_alias = 'custom_ref_alias'
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        custom_policy:
+            message: "custom message"
+            ref: {0}
+        """.format(ref_alias)
+        self._assert_dsl_parsing_exception_error_code(yaml, 15)
+
+    def test_illegal_merge_on_mergeable_properties_on_import(self):
+        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+plugins:
+    test_plugin:
+        properties:
+            interface: "test_interface2"
+            url: "http://test_url2.zip"
+types:
+    test_type:
+        interfaces:
+            -   test_interface1
+            -   test_interface2
+
+interfaces:
+    test_interface2:
+        operations:
+            -   "start"
+            -   "shutdown"
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+
+    def test_illegal_merge_on_nested_mergeable_policies_events_on_import(self):
+        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+policies:
+    types:
+        policy1:
+            message: "custom message"
+            policy: "custom clojure code"
+            """
+        yaml = self.create_yaml_with_imports([imported_yaml]) + """
+policies:
+    types:
+        policy1:
+            message: "some other message"
+            policy: "some other code"
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+
+    def test_node_with_undefined_policy_event(self):
+        yaml = self.POLICIES_SECTION + self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                undefined_policy:
+                    rules:
+                        -   type: "test_rule"
+                            properties:
+                                state: "custom state"
+                                value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 16, DSLParsingLogicException)
+
+    def test_node_with_undefined_rule(self):
+        yaml = self.POLICIES_SECTION + self.MINIMAL_APPLICATION_TEMPLATE + """
+            policies:
+                test_policy:
+                    rules:
+                        -   type: "undefined_rule"
+                            properties:
+                                state: "custom state"
+                                value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 17, DSLParsingLogicException)
+
+    def test_type_with_undefined_policy_event(self):
+        yaml = self.POLICIES_SECTION + self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            undefined_policy:
+                rules:
+                    -   type: "test_rule"
+                        properties:
+                            state: "custom state"
+                            value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 16, DSLParsingLogicException)
+
+    def test_type_with_undefined_rule(self):
+        yaml = self.POLICIES_SECTION + self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        policies:
+            test_policy:
+                rules:
+                    -   type: "undefined_rule"
+                        properties:
+                            state: "custom state"
+                            value: "custom value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 17, DSLParsingLogicException)
+
+    def test_plugin_with_wrongful_derived_from_field(self):
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+
+plugins:
+    test_plugin:
+        derived_from: "bad value"
+        properties:
+            interface: "test_interface1"
+            url: "http://test_url.zip"
+
+types:
+    test_type:
+        interfaces:
+            -   test_interface1: "test_plugin"
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 18, DSLParsingLogicException)
+
+    def test_top_level_relationships_relationship_with_undefined_plugin(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        plugin: "undefined_plugin"
+                        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 19, DSLParsingLogicException)
+
+    def test_top_level_relationships_relationship_with_bad_bind_at_value(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        bind_at: "bad_value"
+                        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+
+    def test_top_level_relationships_relationship_with_bad_run_on_node_value(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        run_on_node: "bad_value"
+                        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 21, DSLParsingLogicException)
+
+    def test_top_level_relationships_import_same_name_relationship(self):
+        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship: {}
+            """
+        yaml = self.create_yaml_with_imports([imported_yaml]) + """
+relationships:
+    test_relationship: {}
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+
+    def test_top_level_relationships_circular_inheritance(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship1:
+        derived_from: test_relationship2
+    test_relationship2:
+        derived_from: test_relationship3
+    test_relationship3:
+        derived_from: test_relationship1
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 100, DSLParsingLogicException)
+
+    def test_top_level_relationships_duplicate_interface_to_top_level_interfaces(self):
+        yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+relationships:
+    test_relationship:
+        interface:
+            name: "test_interface1"
+            operations:
+                -   "install"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 22, DSLParsingLogicException)

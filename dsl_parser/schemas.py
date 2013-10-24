@@ -15,6 +15,82 @@
 
 __author__ = 'ran'
 
+
+SINGLE_WORKFLOW_SCHEMA = {
+    'type': 'object',
+    'oneOf': [
+        {
+            'type': 'object',
+            'properties': {
+                'radial': {
+                    'type': 'string'
+                }
+            },
+            'required': ['radial'],
+            'additionalProperties': False
+        },
+        {
+            'type': 'object',
+            'properties': {
+                'ref': {
+                    'type': 'string'
+                }
+            },
+            'required': ['ref'],
+            'additionalProperties': False
+        }
+    ]
+}
+
+WORKFLOWS_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': SINGLE_WORKFLOW_SCHEMA
+    }
+}
+
+INSTANCE_OR_TYPE_POLICIES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'properties': {
+                'rules': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            #non-meta 'type'
+                            'type': {
+                                'type': 'string'
+                            },
+                            #non-meta 'properties'
+                            'properties': {
+                                'type': 'object',
+                                'properties': {
+                                    'state': {
+                                        'type': 'string'
+                                    },
+                                    'value': {
+                                        'type': 'string'
+                                    }
+                                },
+                                'required': ['state', 'value'],
+                                'additionalProperties': False
+                            }
+                        },
+                        'required': ['type', 'properties'],
+                        'additionalProperties': False
+                    },
+                    'minItems': 1
+                }
+            },
+            'required': ['rules'],
+            'additionalProperties': False
+        }
+    }
+}
+
 # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
 # since no good YAML schema validator could be found (both for Python and at all).
 #
@@ -41,11 +117,13 @@ DSL_SCHEMA = {
                             'name': {
                                 'type': 'string'
                             },
-                            #the below 'type' is our own "type" and not the schema's meta language
+                            #non-meta 'type'
                             'type': {
                                 'type': 'string'
                             },
-                            #the below 'properties' is our own "properties" and not the schema's meta language
+                            'workflows': WORKFLOWS_SCHEMA,
+                            'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
+                            #non-meta 'properties'
                             'properties': {
                                 'type': 'object'
                             }
@@ -84,7 +162,10 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        #the below 'properties' is our own "properties" and not the schema's meta language
+                        'derived_from': {
+                            'type': 'string'
+                        },
+                        #non-meta 'properties'
                         'properties': {
                             'type': 'object',
                             'properties': {
@@ -99,10 +180,70 @@ DSL_SCHEMA = {
                             'additionalProperties': False
                         }
                     },
-                    'required': ['properties'],
+                    'required': ['derived_from', 'properties'],
                     'additionalProperties': False
                 }
             }
+        },
+        'policies': {
+            'type': 'object',
+            'properties': {
+                'types': {
+                    'type': 'object',
+                    'patternProperties': {
+                        '^': {
+                            'type': 'object',
+                            'oneOf': [
+                                {
+                                    'type': 'object',
+                                    'properties': {
+                                        'message': {
+                                            'type': 'string'
+                                        },
+                                        'policy': {
+                                            'type': 'string'
+                                        }
+                                    },
+                                    'required': ['message', 'policy'],
+                                    'additionalProperties': False
+                                },
+                                {
+                                    'type': 'object',
+                                    'properties': {
+                                        'message': {
+                                            'type': 'string'
+                                        },
+                                        'ref': {
+                                            'type': 'string'
+                                        }
+                                    },
+                                    'required': ['message', 'ref'],
+                                    'additionalProperties': False
+                                }
+                            ]
+                        }
+                    }
+                },
+                'rules': {
+                    'type': 'object',
+                    'patternProperties': {
+                        '^': {
+                            'type': 'object',
+                            'properties': {
+                                'message': {
+                                    'type': 'string'
+                                },
+                                'rule': {
+                                    'type': 'string'
+                                }
+                            },
+                            'required': ['message', 'rule'],
+                            'additionalProperties': False
+                        }
+                    }
+                }
+            },
+            'additionalProperties': False
         },
         'types': {
             'type': 'object',
@@ -112,6 +253,7 @@ DSL_SCHEMA = {
                     'properties': {
                         'interfaces': {
                             'type': 'array',
+                            'minItems': 1,
                             'items': {
                                 'oneOf': [
                                     {
@@ -127,11 +269,12 @@ DSL_SCHEMA = {
                                     {
                                         'type': 'string'
                                     }
-                                ],
-                                'minItems': 1
+                                ]
                             }
                         },
-                        #the below 'properties' is our own "properties" and not the schema's meta language
+                        'workflows': WORKFLOWS_SCHEMA,
+                        'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
+                        #non-meta 'properties'
                         'properties': {
                             'type': 'object'
                         },
@@ -143,39 +286,54 @@ DSL_SCHEMA = {
                 }
             }
         },
-        'workflows': {
+        'workflows': WORKFLOWS_SCHEMA,
+        'relationships': {
             'type': 'object',
             'patternProperties': {
                 '^': {
-                    'oneOf': [
-                        {
-                            'type': 'object',
-                            'properties': {
-                                'radial': {
-                                    'type': 'string'
-                                }
-                            },
-                            'required': ['radial'],
-                            'additionalProperties': False
+                    'type': 'object',
+                    'properties': {
+                        'plugin': {
+                            'type': 'string'
                         },
-                        {
+                        'bind_at': {
+                            'type': 'string'
+                        },
+                        'run_on_node': {
+                            'type': 'string'
+                        },
+                        'derived_from': {
+                            'type': 'string'
+                        },
+                        'workflow': SINGLE_WORKFLOW_SCHEMA,
+                        'interface': {
                             'type': 'object',
                             'properties': {
-                                'ref': {
+                                'name': {
                                     'type': 'string'
+                                },
+                                'operations': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'string'
+                                    },
+                                    'uniqueItems': True,
+                                    'minItems': 1
                                 }
                             },
-                            'required': ['ref'],
+                            'required': ['name', 'operations'],
                             'additionalProperties': False
                         }
-                    ]
+                    },
+                    'additionalProperties': False
                 }
             }
-        },
+        }
     },
     'required': ['application_template'],
     'additionalProperties': False
 }
+
 
 IMPORTS_SCHEMA = {
     'type': 'array',

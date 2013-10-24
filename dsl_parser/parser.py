@@ -17,8 +17,10 @@ IMPORTS = 'imports'
 TYPES = 'types'
 PLUGINS = 'plugins'
 INTERFACES = 'interfaces'
+WORKFLOWS = 'workflows'
+POLICIES = 'policies'
+RELATIONSHIPS = 'relationships'
 PROPERTIES = 'properties'
-
 
 __author__ = 'ran'
 
@@ -30,19 +32,17 @@ from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 
 
-filepath = os.path.join(os.path.join(os.path.dirname(__file__), os.pardir), os.path.join('resources',
-                                                                                         'alias-mappings.yaml'))
-with open(filepath, 'r') as f:
-    default_alias_mapping = yaml.safe_load(f.read())
-
-
-def parse_from_file(dsl_file_path, alias_mapping=default_alias_mapping):
+def parse_from_file(dsl_file_path, alias_mapping=None):
+    if alias_mapping is None:
+        alias_mapping = _get_default_alias_mapping()
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
         return _parse(dsl_string, alias_mapping, dsl_file_path)
 
 
-def parse(dsl_string, alias_mapping=default_alias_mapping):
+def parse(dsl_string, alias_mapping=None):
+    if alias_mapping is None:
+        alias_mapping = _get_default_alias_mapping()
     return _parse(dsl_string, alias_mapping)
 
 
@@ -50,9 +50,9 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     try:
         parsed_dsl = yaml.safe_load(dsl_string)
     except ParserError, ex:
-        raise DSLParsingFormatException(-1, 'Failed to parse DSL: Illegal yaml file')
+        raise DSLParsingFormatException(-1, 'Failed to parse DSL: Illegal yaml')
     if parsed_dsl is None:
-        raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml file')
+        raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml')
 
     combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping, dsl_file_path)
 
@@ -61,32 +61,154 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     application_template = combined_parsed_dsl[APPLICATION_TEMPLATE]
     app_name = application_template['name']
 
-    nodes = application_template["topology"]
+    nodes = application_template['topology']
     _validate_no_duplicate_nodes(nodes)
-    processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl), nodes)
 
-    top_level_workflows = _process_top_level_workflows(combined_parsed_dsl['workflows'], alias_mapping) if 'workflows'\
-                                                        in combined_parsed_dsl else {}
+    top_level_relationships = _process_relationships(combined_parsed_dsl, alias_mapping)
+
+    top_level_policies_and_rules_tuple = _process_policies(combined_parsed_dsl[POLICIES], alias_mapping) if \
+        POLICIES in combined_parsed_dsl else ({}, {})
+
+    processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
+                                                     alias_mapping), nodes)
+
+    top_level_workflows = _process_workflows(combined_parsed_dsl[WORKFLOWS], alias_mapping) if WORKFLOWS in \
+                                                                                               combined_parsed_dsl else {}
+
+    response_policies_section = _create_response_policies_section(processed_nodes)
 
     plan = {
         'name': app_name,
         'nodes': processed_nodes,
-        'workflows': top_level_workflows
+        RELATIONSHIPS: top_level_relationships,
+        WORKFLOWS: top_level_workflows,
+        POLICIES: response_policies_section,
+        'policies_events': top_level_policies_and_rules_tuple[0],
+        'rules': top_level_policies_and_rules_tuple[1]
     }
 
     return plan
 
 
-def _process_top_level_workflows(workflows, alias_mapping):
+#This method is applicable to both types and relationships. it's concerned with extracting the super types
+#recursively, where the merging_func parameter is used to merge them with the current type
+def _extract_complete_type_recursive(type_obj, type_name, dsl_container, merging_func, visited_type_names,
+                                     is_relationships):
+    if type_name in visited_type_names:
+        visited_type_names.append(type_name)
+        ex = DSLParsingLogicException(100, 'Failed parsing {0} {1}, Circular dependency detected: {2}'.format(
+            'relationship' if is_relationships else 'type', type_name, ' --> '.join(visited_type_names)))
+        ex.circular_dependency = visited_type_names
+        raise ex
+    visited_type_names.append(type_name)
+    current_level_type = copy.deepcopy(type_obj)
+    #halt condition
+    if 'derived_from' not in current_level_type:
+        return current_level_type
+
+    super_type_name = current_level_type['derived_from']
+    if super_type_name not in dsl_container:
+        raise DSLParsingLogicException(14,
+                                       'Missing definition for {0} {1} which is declared as derived by {0} {2}'
+                                       .format('relationship' if is_relationships else 'type', super_type_name,
+                                               type_name))
+
+    super_type = dsl_container[super_type_name]
+    complete_super_type = _extract_complete_type_recursive(super_type, super_type_name, dsl_container, merging_func,
+                                                           visited_type_names, is_relationships)
+    return merging_func(complete_super_type, current_level_type)
+
+
+def _process_relationships(combined_parsed_dsl, alias_mapping):
+    processed_relationships = {}
+    if RELATIONSHIPS not in combined_parsed_dsl:
+        return processed_relationships
+
+    relationships = combined_parsed_dsl[RELATIONSHIPS]
+
+    def rel_inheritance_merging_func(complete_super_type, current_level_type):
+        #derive fields
+        merged_type = dict(complete_super_type.items() + current_level_type.items())
+        return merged_type
+
+    for rel_name, rel_obj in relationships.iteritems():
+        complete_rel_obj = _extract_complete_type_recursive(rel_obj, rel_name, relationships,
+                                                            rel_inheritance_merging_func, [], True)
+
+        validate_relationship_fields(complete_rel_obj, combined_parsed_dsl, rel_name)
+        processed_relationships[rel_name] = copy.deepcopy(complete_rel_obj)
+        processed_relationships[rel_name]['name'] = rel_name
+        if 'derived_from' in processed_relationships[rel_name]:
+            del (processed_relationships[rel_name]['derived_from'])
+
+        if 'workflow' in processed_relationships[rel_name]:
+            processed_relationships[rel_name]['workflow'] = _process_ref_or_inline_value(processed_relationships[
+                                                                                             rel_name]['workflow'],
+                                                                                         'radial', alias_mapping)
+
+    return processed_relationships
+
+
+def validate_relationship_fields(complete_rel_obj, combined_parsed_dsl, rel_name):
+    plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
+    interfaces = _get_dict_prop(combined_parsed_dsl, INTERFACES)
+
+    if 'plugin' in complete_rel_obj and complete_rel_obj['plugin'] not in plugins:
+        raise DSLParsingLogicException(19, 'Missing definition for plugin {0}, which is declared for relationship'
+                                           ' {1}', complete_rel_obj['plugin'], rel_name)
+    if 'bind_at' in complete_rel_obj and complete_rel_obj['bind_at'] not in ('pre_started', 'post_started'):
+        raise DSLParsingLogicException(20, 'Relationship {0} has an illegal "bind_at" value {1}; value must '
+                                           'be either {2} or {3}', rel_name, complete_rel_obj['bind_at'],
+                                       'pre_started', 'post_started')
+    if 'run_on_node' in complete_rel_obj and complete_rel_obj['run_on_node'] not in ('source', 'target'):
+        raise DSLParsingLogicException(21, 'Relationship {0} has an illegal "run_on_node" value {1}; value must '
+                                           'be either {2} or {3}', rel_name, complete_rel_obj['run_on_node'],
+                                       'source', 'target')
+    if 'interface' in complete_rel_obj and complete_rel_obj['interface']['name'] in interfaces:
+        raise DSLParsingLogicException(22, 'Relationship {0} defines a duplicate interface {1}, it is already defined '
+                                           'in the global interfaces section')
+
+
+def _create_response_policies_section(processed_nodes):
+    response_policies_section = {}
+    for processed_node in processed_nodes:
+        if POLICIES in processed_node:
+            response_policies_section[processed_node['id']] = copy.deepcopy(processed_node[POLICIES])
+    return response_policies_section
+
+
+def _process_policies(policies, alias_mapping):
+    processed_policies_events = {}
+    processed_rules = {}
+
+    if 'types' in policies:
+        for name, policy_event_obj in policies['types'].iteritems():
+            processed_policies_events[name] = {}
+            processed_policies_events[name]['message'] = policy_event_obj['message']
+            processed_policies_events[name]['policy'] = _process_ref_or_inline_value(policy_event_obj, 'policy',
+                                                                                     alias_mapping)
+    if 'rules' in policies:
+        for name, rule_obj in policies['rules'].iteritems():
+            processed_rules[name] = copy.deepcopy(rule_obj)
+
+    return processed_policies_events, processed_rules
+
+
+def _process_workflows(workflows, alias_mapping):
     processed_workflows = {}
+
     for name, flow_obj in workflows.iteritems():
-        if flow_obj.keys()[0] == 'ref':
-            filename = flow_obj.values()[0]
-            processed_workflows[name] = _apply_ref(filename, alias_mapping)
-        else: #flow_obj.keys()[0] == 'radial'
-            processed_workflows[name] = flow_obj.values()[0]
+        processed_workflows[name] = _process_ref_or_inline_value(flow_obj, 'radial', alias_mapping)
 
     return processed_workflows
+
+
+def _process_ref_or_inline_value(ref_or_inline_obj, inline_key_name, alias_mapping):
+    if 'ref' in ref_or_inline_obj:
+        filename = ref_or_inline_obj['ref']
+        return _apply_ref(filename, alias_mapping)
+    else: #inline
+        return ref_or_inline_obj[inline_key_name]
 
 
 def _validate_no_duplicate_nodes(nodes):
@@ -102,6 +224,7 @@ def _validate_no_duplicate_element(elements, keyfunc):
     elements.sort(key=keyfunc)
     groups = []
     from itertools import groupby
+
     for key, group in groupby(elements, key=keyfunc):
         groups.append(list(group))
     for group in groups:
@@ -109,13 +232,13 @@ def _validate_no_duplicate_element(elements, keyfunc):
             return keyfunc(group[0]), len(group)
 
 
-def _process_node(node, parsed_dsl):
+def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, alias_mapping):
     node_type_name = node['type']
-    processed_node = {'id': '{0}.{1}'.format(parsed_dsl[APPLICATION_TEMPLATE]['name'], node['name']),
+    node_name = node['name']
+    processed_node = {'id': '{0}.{1}'.format(parsed_dsl[APPLICATION_TEMPLATE]['name'], node_name),
                       'type': node_type_name}
 
-    plugins = {}
-    operations = {}
+    #handle types
     if TYPES not in parsed_dsl or node_type_name not in parsed_dsl[TYPES]:
         err_message = 'Could not locate node type: {0}; existing types: {1}'.format(node_type_name,
                                                                                     parsed_dsl[TYPES].keys() if
@@ -125,12 +248,15 @@ def _process_node(node, parsed_dsl):
     node_type = parsed_dsl[TYPES][node_type_name]
     complete_node_type = _extract_complete_type(node_type, node_type_name, parsed_dsl)
 
+    #handle plugins and operations
+    plugins = {}
+    operations = {}
     if INTERFACES in complete_node_type:
         if complete_node_type[INTERFACES] and PLUGINS not in parsed_dsl:
             raise DSLParsingLogicException(5, 'Must provide plugins section when providing interfaces section')
 
         implementation_interfaces = complete_node_type[INTERFACES]
-        _validate_no_duplicate_interfaces(implementation_interfaces, node['name'])
+        _validate_no_duplicate_interfaces_for_node(implementation_interfaces, node_name)
         for implementation_interface in implementation_interfaces:
             if type(implementation_interface) == dict:
                 #explicit declaration
@@ -153,7 +279,7 @@ def _process_node(node, parsed_dsl):
                 interface_name = implementation_interface
                 plugin_name = _autowire_plugin(parsed_dsl[PLUGINS], interface_name, node_type_name)
             plugin = parsed_dsl[PLUGINS][plugin_name]
-            plugins[plugin_name] = plugin
+            plugins[plugin_name] = _process_plugin(plugin, plugin_name)
 
             #put operations into node
             if interface_name not in parsed_dsl[INTERFACES]:
@@ -172,17 +298,53 @@ def _process_node(node, parsed_dsl):
         processed_node[PLUGINS] = plugins
         processed_node['operations'] = operations
 
-    if PROPERTIES in complete_node_type:
-        processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
-        if PROPERTIES in node:
-            processed_node[PROPERTIES] = dict(processed_node[PROPERTIES].items() + node[PROPERTIES].items())
-    elif PROPERTIES in node:
-        processed_node[PROPERTIES] = node[PROPERTIES]
+    #merge properties
+    processed_node[PROPERTIES] = _merge_sub_dicts(complete_node_type, node, PROPERTIES)
+
+    #merge workflows
+    merged_workflows = _merge_sub_dicts(complete_node_type, node, WORKFLOWS)
+    processed_node[WORKFLOWS] = _process_workflows(merged_workflows, alias_mapping)
+
+    #merge policies
+    processed_node[POLICIES] = _merge_sub_dicts(complete_node_type, node, POLICIES)
+    _validate_node_policies(processed_node[POLICIES], node_name, top_level_policies_and_rules_tuple)
 
     return processed_node
 
 
-def _validate_no_duplicate_interfaces(implementation_interfaces, node_name):
+def _process_plugin(plugin, plugin_name):
+    if plugin['derived_from'] not in ('cloudify.tosca.artifacts.agent_plugin', 'cloudify.tosca.artifacts'
+                                                                               '.remote_plugin'):
+        #TODO: consider changing the below exception to type DSLParsingFormatException..?
+        raise DSLParsingLogicException(18, 'plugin {0} has an illegal "derived_from" value {1}; value must be'
+                                           ' either {2} or {3}', plugin_name, plugin['derived_from'],
+                                       'cloudify.tosca.artifacts.agent_plugin', 'cloudify.tosca.artifacts'
+                                                                                '.remote_plugin')
+    processed_plugin = copy.deepcopy(plugin)
+    processed_plugin['agent_plugin'] = plugin['derived_from'] == 'cloudify.tosca.artifacts.agent_plugin'
+    del (processed_plugin['derived_from'])
+    return processed_plugin
+
+
+def _validate_node_policies(policies, node_name, top_level_policies_and_rules_tuple):
+    #validating all policies and rules declared are indeed defined in the top level policies section
+    for policy_name, policy in policies.iteritems():
+        if policy_name not in top_level_policies_and_rules_tuple[0]:
+            raise DSLParsingLogicException(16, 'Failed to parse node {0}: policy {1} not defined'.format(node_name,
+                                                                                                         policy_name))
+        for rule in policy['rules']:
+            if rule['type'] not in top_level_policies_and_rules_tuple[1]:
+                raise DSLParsingLogicException(17, 'Failed to parse node {0}: rule {1} under policy {2} not '
+                                                   'defined'.format(node_name, rule['type'], policy_name))
+
+
+def _merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
+    overridden_sub_dict = _get_dict_prop(overridden_dict, sub_dict_key)
+    overriding_sub_dict = _get_dict_prop(overriding_dict, sub_dict_key)
+    return dict(overridden_sub_dict.items() + overriding_sub_dict.items())
+
+
+def _validate_no_duplicate_interfaces_for_node(implementation_interfaces, node_name):
     duplicate = _validate_no_duplicate_element(implementation_interfaces, lambda interface: _get_interface_name(
         interface))
     if duplicate is not None:
@@ -194,54 +356,34 @@ def _validate_no_duplicate_interfaces(implementation_interfaces, node_name):
 
 
 def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
-    return _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, [])
+    def types_inheritance_merging_func(complete_super_type, current_level_type):
+        merged_type = current_level_type
+        #derive properties
+        merged_type[PROPERTIES] = _merge_sub_dicts(complete_super_type, merged_type, PROPERTIES)
+        #derive workflows
+        merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type, merged_type, WORKFLOWS)
+        #derive policies
+        merged_type[POLICIES] = _merge_sub_dicts(complete_super_type, merged_type, POLICIES)
+        #derive interfaces
+        complete_super_type_interfaces = _get_list_prop(complete_super_type, INTERFACES)
+        current_level_type_interfaces = _get_list_prop(merged_type, INTERFACES)
+        merged_interfaces = complete_super_type_interfaces
 
+        for interface_element in current_level_type_interfaces:
+            #we need to replace interface elements in the merged_interfaces if their interface name
+            #matches this interface_element
+            _replace_or_add_interface(merged_interfaces, interface_element)
 
-def _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl, visited_dsl_types_names):
-    if dsl_type_name in visited_dsl_types_names:
-        visited_dsl_types_names.append(dsl_type_name)
-        ex = DSLParsingLogicException(100, 'Failed parsing type {0}, Circular dependency detected: {1}'.format(
-            dsl_type_name, ' --> '.join(visited_dsl_types_names)))
-        ex.circular_dependency = visited_dsl_types_names
-        raise ex
-    visited_dsl_types_names.append(dsl_type_name)
-    current_level_type = copy.deepcopy(dsl_type)
-    #halt condition
-    if 'derived_from' not in current_level_type:
-        return current_level_type
+        merged_type[INTERFACES] = merged_interfaces
 
-    super_type_name = current_level_type['derived_from']
-    if super_type_name not in parsed_dsl[TYPES]:
-        raise DSLParsingLogicException(14, 'Missing definition for type {0} which is declared as derived by type {1}'
-                                       .format(super_type_name, dsl_type_name))
+        return merged_type
 
-    super_type = parsed_dsl[TYPES][super_type_name]
-    complete_super_type = _extract_complete_type_recursive(super_type, super_type_name, parsed_dsl,
-                                                           visited_dsl_types_names)
-    merged_type = current_level_type
-    #derive properties
-    complete_super_type_properties = _get_dict_prop(complete_super_type, PROPERTIES)
-    current_level_type_properties = _get_dict_prop(merged_type, PROPERTIES)
-    merged_properties = dict(complete_super_type_properties.items() + current_level_type_properties.items())
-    merged_type[PROPERTIES] = merged_properties
-    #derive interfaces
-    complete_super_type_interfaces = _get_list_prop(complete_super_type, INTERFACES)
-    current_level_type_interfaces = _get_list_prop(merged_type, INTERFACES)
-    merged_interfaces = complete_super_type_interfaces
-
-    for interface_element in current_level_type_interfaces:
-        #we need to replace interface elements in the merged_interfaces if their interface name
-        #matches this interface_element
-        _replace_or_add_interface(merged_interfaces, interface_element)
-
-    merged_type[INTERFACES] = merged_interfaces
-
-    return merged_type
+    return _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl[TYPES], types_inheritance_merging_func,
+        [], False)
 
 
 def _apply_ref(filename, alias_mapping):
-    if filename in alias_mapping:
-        filename = alias_mapping[filename]
+    filename = _apply_alias_mapping_if_available(filename, alias_mapping)
     try:
         with open(filename, 'r') as f:
             return f.read()
@@ -294,7 +436,17 @@ def _autowire_plugin(plugins, interface_name, type_name):
 
 
 def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
-    merge_no_override = {INTERFACES, PLUGINS}
+    def _merge_into_dict_or_throw_on_duplicate(from_dict, to_dict, top_level_key, path):
+        for key, value in from_dict.iteritems():
+            if key not in to_dict:
+                to_dict[key] = value
+            else:
+                path.append(key)
+                raise DSLParsingLogicException(4, 'Failed on import: Could not merge {0} due to conflict '
+                                                  'on path {1}'.format(top_level_key, ' --> '.join(path)))
+
+    merge_no_override = {INTERFACES, PLUGINS, WORKFLOWS, RELATIONSHIPS}
+    merge_one_nested_level_no_override = {POLICIES}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
     if IMPORTS not in parsed_dsl:
@@ -313,26 +465,30 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
                 parsed_imported_dsl = yaml.safe_load(f)
         except EnvironmentError, ex:
             raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'.format(
-                                           single_import, ex.message))
+                single_import, ex.message))
 
         #combine the current file with the combined parsed dsl we have thus far
         for key, value in parsed_imported_dsl.iteritems():
-            if key == IMPORTS:
+            if key == IMPORTS: #no need to merge those..
                 continue
             if key not in combined_parsed_dsl:
                 #simply add this first level property to the dsl
                 combined_parsed_dsl[key] = value
             else:
-                if key not in merge_no_override:
+                if key in merge_no_override:
+                    #this section will combine dictionary entries of the top level only, with no overrides
+                    _merge_into_dict_or_throw_on_duplicate(value, combined_parsed_dsl[key], key, [])
+                elif key in merge_one_nested_level_no_override:
+                    #this section will combine dictionary entries on up to one nested level, yet without overrides
+                    for nested_key, nested_value in value.iteritems():
+                        if nested_key not in combined_parsed_dsl[key]:
+                            combined_parsed_dsl[key][nested_key] = nested_value
+                        else:
+                            _merge_into_dict_or_throw_on_duplicate(nested_value, combined_parsed_dsl[key][nested_key],
+                                                                   key, [nested_key])
+                else:
                     #first level property is not white-listed for merge - throw an exception
                     raise DSLParsingLogicException(3, 'Failed on import: non-mergeable field {0}'.format(key))
-                    #going over the key-value pairs of the property we're merging
-                for inner_key, inner_value in value.iteritems():
-                    if inner_key not in combined_parsed_dsl[key]:
-                        combined_parsed_dsl[key][inner_key] = inner_value
-                    else:
-                        raise DSLParsingLogicException(4, 'Failed on import: Could not merge {0} due to conflict on '
-                                                          'key {1}'.format(key, inner_key))
 
     #clean the now unnecessary 'imports' section from the combined dsl
     if IMPORTS in combined_parsed_dsl:
@@ -341,56 +497,55 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
 
 
 def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import):
-    _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, [], current_import)
+    def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping,
+                                              current_path_imports_list,
+                                              current_import):
+        def _locate_import(another_import):
+            searched_locations = []
+            if os.path.exists(another_import):
+                return another_import
+            searched_locations.append(another_import)
+            if current_import is not None:
+                relative_path = os.path.join(os.path.dirname(current_import), another_import)
+                if os.path.exists(relative_path):
+                    return relative_path
+                searched_locations.append(relative_path)
+            raise DSLParsingLogicException(13,
+                                           'Failed on import - Unable to locate import file; searched in {0}'
+                                           .format(searched_locations))
 
-
-def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, current_path_imports_list,
-                                          current_import):
-    def _locate_import(another_import):
-        searched_locations = []
-        if os.path.exists(another_import):
-            return another_import
-        searched_locations.append(another_import)
         if current_import is not None:
-            relative_path = os.path.join(os.path.dirname(current_import), another_import)
-            if os.path.exists(relative_path):
-                return relative_path
-            searched_locations.append(relative_path)
-        raise DSLParsingLogicException(13,
-                                       'Failed on import - Unable to locate import file; searched in {0}'
-                                       .format(searched_locations))
+            current_path_imports_list.append(current_import)
+            ordered_imports_list.append(current_import)
 
-    if current_import is not None:
-        current_path_imports_list.append(current_import)
-        ordered_imports_list.append(current_import)
+        if IMPORTS not in parsed_dsl:
+            if current_import is not None:
+                current_path_imports_list.pop()
+            return
 
-    if IMPORTS not in parsed_dsl:
+        for another_import in parsed_dsl[IMPORTS]:
+            another_import = _apply_alias_mapping_if_available(another_import, alias_mapping)
+            if another_import not in ordered_imports_list:
+                import_path = _locate_import(another_import)
+                try:
+                    with open(import_path, 'r') as f:
+                        imported_dsl = yaml.safe_load(f)
+                        _build_ordered_imports_list_recursive(imported_dsl, ordered_imports_list, alias_mapping,
+                                                              current_path_imports_list, import_path)
+                except EnvironmentError, ex:
+                    raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'
+                                                       ''.format(import_path, ex.message))
+            elif another_import in current_path_imports_list:
+                current_path_imports_list.append(another_import)
+                ex = DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}'.format(
+                    " --> ".join(current_path_imports_list)))
+                ex.circular_path = current_path_imports_list
+                raise ex
         if current_import is not None:
             current_path_imports_list.pop()
-        return
 
-    for another_import in parsed_dsl[IMPORTS]:
-        if another_import in alias_mapping:
-            another_import = alias_mapping[another_import]
-
-        if another_import not in ordered_imports_list:
-            import_path = _locate_import(another_import)
-            try:
-                with open(import_path, 'r') as f:
-                    imported_dsl = yaml.safe_load(f)
-                    _build_ordered_imports_list_recursive(imported_dsl, ordered_imports_list, alias_mapping,
-                                                          current_path_imports_list, import_path)
-            except EnvironmentError, ex:
-                raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'
-                                                   ''.format(import_path, ex.message))
-        elif another_import in current_path_imports_list:
-            current_path_imports_list.append(another_import)
-            ex = DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}'.format(
-                " --> ".join(current_path_imports_list)))
-            ex.circular_path = current_path_imports_list
-            raise ex
-    if current_import is not None:
-        current_path_imports_list.pop()
+    current_import = _apply_alias_mapping_if_available(current_import, alias_mapping)
+    _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, [], current_import)
 
 
 def _validate_dsl_schema(parsed_dsl):
@@ -409,6 +564,18 @@ def _validate_imports_section(imports_section, filename):
     except ValidationError, ex:
         raise DSLParsingFormatException(2, 'Improper "imports" section in file {0}; {1}; Path to error: {2}'.format(
             filename, ex.message, '.'.join((str(x) for x in ex.path))))
+
+
+def _get_default_alias_mapping():
+    filepath = os.path.join(os.path.join(os.path.dirname(__file__), os.pardir), os.path.join('resources',
+                                                                                             'alias-mappings.yaml'))
+    with open(filepath, 'r') as f:
+        default_alias_mapping = yaml.safe_load(f.read())
+        return default_alias_mapping
+
+
+def _apply_alias_mapping_if_available(name, alias_mapping):
+    return alias_mapping[name] if name in alias_mapping else name
 
 
 class DSLParsingException(Exception):
