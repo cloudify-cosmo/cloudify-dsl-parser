@@ -29,10 +29,16 @@ logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
 @task
-def prepare_multi_instance_plan(plan, **kwargs):
+def prepare_multi_instance_plan(**kwargs):
     """
     Expand node instances based on number of instances to deploy
     """
+    # TODO: plan is removed from function arguments so it does not litter the output logs
+    # we should change this once we have a better mechanism for controlling task output
+    if not 'plan' in kwargs:
+        raise RuntimeError('Missing plan argument')
+    plan = kwargs['plan']
+
     modify_to_multi_instance_plan(plan)
     return json.dumps(plan)
 
