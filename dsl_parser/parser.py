@@ -27,9 +27,12 @@ __author__ = 'ran'
 import os
 import yaml
 import copy
+import contextlib
 from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
+from urllib import pathname2url
+from urllib2 import urlopen, URLError
 
 
 def parse_from_file(dsl_file_path, alias_mapping=None):
@@ -461,11 +464,13 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
         try:
             #(note that this check is only to verify nothing went wrong in the meanwhile, as we've already read
             # from all imported files earlier)
-            with open(single_import, 'r') as f:
+            with contextlib.closing(urlopen(single_import)) as f:
                 parsed_imported_dsl = yaml.safe_load(f)
-        except EnvironmentError, ex:
-            raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'.format(
-                single_import, ex.message))
+        except URLError, ex:
+            error = DSLParsingLogicException(13, 'Failed on import - Unable to open import url {0}; {1}'.format(
+                                                 single_import, ex.message))
+            error.failed_import = single_import
+            raise error
 
         #combine the current file with the combined parsed dsl we have thus far
         for key, value in parsed_imported_dsl.iteritems():
@@ -496,24 +501,23 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
     return combined_parsed_dsl
 
 
+def _get_import_location_candidate(import_str, current_import_context=None):
+    #Already url format
+    if import_str.startswith('http:') or import_str.startswith('ftp:') or import_str.startswith('file:'):
+        return import_str
+
+    #Points to an existing file
+    if os.path.exists(import_str):
+        return 'file:{0}'.format(pathname2url(import_str))
+
+    if current_import_context is not None:
+        return current_import_context[:current_import_context.rfind('/') + 1] + import_str
+
+
 def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import):
     def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping,
                                               current_path_imports_list,
                                               current_import):
-        def _locate_import(another_import):
-            searched_locations = []
-            if os.path.exists(another_import):
-                return another_import
-            searched_locations.append(another_import)
-            if current_import is not None:
-                relative_path = os.path.join(os.path.dirname(current_import), another_import)
-                if os.path.exists(relative_path):
-                    return relative_path
-                searched_locations.append(relative_path)
-            raise DSLParsingLogicException(13,
-                                           'Failed on import - Unable to locate import file; searched in {0}'
-                                           .format(searched_locations))
-
         if current_import is not None:
             current_path_imports_list.append(current_import)
             ordered_imports_list.append(current_import)
@@ -525,18 +529,26 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
 
         for another_import in parsed_dsl[IMPORTS]:
             another_import = _apply_alias_mapping_if_available(another_import, alias_mapping)
-            if another_import not in ordered_imports_list:
-                import_path = _locate_import(another_import)
+            import_url = _get_import_location_candidate(another_import, current_import)
+            if import_url is None:
+                ex = DSLParsingLogicException(13, 'Failed on import - no suitable location found for import {0}'.
+                                                  format(import_url))
+                ex.failed_import = import_url
+                raise ex
+            if import_url not in ordered_imports_list:
                 try:
-                    with open(import_path, 'r') as f:
+                    with contextlib.closing(urlopen(import_url)) as f:
                         imported_dsl = yaml.safe_load(f)
-                        _build_ordered_imports_list_recursive(imported_dsl, ordered_imports_list, alias_mapping,
-                                                              current_path_imports_list, import_path)
-                except EnvironmentError, ex:
-                    raise DSLParsingLogicException(13, 'Failed on import - Unable to open file {0}; {1}'
-                                                       ''.format(import_path, ex.message))
-            elif another_import in current_path_imports_list:
-                current_path_imports_list.append(another_import)
+                    _build_ordered_imports_list_recursive(imported_dsl, ordered_imports_list, alias_mapping,
+                                                          current_path_imports_list, import_url)
+                except URLError, ex:
+                    ex = DSLParsingLogicException(13, 'Failed on import - Unable to open import url {0}; {1}'.
+                                                      format(import_url, ex.message))
+                    ex.failed_import = import_url
+                    raise ex
+
+            elif import_url in current_path_imports_list:
+                current_path_imports_list.append(import_url)
                 ex = DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}'.format(
                     " --> ".join(current_path_imports_list)))
                 ex.circular_path = current_path_imports_list
@@ -545,6 +557,13 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
             current_path_imports_list.pop()
 
     current_import = _apply_alias_mapping_if_available(current_import, alias_mapping)
+    if current_import is not None:
+        current_import = _get_import_location_candidate(current_import)
+        if current_import is None:
+            ex = DSLParsingLogicException(13, 'Failed on import - no suitable location found for import {0}'.
+                                              format(current_import))
+            ex.failed_import = current_import
+            raise ex
     _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, [], current_import)
 
 
