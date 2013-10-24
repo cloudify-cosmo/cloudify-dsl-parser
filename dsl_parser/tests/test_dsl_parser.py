@@ -47,7 +47,7 @@ class TestDSLParser(unittest.TestCase):
         ]
 
         suffix_map = { 'simple_web_server.host': ['_d82c0', '_c2094']}
-        instances = tasks.create_node_instances(node, suffix_map)
+        instances = tasks._create_node_instances(node, suffix_map)
         self.assertEqual(instances, expected_instances)
 
     def test_create_node_instances_policies(self):
@@ -64,7 +64,7 @@ class TestDSLParser(unittest.TestCase):
         }
 
         suffix_map = { 'simple_web_server.host': ['_d82c0', '_c2094']}
-        actual_policies = tasks.create_node_instances_policies(node_id, policies, suffix_map)
+        actual_policies = tasks._create_node_instances_policies(node_id, policies, suffix_map)
         self.assertEqual(actual_policies, expected_policies)
 
     def test_create_multiple_node_suffix_map(self):

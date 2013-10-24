@@ -50,9 +50,9 @@ def modify_to_multi_instance_plan(plan):
 
     for node_id in node_ids:
         node = get_node(node_id, nodes)
-        instances = create_node_instances(node, nodes_suffixes_map)
+        instances = _create_node_instances(node, nodes_suffixes_map)
         new_nodes.extend(instances)
-        instances_policies = create_node_instances_policies(node_id,
+        instances_policies = _create_node_instances_policies(node_id,
                                                             policies,
                                                             nodes_suffixes_map)
         new_policies.update(instances_policies)
@@ -98,7 +98,7 @@ def get_node(node_id, nodes):
     raise RuntimeError("Could not find a node with id {0} in nodes".format(node_id))
 
 
-def create_node_instances(node, suffixes_map):
+def _create_node_instances(node, suffixes_map):
 
     """
     This method duplicates the given node 'number_of_instances' times and return an array with the duplicated instance.
@@ -131,6 +131,7 @@ def create_node_instances(node, suffixes_map):
                 elif (relationship['type'].endswith('relationships.connected_to') or
                       relationship['type'].endswith('relationships.depends_on')):
                     new_relationship = relationship.copy()
+                    # TODO support connected_to with tiers
                     # currently only 1 instance for connected_to (and depends_on) is supported
                     new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][0])
                 new_relationships.append(new_relationship)
@@ -141,7 +142,20 @@ def create_node_instances(node, suffixes_map):
     return instances
 
 
-def create_node_instances_policies(node_id, policies, node_suffixes_map):
+def _create_node_instances_policies(node_id, policies, node_suffixes_map):
+
+    """
+    This method duplicates the policies for each node_id. and returns a map. let us use an example:
+    Given:
+    node_id -> { ... node policies ... }
+    Returns:
+    {
+        node_id_suffix1 -> { ... node policies ... },
+        node_id_suffix2 -> { ... node policies ... (same as above) }
+        ...
+    }
+    """
+
     if not node_id in policies:
         return {}
 
