@@ -190,7 +190,7 @@ class TestDSLParser(unittest.TestCase):
         }
 
         random.seed(0)
-        new_plan = json.loads(tasks.prepare_multi_instance_plan(plan=plan))
+        new_plan = json.loads(tasks.prepare_multi_instance_plan(plan))
         self.assertEqual(new_plan, expected_plan)
 
     def test_prepare_single_instance_plan(self):
@@ -248,7 +248,7 @@ class TestDSLParser(unittest.TestCase):
         }
     
         random.seed(0)
-        new_plan = json.loads(tasks.prepare_multi_instance_plan(plan=plan))
+        new_plan = json.loads(tasks.prepare_multi_instance_plan(plan))
         self.assertEqual(new_plan, expected_plan)
 
     def test_prepare_single_instance_plan_with_connected_to(self):
@@ -372,6 +372,6 @@ class TestDSLParser(unittest.TestCase):
         }
 
         random.seed(0)
-        new_plan = json.loads(tasks.prepare_multi_instance_plan(plan=plan))
+        new_plan = json.loads(tasks.prepare_multi_instance_plan(plan))
 
         self.assertEqual(new_plan, expected_plan)
