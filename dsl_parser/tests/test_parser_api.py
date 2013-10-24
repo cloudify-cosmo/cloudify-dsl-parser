@@ -474,4 +474,9 @@ imports:
         result = parse(top_level_yaml)
         self._assert_application_template(result)
 
+    def test_import_from_file_uri(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_APPLICATION_TEMPLATE], True)
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+
 #TODO: need to add pyyaml's exception when error 0 / maybe add nested error in more places
