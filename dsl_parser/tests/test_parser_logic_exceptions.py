@@ -18,7 +18,7 @@ __author__ = 'ran'
 import os
 from dsl_parser.parser import DSLParsingLogicException, parse_from_file
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-
+from urllib import pathname2url
 
 class TestParserLogicExceptions(AbstractTestParser):
 
@@ -167,8 +167,10 @@ imports:
     -   {0}""".format(mid_file_name)
 
         ex = self._assert_dsl_parsing_exception_error_code(top_level_yaml, 8, DSLParsingLogicException)
-        expected_circular_path = [mid_file_name, bottom_file_name, mid_file_name]
-        self.assertEquals(expected_circular_path, ex.circular_path)
+        expected_circular_path = [pathname2url(x) for x in [mid_file_name, bottom_file_name, mid_file_name]]
+        self.assertEquals(len(expected_circular_path), len(ex.circular_path))
+        for expected_element, element in zip(expected_circular_path, ex.circular_path):
+            self.assertTrue(expected_element in element, '{0} not in {1}'.format(expected_element,element))
 
     def test_recursive_imports_with_complete_circle(self):
         bottom_level_yaml = """
@@ -187,8 +189,11 @@ imports:
     -   {0}""".format(mid_file_name)
         top_file_name = self.make_file_with_name(top_level_yaml, 'top_level.yaml')
         ex = self._assert_dsl_parsing_exception_error_code(top_file_name, 8, DSLParsingLogicException, parse_from_file)
-        expected_circular_path = [top_file_name, mid_file_name, bottom_file_name, top_file_name]
-        self.assertEquals(expected_circular_path, ex.circular_path)
+        expected_circular_path = [pathname2url(x) for x in [top_file_name, mid_file_name, bottom_file_name,
+                                  top_file_name]]
+        self.assertEquals(len(expected_circular_path), len(ex.circular_path))
+        for expected_element, element in zip(expected_circular_path, ex.circular_path):
+            self.assertTrue(expected_element in element, '{0} not in {1}'.format(expected_element,element))
 
     def test_type_derive_non_from_none_existing(self):
         yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """

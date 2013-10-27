@@ -96,13 +96,18 @@ types:
         filename = 'tempfile{0}.yaml'.format(uuid.uuid4())
         return self.make_file_with_name(content, filename)
 
-    def create_yaml_with_imports(self, contents):
+    def create_yaml_with_imports(self, contents, as_uri=False):
+        def _path2url(path):
+            from urllib import pathname2url
+            from urlparse import urljoin
+            return urljoin('file:', pathname2url(path))
+
         yaml = """
 imports:"""
         for content in contents:
             filename = self.make_yaml_file(content)
             yaml += """
-    -   {0}""".format(filename)
+    -   {0}""".format(filename if not as_uri else _path2url(filename))
         return yaml
 
     def _assert_dsl_parsing_exception_error_code(self, dsl, expected_error_code, exception_type=DSLParsingException,

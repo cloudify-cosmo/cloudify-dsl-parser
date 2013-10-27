@@ -17,6 +17,7 @@ __author__ = 'ran'
 
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.parser import parse, parse_from_file, _get_default_alias_mapping
+from urllib import pathname2url
 
 
 class TestParserApi(AbstractTestParser):
@@ -759,6 +760,26 @@ imports:
         top_level_yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
+        result = parse(top_level_yaml)
+        self._assert_application_template(result)
+
+    def test_import_from_file_uri(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_APPLICATION_TEMPLATE], True)
+        result = parse(yaml)
+        self._assert_minimal_application_template(result)
+
+    def test_relative_file_uri_import(self):
+        bottom_level_yaml = self.BASIC_TYPE
+        self.make_file_with_name(bottom_level_yaml, 'bottom_level.yaml')
+
+        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+imports:
+    -   \"bottom_level.yaml\""""
+        mid_file_name = self.make_yaml_file(mid_level_yaml)
+
+        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+imports:
+    -   {0}""".format('file:///' + pathname2url(mid_file_name))
         result = parse(top_level_yaml)
         self._assert_application_template(result)
 
