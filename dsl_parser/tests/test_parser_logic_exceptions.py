@@ -433,6 +433,87 @@ relationships:
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 100, DSLParsingLogicException)
 
+    def test_instance_relationships_bad_target_value(self):
+        #target value is a non-existent node
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: test_relationship
+                    target: fake_node
+relationships:
+    test_relationship: {}
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 25, DSLParsingLogicException)
+
+    def test_instance_relationships_bad_type_value(self):
+        #type value is a non-existent relationship
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: fake_relationship
+                    target: test_node
+relationships:
+    test_relationship: {}
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 26, DSLParsingLogicException)
+
+    def test_instance_relationships_same_source_and_target(self):
+        #A relationship from a node to itself is not valid
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: test_relationship
+                    target: test_node2
+relationships:
+    test_relationship: {}
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 23, DSLParsingLogicException)
+
+    def test_top_level_relationships_relationship_with_undefined_plugin(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: "test_relationship"
+                    target: "test_node"
+                    plugin: "undefined_plugin"
+relationships:
+    test_relationship: {}
+                        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 19, DSLParsingLogicException)
+
+    def test_top_level_relationships_relationship_with_bad_bind_at_value(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: "test_relationship"
+                    target: "test_node"
+                    bind_at: "bad_value"
+relationships:
+    test_relationship: {}
+                        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+
+    def test_top_level_relationships_relationship_with_bad_run_on_node_value(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: "test_relationship"
+                    target: "test_node"
+                    run_on_node: "bad_value"
+relationships:
+    test_relationship: {}
+                        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 21, DSLParsingLogicException)
+
+    #Note: the following tests ensure that there are no duplicate interfaces definitions in any sections of the input.
+    #there are additional tests that could have been done, yet this part is subject to change in the very near future,
+    #and thus the tests that were already created remained for the moment with no additional ones created.
     def test_top_level_relationships_duplicate_interface_to_top_level_interfaces(self):
         yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
 relationships:
@@ -440,6 +521,87 @@ relationships:
         interface:
             name: "test_interface1"
             operations:
-                -   "install"
+                -   "start"
                 """
+        self._assert_dsl_parsing_exception_error_code(yaml, 22, DSLParsingLogicException)
+
+    def test_top_level_relationships_duplicate_interface_to_another_top_level_relationship(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+relationships:
+    test_relationship:
+        interface:
+            name: "test_interface1"
+            operations:
+                -   "start"
+    test_relationship_2:
+        interface:
+            name: "test_interface1"
+            operations:
+                -   "stop"
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 22, DSLParsingLogicException)
+
+    def test_instance_relationships_duplicate_interface_to_top_level_interfaces(self):
+        #note that this duplicate will generate an error despite the fact that the
+        #interface from the top-level interfaces section is not even actually used
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: test_relationship
+                    target: test_node
+                    interface:
+                        name: "test_interface1"
+                        operations:
+                            -   "start"
+relationships:
+    test_relationship: {}
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 22, DSLParsingLogicException)
+
+    def test_instance_relationships_duplicate_interface_to_top_level_relationships_interface(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: test_relationship
+                    target: test_node
+                    interface:
+                        name: "test_interface2"
+                        operations:
+                            -   "start"
+relationships:
+    test_relationship: {}
+    test_relationship2:
+        interface:
+            name: "test_interface2"
+            operations:
+                -   "install"
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 22, DSLParsingLogicException)
+
+    def test_instance_relationships_duplicate_interface_to_top_level_relationships_interface_despite_override(self):
+        #Very similar to the previous test, this test also ensures that same name interface
+        #is still invalid even if the duplicate is defined in a context of an override.
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: test_relationship
+                    target: test_node
+                    interface:
+                        name: "test_interface2"
+                        operations:
+                            -   "start"
+relationships:
+    test_relationship:
+        interface:
+            name: "test_interface2"
+            operations:
+                -   "install"
+        """
         self._assert_dsl_parsing_exception_error_code(yaml, 22, DSLParsingLogicException)

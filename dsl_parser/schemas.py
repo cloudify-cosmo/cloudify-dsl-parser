@@ -123,6 +123,51 @@ DSL_SCHEMA = {
                             },
                             'workflows': WORKFLOWS_SCHEMA,
                             'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
+                            'relationships': {
+                                'type': 'array',
+                                'items': {
+                                    'type': 'object',
+                                    'properties': {
+                                        #non-meta 'type'
+                                        'type': {
+                                            'type': 'string'
+                                        },
+                                        'target': {
+                                            'type': 'string'
+                                        },
+                                        'plugin': {
+                                            'type': 'string'
+                                        },
+                                        'bind_at': {
+                                            'type': 'string'
+                                        },
+                                        'run_on_node': {
+                                            'type': 'string'
+                                        },
+                                        'workflow': SINGLE_WORKFLOW_SCHEMA,
+                                        'interface': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'name': {
+                                                    'type': 'string'
+                                                },
+                                                'operations': {
+                                                    'type': 'array',
+                                                    'items': {
+                                                        'type': 'string'
+                                                    },
+                                                    'uniqueItems': True,
+                                                    'minItems': 1
+                                                }
+                                            },
+                                            'required': ['name', 'operations'],
+                                            'additionalProperties': False
+                                        }
+                                    },
+                                    'required': ['type', 'target'],
+                                    'additionalProperties': False
+                                }
+                            },
                             #non-meta 'properties'
                             'properties': {
                                 'type': 'object'

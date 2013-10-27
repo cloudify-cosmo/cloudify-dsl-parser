@@ -783,3 +783,170 @@ relationships:
                 ref: "custom ref"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_relationship(self):
+        #relationships are not valid under types whatsoever.
+        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+types:
+    test_type:
+        relationships: {}
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_without_type(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   target: "fake_node"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_without_target(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_without_target(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_extra_prop(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    extra_prop: "value"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_with_derived_from_field(self):
+        #derived_from field is not valid under an instance relationship definition
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    derived_from: "relationship"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_object(self):
+        #trying to use a dictionary instead of an array
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                test_relationship:
+                    type: "fake_relationship"
+                    target: "fake_node"
+                    derived_from: "relationship"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+
+
+
+
+
+
+
+    def test_instance_relationships_relationship_with_empty_interface(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    interface: {}
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_with_interface_without_name(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    interface:
+                        operations:
+                            -   "install"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_with_interface_without_operations(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    interface:
+                        name: "test_rel_interface"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_with_interface_with_empty_operations(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    interface:
+                        name: "test_rel_interface"
+                        operations: []
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_with_interface_with_operations_string(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    interface:
+                        name: "test_rel_interface"
+                        operations: "install"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_with_interface_with_duplicate_operations(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    interface:
+                        name: "test_rel_interface"
+                        operations:
+                            -   "install"
+                            -   "remove"
+                            -   "install"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_with_workflow_with_no_ref_or_radial(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    workflow:
+                        install: {}
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_with_workflow_with_no_ref_or_radial(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    workflow:
+                        install:
+                            radial: "custom radial"
+                            some_other_prop: "val"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationships_relationship_with_workflow_with_both_ref_or_radial(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+            relationships:
+                -   type: "fake_relationship"
+                    target: "fake_node"
+                    workflow:
+                        install:
+                            radial: "custom radial"
+                            ref: "custom ref"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)

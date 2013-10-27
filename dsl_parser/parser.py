@@ -63,14 +63,16 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
 
     nodes = application_template['topology']
     _validate_no_duplicate_nodes(nodes)
+    _validate_no_duplicate_interfaces(combined_parsed_dsl)
 
     top_level_relationships = _process_relationships(combined_parsed_dsl, alias_mapping)
 
     top_level_policies_and_rules_tuple = _process_policies(combined_parsed_dsl[POLICIES], alias_mapping) if \
         POLICIES in combined_parsed_dsl else ({}, {})
 
+    node_names_set = {node['name'] for node in nodes}
     processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
-                                                     alias_mapping), nodes)
+                                                     top_level_relationships, node_names_set, alias_mapping), nodes)
 
     top_level_workflows = _process_workflows(combined_parsed_dsl[WORKFLOWS], alias_mapping) if WORKFLOWS in \
                                                                                                combined_parsed_dsl else {}
@@ -135,7 +137,8 @@ def _process_relationships(combined_parsed_dsl, alias_mapping):
         complete_rel_obj = _extract_complete_type_recursive(rel_obj, rel_name, relationships,
                                                             rel_inheritance_merging_func, [], True)
 
-        validate_relationship_fields(complete_rel_obj, combined_parsed_dsl, rel_name)
+        plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
+        _validate_relationship_fields(complete_rel_obj, plugins, rel_name)
         processed_relationships[rel_name] = copy.deepcopy(complete_rel_obj)
         processed_relationships[rel_name]['name'] = rel_name
         if 'derived_from' in processed_relationships[rel_name]:
@@ -145,28 +148,21 @@ def _process_relationships(combined_parsed_dsl, alias_mapping):
             processed_relationships[rel_name]['workflow'] = _process_ref_or_inline_value(processed_relationships[
                                                                                              rel_name]['workflow'],
                                                                                          'radial', alias_mapping)
-
     return processed_relationships
 
 
-def validate_relationship_fields(complete_rel_obj, combined_parsed_dsl, rel_name):
-    plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
-    interfaces = _get_dict_prop(combined_parsed_dsl, INTERFACES)
-
-    if 'plugin' in complete_rel_obj and complete_rel_obj['plugin'] not in plugins:
+def _validate_relationship_fields(rel_obj, plugins, rel_name):
+    if 'plugin' in rel_obj and rel_obj['plugin'] not in plugins:
         raise DSLParsingLogicException(19, 'Missing definition for plugin {0}, which is declared for relationship'
-                                           ' {1}', complete_rel_obj['plugin'], rel_name)
-    if 'bind_at' in complete_rel_obj and complete_rel_obj['bind_at'] not in ('pre_started', 'post_started'):
+                                           ' {1}', rel_obj['plugin'], rel_name)
+    if 'bind_at' in rel_obj and rel_obj['bind_at'] not in ('pre_started', 'post_started'):
         raise DSLParsingLogicException(20, 'Relationship {0} has an illegal "bind_at" value {1}; value must '
-                                           'be either {2} or {3}', rel_name, complete_rel_obj['bind_at'],
+                                           'be either {2} or {3}', rel_name, rel_obj['bind_at'],
                                        'pre_started', 'post_started')
-    if 'run_on_node' in complete_rel_obj and complete_rel_obj['run_on_node'] not in ('source', 'target'):
+    if 'run_on_node' in rel_obj and rel_obj['run_on_node'] not in ('source', 'target'):
         raise DSLParsingLogicException(21, 'Relationship {0} has an illegal "run_on_node" value {1}; value must '
-                                           'be either {2} or {3}', rel_name, complete_rel_obj['run_on_node'],
+                                           'be either {2} or {3}', rel_name, rel_obj['run_on_node'],
                                        'source', 'target')
-    if 'interface' in complete_rel_obj and complete_rel_obj['interface']['name'] in interfaces:
-        raise DSLParsingLogicException(22, 'Relationship {0} defines a duplicate interface {1}, it is already defined '
-                                           'in the global interfaces section')
 
 
 def _create_response_policies_section(processed_nodes):
@@ -220,6 +216,35 @@ def _validate_no_duplicate_nodes(nodes):
         raise ex
 
 
+def _validate_no_duplicate_interfaces(parsed_dsl):
+    def _add_interface_name_or_throw(rel_obj, unique_interfaces):
+        if 'interface' in rel_obj:
+            if rel_obj['interface']['name'] in unique_interfaces:
+                raise DSLParsingLogicException(22, 'Illegal duplicate - interface {0} is defined more than once'
+                                                    .format(rel_obj['interface']['name']))
+            unique_interfaces.add(rel_obj['interface']['name'])
+
+    top_level_interfaces = _get_dict_prop(parsed_dsl, INTERFACES)
+    top_level_relationships = _get_dict_prop(parsed_dsl, RELATIONSHIPS)
+    nodes = parsed_dsl[APPLICATION_TEMPLATE]['topology']
+
+    unique_interfaces = set()
+    #adding interfaces names from the top-level interfaces definitions -
+    #no need to check for duplicates here because of the yaml inherent structure
+    unique_interfaces.update(top_level_interfaces.keys())
+    #unique_interfaces.update((name for name in top_level_interfaces.keys()))
+
+    #adding interfaces names from the top level relationships definitions
+    for rel_obj in top_level_relationships.itervalues():
+        _add_interface_name_or_throw(rel_obj, unique_interfaces)
+
+    #adding interfaces names from the instance relationships definitions
+    for node in nodes:
+        if RELATIONSHIPS in node:
+            for rel_obj in node[RELATIONSHIPS]:
+                _add_interface_name_or_throw(rel_obj, unique_interfaces)
+
+
 def _validate_no_duplicate_element(elements, keyfunc):
     elements.sort(key=keyfunc)
     groups = []
@@ -232,10 +257,12 @@ def _validate_no_duplicate_element(elements, keyfunc):
             return keyfunc(group[0]), len(group)
 
 
-def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, alias_mapping):
+def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_level_relationships, node_names_set,
+                  alias_mapping):
     node_type_name = node['type']
     node_name = node['name']
-    processed_node = {'id': '{0}.{1}'.format(parsed_dsl[APPLICATION_TEMPLATE]['name'], node_name),
+    app_name = parsed_dsl[APPLICATION_TEMPLATE]['name']
+    processed_node = {'id': '{0}.{1}'.format(app_name, node_name),
                       'type': node_type_name}
 
     #handle types
@@ -287,8 +314,8 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, alias_ma
             interface = parsed_dsl[INTERFACES][interface_name]
             for operation in interface['operations']:
                 if operation in operations:
-                    #Indicate this implicit operation name needs to be removed as we can only support explicit
-                    # implementation in this case
+                    #Indicate this implicit operation name needs to be removed as we can only
+                    #support explicit implementation in this case
                     operations[operation] = None
                 else:
                     operations[operation] = plugin_name
@@ -297,6 +324,41 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, alias_ma
         operations = dict((operation, plugin) for operation, plugin in operations.iteritems() if plugin is not None)
         processed_node[PLUGINS] = plugins
         processed_node['operations'] = operations
+
+    #handle relationships
+    if RELATIONSHIPS in node:
+        relationships = []
+        for relationship in node[RELATIONSHIPS]:
+            relationship_type = relationship['type']
+            #validating only the instance relationship values - the inherited relationship values if any
+            #should have been validated when the top level relationships were processed.
+            _validate_relationship_fields(relationship, plugins, relationship_type)
+            #validate target field (done separately since it's only available in instance relationships)
+            if relationship['target'] not in node_names_set:
+                raise DSLParsingLogicException(25, 'a relationship instance under node {0} of type {1} declares an '
+                                                   'undefined target node {2}'.format(node_name, relationship_type,
+                                                                                      relationship['target']))
+            if relationship['target'] == node_name:
+                raise DSLParsingLogicException(23, 'a relationship instance under node {0} of type {1} '
+                                                   'illegally declares the source node as the target node'.format(
+                    node_name, relationship_type))
+                #merge relationship instance with relationship type
+            if relationship_type not in top_level_relationships:
+                raise DSLParsingLogicException(26, 'a relationship instance under node {0} declares an undefined '
+                                                   'relationship type {1}'.format(node_name, relationship_type))
+            complete_relationship = dict(top_level_relationships[relationship_type].items() + relationship.items())
+            #since we've merged with the already-processed top_level_relationships, there are a few changes that need
+            #to take place - 'name' is replaced with a [fully qualified] 'target' field, and 'workflow' needs to be
+            #re-processed if it is defined in 'relationship', since it overrides any possible already-processed
+            #workflows that might have been inherited, and has not yet been processed
+            del (complete_relationship['name'])
+            complete_relationship['target'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
+            if 'workflow' in relationship:
+                complete_relationship['workflow'] = _process_ref_or_inline_value(relationship['workflow'], 'radial',
+                                                                                 alias_mapping)
+            relationships.append(complete_relationship)
+
+        processed_node[RELATIONSHIPS] = relationships
 
     #merge properties
     processed_node[PROPERTIES] = _merge_sub_dicts(complete_node_type, node, PROPERTIES)
