@@ -20,7 +20,6 @@ SINGLE_WORKFLOW_SCHEMA = {
     'type': 'object',
     'oneOf': [
         {
-            'type': 'object',
             'properties': {
                 'radial': {
                     'type': 'string'
@@ -30,7 +29,6 @@ SINGLE_WORKFLOW_SCHEMA = {
             'additionalProperties': False
         },
         {
-            'type': 'object',
             'properties': {
                 'ref': {
                     'type': 'string'
@@ -240,7 +238,6 @@ DSL_SCHEMA = {
                             'type': 'object',
                             'oneOf': [
                                 {
-                                    'type': 'object',
                                     'properties': {
                                         'message': {
                                             'type': 'string'
@@ -253,7 +250,6 @@ DSL_SCHEMA = {
                                     'additionalProperties': False
                                 },
                                 {
-                                    'type': 'object',
                                     'properties': {
                                         'message': {
                                             'type': 'string'
