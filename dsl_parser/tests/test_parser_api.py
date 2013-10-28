@@ -16,7 +16,7 @@
 __author__ = 'ran'
 
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.parser import parse, parse_from_file, _get_default_alias_mapping
+from dsl_parser.parser import parse, parse_from_path, parse_from_url
 from urllib import pathname2url
 
 
@@ -244,11 +244,16 @@ imports:
 
     def test_parse_dsl_from_file(self):
         filename = self.make_yaml_file(self.MINIMAL_APPLICATION_TEMPLATE)
-        result = parse_from_file(filename)
+        result = parse_from_path(filename)
+        self._assert_minimal_application_template(result)
+
+    def test_parse_dsl_from_url(self):
+        filename_url = self.make_yaml_file(self.MINIMAL_APPLICATION_TEMPLATE, True)
+        result = parse_from_url(filename_url)
         self._assert_minimal_application_template(result)
 
     def test_parse_dsl_from_file_bad_path(self):
-        self.assertRaises(EnvironmentError, parse_from_file, 'fake-file.yaml')
+        self.assertRaises(EnvironmentError, parse_from_path, 'fake-file.yaml')
 
     def test_import_empty_list(self):
         yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
@@ -298,11 +303,19 @@ types:
         yaml = """
 imports:
     -   {0}""".format(imported_alias)
-        result = parse(yaml, {'{0}'.format(imported_alias): '{0}'.format(imported_filename)})
+        result = parse(yaml, alias_mapping_dict={'{0}'.format(imported_alias): '{0}'.format(imported_filename)})
         self._assert_minimal_application_template(result)
 
-    def test_default_alias_mapping_file(self):
-        self.assertTrue(len(_get_default_alias_mapping()) > 0)
+    def test_alias_mapping_imports_using_path(self):
+        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE
+        imported_filename = self.make_yaml_file(imported_yaml)
+        imported_alias = 'imported_alias'
+        yaml = """
+imports:
+    -   {0}""".format(imported_alias)
+        alias_path = self.make_alias_yaml_file({'{0}'.format(imported_alias): '{0}'.format(imported_filename)})
+        result = parse(yaml, alias_mapping_path=alias_path)
+        self._assert_minimal_application_template(result)
 
     def test_empty_first_level_workflows(self):
         yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
@@ -330,7 +343,7 @@ workflows:
         install:
             ref: {0}
         """.format(ref_alias)
-        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
         self._assert_minimal_application_template(result)
         self.assertEquals('my custom radial', result['workflows']['install'])
 
@@ -345,7 +358,7 @@ workflows:
         uninstall:
             ref: {0}
         """.format(ref_alias)
-        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
         self._assert_minimal_application_template(result)
         self.assertEquals('my custom radial', result['workflows']['install'])
         self.assertEquals('custom ref', result['workflows']['uninstall'])
@@ -372,7 +385,7 @@ types:
             uninstall:
                 ref: {0}
             """.format(ref_alias)
-        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
         self._assert_minimal_application_template(result)
         node = result['nodes'][0]
         self.assertEquals('my custom radial', node['workflows']['install'])
@@ -397,7 +410,7 @@ types:
                 uninstall:
                     ref: {0}""".format(ref_alias)
 
-        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
         self._assert_minimal_application_template(result)
         node = result['nodes'][0]
         self.assertEquals('my custom radial', node['workflows']['install'])
@@ -446,7 +459,7 @@ types:
                 ref: "grandparent ref install4"
             """
 
-        result = parse(yaml, {
+        result = parse(yaml, alias_mapping_dict={
             '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
             '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
         })
@@ -500,7 +513,7 @@ types:
                 ref: "parent ref install4"
             """
 
-        result = parse(yaml, {
+        result = parse(yaml, alias_mapping_dict={
             '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
             '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
         })
@@ -827,7 +840,7 @@ policies:
             message: "custom message"
             ref: {0}
             """.format(ref_alias)
-        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(clojure_file_path)})
+        result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(clojure_file_path)})
         self._assert_minimal_application_template(result)
         self.assertEquals('custom message', result['policies_events']['custom_policy']['message'])
         self.assertEquals('custom clojure code', result['policies_events']['custom_policy']['policy'])
@@ -846,7 +859,7 @@ policies:
             message: "custom message 2"
             ref: "{0}"
         """.format(ref_alias)
-        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(clojure_file_path)})
+        result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(clojure_file_path)})
         self._assert_minimal_application_template(result)
         self.assertEquals('custom message', result['policies_events']['custom_policy']['message'])
         self.assertEquals('custom clojure code', result['policies_events']['custom_policy']['policy'])
@@ -1352,7 +1365,7 @@ relationships:
     test_relationship:
         workflow:
             ref: "{0}\"""".format(ref_alias)
-        result = parse(yaml, {'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
+        result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
         self._assert_application_template(result)
         test_relationship = result['relationships']['test_relationship']
         self.assertEquals('ref custom radial', test_relationship['workflow'])

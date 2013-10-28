@@ -35,21 +35,35 @@ from urllib import pathname2url
 from urllib2 import urlopen, URLError
 
 
-def parse_from_file(dsl_file_path, alias_mapping=None):
-    if alias_mapping is None:
-        alias_mapping = _get_default_alias_mapping()
+def parse_from_path(dsl_file_path, alias_mapping_dict=None, alias_mapping_path=None):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-        return _parse(dsl_string, alias_mapping, dsl_file_path)
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_path, dsl_file_path)
 
 
-def parse(dsl_string, alias_mapping=None):
-    if alias_mapping is None:
-        alias_mapping = _get_default_alias_mapping()
-    return _parse(dsl_string, alias_mapping)
+def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_path=None):
+    with contextlib.closing(urlopen(dsl_url)) as f:
+        dsl_string = f.read()
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_path, dsl_url)
 
 
-def _parse(dsl_string, alias_mapping, dsl_file_path=None):
+def parse(dsl_string, alias_mapping_dict=None, alias_mapping_path=None):
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_path)
+
+
+def _get_alias_mapping(alias_mapping_dict, alias_mapping_path):
+    alias_mapping = {}
+    if alias_mapping_path is not None:
+        with contextlib.closing(urlopen(alias_mapping_path)) as f:
+            alias_mapping_string = f.read()
+        alias_mapping = dict(alias_mapping.items() + yaml.safe_load(alias_mapping_string).items())
+    if alias_mapping_dict is not None:
+        alias_mapping = dict(alias_mapping.items() + alias_mapping_dict.items())
+    return alias_mapping
+
+
+def _parse(dsl_string, alias_mapping_dict, alias_mapping_path, dsl_location=None):
+    alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_path)
     try:
         parsed_dsl = yaml.safe_load(dsl_string)
     except ParserError, ex:
@@ -57,7 +71,7 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     if parsed_dsl is None:
         raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml')
 
-    combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping, dsl_file_path)
+    combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping, dsl_location)
 
     _validate_dsl_schema(combined_parsed_dsl)
 
@@ -500,7 +514,7 @@ def _autowire_plugin(plugins, interface_name, type_name):
     return matching_plugins[0]
 
 
-def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
+def _combine_imports(parsed_dsl, alias_mapping, dsl_location):
     def _merge_into_dict_or_throw_on_duplicate(from_dict, to_dict, top_level_key, path):
         for key, value in from_dict.iteritems():
             if key not in to_dict:
@@ -517,10 +531,10 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
     if IMPORTS not in parsed_dsl:
         return combined_parsed_dsl
 
-    _validate_imports_section(parsed_dsl[IMPORTS], dsl_file_path)
+    _validate_imports_section(parsed_dsl[IMPORTS], dsl_location)
 
     ordered_imports_list = []
-    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, dsl_file_path)
+    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, dsl_location)
 
     for single_import in ordered_imports_list:
         try:
@@ -637,22 +651,14 @@ def _validate_dsl_schema(parsed_dsl):
         .path))))
 
 
-def _validate_imports_section(imports_section, filename):
+def _validate_imports_section(imports_section, dsl_location):
     #imports section is validated separately from the main schema since it is validated for each file separately,
     #while the standard validation runs only after combining all imports together
     try:
         validate(imports_section, IMPORTS_SCHEMA)
     except ValidationError, ex:
-        raise DSLParsingFormatException(2, 'Improper "imports" section in file {0}; {1}; Path to error: {2}'.format(
-            filename, ex.message, '.'.join((str(x) for x in ex.path))))
-
-
-def _get_default_alias_mapping():
-    filepath = os.path.join(os.path.join(os.path.dirname(__file__), os.pardir), os.path.join('resources',
-                                                                                             'alias-mappings.yaml'))
-    with open(filepath, 'r') as f:
-        default_alias_mapping = yaml.safe_load(f.read())
-        return default_alias_mapping
+        raise DSLParsingFormatException(2, 'Improper "imports" section in yaml {0}; {1}; Path to error: {2}'.format(
+            dsl_location, ex.message, '.'.join((str(x) for x in ex.path))))
 
 
 def _apply_alias_mapping_if_available(name, alias_mapping):
