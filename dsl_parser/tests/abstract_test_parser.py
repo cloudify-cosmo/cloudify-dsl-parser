@@ -20,8 +20,9 @@ import shutil
 import unittest
 import os
 import uuid
-from dsl_parser.parser import DSLParsingException, DSLParsingLogicException
-from dsl_parser.parser import parse, parse_from_file
+import yaml
+from dsl_parser.parser import DSLParsingException
+from dsl_parser.parser import parse
 
 
 class AbstractTestParser(unittest.TestCase):
@@ -86,28 +87,36 @@ types:
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
 
+    def make_alias_yaml_file(self, alias):
+        filename = 'tempfile{0}.yaml'.format(uuid.uuid4())
+        filename_path = os.path.join(self._temp_dir, filename)
+        with open(filename_path, 'w') as outfile:
+            outfile.write(yaml.dump(alias, default_flow_style=True))
+        return self._path2url(filename_path)
+
     def make_file_with_name(self, content, filename):
         filename_path = os.path.join(self._temp_dir, filename)
         with open(filename_path, 'w') as f:
             f.write(content)
         return filename_path
 
-    def make_yaml_file(self, content):
+    def make_yaml_file(self, content, as_uri=False):
         filename = 'tempfile{0}.yaml'.format(uuid.uuid4())
-        return self.make_file_with_name(content, filename)
+        filename_path = self.make_file_with_name(content, filename)
+        return (filename_path if not as_uri else self._path2url(filename_path))
+
+    def _path2url(self, path):
+        from urllib import pathname2url
+        from urlparse import urljoin
+        return urljoin('file:', pathname2url(path))
 
     def create_yaml_with_imports(self, contents, as_uri=False):
-        def _path2url(path):
-            from urllib import pathname2url
-            from urlparse import urljoin
-            return urljoin('file:', pathname2url(path))
-
         yaml = """
 imports:"""
         for content in contents:
             filename = self.make_yaml_file(content)
             yaml += """
-    -   {0}""".format(filename if not as_uri else _path2url(filename))
+    -   {0}""".format(filename if not as_uri else self._path2url(filename))
         return yaml
 
     def _assert_dsl_parsing_exception_error_code(self, dsl, expected_error_code, exception_type=DSLParsingException,

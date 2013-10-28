@@ -16,7 +16,7 @@
 __author__ = 'ran'
 
 import os
-from dsl_parser.parser import DSLParsingLogicException, parse_from_file
+from dsl_parser.parser import DSLParsingLogicException, parse_from_path
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from urllib import pathname2url
 
@@ -188,7 +188,7 @@ imports:
 imports:
     -   {0}""".format(mid_file_name)
         top_file_name = self.make_file_with_name(top_level_yaml, 'top_level.yaml')
-        ex = self._assert_dsl_parsing_exception_error_code(top_file_name, 8, DSLParsingLogicException, parse_from_file)
+        ex = self._assert_dsl_parsing_exception_error_code(top_file_name, 8, DSLParsingLogicException, parse_from_path)
         expected_circular_path = [pathname2url(x) for x in [top_file_name, mid_file_name, bottom_file_name,
                                   top_file_name]]
         self.assertEquals(len(expected_circular_path), len(ex.circular_path))
