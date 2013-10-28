@@ -44,7 +44,7 @@ interfaces:
 
 plugins:
     test_plugin:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url.zip"

@@ -47,10 +47,12 @@ class TestParserApi(AbstractTestParser):
     def _assert_application_template(self, result):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
-        self.assertEquals(True, node['plugins']['test_plugin']['agent_plugin'])
-        plugin_props = node['plugins']['test_plugin']['properties']
+        plugin_props = node['plugins']['test_plugin']
+        self.assertEquals(4, len(plugin_props))
+        self.assertEquals('true', plugin_props['agent_plugin'])
         self.assertEquals('test_interface1', plugin_props['interface'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
+        self.assertEquals('test_plugin', plugin_props['name'])
         operations = node['operations']
         self.assertEquals('test_plugin', operations['install'])
         self.assertEquals('test_plugin', operations['test_interface1.install'])
@@ -91,7 +93,7 @@ interfaces:
 
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -100,9 +102,12 @@ plugins:
         node = result['nodes'][0]
         self._assert_application_template(result)
 
-        plugin_props = node['plugins']['other_test_plugin']['properties']
+        plugin_props = node['plugins']['other_test_plugin']
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
+        self.assertEquals('true', plugin_props['agent_plugin'])
+        self.assertEquals('other_test_plugin', plugin_props['name'])
         operations = node['operations']
         self.assertEquals('other_test_plugin', operations['start'])
         self.assertEquals('other_test_plugin', operations['test_interface2.start'])
@@ -113,7 +118,7 @@ plugins:
         yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -133,9 +138,12 @@ interfaces:
         node = result['nodes'][0]
         self._assert_application_template(result)
 
-        plugin_props = node['plugins']['other_test_plugin']['properties']
+        plugin_props = node['plugins']['other_test_plugin']
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
+        self.assertEquals('other_test_plugin', plugin_props['name'])
+        self.assertEquals('true', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals('other_test_plugin', operations['start'])
         self.assertEquals('other_test_plugin', operations['test_interface2.start'])
@@ -598,17 +606,17 @@ interfaces:
 
 plugins:
     test_plugin2:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
     test_plugin3:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface3"
             url: "http://test_url3.zip"
     test_plugin4:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface4"
             url: "http://test_url4.zip"
@@ -617,9 +625,12 @@ plugins:
         result = parse(yaml)
         self._assert_application_template(result)
         node = result['nodes'][0]
-        plugin_props = node['plugins']['test_plugin2']['properties']
+        plugin_props = node['plugins']['test_plugin2']
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
+        self.assertEquals('test_plugin2', plugin_props['name'])
+        self.assertEquals('true', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals(12, len(operations))
         self.assertEquals('test_plugin2', operations['start'])
@@ -656,7 +667,7 @@ interfaces:
 
 plugins:
     test_plugin2:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -665,9 +676,12 @@ plugins:
         result = parse(yaml)
         self._assert_application_template(result)
         node = result['nodes'][0]
-        plugin_props = node['plugins']['test_plugin2']['properties']
+        plugin_props = node['plugins']['test_plugin2']
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
+        self.assertEquals('test_plugin2', plugin_props['name'])
+        self.assertEquals('true', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals(8, len(operations))
         self.assertEquals('test_plugin2', operations['start'])
@@ -692,7 +706,7 @@ interfaces:
 
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -700,16 +714,22 @@ plugins:
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins']['test_plugin']['properties']
+        plugin_props = node['plugins']['test_plugin']
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('test_interface1', plugin_props['interface'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
+        self.assertEquals('test_plugin', plugin_props['name'])
+        self.assertEquals('true', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals('test_plugin', operations['test_interface1.install'])
         self.assertEquals('test_plugin', operations['terminate'])
         self.assertEquals('test_plugin', operations['test_interface1.terminate'])
-        plugin_props = node['plugins']['other_test_plugin']['properties']
+        plugin_props = node['plugins']['other_test_plugin']
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
+        self.assertEquals('other_test_plugin', plugin_props['name'])
+        self.assertEquals('true', plugin_props['agent_plugin'])
         self.assertEquals('other_test_plugin', operations['test_interface2.install'])
         self.assertEquals('other_test_plugin', operations['shutdown'])
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
@@ -733,20 +753,20 @@ interfaces:
 
 plugins:
     test_plugin1:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url1.zip"
     test_plugin2:
-        derived_from: "cloudify.tosca.artifacts.remote_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
     """
         result = parse(yaml)
         node = result['nodes'][0]
-        self.assertEquals(True, node['plugins']['test_plugin1']['agent_plugin'])
-        self.assertEquals(False, node['plugins']['test_plugin2']['agent_plugin'])
+        self.assertEquals('true', node['plugins']['test_plugin1']['agent_plugin'])
+        self.assertEquals('false', node['plugins']['test_plugin2']['agent_plugin'])
 
     def test_relative_path_import(self):
         bottom_level_yaml = self.BASIC_TYPE
@@ -1598,7 +1618,7 @@ interfaces:
             -   "terminate"
 plugins:
     test_plugin:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url.zip"
@@ -1641,3 +1661,246 @@ plugins:
         self.assertEquals(2, len(node_relationship['interface']['operations']))
         self.assertEquals('install', node_relationship['interface']['operations'][0])
         self.assertEquals('terminate', node_relationship['interface']['operations'][1])
+
+    def test_node_host_id_field(self):
+        yaml = """
+application_template:
+    name: test_app
+    topology:
+        -   name: test_node
+            type: cloudify.types.host
+            properties:
+                key: "val"
+types:
+    cloudify.types.host: {}
+            """
+        result = parse(yaml)
+        self.assertEquals('test_app.test_node', result['nodes'][0]['host_id'])
+
+    def test_node_host_id_field_via_relationship(self):
+        yaml = """
+application_template:
+    name: test_app
+    topology:
+        -   name: test_node1
+            type: cloudify.types.host
+        -   name: test_node2
+            type: another_type
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: test_node1
+        -   name: test_node3
+            type: another_type
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: test_node2
+types:
+    cloudify.types.host: {}
+    another_type: {}
+
+relationships:
+    cloudify.relationships.contained_in: {}
+            """
+        result = parse(yaml)
+        self.assertEquals('test_app.test_node1', result['nodes'][1]['host_id'])
+        self.assertEquals('test_app.test_node1', result['nodes'][2]['host_id'])
+
+    def test_node_host_id_field_via_node_supertype(self):
+        yaml = """
+application_template:
+    name: test_app
+    topology:
+        -   name: test_node1
+            type: another_type
+types:
+    cloudify.types.host: {}
+    another_type:
+        derived_from: cloudify.types.host
+            """
+        result = parse(yaml)
+        self.assertEquals('test_app.test_node1', result['nodes'][0]['host_id'])
+
+    def test_node_host_id_field_via_relationship_derived_from_inheritance(self):
+        yaml = """
+application_template:
+    name: test_app
+    topology:
+        -   name: test_node1
+            type: cloudify.types.host
+        -   name: test_node2
+            type: another_type
+            relationships:
+                -   type: test_relationship
+                    target: test_node1
+types:
+    cloudify.types.host: {}
+    another_type: {}
+relationships:
+    cloudify.relationships.contained_in: {}
+    test_relationship:
+        derived_from: cloudify.relationships.contained_in
+            """
+        result = parse(yaml)
+        self.assertEquals('test_app.test_node1', result['nodes'][1]['host_id'])
+
+    def test_node_plugins_to_install_field(self):
+        yaml = """
+application_template:
+    name: test_app
+    topology:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            -   "test_interface"
+interfaces:
+    test_interface:
+        operations:
+            -   start
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "test_interface"
+            url: "http://test_plugin.zip"
+            """
+        result = parse(yaml)
+        plugin = result['nodes'][0]['plugins_to_install']['test_plugin']
+        self.assertEquals('test_plugin', plugin['name'])
+        self.assertEquals('test_interface', plugin['interface'])
+        self.assertEquals('true', plugin['agent_plugin'])
+        self.assertEquals('http://test_plugin.zip', plugin['url'])
+        self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
+
+    def test_node_plugins_to_install_field_installer_plugin(self):
+        #testing to ensure the installer plugin is treated differently and is not
+        #put on the plugins_to_install dict like the rest of the plugins
+        yaml = """
+application_template:
+    name: test_app
+    topology:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            -   "test_interface"
+interfaces:
+    test_interface:
+        operations:
+            -   start
+plugins:
+    cloudify.plugins.plugin_installer:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "test_interface"
+            url: "http://test_plugin.zip"
+        """
+        #note that we're expecting an empty dict since every node which is a host should have one
+        result = parse(yaml)
+        self.assertEquals({}, result['nodes'][0]['plugins_to_install'])
+
+    def test_node_plugins_to_install_field_remote_plugin(self):
+        #testing to ensure that only plugins of type agent_plugin are put on the plugins_to_install field
+        yaml = """
+application_template:
+    name: test_app
+    topology:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            -   "test_interface"
+interfaces:
+    test_interface:
+        operations:
+            -   start
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            interface: "test_interface"
+            url: "http://test_plugin.zip"
+        """
+
+        result = parse(yaml)
+        self.assertEquals({}, result['nodes'][0]['plugins_to_install'])
+
+    def test_node_plugins_to_install_field_plugins_from_contained_nodes(self):
+        #testing to ensure plugins from nodes with contained_in relationships to a host node (whether direct
+        #or recursive) also get added to the plugins_to_install field.
+        #this test also ensures there's no problem with a "duplicate" plugin on the plugins_to_install field,
+        #as test_plugin should be added from both test_node2 and test_node4 [only one should remain in the end]
+        yaml = """
+application_template:
+    name: test_app
+    topology:
+        -   name: test_node1
+            type: cloudify.types.host
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: 'cloudify.relationships.contained_in'
+                    target: test_node1
+        -   name: test_node3
+            type: test_type2
+            relationships:
+                -   type: 'cloudify.relationships.contained_in'
+                    target: test_node2
+        -   name: test_node4
+            type: test_type
+            relationships:
+                -   type: 'cloudify.relationships.contained_in'
+                    target: test_node3
+types:
+    cloudify.types.host: {}
+    test_type:
+        interfaces:
+            -   "test_interface"
+    test_type2:
+        interfaces:
+            -   "test_interface2"
+interfaces:
+    test_interface:
+        operations:
+            -   start
+    test_interface2:
+        operations:
+            -   install
+relationships:
+    cloudify.relationships.contained_in: {}
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "test_interface"
+            url: "http://test_plugin.zip"
+    test_plugin2:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "test_interface2"
+            url: "http://test_plugin2.zip"
+        """
+
+        result = parse(yaml)
+        #ensuring non-host nodes don't have this field
+        self.assertTrue('plugins_to_install' not in result['nodes'][1])
+
+        plugins_to_install = result['nodes'][0]['plugins_to_install']
+        self.assertEquals('test_plugin', plugins_to_install['test_plugin']['name'])
+        self.assertEquals('test_interface', plugins_to_install['test_plugin']['interface'])
+        self.assertEquals('true', plugins_to_install['test_plugin']['agent_plugin'])
+        self.assertEquals('http://test_plugin.zip', plugins_to_install['test_plugin']['url'])
+        self.assertEquals('test_plugin2', plugins_to_install['test_plugin2']['name'])
+        self.assertEquals('test_interface2', plugins_to_install['test_plugin2']['interface'])
+        self.assertEquals('true', plugins_to_install['test_plugin2']['agent_plugin'])
+        self.assertEquals('http://test_plugin2.zip', plugins_to_install['test_plugin2']['url'])
+        self.assertEquals(2, len(result['nodes'][0]['plugins_to_install']))
+
+
+
+
+
+    #TODO: contained-in relationships tests such as loops etc.

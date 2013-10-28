@@ -47,7 +47,7 @@ types:
 
 plugins:
     test_plugin2:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "missing_interface"
             url: "http://test_url2.zip"
@@ -71,7 +71,7 @@ interfaces:
 
 plugins:
     test_plugin:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url.zip"
@@ -104,7 +104,7 @@ interfaces:
         yaml = self.create_yaml_with_imports([self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS]) + """
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface1"
             url: "http://other_test_url.zip"

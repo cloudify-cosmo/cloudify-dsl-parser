@@ -22,6 +22,10 @@ POLICIES = 'policies'
 RELATIONSHIPS = 'relationships'
 PROPERTIES = 'properties'
 
+HOST_TYPE = 'cloudify.types.host'
+CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
+PLUGIN_INSTALLER_PLUGIN = 'cloudify.plugins.plugin_installer'
+
 __author__ = 'ran'
 
 import os
@@ -76,6 +80,8 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     node_names_set = {node['name'] for node in nodes}
     processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
                                                      top_level_relationships, node_names_set, alias_mapping), nodes)
+    _post_process_nodes(processed_nodes, _get_dict_prop(combined_parsed_dsl, TYPES),
+                        _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS))
 
     top_level_workflows = _process_workflows(combined_parsed_dsl[WORKFLOWS], alias_mapping) if WORKFLOWS in \
                                                                                                combined_parsed_dsl else {}
@@ -93,6 +99,40 @@ def _parse(dsl_string, alias_mapping, dsl_file_path=None):
     }
 
     return plan
+
+
+def _post_process_nodes(processed_nodes, types, relationships):
+    node_name_to_node = {node['id']: node for node in processed_nodes}
+    host_types = _build_family_descendants_set(types, HOST_TYPE)
+    contained_in_rel_types = _build_family_descendants_set(relationships, CONTAINED_IN_REL_TYPE)
+
+    for node in processed_nodes:
+        node['host_id'] = _extract_node_host_id(node, node_name_to_node, host_types, contained_in_rel_types)
+
+    for node in processed_nodes:
+        if node['type'] in host_types:
+            plugins_to_install = {}
+            for another_node in processed_nodes:
+                #going over all other nodes, to accumulate plugins from different nodes whose host is the current node
+                if another_node['host_id'] == node['id'] and PLUGINS in another_node:
+                    #ok to override here since we assume it is the same plugin
+                    for plugin_name, plugin_obj in another_node[PLUGINS].iteritems():
+                        #only wish to add agent plugins, and only if they're not the installer plugin
+                        if plugin_obj['agent_plugin'] == 'true' and plugin_obj['name'] != PLUGIN_INSTALLER_PLUGIN:
+                            plugins_to_install[plugin_name] = plugin_obj
+            node['plugins_to_install'] = plugins_to_install
+
+
+def _build_family_descendants_set(types_dict, derived_from):
+    return {type_name for type_name in types_dict.iterkeys() if _is_derived_from(type_name, types_dict, derived_from)}
+
+
+def _is_derived_from(type_name, types, derived_from):
+    if type_name == derived_from:
+        return True
+    elif 'derived_from' in types[type_name]:
+        return _is_derived_from(types[type_name]['derived_from'], types, derived_from)
+    return False
 
 
 #This method is applicable to both types and relationships. it's concerned with extracting the super types
@@ -224,7 +264,7 @@ def _validate_no_duplicate_interfaces(parsed_dsl):
         if 'interface' in rel_obj:
             if rel_obj['interface']['name'] in unique_interfaces:
                 raise DSLParsingLogicException(22, 'Illegal duplicate - interface {0} is defined more than once'
-                                                    .format(rel_obj['interface']['name']))
+                .format(rel_obj['interface']['name']))
             unique_interfaces.add(rel_obj['interface']['name'])
 
     top_level_interfaces = _get_dict_prop(parsed_dsl, INTERFACES)
@@ -258,6 +298,43 @@ def _validate_no_duplicate_element(elements, keyfunc):
     for group in groups:
         if len(group) > 1:
             return keyfunc(group[0]), len(group)
+
+
+def _process_node_relationships(alias_mapping, app_name, node, node_name, node_names_set, plugins, processed_node,
+                                top_level_relationships):
+    if RELATIONSHIPS in node:
+        relationships = []
+        for relationship in node[RELATIONSHIPS]:
+            relationship_type = relationship['type']
+            #validating only the instance relationship values - the inherited relationship values if any
+            #should have been validated when the top level relationships were processed.
+            _validate_relationship_fields(relationship, plugins, relationship_type)
+            #validate target field (done separately since it's only available in instance relationships)
+            if relationship['target'] not in node_names_set:
+                raise DSLParsingLogicException(25, 'a relationship instance under node {0} of type {1} declares an '
+                                                   'undefined target node {2}'.format(node_name, relationship_type,
+                                                                                      relationship['target']))
+            if relationship['target'] == node_name:
+                raise DSLParsingLogicException(23, 'a relationship instance under node {0} of type {1} '
+                                                   'illegally declares the source node as the target node'.format(
+                    node_name, relationship_type))
+                #merge relationship instance with relationship type
+            if relationship_type not in top_level_relationships:
+                raise DSLParsingLogicException(26, 'a relationship instance under node {0} declares an undefined '
+                                                   'relationship type {1}'.format(node_name, relationship_type))
+            complete_relationship = dict(top_level_relationships[relationship_type].items() + relationship.items())
+            #since we've merged with the already-processed top_level_relationships, there are a few changes that need
+            #to take place - 'name' is replaced with a [fully qualified] 'target' field, and 'workflow' needs to be
+            #re-processed if it is defined in 'relationship', since it overrides any possible already-processed
+            #workflows that might have been inherited, and has not yet been processed
+            del (complete_relationship['name'])
+            complete_relationship['target'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
+            if 'workflow' in relationship:
+                complete_relationship['workflow'] = _process_ref_or_inline_value(relationship['workflow'], 'radial',
+                                                                                 alias_mapping)
+            relationships.append(complete_relationship)
+
+        processed_node[RELATIONSHIPS] = relationships
 
 
 def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_level_relationships, node_names_set,
@@ -329,39 +406,8 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
         processed_node['operations'] = operations
 
     #handle relationships
-    if RELATIONSHIPS in node:
-        relationships = []
-        for relationship in node[RELATIONSHIPS]:
-            relationship_type = relationship['type']
-            #validating only the instance relationship values - the inherited relationship values if any
-            #should have been validated when the top level relationships were processed.
-            _validate_relationship_fields(relationship, plugins, relationship_type)
-            #validate target field (done separately since it's only available in instance relationships)
-            if relationship['target'] not in node_names_set:
-                raise DSLParsingLogicException(25, 'a relationship instance under node {0} of type {1} declares an '
-                                                   'undefined target node {2}'.format(node_name, relationship_type,
-                                                                                      relationship['target']))
-            if relationship['target'] == node_name:
-                raise DSLParsingLogicException(23, 'a relationship instance under node {0} of type {1} '
-                                                   'illegally declares the source node as the target node'.format(
-                    node_name, relationship_type))
-                #merge relationship instance with relationship type
-            if relationship_type not in top_level_relationships:
-                raise DSLParsingLogicException(26, 'a relationship instance under node {0} declares an undefined '
-                                                   'relationship type {1}'.format(node_name, relationship_type))
-            complete_relationship = dict(top_level_relationships[relationship_type].items() + relationship.items())
-            #since we've merged with the already-processed top_level_relationships, there are a few changes that need
-            #to take place - 'name' is replaced with a [fully qualified] 'target' field, and 'workflow' needs to be
-            #re-processed if it is defined in 'relationship', since it overrides any possible already-processed
-            #workflows that might have been inherited, and has not yet been processed
-            del (complete_relationship['name'])
-            complete_relationship['target'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
-            if 'workflow' in relationship:
-                complete_relationship['workflow'] = _process_ref_or_inline_value(relationship['workflow'], 'radial',
-                                                                                 alias_mapping)
-            relationships.append(complete_relationship)
-
-        processed_node[RELATIONSHIPS] = relationships
+    _process_node_relationships(alias_mapping, app_name, node, node_name, node_names_set, plugins, processed_node,
+                                top_level_relationships)
 
     #merge properties
     processed_node[PROPERTIES] = _merge_sub_dicts(complete_node_type, node, PROPERTIES)
@@ -377,17 +423,26 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     return processed_node
 
 
+def _extract_node_host_id(processed_node, node_name_to_node, host_types, contained_in_rel_types):
+    if processed_node['type'] in host_types:
+        return processed_node['id']
+    else:
+        if RELATIONSHIPS in processed_node:
+            for rel in processed_node[RELATIONSHIPS]:
+                if rel['type'] in contained_in_rel_types:
+                    return _extract_node_host_id(node_name_to_node[rel['target']], node_name_to_node, host_types,
+                                                 contained_in_rel_types)
+
+
 def _process_plugin(plugin, plugin_name):
-    if plugin['derived_from'] not in ('cloudify.tosca.artifacts.agent_plugin', 'cloudify.tosca.artifacts'
-                                                                               '.remote_plugin'):
+    if plugin['derived_from'] not in ('cloudify.plugins.agent_plugin', 'cloudify.plugins.remote_plugin'):
         #TODO: consider changing the below exception to type DSLParsingFormatException..?
         raise DSLParsingLogicException(18, 'plugin {0} has an illegal "derived_from" value {1}; value must be'
                                            ' either {2} or {3}', plugin_name, plugin['derived_from'],
-                                       'cloudify.tosca.artifacts.agent_plugin', 'cloudify.tosca.artifacts'
-                                                                                '.remote_plugin')
-    processed_plugin = copy.deepcopy(plugin)
-    processed_plugin['agent_plugin'] = plugin['derived_from'] == 'cloudify.tosca.artifacts.agent_plugin'
-    del (processed_plugin['derived_from'])
+                                       'cloudify.plugins.agent_plugin', 'cloudify.plugins.remote_plugin')
+    processed_plugin = copy.deepcopy(plugin[PROPERTIES])
+    processed_plugin['name'] = plugin_name
+    processed_plugin['agent_plugin'] = str(plugin['derived_from'] == 'cloudify.plugins.agent_plugin').lower()
     return processed_plugin
 
 
@@ -530,7 +585,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_file_path):
                 parsed_imported_dsl = yaml.safe_load(f)
         except URLError, ex:
             error = DSLParsingLogicException(13, 'Failed on import - Unable to open import url {0}; {1}'.format(
-                                                 single_import, ex.message))
+                single_import, ex.message))
             error.failed_import = single_import
             raise error
 
@@ -594,7 +649,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
             import_url = _get_import_location_candidate(another_import, current_import)
             if import_url is None:
                 ex = DSLParsingLogicException(13, 'Failed on import - no suitable location found for import {0}'.
-                                                  format(import_url))
+                format(import_url))
                 ex.failed_import = import_url
                 raise ex
             if import_url not in ordered_imports_list:
@@ -605,7 +660,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
                                                           current_path_imports_list, import_url)
                 except URLError, ex:
                     ex = DSLParsingLogicException(13, 'Failed on import - Unable to open import url {0}; {1}'.
-                                                      format(import_url, ex.message))
+                    format(import_url, ex.message))
                     ex.failed_import = import_url
                     raise ex
 
@@ -623,7 +678,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
         current_import = _get_import_location_candidate(current_import)
         if current_import is None:
             ex = DSLParsingLogicException(13, 'Failed on import - no suitable location found for import {0}'.
-                                              format(current_import))
+            format(current_import))
             ex.failed_import = current_import
             raise ex
     _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, [], current_import)
