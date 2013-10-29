@@ -21,6 +21,7 @@ __author__ = 'idanmo'
 
 import json
 import random
+import parser
 
 NODES = "nodes"
 POLICIES = "policies"
@@ -35,6 +36,11 @@ def prepare_multi_instance_plan(plan, **kwargs):
     """
     modify_to_multi_instance_plan(plan)
     return json.dumps(plan)
+
+@task
+def parse_dsl(dsl_location):
+    result = parser.parse_from_path(dsl_location)
+    return json.dumps(result)
 
 
 def modify_to_multi_instance_plan(plan):
