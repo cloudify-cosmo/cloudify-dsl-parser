@@ -15,63 +15,77 @@
 
 import logging
 from celery.utils.log import get_task_logger
+from celery import task
 
 __author__ = 'idanmo'
 
 import json
+import random
 
 NODES = "nodes"
+POLICIES = "policies"
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
-
-def prepare_multi_instance_plan(nodes_plan_json):
-
+@task
+def prepare_multi_instance_plan(plan, **kwargs):
     """
-    JSON should include "nodes" and "nodes_extra".
+    Expand node instances based on number of instances to deploy
     """
-    plan = json.loads(nodes_plan_json)
-
-    new_nodes = create_multi_instance_nodes(plan[NODES])
-    plan[NODES] = new_nodes
-
-    return plan
+    modify_to_multi_instance_plan(plan)
+    return json.dumps(plan)
 
 
-def create_multi_instance_nodes(nodes):
+def modify_to_multi_instance_plan(plan):
+
+    nodes = plan[NODES]
+    policies = plan[POLICIES]
 
     new_nodes = []
+    new_policies = {}
 
-    nodes_expansion = create_node_expansion_map(nodes)
+    nodes_suffixes_map = create_node_suffixes_map(nodes)
+    node_ids = create_node_suffixes_map(nodes).iterkeys()
 
-    for node_id, number_of_instances in nodes_expansion.iteritems():
+    for node_id in node_ids:
         node = get_node(node_id, nodes)
-        instances = create_node_instances(node, number_of_instances)
+        instances = _create_node_instances(node, nodes_suffixes_map)
         new_nodes.extend(instances)
+        instances_policies = _create_node_instances_policies(node_id,
+                                                            policies,
+                                                            nodes_suffixes_map)
+        new_policies.update(instances_policies)
 
-    return new_nodes
+    plan[NODES] = new_nodes
+    plan[POLICIES] = new_policies
 
 
-def create_node_expansion_map(nodes):
+def create_node_suffixes_map(nodes):
     """
-    This method insepcts the current nodes and creates an expansion map.
-    That is, for every node, it should determine how many instances are needed in the final plan.
+    This method inspects the current nodes and creates a list of random suffixes.
+    That is, for every node, it determines how many instances are needed
+    and generates a random number (later used as id suffix) for each instance.
     """
 
-    expansion_map = {}
+    suffix_map = {}
     for node in nodes:
         if is_host(node):
-            expansion_map[node["id"]] = node["instances"]["deploy"]
+            number_of_hosts = node["instances"]["deploy"]
+            suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
 
     for node in nodes:
         if not is_host(node):
-            expansion_map[node["id"]] = expansion_map[node["host_id"]]
+            host_id = node["host_id"]
+            number_of_hosts = len (suffix_map[host_id])
+            suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
 
-    return expansion_map
+    return suffix_map
+
 
 def is_host(node):
     return node["host_id"] == node["id"]
+
 
 def get_node(node_id, nodes):
 
@@ -84,36 +98,87 @@ def get_node(node_id, nodes):
     raise RuntimeError("Could not find a node with id {0} in nodes".format(node_id))
 
 
-def create_node_instances(node, number_of_instances):
+def _create_node_instances(node, suffixes_map):
 
     """
     This method duplicates the given node 'number_of_instances' times and return an array with the duplicated instance.
     Each instance has a different id and each instance has a different host_id.
-    id's are generated with an incremental index suffixed to the original id.
-    For example: app.host --> [app.host_1, app.host_2] in case of 2 instances.
+    id's are generated with an random index suffixed to the original id.
+    For example: app.host --> [app.host_ab54ef, app.host_2_12345] in case of 2 instances.
     """
-
-    if number_of_instances == 1:
-
-        # no need to duplicate. just return the original node
-        return node
 
     instances = []
 
+    node_id = node['id']
+    node_suffixes = suffixes_map[node_id]
+    host_id = node['host_id']
+    host_suffixes = suffixes_map[host_id]
+    number_of_instances = len(node_suffixes)
+
     for i in range(number_of_instances):
-
-        # clone the original node
         node_copy = node.copy()
-
-        # and change its id
-        new_id = "{0}_{1}".format(node['id'], i + 1)
-        node_copy['id'] = new_id
-
-        # and change the host_id
-        node_copy['host_id'] = "{0}_{1}".format(node_copy['host_id'], i + 1)
-
+        node_copy['id'] = _build_node_instance_id(node_id, node_suffixes[i])
+        node_copy['host_id'] = _build_node_instance_id(host_id, host_suffixes[i])
         logger.debug("generated new node instance {0}".format(node_copy))
+        if 'relationships' in node_copy:
+            new_relationships = []
+            for relationship in node_copy['relationships']:
+                new_relationship = relationship
+                target_id = relationship['target_id']
+                if relationship['type'].endswith('relationships.contained_in'):
+                    new_relationship = relationship.copy()
+                    new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][i])
+                elif (relationship['type'].endswith('relationships.connected_to') or
+                      relationship['type'].endswith('relationships.depends_on')):
+                    new_relationship = relationship.copy()
+                    # TODO support connected_to with tiers
+                    # currently only 1 instance for connected_to (and depends_on) is supported
+                    new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][0])
+                new_relationships.append(new_relationship)
+            node_copy['relationships'] = new_relationships
 
         instances.append(node_copy)
 
     return instances
+
+
+def _create_node_instances_policies(node_id, policies, node_suffixes_map):
+
+    """
+    This method duplicates the policies for each node_id. and returns a map. let us use an example:
+    Given:
+    node_id -> { ... node policies ... }
+    Returns:
+    {
+        node_id_suffix1 -> { ... node policies ... },
+        node_id_suffix2 -> { ... node policies ... (same as above) }
+        ...
+    }
+    """
+
+    if not node_id in policies:
+        return {}
+
+    node_suffixes = node_suffixes_map[node_id]
+    node_policies = policies[node_id]
+    node_instances_policies = {}
+    number_of_instances = len(node_suffixes)
+    for i in range(number_of_instances):
+        the_id = _build_node_instance_id(node_id, node_suffixes[i])
+        node_instances_policies[the_id] = node_policies
+    return node_instances_policies
+
+
+def _build_node_instance_id(node_id, node_suffix):
+    return node_id + node_suffix
+
+
+def _generate_unique_ids(number_of_ids):
+
+    ids = []
+    while len(ids) < number_of_ids:
+        rand_id = '_%05x' % random.randrange(16**5)
+        if rand_id not in ids:
+            ids.append(rand_id)
+
+    return list(ids)
