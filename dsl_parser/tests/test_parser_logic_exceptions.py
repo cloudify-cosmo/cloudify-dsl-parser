@@ -47,7 +47,7 @@ types:
 
 plugins:
     test_plugin2:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "missing_interface"
             url: "http://test_url2.zip"
@@ -71,7 +71,7 @@ interfaces:
 
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url.zip"
@@ -104,7 +104,7 @@ interfaces:
         yaml = self.create_yaml_with_imports([self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS]) + """
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface1"
             url: "http://other_test_url.zip"
@@ -610,3 +610,28 @@ relationships:
                 -   "install"
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 22, DSLParsingLogicException)
+
+    def test_validate_agent_plugin_on_non_host_node(self):
+        yaml = """
+application_template:
+    name: test_app
+    topology:
+        -   name: test_node1
+            type: test_type
+types:
+    test_type:
+        interfaces:
+            -   "test_interface"
+interfaces:
+    test_interface:
+        operations:
+            -   start
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "test_interface"
+            url: "http://test_plugin.zip"
+        """
+        self._assert_dsl_parsing_exception_error_code(yaml, 24, DSLParsingLogicException)
+

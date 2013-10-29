@@ -121,7 +121,9 @@ def _post_process_nodes(processed_nodes, types, relationships):
     contained_in_rel_types = _build_family_descendants_set(relationships, CONTAINED_IN_REL_TYPE)
 
     for node in processed_nodes:
-        node['host_id'] = _extract_node_host_id(node, node_name_to_node, host_types, contained_in_rel_types)
+        host_id = _extract_node_host_id(node, node_name_to_node, host_types, contained_in_rel_types)
+        if host_id:
+            node['host_id'] = host_id
 
     for node in processed_nodes:
         if node['type'] in host_types:
@@ -135,6 +137,19 @@ def _post_process_nodes(processed_nodes, types, relationships):
                         if plugin_obj['agent_plugin'] == 'true' and plugin_obj['name'] != PLUGIN_INSTALLER_PLUGIN:
                             plugins_to_install[plugin_name] = plugin_obj
             node['plugins_to_install'] = plugins_to_install
+
+    _validate_agent_plugins_on_host_nodes(processed_nodes)
+
+
+def _validate_agent_plugins_on_host_nodes(processed_nodes):
+    for node in processed_nodes:
+        if 'host_id' not in node and PLUGINS in node:
+            for plugin in node[PLUGINS].itervalues():
+                if plugin['agent_plugin'] == 'true':
+                    raise DSLParsingLogicException(24, "node {0} has no relationship which makes it contained within "
+                                                       "a host and it has an agent plugin named {1}, agent plugins "
+                                                       "must be installed on a host".format(node['id'],
+                                                                                            plugin['name']))
 
 
 def _build_family_descendants_set(types_dict, derived_from):
@@ -343,9 +358,12 @@ def _process_node_relationships(alias_mapping, app_name, node, node_name, node_n
             #workflows that might have been inherited, and has not yet been processed
             del (complete_relationship['name'])
             complete_relationship['target'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
-            if 'workflow' in relationship:
+            if 'workflow' in relationship and relationship['workflow']:
                 complete_relationship['workflow'] = _process_ref_or_inline_value(relationship['workflow'], 'radial',
                                                                                  alias_mapping)
+            elif 'workflow' not in complete_relationship or not complete_relationship['workflow']:
+                complete_relationship['workflow'] = 'define stub_workflow\n\t'
+            complete_relationship['state'] = 'reachable'
             relationships.append(complete_relationship)
 
         processed_node[RELATIONSHIPS] = relationships
@@ -425,6 +443,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
 
     #merge properties
     processed_node[PROPERTIES] = _merge_sub_dicts(complete_node_type, node, PROPERTIES)
+    processed_node[PROPERTIES]['cloudify_runtime'] = {}
 
     #merge workflows
     merged_workflows = _merge_sub_dicts(complete_node_type, node, WORKFLOWS)

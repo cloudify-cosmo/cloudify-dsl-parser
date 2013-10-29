@@ -175,7 +175,7 @@ interfaces:
 
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface1"
             """
@@ -238,7 +238,7 @@ interfaces:
 
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             url: "http://test_url.zip"
             """
@@ -269,7 +269,7 @@ interfaces:
 
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             url: "http://test_url.zip"
             interface: "test_interface1"

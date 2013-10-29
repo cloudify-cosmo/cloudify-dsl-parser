@@ -45,7 +45,7 @@ interfaces:
 
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url.zip"

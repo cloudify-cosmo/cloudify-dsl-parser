@@ -49,7 +49,7 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
         self.assertEquals(4, len(plugin_props))
-        self.assertEquals('true', plugin_props['agent_plugin'])
+        self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('test_interface1', plugin_props['interface'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
@@ -93,7 +93,7 @@ interfaces:
 
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -106,7 +106,7 @@ plugins:
         self.assertEquals(4, len(plugin_props))
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
-        self.assertEquals('true', plugin_props['agent_plugin'])
+        self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         operations = node['operations']
         self.assertEquals('other_test_plugin', operations['start'])
@@ -118,7 +118,7 @@ plugins:
         yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -143,7 +143,7 @@ interfaces:
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
-        self.assertEquals('true', plugin_props['agent_plugin'])
+        self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals('other_test_plugin', operations['start'])
         self.assertEquals('other_test_plugin', operations['test_interface2.start'])
@@ -619,17 +619,17 @@ interfaces:
 
 plugins:
     test_plugin2:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
     test_plugin3:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface3"
             url: "http://test_url3.zip"
     test_plugin4:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface4"
             url: "http://test_url4.zip"
@@ -643,7 +643,7 @@ plugins:
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('test_plugin2', plugin_props['name'])
-        self.assertEquals('true', plugin_props['agent_plugin'])
+        self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals(12, len(operations))
         self.assertEquals('test_plugin2', operations['start'])
@@ -680,7 +680,7 @@ interfaces:
 
 plugins:
     test_plugin2:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -694,7 +694,7 @@ plugins:
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('test_plugin2', plugin_props['name'])
-        self.assertEquals('true', plugin_props['agent_plugin'])
+        self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals(8, len(operations))
         self.assertEquals('test_plugin2', operations['start'])
@@ -719,7 +719,7 @@ interfaces:
 
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface2"
             url: "http://test_url2.zip"
@@ -732,7 +732,7 @@ plugins:
         self.assertEquals('test_interface1', plugin_props['interface'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
-        self.assertEquals('true', plugin_props['agent_plugin'])
+        self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals('test_plugin', operations['test_interface1.install'])
         self.assertEquals('test_plugin', operations['terminate'])
@@ -742,7 +742,7 @@ plugins:
         self.assertEquals('test_interface2', plugin_props['interface'])
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
-        self.assertEquals('true', plugin_props['agent_plugin'])
+        self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('other_test_plugin', operations['test_interface2.install'])
         self.assertEquals('other_test_plugin', operations['shutdown'])
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
@@ -766,7 +766,7 @@ interfaces:
 
 plugins:
     test_plugin1:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url1.zip"
@@ -778,7 +778,7 @@ plugins:
     """
         result = parse(yaml)
         node = result['nodes'][0]
-        self.assertEquals('true', node['plugins']['test_plugin1']['agent_plugin'])
+        self.assertEquals('false', node['plugins']['test_plugin1']['agent_plugin'])
         self.assertEquals('false', node['plugins']['test_plugin2']['agent_plugin'])
 
     def test_relative_path_import(self):
@@ -1532,7 +1532,8 @@ relationships:
         self.assertEquals('pre_started', relationship['bind_at'])
         self.assertEquals('source', relationship['run_on_node'])
         self.assertEquals('custom workflow', relationship['workflow'])
-        self.assertEquals(5, len(relationship))
+        self.assertEquals('reachable', relationship['state'])
+        self.assertEquals(6, len(relationship))
 
     def test_instance_relationships_duplicate_relationship(self):
         #right now, having two relationships with the same (type,target) under one node is valid
@@ -1555,8 +1556,10 @@ relationships:
         self.assertEquals('test_relationship', result['nodes'][1]['relationships'][1]['type'])
         self.assertEquals('test_app.test_node', result['nodes'][1]['relationships'][0]['target'])
         self.assertEquals('test_app.test_node', result['nodes'][1]['relationships'][1]['target'])
-        self.assertEquals(2, len(result['nodes'][1]['relationships'][0]))
-        self.assertEquals(2, len(result['nodes'][1]['relationships'][1]))
+        self.assertEquals('reachable', result['nodes'][1]['relationships'][0]['state'])
+        self.assertEquals('reachable', result['nodes'][1]['relationships'][1]['state'])
+        self.assertEquals(4, len(result['nodes'][1]['relationships'][0]))
+        self.assertEquals(4, len(result['nodes'][1]['relationships'][1]))
 
     def test_instance_relationships_relationship_inheritance(self):
         #possibly 'inheritance' is the wrong term to use here,
@@ -1591,7 +1594,8 @@ relationships:
         self.assertEquals('source', relationship['run_on_node'])
         self.assertEquals(2, len(relationship['interface']['operations']))
         self.assertEquals('custom radial', relationship['workflow'])
-        self.assertEquals(6, len(relationship))
+        self.assertEquals('reachable', relationship['state'])
+        self.assertEquals(7, len(relationship))
 
     def test_relationships_and_node_recursive_inheritance(self):
         #testing for a complete inheritance path for relationships
@@ -1631,7 +1635,7 @@ interfaces:
             -   "terminate"
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface1"
             url: "http://test_url.zip"
@@ -1644,7 +1648,7 @@ plugins:
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(5, len(parent_relationship))
         self.assertEquals(6, len(relationship))
-        self.assertEquals(7, len(node_relationship))
+        self.assertEquals(8, len(node_relationship))
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals('target', parent_relationship['run_on_node'])
@@ -1670,6 +1674,7 @@ plugins:
         self.assertEquals('test_plugin', node_relationship['plugin'])
         self.assertEquals('pre_started', node_relationship['bind_at'])
         self.assertEquals('node custom radial', node_relationship['workflow'])
+        self.assertEquals('reachable', node_relationship['state'])
         self.assertEquals('test_interface2', node_relationship['interface']['name'])
         self.assertEquals(2, len(node_relationship['interface']['operations']))
         self.assertEquals('install', node_relationship['interface']['operations'][0])
@@ -1805,7 +1810,7 @@ interfaces:
             -   start
 plugins:
     cloudify.plugins.plugin_installer:
-        derived_from: "cloudify.plugins.agent_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test_interface"
             url: "http://test_plugin.zip"
@@ -1912,8 +1917,23 @@ plugins:
         self.assertEquals('http://test_plugin2.zip', plugins_to_install['test_plugin2']['url'])
         self.assertEquals(2, len(result['nodes'][0]['plugins_to_install']))
 
+    def test_node_cloudify_runtime_property(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE
+        result = parse(yaml)
+        self.assertEquals({}, result['nodes'][0]['properties']['cloudify_runtime'])
 
-
+    def test_instance_relationships_stub_relationship_workflow(self):
+        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: test_relationship
+                    target: test_node
+relationships:
+    test_relationship: {}
+        """
+        result = parse(yaml)
+        self.assertEquals('define stub_workflow\n\t', result['nodes'][1]['relationships'][0]['workflow'])
 
 
     #TODO: contained-in relationships tests such as loops etc.
