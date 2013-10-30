@@ -38,7 +38,7 @@ def prepare_multi_instance_plan(plan, **kwargs):
     return json.dumps(plan)
 
 @task
-def parse_dsl(dsl_location):
+def parse_dsl(dsl_location, **kwargs):
     result = parser.parse_from_path(dsl_location)
     return json.dumps(result)
 
