@@ -32,7 +32,7 @@ import os
 import yaml
 import copy
 import contextlib
-from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
+from schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 from urllib import pathname2url
