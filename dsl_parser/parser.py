@@ -12,7 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-APPLICATION_TEMPLATE = 'application_template'
+BLUEPRINT = 'blueprint'
 IMPORTS = 'imports'
 TYPES = 'types'
 PLUGINS = 'plugins'
@@ -79,10 +79,10 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_path, dsl_location=None
 
     _validate_dsl_schema(combined_parsed_dsl)
 
-    application_template = combined_parsed_dsl[APPLICATION_TEMPLATE]
-    app_name = application_template['name']
+    blueprint = combined_parsed_dsl[BLUEPRINT]
+    app_name = blueprint['name']
 
-    nodes = application_template['topology']
+    nodes = blueprint['topology']
     _validate_no_duplicate_nodes(nodes)
     _validate_no_duplicate_interfaces(combined_parsed_dsl)
 
@@ -298,7 +298,7 @@ def _validate_no_duplicate_interfaces(parsed_dsl):
 
     top_level_interfaces = _get_dict_prop(parsed_dsl, INTERFACES)
     top_level_relationships = _get_dict_prop(parsed_dsl, RELATIONSHIPS)
-    nodes = parsed_dsl[APPLICATION_TEMPLATE]['topology']
+    nodes = parsed_dsl[BLUEPRINT]['topology']
 
     unique_interfaces = set()
     #adding interfaces names from the top-level interfaces definitions -
@@ -373,7 +373,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
                   alias_mapping):
     node_type_name = node['type']
     node_name = node['name']
-    app_name = parsed_dsl[APPLICATION_TEMPLATE]['name']
+    app_name = parsed_dsl[BLUEPRINT]['name']
     processed_node = {'id': '{0}.{1}'.format(app_name, node_name),
                       'type': node_type_name}
 
