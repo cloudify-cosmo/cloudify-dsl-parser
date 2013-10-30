@@ -22,7 +22,7 @@ from urllib import pathname2url
 
 class TestParserApi(AbstractTestParser):
 
-    def _assert_minimal_application_template(self, result):
+    def _assert_minimal_blueprint(self, result):
         self.assertEquals('test_app', result['name'])
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
@@ -30,21 +30,21 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('test_type', node['type'])
         self.assertEquals('val', node['properties']['key'])
 
-    def test_single_node_application_template(self):
-        result = parse(self.MINIMAL_APPLICATION_TEMPLATE)
-        self._assert_minimal_application_template(result)
+    def test_single_node_blueprint(self):
+        result = parse(self.MINIMAL_blueprint)
+        self._assert_minimal_blueprint(result)
 
     def test_type_without_interface(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE
+        yaml = self.MINIMAL_blueprint
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_import_from_path(self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_APPLICATION_TEMPLATE])
+        yaml = self.create_yaml_with_imports([self.MINIMAL_blueprint])
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
-    def _assert_application_template(self, result):
+    def _assert_blueprint(self, result):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
@@ -60,7 +60,7 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('test_plugin', operations['test_interface1.terminate'])
 
     def test_type_with_single_explicit_interface_and_plugin(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_blueprint_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -70,15 +70,15 @@ types:
             """
 
         result = parse(yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
 
     def test_type_with_single_implicit_interface_and_plugin(self):
-        yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS
+        yaml = self.blueprint_WITH_INTERFACES_AND_PLUGINS
         result = parse(yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
 
     def test_dsl_with_type_with_both_explicit_and_implicit_interfaces_declarations(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_blueprint_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 types:
     test_type:
         interfaces:
@@ -100,7 +100,7 @@ plugins:
 """
         result = parse(yaml)
         node = result['nodes'][0]
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
         self.assertEquals(4, len(plugin_props))
@@ -115,7 +115,7 @@ plugins:
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
 
     def test_merge_plugins_and_interfaces_imports(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_blueprint_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 plugins:
     other_test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
@@ -136,7 +136,7 @@ interfaces:
         """
         result = parse(yaml)
         node = result['nodes'][0]
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
         self.assertEquals(4, len(plugin_props))
@@ -151,7 +151,7 @@ interfaces:
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
 
     def test_workflows_recursive_imports(self):
-        bottom_level_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        bottom_level_yaml = self.MINIMAL_blueprint + """
 workflows:
     install1:
         radial: "bottom radial install1"
@@ -173,14 +173,14 @@ imports:
     -   {0}""".format(mid_file_name)
 
         result = parse(top_level_yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals(3, len(result['workflows']))
         self.assertEquals('bottom radial install1', result['workflows']['install1'])
         self.assertEquals('mid radial install2', result['workflows']['install2'])
         self.assertEquals('top radial install3', result['workflows']['install3'])
 
     def test_policies_and_rules_recursive_imports(self):
-        bottom_level_yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        bottom_level_yaml = self.MINIMAL_blueprint + """
 policies:
     types:
         policy1:
@@ -218,7 +218,7 @@ imports:
     -   {0}""".format(mid_file_name)
 
         result = parse(top_level_yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals(3, len(result['policies_events']))
         self.assertEquals(3, len(result['rules']))
         self.assertEquals('bottom policy1', result['policies_events']['policy1']['message'])
@@ -243,32 +243,32 @@ imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
-        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        top_level_yaml = self.BASIC_blueprint_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
 
         result = parse(top_level_yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
 
     def test_parse_dsl_from_file(self):
-        filename = self.make_yaml_file(self.MINIMAL_APPLICATION_TEMPLATE)
+        filename = self.make_yaml_file(self.MINIMAL_blueprint)
         result = parse_from_path(filename)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_parse_dsl_from_url(self):
-        filename_url = self.make_yaml_file(self.MINIMAL_APPLICATION_TEMPLATE, True)
+        filename_url = self.make_yaml_file(self.MINIMAL_blueprint, True)
         result = parse_from_url(filename_url)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_parse_dsl_from_file_bad_path(self):
         self.assertRaises(EnvironmentError, parse_from_path, 'fake-file.yaml')
 
     def test_import_empty_list(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 imports: []
         """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_diamond_imports(self):
         bottom_level_yaml = self.BASIC_TYPE
@@ -284,15 +284,15 @@ imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name2 = self.make_yaml_file(mid_level_yaml2)
 
-        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        top_level_yaml = self.BASIC_blueprint_SECTION + """
 imports:
     -   {0}
     -   {1}""".format(mid_file_name, mid_file_name2)
         result = parse(top_level_yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
 
     def test_node_get_type_properties_including_overriding_properties(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         properties:
@@ -300,22 +300,22 @@ types:
             key2: "val2"
     """
         result = parse(yaml)
-        self._assert_minimal_application_template(result) #this will also check property "key" = "val"
+        self._assert_minimal_blueprint(result) #this will also check property "key" = "val"
         node = result['nodes'][0]
         self.assertEquals('val2', node['properties']['key2'])
 
     def test_alias_mapping_imports(self):
-        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE
+        imported_yaml = self.MINIMAL_blueprint
         imported_filename = self.make_yaml_file(imported_yaml)
         imported_alias = 'imported_alias'
         yaml = """
 imports:
     -   {0}""".format(imported_alias)
         result = parse(yaml, alias_mapping_dict={'{0}'.format(imported_alias): '{0}'.format(imported_filename)})
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_alias_mapping_imports_using_path(self):
-        imported_yaml = self.MINIMAL_APPLICATION_TEMPLATE
+        imported_yaml = self.MINIMAL_blueprint
         imported_filename = self.make_yaml_file(imported_yaml)
         imported_alias = 'imported_alias'
         yaml = """
@@ -323,43 +323,43 @@ imports:
     -   {0}""".format(imported_alias)
         alias_path = self.make_alias_yaml_file({'{0}'.format(imported_alias): '{0}'.format(imported_filename)})
         result = parse(yaml, alias_mapping_path=alias_path)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_empty_first_level_workflows(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 workflows: {}
         """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_first_level_workflows_radial(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 workflows:
         install:
             radial: "my custom radial"
         """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals('my custom radial', result['workflows']['install'])
 
     def test_first_level_workflows_ref(self):
         ref_alias = 'ref_alias'
         radial_file_path = self.make_file_with_name('my custom radial', 'radial_file.radial')
 
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 workflows:
         install:
             ref: {0}
         """.format(ref_alias)
         result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals('my custom radial', result['workflows']['install'])
 
     def test_first_level_workflows_both_radial_and_ref(self):
         ref_alias = 'ref_alias'
         radial_file_path = self.make_file_with_name('custom ref', 'radial_file.radial')
 
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 workflows:
         install:
             radial: "my custom radial"
@@ -367,24 +367,24 @@ workflows:
             ref: {0}
         """.format(ref_alias)
         result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals('my custom radial', result['workflows']['install'])
         self.assertEquals('custom ref', result['workflows']['uninstall'])
 
     def test_type_empty_workflows(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         workflows: {}
     """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_type_workflows_both_radial_and_ref(self):
         ref_alias = 'ref_alias'
         radial_file_path = self.make_file_with_name('custom ref', 'radial_file.radial')
 
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         workflows:
@@ -394,24 +394,24 @@ types:
                 ref: {0}
             """.format(ref_alias)
         result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         self.assertEquals('my custom radial', node['workflows']['install'])
         self.assertEquals('custom ref', node['workflows']['uninstall'])
         self.assertEquals(2, len(node['workflows']))
 
     def test_instance_empty_workflows(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
             workflows: {}
     """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_instance_workflows_both_radial_and_ref(self):
         ref_alias = 'ref_alias'
         radial_file_path = self.make_file_with_name('custom ref', 'radial_file.radial')
 
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
             workflows:
                 install:
                     radial: "my custom radial"
@@ -419,7 +419,7 @@ types:
                     ref: {0}""".format(ref_alias)
 
         result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         self.assertEquals('my custom radial', node['workflows']['install'])
         self.assertEquals('custom ref', node['workflows']['uninstall'])
@@ -434,7 +434,7 @@ types:
         ref_alias2 = 'ref_alias2'
         radial_file2_path = self.make_file_with_name('parent ref install5', 'radial_file2.radial')
 
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         derived_from: "test_type_parent"
@@ -472,7 +472,7 @@ types:
             '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
         })
 
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         self.assertEquals('radial install1', node['workflows']['install1'])
         self.assertEquals('ref install2', node['workflows']['install2'])
@@ -490,7 +490,7 @@ types:
         ref_alias2 = 'ref_alias2'
         radial_file2_path = self.make_file_with_name('ref install5', 'radial_file2.radial')
 
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
             workflows:
                 install1:
                     radial: "node radial install1"
@@ -526,7 +526,7 @@ types:
             '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
         })
 
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         self.assertEquals('node radial install1', node['workflows']['install1'])
         self.assertEquals('node ref install2', node['workflows']['install2'])
@@ -536,7 +536,7 @@ types:
         self.assertEquals(5, len(node['workflows']))
 
     def test_type_properties_derivation(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         properties:
@@ -551,13 +551,13 @@ types:
             key3: "val3_parent"
     """
         result = parse(yaml)
-        self._assert_minimal_application_template(result) #this will also check property "key" = "val"
+        self._assert_minimal_blueprint(result) #this will also check property "key" = "val"
         node = result['nodes'][0]
         self.assertEquals('val2', node['properties']['key2'])
         self.assertEquals('val3_parent', node['properties']['key3'])
 
     def test_type_properties_recursive_derivation(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         properties:
@@ -582,14 +582,14 @@ types:
     test_type_grandgrandparent: {}
     """
         result = parse(yaml)
-        self._assert_minimal_application_template(result) #this will also check property "key" = "val"
+        self._assert_minimal_blueprint(result) #this will also check property "key" = "val"
         node = result['nodes'][0]
         self.assertEquals('val2', node['properties']['key2'])
         self.assertEquals('val3_grandparent', node['properties']['key3'])
         self.assertEquals('val4_parent', node['properties']['key4'])
 
     def test_type_interface_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_blueprint_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 types:
     test_type:
         interfaces:
@@ -636,7 +636,7 @@ plugins:
     """
 
         result = parse(yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
         self.assertEquals(4, len(plugin_props))
@@ -657,7 +657,7 @@ plugins:
         self.assertEquals(4, len(node['plugins']))
 
     def test_type_interface_recursive_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_blueprint_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 types:
     test_type:
         interfaces:
@@ -687,7 +687,7 @@ plugins:
         """
 
         result = parse(yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
         self.assertEquals(4, len(plugin_props))
@@ -704,7 +704,7 @@ plugins:
         self.assertEquals(2, len(node['plugins']))
 
     def test_two_explicit_interfaces_with_same_operation_name(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_APPLICATION_TEMPLATE_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_blueprint_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
 types:
     test_type:
         interfaces:
@@ -749,7 +749,7 @@ plugins:
         self.assertEquals(6, len(operations))
 
     def test_plugins_derived_from_field(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         interfaces:
@@ -790,16 +790,16 @@ imports:
     -   \"bottom_level.yaml\""""
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
-        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        top_level_yaml = self.BASIC_blueprint_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
         result = parse(top_level_yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
 
     def test_import_from_file_uri(self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_APPLICATION_TEMPLATE], True)
+        yaml = self.create_yaml_with_imports([self.MINIMAL_blueprint], True)
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_relative_file_uri_import(self):
         bottom_level_yaml = self.BASIC_TYPE
@@ -810,34 +810,34 @@ imports:
     -   \"bottom_level.yaml\""""
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
-        top_level_yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        top_level_yaml = self.BASIC_blueprint_SECTION + """
 imports:
     -   {0}""".format('file:///' + pathname2url(mid_file_name))
         result = parse(top_level_yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
 
     def test_empty_top_level_policies(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 policies: {}
         """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals(0, len(result['policies_events']))
         self.assertEquals(0, len(result['rules']))
 
     def test_empty_top_level_policies_events_and_rules(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 policies:
     types: {}
     rules: {}
         """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals(0, len(result['policies_events']))
         self.assertEquals(0, len(result['rules']))
 
     def test_top_level_policies_with_inline_policy(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 policies:
     types:
         custom_policy:
@@ -845,7 +845,7 @@ policies:
             policy: "custom clojure code"
         """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals('custom message', result['policies_events']['custom_policy']['message'])
         self.assertEquals('custom clojure code', result['policies_events']['custom_policy']['policy'])
 
@@ -853,7 +853,7 @@ policies:
         ref_alias = 'ref_alias'
         clojure_file_path = self.make_file_with_name('custom clojure code', 'clojure_file.clj')
 
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 policies:
     types:
         custom_policy:
@@ -861,7 +861,7 @@ policies:
             ref: {0}
             """.format(ref_alias)
         result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(clojure_file_path)})
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals('custom message', result['policies_events']['custom_policy']['message'])
         self.assertEquals('custom clojure code', result['policies_events']['custom_policy']['policy'])
 
@@ -869,7 +869,7 @@ policies:
         ref_alias = 'ref_alias'
         clojure_file_path = self.make_file_with_name('custom clojure code 2', 'clojure_file.clj')
 
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 policies:
     types:
         custom_policy:
@@ -880,14 +880,14 @@ policies:
             ref: "{0}"
         """.format(ref_alias)
         result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(clojure_file_path)})
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals('custom message', result['policies_events']['custom_policy']['message'])
         self.assertEquals('custom clojure code', result['policies_events']['custom_policy']['policy'])
         self.assertEquals('custom message 2', result['policies_events']['custom_policy2']['message'])
         self.assertEquals('custom clojure code 2', result['policies_events']['custom_policy2']['policy'])
 
     def test_top_level_rules(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 policies:
     rules:
         custom_rule:
@@ -898,30 +898,30 @@ policies:
             rule: "custom clojure code 2"
         """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals('custom message', result['rules']['custom_rule']['message'])
         self.assertEquals('custom clojure code', result['rules']['custom_rule']['rule'])
         self.assertEquals('custom message 2', result['rules']['custom_rule2']['message'])
         self.assertEquals('custom clojure code 2', result['rules']['custom_rule2']['rule'])
 
     def test_instance_empty_policies(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
                 policies: {}
                 """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_type_empty_policies(self):
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         policies: {}
                 """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
 
     def test_instance_policies(self):
-        yaml = self.POLICIES_SECTION + self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.POLICIES_SECTION + self.MINIMAL_blueprint + """
             policies:
                 test_policy:
                     rules:
@@ -931,7 +931,7 @@ types:
                                 value: "custom value"
                 """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         node_rule = node['policies']['test_policy']['rules'][0]
         self.assertEquals('test_rule', node_rule['type'])
@@ -941,7 +941,7 @@ types:
         self.assertDictEqual(node['policies'], result['policies']['test_app.test_node'])
 
     def test_type_policies(self):
-        yaml = self.POLICIES_SECTION + self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.POLICIES_SECTION + self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         policies:
@@ -953,7 +953,7 @@ types:
                             value: "custom value"
                 """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         node_rule = node['policies']['test_policy']['rules'][0]
         self.assertEquals('test_rule', node_rule['type'])
@@ -965,7 +965,7 @@ types:
     def test_type_policies_recursive_inheritance(self):
         #policies 1,5,6 will come from each type separately,
         #2 is a direct override, 3 is an indirect override, and 4 is a double override
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         derived_from: "test_type_parent"
@@ -1094,7 +1094,7 @@ policies:
             """
 
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         node_policies = node['policies']
         self.assertEquals(6, len(node_policies))
@@ -1110,7 +1110,7 @@ policies:
     def test_type_and_node_policies_recursive_inheritance(self):
         #policies 1,5,6 will come from each type separately,
         #2 is a direct override, 3 is an indirect override, and 4 is a double override
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
             policies:
                 policy1:
                     rules:
@@ -1235,7 +1235,7 @@ policies:
             """
 
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         node_policies = node['policies']
         self.assertEquals(6, len(node_policies))
@@ -1251,7 +1251,7 @@ policies:
     def test_type_policies_multiple_and_same_name_rules(self):
         #a test to verify same-name rules don't cause any problem in inheritance,
         #as well as verifying multiple rules under the same policy are inherited correctly
-        yaml = self.BASIC_APPLICATION_TEMPLATE_SECTION + """
+        yaml = self.BASIC_blueprint_SECTION + """
 types:
     test_type:
         derived_from: "test_type_parent"
@@ -1312,7 +1312,7 @@ policies:
                 """
 
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         node_policies = node['policies']
         self.assertEquals(2, len(node_policies))
@@ -1331,24 +1331,24 @@ policies:
         self.assertDictEqual(node['policies'], result['policies']['test_app.test_node'])
 
     def test_empty_top_level_relationships(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 relationships: {}
                         """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertEquals(0, len(result['relationships']))
 
     def test_empty_top_level_relationships_empty_relationship(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
 relationships:
     test_relationship: {}
                         """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertDictEqual({'name': 'test_relationship'}, result['relationships']['test_relationship'])
 
     def test_top_level_relationships_single_complete_relationship(self):
-        yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+        yaml = self.blueprint_WITH_INTERFACES_AND_PLUGINS + """
 relationships:
     empty_rel: {}
     test_relationship:
@@ -1365,7 +1365,7 @@ relationships:
                 -   "terminate"
         """
         result = parse(yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
         test_relationship = result['relationships']['test_relationship']
         self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
         self.assertTrue('derived_from' not in test_relationship)
@@ -1380,18 +1380,18 @@ relationships:
         ref_alias = 'ref_alias'
         radial_file_path = self.make_file_with_name('ref custom radial', 'radial_file.radial')
 
-        yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+        yaml = self.blueprint_WITH_INTERFACES_AND_PLUGINS + """
 relationships:
     test_relationship:
         workflow:
             ref: "{0}\"""".format(ref_alias)
         result = parse(yaml, alias_mapping_dict={'{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
         test_relationship = result['relationships']['test_relationship']
         self.assertEquals('ref custom radial', test_relationship['workflow'])
 
     def test_top_level_relationships_recursive_imports(self):
-        bottom_level_yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+        bottom_level_yaml = self.blueprint_WITH_INTERFACES_AND_PLUGINS + """
 relationships:
     empty_rel: {}
     test_relationship:
@@ -1428,7 +1428,7 @@ imports:
     -   {0}""".format(mid_file_name)
 
         result = parse(top_level_yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
         test_relationship = result['relationships']['test_relationship']
         self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
         self.assertEquals('test_relationship', test_relationship['name'])
@@ -1451,7 +1451,7 @@ imports:
         self.assertEquals(3, len(test_relationship3))
 
     def test_top_level_relationships_inheritance(self):
-        yaml = self.APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS + """
+        yaml = self.blueprint_WITH_INTERFACES_AND_PLUGINS + """
 relationships:
     empty_rel: {}
     test_relationship:
@@ -1477,7 +1477,7 @@ relationships:
             radial: "custom radial"
         """
         result = parse(yaml)
-        self._assert_application_template(result)
+        self._assert_blueprint(result)
         test_relationship = result['relationships']['test_relationship']
         test_relationship2 = result['relationships']['test_relationship2']
         test_relationship3 = result['relationships']['test_relationship3']
@@ -1500,15 +1500,15 @@ relationships:
         self.assertEquals('custom radial', test_relationship3['workflow'])
 
     def test_instance_relationships_empty_relationships_section(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
             relationships: []
                     """
         result = parse(yaml)
-        self._assert_minimal_application_template(result)
+        self._assert_minimal_blueprint(result)
         self.assertListEqual([], result['nodes'][0]['relationships'])
 
     def test_instance_relationships_standard_relationship(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
         -   name: test_node2
             type: test_type
             relationships:
@@ -1537,7 +1537,7 @@ relationships:
 
     def test_instance_relationships_duplicate_relationship(self):
         #right now, having two relationships with the same (type,target) under one node is valid
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
         -   name: test_node2
             type: test_type
             relationships:
@@ -1566,7 +1566,7 @@ relationships:
         #the meaning is for checking that the relationship properties from the top-level relationships
         #section are used for instance-relationships which declare their types
         #note there are no overrides in this case; these are tested in the next, more thorough test
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
         -   name: test_node2
             type: test_type
             relationships:
@@ -1600,7 +1600,7 @@ relationships:
     def test_relationships_and_node_recursive_inheritance(self):
         #testing for a complete inheritance path for relationships
         #from top-level relationships to a relationship instance
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
         -   name: test_node2
             type: test_type
             relationships:
@@ -1682,7 +1682,7 @@ plugins:
 
     def test_node_host_id_field(self):
         yaml = """
-application_template:
+blueprint:
     name: test_app
     topology:
         -   name: test_node
@@ -1697,7 +1697,7 @@ types:
 
     def test_node_host_id_field_via_relationship(self):
         yaml = """
-application_template:
+blueprint:
     name: test_app
     topology:
         -   name: test_node1
@@ -1725,7 +1725,7 @@ relationships:
 
     def test_node_host_id_field_via_node_supertype(self):
         yaml = """
-application_template:
+blueprint:
     name: test_app
     topology:
         -   name: test_node1
@@ -1740,7 +1740,7 @@ types:
 
     def test_node_host_id_field_via_relationship_derived_from_inheritance(self):
         yaml = """
-application_template:
+blueprint:
     name: test_app
     topology:
         -   name: test_node1
@@ -1763,7 +1763,7 @@ relationships:
 
     def test_node_plugins_to_install_field(self):
         yaml = """
-application_template:
+blueprint:
     name: test_app
     topology:
         -   name: test_node1
@@ -1795,7 +1795,7 @@ plugins:
         #testing to ensure the installer plugin is treated differently and is not
         #put on the plugins_to_install dict like the rest of the plugins
         yaml = """
-application_template:
+blueprint:
     name: test_app
     topology:
         -   name: test_node1
@@ -1822,7 +1822,7 @@ plugins:
     def test_node_plugins_to_install_field_remote_plugin(self):
         #testing to ensure that only plugins of type agent_plugin are put on the plugins_to_install field
         yaml = """
-application_template:
+blueprint:
     name: test_app
     topology:
         -   name: test_node1
@@ -1852,7 +1852,7 @@ plugins:
         #this test also ensures there's no problem with a "duplicate" plugin on the plugins_to_install field,
         #as test_plugin should be added from both test_node2 and test_node4 [only one should remain in the end]
         yaml = """
-application_template:
+blueprint:
     name: test_app
     topology:
         -   name: test_node1
@@ -1918,12 +1918,12 @@ plugins:
         self.assertEquals(2, len(result['nodes'][0]['plugins_to_install']))
 
     def test_node_cloudify_runtime_property(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE
+        yaml = self.MINIMAL_blueprint
         result = parse(yaml)
         self.assertEquals({}, result['nodes'][0]['properties']['cloudify_runtime'])
 
     def test_instance_relationships_stub_relationship_workflow(self):
-        yaml = self.MINIMAL_APPLICATION_TEMPLATE + """
+        yaml = self.MINIMAL_blueprint + """
         -   name: test_node2
             type: test_type
             relationships:

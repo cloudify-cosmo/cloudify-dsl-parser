@@ -26,8 +26,8 @@ from dsl_parser.parser import parse
 
 
 class AbstractTestParser(unittest.TestCase):
-    BASIC_APPLICATION_TEMPLATE_SECTION = """
-application_template:
+    BASIC_blueprint_SECTION = """
+blueprint:
     name: test_app
     topology:
         -   name: test_node
@@ -72,13 +72,13 @@ policies:
             rule: "test rule code"
             """
 
-    #note that some tests extend the BASIC_APPLICATION_TEMPLATE 'inline', which is why it's appended in the end
-    MINIMAL_APPLICATION_TEMPLATE = """
+    #note that some tests extend the BASIC_blueprint 'inline', which is why it's appended in the end
+    MINIMAL_blueprint = """
 types:
     test_type: {}
-    """ + BASIC_APPLICATION_TEMPLATE_SECTION
+    """ + BASIC_blueprint_SECTION
 
-    APPLICATION_TEMPLATE_WITH_INTERFACES_AND_PLUGINS = BASIC_APPLICATION_TEMPLATE_SECTION + \
+    blueprint_WITH_INTERFACES_AND_PLUGINS = BASIC_blueprint_SECTION + \
                                                        BASIC_INTERFACE_AND_PLUGIN + BASIC_TYPE
 
     def setUp(self):

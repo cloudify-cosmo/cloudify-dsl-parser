@@ -100,7 +100,7 @@ INSTANCE_OR_TYPE_POLICIES_SCHEMA = {
 DSL_SCHEMA = {
     'type': 'object',
     'properties': {
-        'application_template': {
+        'blueprint': {
             'type': 'object',
             'properties': {
                 'name': {
@@ -371,7 +371,7 @@ DSL_SCHEMA = {
             }
         }
     },
-    'required': ['application_template'],
+    'required': ['blueprint'],
     'additionalProperties': False
 }
 
