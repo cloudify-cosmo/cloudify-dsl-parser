@@ -322,7 +322,7 @@ imports:
 imports:
     -   {0}""".format(imported_alias)
         alias_path = self.make_alias_yaml_file({'{0}'.format(imported_alias): '{0}'.format(imported_filename)})
-        result = parse(yaml, alias_mapping_path=alias_path)
+        result = parse(yaml, alias_mapping_url=alias_path)
         self._assert_minimal_blueprint(result)
 
     def test_empty_first_level_workflows(self):

@@ -39,26 +39,26 @@ from urllib import pathname2url
 from urllib2 import urlopen, URLError
 
 
-def parse_from_path(dsl_file_path, alias_mapping_dict=None, alias_mapping_path=None):
+def parse_from_path(dsl_file_path, alias_mapping_dict=None, alias_mapping_url=None):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_path, dsl_file_path)
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, dsl_file_path)
 
 
-def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_path=None):
+def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None):
     with contextlib.closing(urlopen(dsl_url)) as f:
         dsl_string = f.read()
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_path, dsl_url)
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, dsl_url)
 
 
-def parse(dsl_string, alias_mapping_dict=None, alias_mapping_path=None):
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_path)
+def parse(dsl_string, alias_mapping_dict=None, alias_mapping_url=None):
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url)
 
 
-def _get_alias_mapping(alias_mapping_dict, alias_mapping_path):
+def _get_alias_mapping(alias_mapping_dict, alias_mapping_url):
     alias_mapping = {}
-    if alias_mapping_path is not None:
-        with contextlib.closing(urlopen(alias_mapping_path)) as f:
+    if alias_mapping_url is not None:
+        with contextlib.closing(urlopen(alias_mapping_url)) as f:
             alias_mapping_string = f.read()
         alias_mapping = dict(alias_mapping.items() + yaml.safe_load(alias_mapping_string).items())
     if alias_mapping_dict is not None:
@@ -66,8 +66,8 @@ def _get_alias_mapping(alias_mapping_dict, alias_mapping_path):
     return alias_mapping
 
 
-def _parse(dsl_string, alias_mapping_dict, alias_mapping_path, dsl_location=None):
-    alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_path)
+def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, dsl_location=None):
+    alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
     try:
         parsed_dsl = yaml.safe_load(dsl_string)
     except ParserError, ex:

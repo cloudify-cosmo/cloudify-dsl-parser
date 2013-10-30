@@ -38,8 +38,8 @@ def prepare_multi_instance_plan(plan, **kwargs):
     return json.dumps(plan)
 
 @task
-def parse_dsl(dsl_location, **kwargs):
-    result = parser.parse_from_url(dsl_location)
+def parse_dsl(dsl_location, alias_mapping_url, **kwargs):
+    result = parser.parse_from_url(dsl_url=dsl_location, alias_mapping_url=alias_mapping_url)
     return json.dumps(result)
 
 
