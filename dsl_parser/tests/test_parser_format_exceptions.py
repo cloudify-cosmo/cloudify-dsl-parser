@@ -477,7 +477,7 @@ policies:
                         -   type: "custom type"
                             properties:
                                 state: "custom state"
-                                value: "custom value"
+                                service: "custom value"
                     """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -490,7 +490,7 @@ policies:
                             extra_prop: "value"
                             properties:
                                 state: "custom state"
-                                value: "custom value"
+                                service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -501,7 +501,7 @@ policies:
                     rules:
                         -   properties:
                                 state: "custom state"
-                                value: "custom value"
+                                service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -523,7 +523,7 @@ policies:
                         -   type: "custom type"
                             properties:
                                 state: "custom state"
-                                value: "custom value"
+                                service: "custom value"
                                 extra_prop: "value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
@@ -546,7 +546,7 @@ policies:
                     rules:
                         -   type: "custom type"
                             properties:
-                                value: "custom value"
+                                service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -593,7 +593,7 @@ types:
                     -   type: "custom type"
                         properties:
                             state: "custom state"
-                            value: "custom value"
+                            service: "custom value"
                     """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -608,7 +608,7 @@ types:
                         extra_prop: "value"
                         properties:
                             state: "custom state"
-                            value: "custom value"
+                            service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -621,7 +621,7 @@ types:
                 rules:
                     -   properties:
                             state: "custom state"
-                            value: "custom value"
+                            service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -647,7 +647,7 @@ types:
                     -   type: "custom type"
                         properties:
                             state: "custom state"
-                            value: "custom value"
+                            service: "custom value"
                             extra_prop: "value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
@@ -674,7 +674,7 @@ types:
                 rules:
                     -   type: "custom type"
                         properties:
-                            value: "custom value"
+                            service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 

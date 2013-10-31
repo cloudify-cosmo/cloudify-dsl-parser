@@ -928,7 +928,7 @@ types:
                         -   type: "test_rule"
                             properties:
                                 state: "custom state"
-                                value: "custom value"
+                                service: "custom service"
                 """
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
@@ -937,7 +937,7 @@ types:
         node_rule = node_policy['rules'][0]
         self.assertEquals('test_rule', node_rule['type'])
         self.assertEquals('custom state', node_rule['properties']['state'])
-        self.assertEquals('custom value', node_rule['properties']['value'])
+        self.assertEquals('custom service', node_rule['properties']['service'])
         #verifying the top-level policies section in the response also contains the same values
         self.assertListEqual(node['policies'], result['policies']['test_app.test_node'])
 
@@ -951,7 +951,7 @@ types:
                     -   type: "test_rule"
                         properties:
                             state: "custom state"
-                            value: "custom value"
+                            service: "custom value"
                 """
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
@@ -960,7 +960,7 @@ types:
         node_rule = node_policy['rules'][0]
         self.assertEquals('test_rule', node_rule['type'])
         self.assertEquals('custom state', node_rule['properties']['state'])
-        self.assertEquals('custom value', node_rule['properties']['value'])
+        self.assertEquals('custom value', node_rule['properties']['service'])
         #verifying the top-level policies section in the response also contains the same values
         self.assertListEqual(node['policies'], result['policies']['test_app.test_node'])
 
@@ -977,25 +977,25 @@ types:
                     -   type: "rule1"
                         properties:
                             state: "state1"
-                            value: "value1"
+                            service: "value1"
             -   name: policy2
                 rules:
                     -   type: "rule2"
                         properties:
                             state: "state2"
-                            value: "value2"
+                            service: "value2"
             -   name: policy3
                 rules:
                     -   type: "rule3"
                         properties:
                             state: "state3"
-                            value: "value3"
+                            service: "value3"
             -   name: policy4
                 rules:
                     -   type: "rule4"
                         properties:
                             state: "state4"
-                            value: "value4"
+                            service: "value4"
 
     test_type_parent:
         derived_from: "test_type_grandparent"
@@ -1005,19 +1005,19 @@ types:
                     -   type: "parent_rule2"
                         properties:
                             state: "parent_state2"
-                            value: "parent_value2"
+                            service: "parent_value2"
             -   name: policy4
                 rules:
                     -   type: "parent_rule4"
                         properties:
                             state: "parent_state4"
-                            value: "parent_value4"
+                            service: "parent_value4"
             -   name: policy5
                 rules:
                     -   type: "parent_rule5"
                         properties:
                             state: "parent_state5"
-                            value: "parent_value5"
+                            service: "parent_value5"
 
 
     test_type_grandparent:
@@ -1027,19 +1027,19 @@ types:
                     -   type: "grandparent_rule3"
                         properties:
                             state: "grandparent_state3"
-                            value: "grandparent_value3"
+                            service: "grandparent_value3"
             -   name: policy4
                 rules:
                     -   type: "grandparent_rule4"
                         properties:
                             state: "grandparent_state4"
-                            value: "grandparent_value4"
+                            service: "grandparent_value4"
             -   name: policy6
                 rules:
                     -   type: "grandparent_rule6"
                         properties:
                             state: "grandparent_state6"
-                            value: "grandparent_value6"
+                            service: "grandparent_value6"
 
 policies:
     types:
@@ -1118,25 +1118,25 @@ policies:
                         -   type: "rule1"
                             properties:
                                 state: "state1"
-                                value: "value1"
+                                service: "value1"
                 -   name: policy2
                     rules:
                         -   type: "rule2"
                             properties:
                                 state: "state2"
-                                value: "value2"
+                                service: "value2"
                 -   name: policy3
                     rules:
                         -   type: "rule3"
                             properties:
                                 state: "state3"
-                                value: "value3"
+                                service: "value3"
                 -   name: policy4
                     rules:
                         -   type: "rule4"
                             properties:
                                 state: "state4"
-                                value: "value4"
+                                service: "value4"
 types:
     test_type:
         derived_from: "test_type_parent"
@@ -1146,19 +1146,19 @@ types:
                     -   type: "parent_rule2"
                         properties:
                             state: "parent_state2"
-                            value: "parent_value2"
+                            service: "parent_value2"
             -   name: policy4
                 rules:
                     -   type: "parent_rule4"
                         properties:
                             state: "parent_state4"
-                            value: "parent_value4"
+                            service: "parent_value4"
             -   name: policy5
                 rules:
                     -   type: "parent_rule5"
                         properties:
                             state: "parent_state5"
-                            value: "parent_value5"
+                            service: "parent_value5"
 
     test_type_parent:
         policies:
@@ -1167,19 +1167,19 @@ types:
                     -   type: "grandparent_rule3"
                         properties:
                             state: "grandparent_state3"
-                            value: "grandparent_value3"
+                            service: "grandparent_value3"
             -   name: policy4
                 rules:
                     -   type: "grandparent_rule4"
                         properties:
                             state: "grandparent_state4"
-                            value: "grandparent_value4"
+                            service: "grandparent_value4"
             -   name: policy6
                 rules:
                     -   type: "grandparent_rule6"
                         properties:
                             state: "grandparent_state6"
-                            value: "grandparent_value6"
+                            service: "grandparent_value6"
 
 policies:
     types:
@@ -1261,17 +1261,17 @@ types:
                     -   type: "rule1"
                         properties:
                             state: "state1"
-                            value: "value1"
+                            service: "value1"
             -   name: policy2
                 rules:
                     -   type: "rule2"
                         properties:
                             state: "state2"
-                            value: "value2"
+                            service: "value2"
                     -   type: "rule3"
                         properties:
                             state: "state3"
-                            value: "value3"
+                            service: "value3"
 
     test_type_parent:
         policies:
@@ -1280,13 +1280,13 @@ types:
                     -   type: "rule1"
                         properties:
                             state: "parent_state2"
-                            value: "parent_value2"
+                            service: "parent_value2"
             -   name: policy2
                 rules:
                     -   type: "rule4"
                         properties:
                             state: "parent_state4"
-                            value: "parent_value4"
+                            service: "parent_value4"
 
 policies:
     types:
@@ -1319,14 +1319,14 @@ policies:
         self.assertEquals(1, len(self._get_policy_from_node(node, 'policy1')['rules']))
         self.assertEquals('rule1', self._get_policy_from_node(node, 'policy1')['rules'][0]['type'])
         self.assertEquals('state1', self._get_policy_from_node(node, 'policy1')['rules'][0]['properties']['state'])
-        self.assertEquals('value1', self._get_policy_from_node(node, 'policy1')['rules'][0]['properties']['value'])
+        self.assertEquals('value1', self._get_policy_from_node(node, 'policy1')['rules'][0]['properties']['service'])
         self.assertEquals(2, len(self._get_policy_from_node(node, 'policy2')['rules']))
         self.assertEquals('rule2', self._get_policy_from_node(node, 'policy2')['rules'][0]['type'])
         self.assertEquals('state2', self._get_policy_from_node(node, 'policy2')['rules'][0]['properties']['state'])
-        self.assertEquals('value2', self._get_policy_from_node(node, 'policy2')['rules'][0]['properties']['value'])
+        self.assertEquals('value2', self._get_policy_from_node(node, 'policy2')['rules'][0]['properties']['service'])
         self.assertEquals('rule3', self._get_policy_from_node(node, 'policy2')['rules'][1]['type'])
         self.assertEquals('state3', self._get_policy_from_node(node, 'policy2')['rules'][1]['properties']['state'])
-        self.assertEquals('value3', self._get_policy_from_node(node, 'policy2')['rules'][1]['properties']['value'])
+        self.assertEquals('value3', self._get_policy_from_node(node, 'policy2')['rules'][1]['properties']['service'])
         #verifying the top-level policies section in the response also contains the same values
         self.assertListEqual(node['policies'], result['policies']['test_app.test_node'])
 

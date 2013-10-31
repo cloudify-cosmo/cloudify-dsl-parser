@@ -285,7 +285,7 @@ policies:
                         -   type: "test_rule"
                             properties:
                                 state: "custom state"
-                                value: "custom value"
+                                service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 16, DSLParsingLogicException)
 
@@ -297,7 +297,7 @@ policies:
                         -   type: "undefined_rule"
                             properties:
                                 state: "custom state"
-                                value: "custom value"
+                                service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 17, DSLParsingLogicException)
 
@@ -311,7 +311,7 @@ types:
                     -   type: "test_rule"
                         properties:
                             state: "custom state"
-                            value: "custom value"
+                            service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 16, DSLParsingLogicException)
 
@@ -325,7 +325,7 @@ types:
                     -   type: "undefined_rule"
                         properties:
                             state: "custom state"
-                            value: "custom value"
+                            service: "custom value"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 17, DSLParsingLogicException)
 

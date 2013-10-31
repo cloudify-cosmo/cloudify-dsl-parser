@@ -68,14 +68,14 @@ INSTANCE_OR_TYPE_POLICIES_SCHEMA = {
                         'properties': {
                             'type': 'object',
                             'properties': {
-                                'state': {
+                                'service': {
                                     'type': 'string'
                                 },
-                                'value': {
+                                'state': {
                                     'type': 'string'
                                 }
                             },
-                            'required': ['state', 'value'],
+                            'required': ['service', 'state'],
                             'additionalProperties': False
                         }
                     },
