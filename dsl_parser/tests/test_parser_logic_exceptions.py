@@ -20,7 +20,11 @@ from dsl_parser.parser import DSLParsingLogicException, parse_from_path
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from urllib import pathname2url
 
+
 class TestParserLogicExceptions(AbstractTestParser):
+
+    def test_parse_dsl_from_file_bad_path(self):
+        self.assertRaises(EnvironmentError, parse_from_path, 'fake-file.yaml')
 
     def test_no_type_definition(self):
         self._assert_dsl_parsing_exception_error_code(self.BASIC_BLUEPRINT_SECTION, 7, DSLParsingLogicException)
@@ -149,51 +153,6 @@ policies:
             rule: "some other code"
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
-
-    def test_recursive_imports_with_inner_circular(self):
-        bottom_level_yaml = """
-imports:
-    -   {0}
-        """.format(os.path.join(self._temp_dir, "mid_level.yaml")) + self.BASIC_TYPE
-        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
-
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
-imports:
-    -   {0}""".format(bottom_file_name)
-        mid_file_name = self.make_file_with_name(mid_level_yaml, 'mid_level.yaml')
-
-        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
-imports:
-    -   {0}""".format(mid_file_name)
-
-        ex = self._assert_dsl_parsing_exception_error_code(top_level_yaml, 8, DSLParsingLogicException)
-        expected_circular_path = [pathname2url(x) for x in [mid_file_name, bottom_file_name, mid_file_name]]
-        self.assertEquals(len(expected_circular_path), len(ex.circular_path))
-        for expected_element, element in zip(expected_circular_path, ex.circular_path):
-            self.assertTrue(expected_element in element, '{0} not in {1}'.format(expected_element,element))
-
-    def test_recursive_imports_with_complete_circle(self):
-        bottom_level_yaml = """
-imports:
-    -   {0}
-            """.format(os.path.join(self._temp_dir, "top_level.yaml")) + self.BASIC_TYPE
-        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
-
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
-imports:
-    -   {0}""".format(bottom_file_name)
-        mid_file_name = self.make_yaml_file(mid_level_yaml)
-
-        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
-imports:
-    -   {0}""".format(mid_file_name)
-        top_file_name = self.make_file_with_name(top_level_yaml, 'top_level.yaml')
-        ex = self._assert_dsl_parsing_exception_error_code(top_file_name, 8, DSLParsingLogicException, parse_from_path)
-        expected_circular_path = [pathname2url(x) for x in [top_file_name, mid_file_name, bottom_file_name,
-                                  top_file_name]]
-        self.assertEquals(len(expected_circular_path), len(ex.circular_path))
-        for expected_element, element in zip(expected_circular_path, ex.circular_path):
-            self.assertTrue(expected_element in element, '{0} not in {1}'.format(expected_element,element))
 
     def test_type_derive_non_from_none_existing(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """

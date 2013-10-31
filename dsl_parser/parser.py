@@ -609,6 +609,8 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_url):
 
     ordered_imports_list = []
     _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, dsl_location, resources_url)
+    if dsl_location:
+        ordered_imports_list = ordered_imports_list[1:]
 
     for single_import in ordered_imports_list:
         try:
@@ -678,14 +680,11 @@ def _validate_url_exists(url):
 
 
 def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import, resources_url):
-    def _build_ordered_imports_list_recursive(parsed_dsl, current_path_imports_list, current_import):
+    def _build_ordered_imports_list_recursive(parsed_dsl, current_import):
         if current_import is not None:
-            current_path_imports_list.append(current_import)
             ordered_imports_list.append(current_import)
 
         if IMPORTS not in parsed_dsl:
-            if current_import is not None:
-                current_path_imports_list.pop()
             return
 
         for another_import in parsed_dsl[IMPORTS]:
@@ -700,21 +699,12 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
                 try:
                     with contextlib.closing(urlopen(import_url)) as f:
                         imported_dsl = yaml.safe_load(f)
-                    _build_ordered_imports_list_recursive(imported_dsl, current_path_imports_list, import_url)
+                    _build_ordered_imports_list_recursive(imported_dsl, import_url)
                 except URLError, ex:
                     ex = DSLParsingLogicException(13, 'Failed on import - Unable to open import url {0}; {1}'.
                     format(import_url, ex.message))
                     ex.failed_import = import_url
                     raise ex
-
-            elif import_url in current_path_imports_list:
-                current_path_imports_list.append(import_url)
-                ex = DSLParsingLogicException(8, 'Failed on import - Circular imports detected: {0}'.format(
-                    " --> ".join(current_path_imports_list)))
-                ex.circular_path = current_path_imports_list
-                raise ex
-        if current_import is not None:
-            current_path_imports_list.pop()
 
     current_import = _apply_alias_mapping_if_available(current_import, alias_mapping)
     if current_import is not None:
@@ -724,7 +714,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
             format(current_import))
             ex.failed_import = current_import
             raise ex
-    _build_ordered_imports_list_recursive(parsed_dsl, [], current_import)
+    _build_ordered_imports_list_recursive(parsed_dsl, current_import)
 
 
 def _validate_dsl_schema(parsed_dsl):

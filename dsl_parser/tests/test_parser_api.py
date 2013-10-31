@@ -18,7 +18,7 @@ __author__ = 'ran'
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.parser import parse, parse_from_path, parse_from_url
 from urllib import pathname2url
-
+import os
 
 class TestParserApi(AbstractTestParser):
 
@@ -259,9 +259,6 @@ imports:
         filename_url = self.make_yaml_file(self.MINIMAL_BLUEPRINT, True)
         result = parse_from_url(filename_url)
         self._assert_minimal_blueprint(result)
-
-    def test_parse_dsl_from_file_bad_path(self):
-        self.assertRaises(EnvironmentError, parse_from_path, 'fake-file.yaml')
 
     def test_import_empty_list(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -1955,5 +1952,43 @@ imports:
         top_file = self.make_yaml_file(yaml, True)
         result = parse_from_url(top_file, resources_url=file_url[:-len(resource_file_name)])
         self._assert_minimal_blueprint(result)
+
+    def test_recursive_imports_with_inner_circular(self):
+        bottom_level_yaml = """
+imports:
+    -   {0}
+        """.format(os.path.join(self._temp_dir, "mid_level.yaml")) + self.BASIC_TYPE
+        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
+
+        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+imports:
+    -   {0}""".format(bottom_file_name)
+        mid_file_name = self.make_file_with_name(mid_level_yaml, 'mid_level.yaml')
+
+        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
+imports:
+    -   {0}""".format(mid_file_name)
+
+        result = parse(top_level_yaml)
+        self._assert_blueprint(result)
+
+    def test_recursive_imports_with_complete_circle(self):
+        bottom_level_yaml = """
+imports:
+    -   {0}
+            """.format(os.path.join(self._temp_dir, "top_level.yaml")) + self.BASIC_TYPE
+        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
+
+        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+imports:
+    -   {0}""".format(bottom_file_name)
+        mid_file_name = self.make_yaml_file(mid_level_yaml)
+
+        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
+imports:
+    -   {0}""".format(mid_file_name)
+        top_file_name = self.make_file_with_name(top_level_yaml, 'top_level.yaml')
+        result = parse_from_path(top_file_name)
+        self._assert_blueprint(result)
 
     #TODO: contained-in relationships tests such as loops etc.
