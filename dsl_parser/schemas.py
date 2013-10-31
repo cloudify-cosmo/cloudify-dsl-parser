@@ -203,7 +203,7 @@ DSL_SCHEMA = {
         },
         'plugins': {
             'type': 'object',
-            'oneOf': [
+            'anyOf': [
                 {
                     'patternProperties': {
                         '^': {
