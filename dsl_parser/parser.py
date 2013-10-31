@@ -226,15 +226,15 @@ def _process_relationships(combined_parsed_dsl, alias_mapping):
 def _validate_relationship_fields(rel_obj, plugins, rel_name):
     if 'plugin' in rel_obj and rel_obj['plugin'] not in plugins:
         raise DSLParsingLogicException(19, 'Missing definition for plugin {0}, which is declared for relationship'
-                                           ' {1}', rel_obj['plugin'], rel_name)
+                                           ' {1}'.format(rel_obj['plugin'], rel_name))
     if 'bind_at' in rel_obj and rel_obj['bind_at'] not in ('pre_started', 'post_started'):
         raise DSLParsingLogicException(20, 'Relationship {0} has an illegal "bind_at" value {1}; value must '
-                                           'be either {2} or {3}', rel_name, rel_obj['bind_at'],
-                                       'pre_started', 'post_started')
+                                           'be either {2} or {3}'.format(rel_name, rel_obj['bind_at'],
+                                       'pre_started', 'post_started'))
     if 'run_on_node' in rel_obj and rel_obj['run_on_node'] not in ('source', 'target'):
         raise DSLParsingLogicException(21, 'Relationship {0} has an illegal "run_on_node" value {1}; value must '
-                                           'be either {2} or {3}', rel_name, rel_obj['run_on_node'],
-                                       'source', 'target')
+                                           'be either {2} or {3}'.format(rel_name, rel_obj['run_on_node'],
+                                       'source', 'target'))
 
 
 def _create_response_policies_section(processed_nodes):
