@@ -1935,5 +1935,25 @@ relationships:
         result = parse(yaml)
         self.assertEquals('define stub_workflow\n\t', result['nodes'][1]['relationships'][0]['workflow'])
 
+    def test_import_resources(self):
+        resource_file_name = 'resource_file.yaml'
+        file_name = self.make_file_with_name(self.MINIMAL_BLUEPRINT, resource_file_name, 'resources')
+        file_url = self._path2url(file_name)
+        yaml = """
+imports:
+    -   {0}""".format(resource_file_name)
+        result = parse(yaml, resources_url=file_url[:-len(resource_file_name)])
+        self._assert_minimal_blueprint(result)
+
+    def test_import_resources_from_url(self):
+        resource_file_name = 'resource_file.yaml'
+        file_name = self.make_file_with_name(self.MINIMAL_BLUEPRINT, resource_file_name, 'resources')
+        file_url = self._path2url(file_name)
+        yaml = """
+imports:
+    -   {0}""".format(resource_file_name)
+        top_file = self.make_yaml_file(yaml, True)
+        result = parse_from_url(top_file, resources_url=file_url[:-len(resource_file_name)])
+        self._assert_minimal_blueprint(result)
 
     #TODO: contained-in relationships tests such as loops etc.

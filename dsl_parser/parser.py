@@ -39,20 +39,20 @@ from urllib import pathname2url
 from urllib2 import urlopen, URLError
 
 
-def parse_from_path(dsl_file_path, alias_mapping_dict=None, alias_mapping_url=None):
+def parse_from_path(dsl_file_path, alias_mapping_dict=None, alias_mapping_url=None, resources_url=None):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, dsl_file_path)
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_url, dsl_file_path)
 
 
-def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None):
+def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None, resources_url=None):
     with contextlib.closing(urlopen(dsl_url)) as f:
         dsl_string = f.read()
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, dsl_url)
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_url, dsl_url)
 
 
-def parse(dsl_string, alias_mapping_dict=None, alias_mapping_url=None):
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url)
+def parse(dsl_string, alias_mapping_dict=None, alias_mapping_url=None, resources_url=None):
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_url)
 
 
 def _get_alias_mapping(alias_mapping_dict, alias_mapping_url):
@@ -66,7 +66,7 @@ def _get_alias_mapping(alias_mapping_dict, alias_mapping_url):
     return alias_mapping
 
 
-def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, dsl_location=None):
+def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_url, dsl_location=None):
     alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
     try:
         parsed_dsl = yaml.safe_load(dsl_string)
@@ -75,7 +75,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, dsl_location=None)
     if parsed_dsl is None:
         raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml')
 
-    combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping, dsl_location)
+    combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_url)
 
     _validate_dsl_schema(combined_parsed_dsl)
 
@@ -588,7 +588,7 @@ def _autowire_plugin(plugins, interface_name, type_name):
     return matching_plugins[0]
 
 
-def _combine_imports(parsed_dsl, alias_mapping, dsl_location):
+def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_url):
     def _merge_into_dict_or_throw_on_duplicate(from_dict, to_dict, top_level_key, path):
         for key, value in from_dict.iteritems():
             if key not in to_dict:
@@ -608,7 +608,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location):
     _validate_imports_section(parsed_dsl[IMPORTS], dsl_location)
 
     ordered_imports_list = []
-    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, dsl_location)
+    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, dsl_location, resources_url)
 
     for single_import in ordered_imports_list:
         try:
@@ -651,7 +651,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location):
     return combined_parsed_dsl
 
 
-def _get_import_location_candidate(import_str, current_import_context=None):
+def _get_import_location_candidate(import_str, resources_url, current_import_context=None):
     #Already url format
     if import_str.startswith('http:') or import_str.startswith('ftp:') or import_str.startswith('file:'):
         return import_str
@@ -660,14 +660,25 @@ def _get_import_location_candidate(import_str, current_import_context=None):
     if os.path.exists(import_str):
         return 'file:{0}'.format(pathname2url(import_str))
 
-    if current_import_context is not None:
-        return current_import_context[:current_import_context.rfind('/') + 1] + import_str
+    if current_import_context:
+        candidate_url = current_import_context[:current_import_context.rfind('/') + 1] + import_str
+        if _validate_url_exists(candidate_url):
+            return candidate_url
+
+    if resources_url:
+        return resources_url + import_str
 
 
-def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import):
-    def _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping,
-                                              current_path_imports_list,
-                                              current_import):
+def _validate_url_exists(url):
+    try:
+        with contextlib.closing(urlopen(url)):
+            return True
+    except URLError:
+        return False
+
+
+def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import, resources_url):
+    def _build_ordered_imports_list_recursive(parsed_dsl, current_path_imports_list, current_import):
         if current_import is not None:
             current_path_imports_list.append(current_import)
             ordered_imports_list.append(current_import)
@@ -679,7 +690,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
 
         for another_import in parsed_dsl[IMPORTS]:
             another_import = _apply_alias_mapping_if_available(another_import, alias_mapping)
-            import_url = _get_import_location_candidate(another_import, current_import)
+            import_url = _get_import_location_candidate(another_import, resources_url, current_import)
             if import_url is None:
                 ex = DSLParsingLogicException(13, 'Failed on import - no suitable location found for import {0}'.
                 format(import_url))
@@ -689,8 +700,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
                 try:
                     with contextlib.closing(urlopen(import_url)) as f:
                         imported_dsl = yaml.safe_load(f)
-                    _build_ordered_imports_list_recursive(imported_dsl, ordered_imports_list, alias_mapping,
-                                                          current_path_imports_list, import_url)
+                    _build_ordered_imports_list_recursive(imported_dsl, current_path_imports_list, import_url)
                 except URLError, ex:
                     ex = DSLParsingLogicException(13, 'Failed on import - Unable to open import url {0}; {1}'.
                     format(import_url, ex.message))
@@ -708,13 +718,13 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
 
     current_import = _apply_alias_mapping_if_available(current_import, alias_mapping)
     if current_import is not None:
-        current_import = _get_import_location_candidate(current_import)
+        current_import = _get_import_location_candidate(current_import, resources_url)
         if current_import is None:
             ex = DSLParsingLogicException(13, 'Failed on import - no suitable location found for import {0}'.
             format(current_import))
             ex.failed_import = current_import
             raise ex
-    _build_ordered_imports_list_recursive(parsed_dsl, ordered_imports_list, alias_mapping, [], current_import)
+    _build_ordered_imports_list_recursive(parsed_dsl, [], current_import)
 
 
 def _validate_dsl_schema(parsed_dsl):

@@ -94,8 +94,11 @@ types:
             outfile.write(yaml.dump(alias, default_flow_style=True))
         return self._path2url(filename_path)
 
-    def make_file_with_name(self, content, filename):
-        filename_path = os.path.join(self._temp_dir, filename)
+    def make_file_with_name(self, content, filename, base_dir=None):
+        base_dir = os.path.join(self._temp_dir, base_dir) if base_dir else self._temp_dir
+        filename_path = os.path.join(base_dir, filename)
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
         with open(filename_path, 'w') as f:
             f.write(content)
         return filename_path
