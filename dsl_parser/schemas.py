@@ -48,45 +48,47 @@ WORKFLOWS_SCHEMA = {
 }
 
 INSTANCE_OR_TYPE_POLICIES_SCHEMA = {
-    'type': 'object',
-    'patternProperties': {
-        '^': {
-            'type': 'object',
-            'properties': {
-                'rules': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            #non-meta 'type'
-                            'type': {
-                                'type': 'string'
-                            },
-                            #non-meta 'properties'
-                            'properties': {
-                                'type': 'object',
-                                'properties': {
-                                    'state': {
-                                        'type': 'string'
-                                    },
-                                    'value': {
-                                        'type': 'string'
-                                    }
-                                },
-                                'required': ['state', 'value'],
-                                'additionalProperties': False
-                            }
-                        },
-                        'required': ['type', 'properties'],
-                        'additionalProperties': False
-                    },
-                    'minItems': 1
-                }
+    'type': 'array',
+    'items': {
+        'type': 'object',
+        'properties': {
+            'name': {
+                'type': 'string'
             },
-            'required': ['rules'],
-            'additionalProperties': False
-        }
+            'rules': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        #non-meta 'type'
+                        'type': {
+                            'type': 'string'
+                        },
+                        #non-meta 'properties'
+                        'properties': {
+                            'type': 'object',
+                            'properties': {
+                                'state': {
+                                    'type': 'string'
+                                },
+                                'value': {
+                                    'type': 'string'
+                                }
+                            },
+                            'required': ['state', 'value'],
+                            'additionalProperties': False
+                        }
+                    },
+                    'required': ['type', 'properties'],
+                    'additionalProperties': False
+                },
+                'minItems': 1
+            }
+        },
+        'required': ['name', 'rules'],
+        'additionalProperties': False
     }
+
 }
 
 # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),

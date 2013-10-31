@@ -450,10 +450,11 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     processed_node[WORKFLOWS] = _process_workflows(merged_workflows, alias_mapping)
 
     #merge policies
-    processed_node[POLICIES] = _merge_sub_dicts(complete_node_type, node, POLICIES)
+    processed_node[POLICIES] = _merge_sub_list(complete_node_type, node, POLICIES)
     _validate_node_policies(processed_node[POLICIES], node_name, top_level_policies_and_rules_tuple)
 
     return processed_node
+
 
 
 def _extract_node_host_id(processed_node, node_name_to_node, host_types, contained_in_rel_types):
@@ -481,14 +482,25 @@ def _process_plugin(plugin, plugin_name):
 
 def _validate_node_policies(policies, node_name, top_level_policies_and_rules_tuple):
     #validating all policies and rules declared are indeed defined in the top level policies section
-    for policy_name, policy in policies.iteritems():
+    for policy_obj in policies:
+        policy_name = policy_obj['name']
         if policy_name not in top_level_policies_and_rules_tuple[0]:
             raise DSLParsingLogicException(16, 'Failed to parse node {0}: policy {1} not defined'.format(node_name,
                                                                                                          policy_name))
-        for rule in policy['rules']:
+        for rule in policy_obj['rules']:
             if rule['type'] not in top_level_policies_and_rules_tuple[1]:
                 raise DSLParsingLogicException(17, 'Failed to parse node {0}: rule {1} under policy {2} not '
                                                    'defined'.format(node_name, rule['type'], policy_name))
+
+
+def _merge_sub_list(overridden_dict, overriding_dict, sub_list_key):
+    def _get_named_list_dict(sub_list):
+        return {entry['name']: entry for entry in sub_list}.items()
+
+    overridden_sub_list = _get_list_prop(overridden_dict, sub_list_key)
+    overriding_sub_list = _get_list_prop(overriding_dict, sub_list_key)
+    name_to_list_entry = dict(_get_named_list_dict(overridden_sub_list) + _get_named_list_dict(overriding_sub_list))
+    return name_to_list_entry.values()
 
 
 def _merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
@@ -516,7 +528,7 @@ def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
         #derive workflows
         merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type, merged_type, WORKFLOWS)
         #derive policies
-        merged_type[POLICIES] = _merge_sub_dicts(complete_super_type, merged_type, POLICIES)
+        merged_type[POLICIES] = _merge_sub_list(complete_super_type, merged_type, POLICIES)
         #derive interfaces
         complete_super_type_interfaces = _get_list_prop(complete_super_type, INTERFACES)
         current_level_type_interfaces = _get_list_prop(merged_type, INTERFACES)

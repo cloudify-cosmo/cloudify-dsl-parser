@@ -280,7 +280,7 @@ policies:
     def test_node_with_undefined_policy_event(self):
         yaml = self.POLICIES_SECTION + self.MINIMAL_BLUEPRINT + """
             policies:
-                undefined_policy:
+                -   name: "undefined_policy_event"
                     rules:
                         -   type: "test_rule"
                             properties:
@@ -292,7 +292,7 @@ policies:
     def test_node_with_undefined_rule(self):
         yaml = self.POLICIES_SECTION + self.MINIMAL_BLUEPRINT + """
             policies:
-                test_policy:
+                -   name: "test_policy"
                     rules:
                         -   type: "undefined_rule"
                             properties:
@@ -306,7 +306,7 @@ policies:
 types:
     test_type:
         policies:
-            undefined_policy:
+            -   name: undefined_policy
                 rules:
                     -   type: "test_rule"
                         properties:
@@ -320,7 +320,7 @@ types:
 types:
     test_type:
         policies:
-            test_policy:
+            -   name: test_policy
                 rules:
                     -   type: "undefined_rule"
                         properties:

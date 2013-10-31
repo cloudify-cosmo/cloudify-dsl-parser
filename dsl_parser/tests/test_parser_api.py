@@ -30,6 +30,9 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('test_type', node['type'])
         self.assertEquals('val', node['properties']['key'])
 
+    def _get_policy_from_node(self, node, policy_name):
+        return next(policy for policy in node['policies'] if policy['name'] == policy_name)
+
     def test_single_node_blueprint(self):
         result = parse(self.MINIMAL_BLUEPRINT)
         self._assert_minimal_blueprint(result)
@@ -912,7 +915,7 @@ policies:
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
-        policies: {}
+        policies: []
                 """
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
@@ -920,7 +923,7 @@ types:
     def test_instance_policies(self):
         yaml = self.POLICIES_SECTION + self.MINIMAL_BLUEPRINT + """
             policies:
-                test_policy:
+                -   name: test_policy
                     rules:
                         -   type: "test_rule"
                             properties:
@@ -930,19 +933,20 @@ types:
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
-        node_rule = node['policies']['test_policy']['rules'][0]
+        node_policy = self._get_policy_from_node(node, 'test_policy')
+        node_rule = node_policy['rules'][0]
         self.assertEquals('test_rule', node_rule['type'])
         self.assertEquals('custom state', node_rule['properties']['state'])
         self.assertEquals('custom value', node_rule['properties']['value'])
         #verifying the top-level policies section in the response also contains the same values
-        self.assertDictEqual(node['policies'], result['policies']['test_app.test_node'])
+        self.assertListEqual(node['policies'], result['policies']['test_app.test_node'])
 
     def test_type_policies(self):
         yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
         policies:
-            test_policy:
+            -   name: test_policy
                 rules:
                     -   type: "test_rule"
                         properties:
@@ -952,12 +956,13 @@ types:
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
-        node_rule = node['policies']['test_policy']['rules'][0]
+        node_policy = self._get_policy_from_node(node, 'test_policy')
+        node_rule = node_policy['rules'][0]
         self.assertEquals('test_rule', node_rule['type'])
         self.assertEquals('custom state', node_rule['properties']['state'])
         self.assertEquals('custom value', node_rule['properties']['value'])
         #verifying the top-level policies section in the response also contains the same values
-        self.assertDictEqual(node['policies'], result['policies']['test_app.test_node'])
+        self.assertListEqual(node['policies'], result['policies']['test_app.test_node'])
 
     def test_type_policies_recursive_inheritance(self):
         #policies 1,5,6 will come from each type separately,
@@ -967,25 +972,25 @@ types:
     test_type:
         derived_from: "test_type_parent"
         policies:
-            policy1:
+            -   name: policy1
                 rules:
                     -   type: "rule1"
                         properties:
                             state: "state1"
                             value: "value1"
-            policy2:
+            -   name: policy2
                 rules:
                     -   type: "rule2"
                         properties:
                             state: "state2"
                             value: "value2"
-            policy3:
+            -   name: policy3
                 rules:
                     -   type: "rule3"
                         properties:
                             state: "state3"
                             value: "value3"
-            policy4:
+            -   name: policy4
                 rules:
                     -   type: "rule4"
                         properties:
@@ -995,19 +1000,19 @@ types:
     test_type_parent:
         derived_from: "test_type_grandparent"
         policies:
-            policy2:
+            -   name: policy2
                 rules:
                     -   type: "parent_rule2"
                         properties:
                             state: "parent_state2"
                             value: "parent_value2"
-            policy4:
+            -   name: policy4
                 rules:
                     -   type: "parent_rule4"
                         properties:
                             state: "parent_state4"
                             value: "parent_value4"
-            policy5:
+            -   name: policy5
                 rules:
                     -   type: "parent_rule5"
                         properties:
@@ -1017,19 +1022,19 @@ types:
 
     test_type_grandparent:
         policies:
-            policy3:
+            -   name: policy3
                 rules:
                     -   type: "grandparent_rule3"
                         properties:
                             state: "grandparent_state3"
                             value: "grandparent_value3"
-            policy4:
+            -   name: policy4
                 rules:
                     -   type: "grandparent_rule4"
                         properties:
                             state: "grandparent_state4"
                             value: "grandparent_value4"
-            policy6:
+            -   name: policy6
                 rules:
                     -   type: "grandparent_rule6"
                         properties:
@@ -1093,41 +1098,40 @@ policies:
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
-        node_policies = node['policies']
-        self.assertEquals(6, len(node_policies))
-        self.assertEquals('rule1', node_policies['policy1']['rules'][0]['type'])
-        self.assertEquals('rule2', node_policies['policy2']['rules'][0]['type'])
-        self.assertEquals('rule3', node_policies['policy3']['rules'][0]['type'])
-        self.assertEquals('rule4', node_policies['policy4']['rules'][0]['type'])
-        self.assertEquals('parent_rule5', node_policies['policy5']['rules'][0]['type'])
-        self.assertEquals('grandparent_rule6', node_policies['policy6']['rules'][0]['type'])
+        self.assertEquals(6, len(node['policies']))
+        self.assertEquals('rule1', self._get_policy_from_node(node, 'policy1')['rules'][0]['type'])
+        self.assertEquals('rule2', self._get_policy_from_node(node, 'policy2')['rules'][0]['type'])
+        self.assertEquals('rule3', self._get_policy_from_node(node, 'policy3')['rules'][0]['type'])
+        self.assertEquals('rule4', self._get_policy_from_node(node, 'policy4')['rules'][0]['type'])
+        self.assertEquals('parent_rule5', self._get_policy_from_node(node, 'policy5')['rules'][0]['type'])
+        self.assertEquals('grandparent_rule6', self._get_policy_from_node(node, 'policy6')['rules'][0]['type'])
         #verifying the top-level policies section in the response also contains the same values
-        self.assertDictEqual(node['policies'], result['policies']['test_app.test_node'])
+        self.assertListEqual(node['policies'], result['policies']['test_app.test_node'])
 
     def test_type_and_node_policies_recursive_inheritance(self):
         #policies 1,5,6 will come from each type separately,
         #2 is a direct override, 3 is an indirect override, and 4 is a double override
         yaml = self.BASIC_BLUEPRINT_SECTION + """
             policies:
-                policy1:
+                -   name: policy1
                     rules:
                         -   type: "rule1"
                             properties:
                                 state: "state1"
                                 value: "value1"
-                policy2:
+                -   name: policy2
                     rules:
                         -   type: "rule2"
                             properties:
                                 state: "state2"
                                 value: "value2"
-                policy3:
+                -   name: policy3
                     rules:
                         -   type: "rule3"
                             properties:
                                 state: "state3"
                                 value: "value3"
-                policy4:
+                -   name: policy4
                     rules:
                         -   type: "rule4"
                             properties:
@@ -1137,19 +1141,19 @@ types:
     test_type:
         derived_from: "test_type_parent"
         policies:
-            policy2:
+            -   name: policy2
                 rules:
                     -   type: "parent_rule2"
                         properties:
                             state: "parent_state2"
                             value: "parent_value2"
-            policy4:
+            -   name: policy4
                 rules:
                     -   type: "parent_rule4"
                         properties:
                             state: "parent_state4"
                             value: "parent_value4"
-            policy5:
+            -   name: policy5
                 rules:
                     -   type: "parent_rule5"
                         properties:
@@ -1158,19 +1162,19 @@ types:
 
     test_type_parent:
         policies:
-            policy3:
+            -   name: policy3
                 rules:
                     -   type: "grandparent_rule3"
                         properties:
                             state: "grandparent_state3"
                             value: "grandparent_value3"
-            policy4:
+            -   name: policy4
                 rules:
                     -   type: "grandparent_rule4"
                         properties:
                             state: "grandparent_state4"
                             value: "grandparent_value4"
-            policy6:
+            -   name: policy6
                 rules:
                     -   type: "grandparent_rule6"
                         properties:
@@ -1234,16 +1238,15 @@ policies:
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
-        node_policies = node['policies']
-        self.assertEquals(6, len(node_policies))
-        self.assertEquals('rule1', node_policies['policy1']['rules'][0]['type'])
-        self.assertEquals('rule2', node_policies['policy2']['rules'][0]['type'])
-        self.assertEquals('rule3', node_policies['policy3']['rules'][0]['type'])
-        self.assertEquals('rule4', node_policies['policy4']['rules'][0]['type'])
-        self.assertEquals('parent_rule5', node_policies['policy5']['rules'][0]['type'])
-        self.assertEquals('grandparent_rule6', node_policies['policy6']['rules'][0]['type'])
+        self.assertEquals(6, len(node['policies']))
+        self.assertEquals('rule1', self._get_policy_from_node(node, 'policy1')['rules'][0]['type'])
+        self.assertEquals('rule2', self._get_policy_from_node(node, 'policy2')['rules'][0]['type'])
+        self.assertEquals('rule3', self._get_policy_from_node(node, 'policy3')['rules'][0]['type'])
+        self.assertEquals('rule4', self._get_policy_from_node(node, 'policy4')['rules'][0]['type'])
+        self.assertEquals('parent_rule5', self._get_policy_from_node(node, 'policy5')['rules'][0]['type'])
+        self.assertEquals('grandparent_rule6', self._get_policy_from_node(node, 'policy6')['rules'][0]['type'])
         #verifying the top-level policies section in the response also contains the same values
-        self.assertDictEqual(node['policies'], result['policies']['test_app.test_node'])
+        self.assertListEqual(node['policies'], result['policies']['test_app.test_node'])
 
     def test_type_policies_multiple_and_same_name_rules(self):
         #a test to verify same-name rules don't cause any problem in inheritance,
@@ -1253,13 +1256,13 @@ types:
     test_type:
         derived_from: "test_type_parent"
         policies:
-            policy1:
+            -   name: policy1
                 rules:
                     -   type: "rule1"
                         properties:
                             state: "state1"
                             value: "value1"
-            policy2:
+            -   name: policy2
                 rules:
                     -   type: "rule2"
                         properties:
@@ -1272,13 +1275,13 @@ types:
 
     test_type_parent:
         policies:
-            policy1:
+            -   name: policy1
                 rules:
                     -   type: "rule1"
                         properties:
                             state: "parent_state2"
                             value: "parent_value2"
-            policy2:
+            -   name: policy2
                 rules:
                     -   type: "rule4"
                         properties:
@@ -1311,21 +1314,21 @@ policies:
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
-        node_policies = node['policies']
+        node_policies = node['policies']        
         self.assertEquals(2, len(node_policies))
-        self.assertEquals(1, len(node_policies['policy1']['rules']))
-        self.assertEquals('rule1', node_policies['policy1']['rules'][0]['type'])
-        self.assertEquals('state1', node_policies['policy1']['rules'][0]['properties']['state'])
-        self.assertEquals('value1', node_policies['policy1']['rules'][0]['properties']['value'])
-        self.assertEquals(2, len(node_policies['policy2']['rules']))
-        self.assertEquals('rule2', node_policies['policy2']['rules'][0]['type'])
-        self.assertEquals('state2', node_policies['policy2']['rules'][0]['properties']['state'])
-        self.assertEquals('value2', node_policies['policy2']['rules'][0]['properties']['value'])
-        self.assertEquals('rule3', node_policies['policy2']['rules'][1]['type'])
-        self.assertEquals('state3', node_policies['policy2']['rules'][1]['properties']['state'])
-        self.assertEquals('value3', node_policies['policy2']['rules'][1]['properties']['value'])
+        self.assertEquals(1, len(self._get_policy_from_node(node, 'policy1')['rules']))
+        self.assertEquals('rule1', self._get_policy_from_node(node, 'policy1')['rules'][0]['type'])
+        self.assertEquals('state1', self._get_policy_from_node(node, 'policy1')['rules'][0]['properties']['state'])
+        self.assertEquals('value1', self._get_policy_from_node(node, 'policy1')['rules'][0]['properties']['value'])
+        self.assertEquals(2, len(self._get_policy_from_node(node, 'policy2')['rules']))
+        self.assertEquals('rule2', self._get_policy_from_node(node, 'policy2')['rules'][0]['type'])
+        self.assertEquals('state2', self._get_policy_from_node(node, 'policy2')['rules'][0]['properties']['state'])
+        self.assertEquals('value2', self._get_policy_from_node(node, 'policy2')['rules'][0]['properties']['value'])
+        self.assertEquals('rule3', self._get_policy_from_node(node, 'policy2')['rules'][1]['type'])
+        self.assertEquals('state3', self._get_policy_from_node(node, 'policy2')['rules'][1]['properties']['state'])
+        self.assertEquals('value3', self._get_policy_from_node(node, 'policy2')['rules'][1]['properties']['value'])
         #verifying the top-level policies section in the response also contains the same values
-        self.assertDictEqual(node['policies'], result['policies']['test_app.test_node'])
+        self.assertListEqual(node['policies'], result['policies']['test_app.test_node'])
 
     def test_empty_top_level_relationships(self):
         yaml = self.MINIMAL_BLUEPRINT + """
