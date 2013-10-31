@@ -693,8 +693,8 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
             import_url = _get_import_location_candidate(another_import, resources_url, current_import)
             if import_url is None:
                 ex = DSLParsingLogicException(13, 'Failed on import - no suitable location found for import {0}'.
-                format(import_url))
-                ex.failed_import = import_url
+                format(another_import))
+                ex.failed_import = another_import
                 raise ex
             if import_url not in ordered_imports_list:
                 try:

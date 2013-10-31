@@ -29,6 +29,7 @@ POLICIES = "policies"
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
+
 @task
 def prepare_multi_instance_plan(plan, **kwargs):
     """
@@ -37,14 +38,15 @@ def prepare_multi_instance_plan(plan, **kwargs):
     modify_to_multi_instance_plan(plan)
     return json.dumps(plan)
 
+
 @task
-def parse_dsl(dsl_location, alias_mapping_url, **kwargs):
-    result = parser.parse_from_url(dsl_url=dsl_location, alias_mapping_url=alias_mapping_url)
+def parse_dsl(dsl_location, alias_mapping_url, resources_url, **kwargs):
+    result = parser.parse_from_url(dsl_url=dsl_location, alias_mapping_url=alias_mapping_url,
+                                   resources_url=resources_url)
     return json.dumps(result)
 
 
 def modify_to_multi_instance_plan(plan):
-
     nodes = plan[NODES]
     policies = plan[POLICIES]
 
@@ -59,8 +61,8 @@ def modify_to_multi_instance_plan(plan):
         instances = _create_node_instances(node, nodes_suffixes_map)
         new_nodes.extend(instances)
         instances_policies = _create_node_instances_policies(node_id,
-                                                            policies,
-                                                            nodes_suffixes_map)
+                                                             policies,
+                                                             nodes_suffixes_map)
         new_policies.update(instances_policies)
 
     plan[NODES] = new_nodes
@@ -83,7 +85,7 @@ def create_node_suffixes_map(nodes):
     for node in nodes:
         if not is_host(node):
             host_id = node["host_id"]
-            number_of_hosts = len (suffix_map[host_id])
+            number_of_hosts = len(suffix_map[host_id])
             suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
 
     return suffix_map
@@ -94,7 +96,6 @@ def is_host(node):
 
 
 def get_node(node_id, nodes):
-
     """
     Retrieves a node from the nodes list based on the node id.
     """
@@ -105,7 +106,6 @@ def get_node(node_id, nodes):
 
 
 def _create_node_instances(node, suffixes_map):
-
     """
     This method duplicates the given node 'number_of_instances' times and return an array with the duplicated instance.
     Each instance has a different id and each instance has a different host_id.
@@ -135,7 +135,7 @@ def _create_node_instances(node, suffixes_map):
                     new_relationship = relationship.copy()
                     new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][i])
                 elif (relationship['type'].endswith('relationships.connected_to') or
-                      relationship['type'].endswith('relationships.depends_on')):
+                          relationship['type'].endswith('relationships.depends_on')):
                     new_relationship = relationship.copy()
                     # TODO support connected_to with tiers
                     # currently only 1 instance for connected_to (and depends_on) is supported
@@ -149,7 +149,6 @@ def _create_node_instances(node, suffixes_map):
 
 
 def _create_node_instances_policies(node_id, policies, node_suffixes_map):
-
     """
     This method duplicates the policies for each node_id. and returns a map. let us use an example:
     Given:
@@ -180,10 +179,9 @@ def _build_node_instance_id(node_id, node_suffix):
 
 
 def _generate_unique_ids(number_of_ids):
-
     ids = []
     while len(ids) < number_of_ids:
-        rand_id = '_%05x' % random.randrange(16**5)
+        rand_id = '_%05x' % random.randrange(16 ** 5)
         if rand_id not in ids:
             ids.append(rand_id)
 
