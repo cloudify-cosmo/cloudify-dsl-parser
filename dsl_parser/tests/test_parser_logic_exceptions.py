@@ -593,4 +593,3 @@ plugins:
             url: "http://test_plugin.zip"
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 24, DSLParsingLogicException)
-

@@ -225,7 +225,7 @@ DSL_SCHEMA = {
                             'additionalProperties': False
                         }
                     },
-                    'required': ['derived_from', 'properties'],
+                    'required': ['derived_from'],
                     'additionalProperties': False
                 }
             }

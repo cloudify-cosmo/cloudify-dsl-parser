@@ -407,7 +407,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
                                                        'to implement interface {1} for type {2}'.format(plugin_name,
                                                                                                         interface_name,
                                                                                                         node_type_name))
-                    #validate the explicit plugin does indeed implement the right interface
+                #validate the explicit plugin does indeed implement the right interface
                 if parsed_dsl[PLUGINS][plugin_name][PROPERTIES]['interface'] != interface_name:
                     raise DSLParsingLogicException(6, 'Illegal explicit plugin declaration for type {0}: the plugin {'
                                                       '1} does not implement interface {2}'.format(node_type_name,
