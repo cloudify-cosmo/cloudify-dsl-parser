@@ -469,6 +469,7 @@ def _extract_node_host_id(processed_node, node_name_to_node, host_types, contain
 
 
 def _process_plugin(plugin, plugin_name):
+    #'cloudify.plugins.plugin'
     if plugin['derived_from'] not in ('cloudify.plugins.agent_plugin', 'cloudify.plugins.remote_plugin'):
         #TODO: consider changing the below exception to type DSLParsingFormatException..?
         raise DSLParsingLogicException(18, 'plugin {0} has an illegal "derived_from" value {1}; value must be'
@@ -583,7 +584,7 @@ def _get_dict_prop(dictionary, prop_name):
 
 def _autowire_plugin(plugins, interface_name, type_name):
     matching_plugins = [plugin_name for plugin_name, plugin_data in plugins.items() if
-                        plugin_data[PROPERTIES]['interface'] == interface_name]
+                        PROPERTIES in plugin_data and plugin_data[PROPERTIES]['interface'] == interface_name]
 
     num_of_matches = len(matching_plugins)
     if num_of_matches == 0:

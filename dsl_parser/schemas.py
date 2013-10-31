@@ -203,47 +203,39 @@ DSL_SCHEMA = {
         },
         'plugins': {
             'type': 'object',
-            'anyOf': [
-                {
-                    'patternProperties': {
-                        '^': {
+            'patternProperties': {
+                #this is specifically for the root plugin, not meant for other uses
+                '^cloudify.plugins.plugin$': {
+                    'type': 'object',
+                    'properties': {},
+                    'additionalProperties': False
+                },
+                '^((?!cloudify\.plugins\.plugin).*)$|^cloudify\.plugins\.plugin.+$': {
+                    'type': 'object',
+                    'properties': {
+                        'derived_from': {
+                            'type': 'string'
+                        },
+                        #non-meta 'properties'
+                        'properties': {
                             'type': 'object',
                             'properties': {
-                                'derived_from': {
+                                'interface': {
                                     'type': 'string'
                                 },
-                                #non-meta 'properties'
-                                'properties': {
-                                    'type': 'object',
-                                    'properties': {
-                                        'interface': {
-                                            'type': 'string'
-                                        },
-                                        'url': {
-                                            'type': 'string'
-                                        }
-                                    },
-                                    'required': ['interface', 'url'],
-                                    'additionalProperties': False
+                                'url': {
+                                    'type': 'string'
                                 }
                             },
-                            'required': ['derived_from'],
-                            'additionalProperties': False
-                        }
-                    }
-                },
-                {
-                    #this is specifically for the root plugin, not meant for other uses
-                    'properties': {
-                        'cloudify.plugins.plugin': {
-                            'type': 'object',
-                            'properties': {},
+                            'required': ['interface', 'url'],
                             'additionalProperties': False
                         }
                     },
+                    'required': ['derived_from'],
                     'additionalProperties': False
                 }
-            ]
+            },
+            'additionalProperties': False
         },
         'policies': {
             'type': 'object',
