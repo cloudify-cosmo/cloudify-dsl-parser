@@ -7,8 +7,7 @@ install:
     # command to install dependencies
     - python setup.py install
 
-
 script:
 
     # command to run tests
-    - python -m unittest dsl_parser.tests.test_dsl_parser
+    - nosetests dsl_parser/tests
