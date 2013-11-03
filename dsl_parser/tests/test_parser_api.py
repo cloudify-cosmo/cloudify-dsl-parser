@@ -1520,11 +1520,21 @@ relationships:
                     target: "test_node"
                     bind_at: "pre_started"
                     run_on_node: "source"
+                    plugin: "test_plugin"
                     workflow:
                         radial: "custom workflow"
-
 relationships:
     test_relationship: {}
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            interface: "test_interface1"
+            url: "http://test_url.zip"
                     """
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
@@ -1537,7 +1547,8 @@ relationships:
         self.assertEquals('source', relationship['run_on_node'])
         self.assertEquals('custom workflow', relationship['workflow'])
         self.assertEquals('reachable', relationship['state'])
-        self.assertEquals(6, len(relationship))
+        self.assertEquals('test_plugin', relationship['plugin'])
+        self.assertEquals(7, len(relationship))
 
     def test_instance_relationships_duplicate_relationship(self):
         #right now, having two relationships with the same (type,target) under one node is valid
@@ -2030,6 +2041,5 @@ types:
             """
         result = parse(yaml)
         self._assert_blueprint(result)
-
 
     #TODO: contained-in relationships tests such as loops etc.

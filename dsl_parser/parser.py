@@ -101,7 +101,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url
     _validate_no_duplicate_nodes(nodes)
     _validate_no_duplicate_interfaces(combined_parsed_dsl)
 
-    top_level_relationships = _process_relationships(combined_parsed_dsl, alias_mapping)
+    top_level_relationships = _process_relationships(combined_parsed_dsl)
 
     top_level_policies_and_rules_tuple = _process_policies(combined_parsed_dsl[POLICIES], alias_mapping) if \
         POLICIES in combined_parsed_dsl else ({}, {})
@@ -208,7 +208,7 @@ def _extract_complete_type_recursive(type_obj, type_name, dsl_container, merging
     return merging_func(complete_super_type, current_level_type)
 
 
-def _process_relationships(combined_parsed_dsl, alias_mapping):
+def _process_relationships(combined_parsed_dsl):
     processed_relationships = {}
     if RELATIONSHIPS not in combined_parsed_dsl:
         return processed_relationships
@@ -342,7 +342,7 @@ def _validate_no_duplicate_element(elements, keyfunc):
             return keyfunc(group[0]), len(group)
 
 
-def _process_node_relationships(alias_mapping, app_name, node, node_name, node_names_set, plugins, processed_node,
+def _process_node_relationships(app_name, node, node_name, node_names_set, plugins, processed_node,
                                 top_level_relationships):
     if RELATIONSHIPS in node:
         relationships = []
@@ -453,8 +453,8 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
         processed_node['operations'] = operations
 
     #handle relationships
-    _process_node_relationships(alias_mapping, app_name, node, node_name, node_names_set, plugins, processed_node,
-                                top_level_relationships)
+    _process_node_relationships(app_name, node, node_name, node_names_set, _get_dict_prop(parsed_dsl, PLUGINS),
+                                processed_node, top_level_relationships)
 
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
     processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS], alias_mapping)
