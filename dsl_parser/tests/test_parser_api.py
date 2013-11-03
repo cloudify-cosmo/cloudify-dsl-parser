@@ -2021,5 +2021,15 @@ workflows:
         self._assert_minimal_blueprint(result)
         self.assertEquals('my custom radial', result['workflows']['install'])
 
+    def test_node_interfaces_with_explicit_interface(self):
+        yaml = self.BASIC_INTERFACE_AND_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+            interfaces:
+                -   test_interface1: "test_plugin"
+types:
+    test_type: {}
+            """
+        result = parse(yaml)
+        self._assert_blueprint(result)
+
 
     #TODO: contained-in relationships tests such as loops etc.

@@ -47,6 +47,28 @@ WORKFLOWS_SCHEMA = {
     }
 }
 
+INSTANCE_OR_TYPE_INTERFACES_SCHEMA = {
+    'type': 'array',
+    'minItems': 1,
+    'items': {
+        'oneOf': [
+            {
+                'type': 'object',
+                'patternProperties': {
+                    '^': {
+                        'type': 'string'
+                    }
+                },
+                'maxProperties': 1,
+                'minProperties': 1
+            },
+            {
+                'type': 'string'
+            }
+        ]
+    }
+}
+
 INSTANCE_OR_TYPE_POLICIES_SCHEMA = {
     'type': 'array',
     'items': {
@@ -121,6 +143,7 @@ DSL_SCHEMA = {
                             'type': {
                                 'type': 'string'
                             },
+                            'interfaces': INSTANCE_OR_TYPE_INTERFACES_SCHEMA,
                             'workflows': WORKFLOWS_SCHEMA,
                             'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
                             'relationships': {
@@ -301,27 +324,7 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        'interfaces': {
-                            'type': 'array',
-                            'minItems': 1,
-                            'items': {
-                                'oneOf': [
-                                    {
-                                        'type': 'object',
-                                        'patternProperties': {
-                                            '^': {
-                                                'type': 'string'
-                                            }
-                                        },
-                                        'maxProperties': 1,
-                                        'minProperties': 1
-                                    },
-                                    {
-                                        'type': 'string'
-                                    }
-                                ]
-                            }
-                        },
+                        'interfaces': INSTANCE_OR_TYPE_INTERFACES_SCHEMA,
                         'workflows': WORKFLOWS_SCHEMA,
                         'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
                         #non-meta 'properties'

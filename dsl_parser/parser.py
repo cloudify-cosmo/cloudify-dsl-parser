@@ -397,7 +397,10 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
         raise DSLParsingLogicException(7, err_message)
 
     node_type = parsed_dsl[TYPES][node_type_name]
-    complete_node_type = _extract_complete_type(node_type, node_type_name, parsed_dsl)
+    complete_node_type = _extract_complete_node_type(node_type, node_type_name, parsed_dsl, node)
+    processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
+    processed_node[WORKFLOWS] = complete_node_type[WORKFLOWS]
+    processed_node[POLICIES] = complete_node_type[POLICIES]
 
     #handle plugins and operations
     plugins = {}
@@ -453,18 +456,9 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     _process_node_relationships(alias_mapping, app_name, node, node_name, node_names_set, plugins, processed_node,
                                 top_level_relationships)
 
-    #merge properties
-    processed_node[PROPERTIES] = _merge_sub_dicts(complete_node_type, node, PROPERTIES)
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
-
-    #merge workflows
-    merged_workflows = _merge_sub_dicts(complete_node_type, node, WORKFLOWS)
-    processed_node[WORKFLOWS] = _process_workflows(merged_workflows, alias_mapping)
-
-    #merge policies
-    processed_node[POLICIES] = _merge_sub_list(complete_node_type, node, POLICIES)
+    processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS], alias_mapping)
     _validate_node_policies(processed_node[POLICIES], node_name, top_level_policies_and_rules_tuple)
-
     processed_node['instances'] = {'deploy': 1}
 
     return processed_node
@@ -534,7 +528,7 @@ def _validate_no_duplicate_interfaces_for_node(implementation_interfaces, node_n
         raise ex
 
 
-def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
+def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node):
     def types_inheritance_merging_func(complete_super_type, current_level_type):
         merged_type = current_level_type
         #derive properties
@@ -557,8 +551,9 @@ def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
 
         return merged_type
 
-    return _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl[TYPES], types_inheritance_merging_func,
-        [], False)
+    complete_type = _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl[TYPES],
+                                             types_inheritance_merging_func, [], False)
+    return types_inheritance_merging_func(complete_type, copy.deepcopy(node))
 
 
 def _apply_ref(filename, path_context, alias_mapping, resources_base_url):

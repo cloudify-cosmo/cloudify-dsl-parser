@@ -43,7 +43,6 @@ def prepare_multi_instance_plan(plan, **kwargs):
 def parse_dsl(dsl_location, alias_mapping_url, resources_base_url, **kwargs):
     result = parser.parse_from_url(dsl_url=dsl_location, alias_mapping_url=alias_mapping_url,
                                    resources_base_url=resources_base_url)
-    logger.fatal('=+= parse ended. result: ' + json.dumps(result))
     return json.dumps(result)
 
 
