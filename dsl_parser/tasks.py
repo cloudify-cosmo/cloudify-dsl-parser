@@ -92,7 +92,7 @@ def create_node_suffixes_map(nodes):
 
 
 def is_host(node):
-    return node["host_id"] == node["id"]
+    return 'host_id' in node and node["host_id"] == node["id"]
 
 
 def get_node(node_id, nodes):
