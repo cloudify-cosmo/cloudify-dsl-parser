@@ -465,8 +465,9 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     processed_node[POLICIES] = _merge_sub_list(complete_node_type, node, POLICIES)
     _validate_node_policies(processed_node[POLICIES], node_name, top_level_policies_and_rules_tuple)
 
-    return processed_node
+    processed_node['instances'] = {'deploy': 1}
 
+    return processed_node
 
 
 def _extract_node_host_id(processed_node, node_name_to_node, host_types, contained_in_rel_types):

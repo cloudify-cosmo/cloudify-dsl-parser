@@ -29,6 +29,7 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('test_app.test_node', node['id'])
         self.assertEquals('test_type', node['type'])
         self.assertEquals('val', node['properties']['key'])
+        self.assertEquals(1, node['instances']['deploy'])
 
     def _get_policy_from_node(self, node, policy_name):
         return next(policy for policy in node['policies'] if policy['name'] == policy_name)
