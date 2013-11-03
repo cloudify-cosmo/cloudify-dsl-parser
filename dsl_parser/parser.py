@@ -145,7 +145,7 @@ def _post_process_nodes(processed_nodes, types, relationships):
             plugins_to_install = {}
             for another_node in processed_nodes:
                 #going over all other nodes, to accumulate plugins from different nodes whose host is the current node
-                if another_node['host_id'] == node['id'] and PLUGINS in another_node:
+                if 'host_id' in another_node and another_node['host_id'] == node['id'] and PLUGINS in another_node:
                     #ok to override here since we assume it is the same plugin
                     for plugin_name, plugin_obj in another_node[PLUGINS].iteritems():
                         #only wish to add agent plugins, and only if they're not the installer plugin

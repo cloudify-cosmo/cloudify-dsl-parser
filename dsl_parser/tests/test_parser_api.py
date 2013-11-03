@@ -2042,4 +2042,16 @@ types:
         result = parse(yaml)
         self._assert_blueprint(result)
 
+    def test_node_without_host_id(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + """
+        -   name: test_node2
+            type: cloudify.types.host
+types:
+    cloudify.types.host: {}
+    test_type: {}
+        """
+        result = parse(yaml)
+        self.assertFalse('host_id' in result['nodes'][0])
+        self.assertEquals('test_app.test_node2', result['nodes'][1]['host_id'])
+
     #TODO: contained-in relationships tests such as loops etc.
