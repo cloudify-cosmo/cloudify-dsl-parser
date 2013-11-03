@@ -370,7 +370,8 @@ def _process_node_relationships(app_name, node, node_name, node_names_set, plugi
             #re-processed if it is defined in 'relationship', since it overrides any possible already-processed
             #workflows that might have been inherited, and has not yet been processed
             del (complete_relationship['name'])
-            complete_relationship['target'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
+            complete_relationship['target_id'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
+            del (complete_relationship['target'])
             if 'workflow' in relationship and relationship['workflow']:
                 complete_relationship['workflow'] = _process_ref_or_inline_value(relationship['workflow'], 'radial')
             elif 'workflow' not in complete_relationship or not complete_relationship['workflow']:
@@ -471,7 +472,7 @@ def _extract_node_host_id(processed_node, node_name_to_node, host_types, contain
         if RELATIONSHIPS in processed_node:
             for rel in processed_node[RELATIONSHIPS]:
                 if rel['type'] in contained_in_rel_types:
-                    return _extract_node_host_id(node_name_to_node[rel['target']], node_name_to_node, host_types,
+                    return _extract_node_host_id(node_name_to_node[rel['target_id']], node_name_to_node, host_types,
                                                  contained_in_rel_types)
 
 

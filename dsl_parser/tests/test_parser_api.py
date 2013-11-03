@@ -1542,7 +1542,7 @@ plugins:
         self.assertEquals(1, len(result['nodes'][1]['relationships']))
         relationship = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
-        self.assertEquals('test_app.test_node', relationship['target'])
+        self.assertEquals('test_app.test_node', relationship['target_id'])
         self.assertEquals('pre_started', relationship['bind_at'])
         self.assertEquals('source', relationship['run_on_node'])
         self.assertEquals('custom workflow', relationship['workflow'])
@@ -1569,8 +1569,8 @@ relationships:
         self.assertEquals(2, len(result['nodes'][1]['relationships']))
         self.assertEquals('test_relationship', result['nodes'][1]['relationships'][0]['type'])
         self.assertEquals('test_relationship', result['nodes'][1]['relationships'][1]['type'])
-        self.assertEquals('test_app.test_node', result['nodes'][1]['relationships'][0]['target'])
-        self.assertEquals('test_app.test_node', result['nodes'][1]['relationships'][1]['target'])
+        self.assertEquals('test_app.test_node', result['nodes'][1]['relationships'][0]['target_id'])
+        self.assertEquals('test_app.test_node', result['nodes'][1]['relationships'][1]['target_id'])
         self.assertEquals('reachable', result['nodes'][1]['relationships'][0]['state'])
         self.assertEquals('reachable', result['nodes'][1]['relationships'][1]['state'])
         self.assertEquals(4, len(result['nodes'][1]['relationships'][0]))
@@ -1604,7 +1604,7 @@ relationships:
         result = parse(yaml)
         relationship = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
-        self.assertEquals('test_app.test_node', relationship['target'])
+        self.assertEquals('test_app.test_node', relationship['target_id'])
         self.assertEquals('pre_started', relationship['bind_at'])
         self.assertEquals('source', relationship['run_on_node'])
         self.assertEquals(2, len(relationship['interface']['operations']))
@@ -1684,7 +1684,7 @@ plugins:
         self.assertEquals('terminate', relationship['interface']['operations'][1])
 
         self.assertEquals('relationship', node_relationship['type'])
-        self.assertEquals('test_app.test_node', node_relationship['target'])
+        self.assertEquals('test_app.test_node', node_relationship['target_id'])
         self.assertEquals('target', node_relationship['run_on_node'])
         self.assertEquals('test_plugin', node_relationship['plugin'])
         self.assertEquals('pre_started', node_relationship['bind_at'])
