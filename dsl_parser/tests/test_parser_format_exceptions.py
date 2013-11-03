@@ -294,12 +294,13 @@ workflows:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_first_level_workflows_both_ref_and_radial(self):
+        file_name = self.make_file_with_name('some radial code', 'custom_ref.radial')
         yaml = self.MINIMAL_BLUEPRINT + """
 workflows:
     install:
         radial: "custom radial"
-        ref: "custom ref"
-        """
+        ref: "{0}"
+        """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_workflows_no_ref_or_radial(self):
@@ -323,14 +324,15 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_workflows_both_ref_and_radial(self):
+        file_name = self.make_file_with_name('some radial code', 'custom_ref.radial')
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
         workflows:
             install:
                 radial: "custom radial"
-                ref: "custom ref"
-                """
+                ref: "{0}"
+                """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_instance_workflows_no_ref_or_radial(self):
@@ -351,12 +353,13 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_instance_workflows_both_ref_and_radial(self):
+        file_name = self.make_file_with_name('some radial code', 'custom_ref.radial')
         yaml = self.MINIMAL_BLUEPRINT + """
             workflows:
                 install:
                     radial: "custom radial"
-                    ref: "custom ref"
-                """
+                    ref: "{0}"
+                """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_extra_properties(self):
@@ -371,14 +374,15 @@ policies:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_both_policy_and_ref(self):
+        file_name = self.make_file_with_name('some clojure code', 'custom_ref.clj')
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 policies:
     types:
         custom_policy:
             message: "custom message"
             policy: "custom clojure code"
-            ref: "ref value"
-    """
+            ref: "{0}"
+    """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_empty_policy(self):
@@ -399,12 +403,13 @@ policies:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_no_message(self):
+        file_name = self.make_file_with_name('some clojure code', 'custom_ref.clj')
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 policies:
     types:
         custom_policy:
-            ref: "ref value"
-    """
+            ref: "{0}"
+    """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_policies_empty_rule(self):
@@ -774,14 +779,15 @@ relationships:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_top_level_relationships_workflow_with_both_ref_or_radial(self):
+        file_name = self.make_file_with_name('some radial code', 'custom_ref.radial')
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
     test_relationship:
         workflow:
             install:
                 radial: "custom radial"
-                ref: "custom ref"
-                """
+                ref: "{0}"
+                """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_relationship(self):
@@ -940,6 +946,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_instance_relationships_relationship_with_workflow_with_both_ref_or_radial(self):
+        file_name = self.make_file_with_name('some radial code', 'custom_ref.radial')
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships:
                 -   type: "fake_relationship"
@@ -947,6 +954,6 @@ types:
                     workflow:
                         install:
                             radial: "custom radial"
-                            ref: "custom ref"
-                """
+                            ref: "{0}"
+                """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)

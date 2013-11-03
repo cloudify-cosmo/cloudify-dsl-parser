@@ -39,20 +39,20 @@ from urllib import pathname2url
 from urllib2 import urlopen, URLError
 
 
-def parse_from_path(dsl_file_path, alias_mapping_dict=None, alias_mapping_url=None, resources_url=None):
+def parse_from_path(dsl_file_path, alias_mapping_dict=None, alias_mapping_url=None, resources_base_url=None):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_url, dsl_file_path)
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url, dsl_file_path)
 
 
-def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None, resources_url=None):
+def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None, resources_base_url=None):
     with contextlib.closing(urlopen(dsl_url)) as f:
         dsl_string = f.read()
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_url, dsl_url)
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url, dsl_url)
 
 
-def parse(dsl_string, alias_mapping_dict=None, alias_mapping_url=None, resources_url=None):
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_url)
+def parse(dsl_string, alias_mapping_dict=None, alias_mapping_url=None, resources_base_url=None):
+    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url)
 
 
 def _get_alias_mapping(alias_mapping_dict, alias_mapping_url):
@@ -66,7 +66,20 @@ def _get_alias_mapping(alias_mapping_dict, alias_mapping_url):
     return alias_mapping
 
 
-def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_url, dsl_location=None):
+def _dsl_location_to_url(dsl_location, alias_mapping, resources_base_url):
+    dsl_location = _apply_alias_mapping_if_available(dsl_location, alias_mapping)
+    if dsl_location is not None:
+        dsl_location = _get_resource_location(dsl_location, resources_base_url)
+        if dsl_location is None:
+            ex = DSLParsingLogicException(30, 'Failed on converting dsl location to url - no suitable location found '
+                                              'for dsl {0}'.
+            format(dsl_location))
+            ex.failed_import = dsl_location
+            raise ex
+    return dsl_location
+
+
+def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url, dsl_location=None):
     alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
     try:
         parsed_dsl = yaml.safe_load(dsl_string)
@@ -75,7 +88,9 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_url, dsl
     if parsed_dsl is None:
         raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml')
 
-    combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_url)
+    if dsl_location:
+        dsl_location = _dsl_location_to_url(dsl_location, alias_mapping, resources_base_url)
+    combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_base_url)
 
     _validate_dsl_schema(combined_parsed_dsl)
 
@@ -219,7 +234,7 @@ def _process_relationships(combined_parsed_dsl, alias_mapping):
         if 'workflow' in processed_relationships[rel_name]:
             processed_relationships[rel_name]['workflow'] = _process_ref_or_inline_value(processed_relationships[
                                                                                              rel_name]['workflow'],
-                                                                                         'radial', alias_mapping)
+                                                                                         'radial')
     return processed_relationships
 
 
@@ -253,8 +268,7 @@ def _process_policies(policies, alias_mapping):
         for name, policy_event_obj in policies['types'].iteritems():
             processed_policies_events[name] = {}
             processed_policies_events[name]['message'] = policy_event_obj['message']
-            processed_policies_events[name]['policy'] = _process_ref_or_inline_value(policy_event_obj, 'policy',
-                                                                                     alias_mapping)
+            processed_policies_events[name]['policy'] = _process_ref_or_inline_value(policy_event_obj, 'policy')
     if 'rules' in policies:
         for name, rule_obj in policies['rules'].iteritems():
             processed_rules[name] = copy.deepcopy(rule_obj)
@@ -266,15 +280,14 @@ def _process_workflows(workflows, alias_mapping):
     processed_workflows = {}
 
     for name, flow_obj in workflows.iteritems():
-        processed_workflows[name] = _process_ref_or_inline_value(flow_obj, 'radial', alias_mapping)
+        processed_workflows[name] = _process_ref_or_inline_value(flow_obj, 'radial')
 
     return processed_workflows
 
 
-def _process_ref_or_inline_value(ref_or_inline_obj, inline_key_name, alias_mapping):
+def _process_ref_or_inline_value(ref_or_inline_obj, inline_key_name):
     if 'ref' in ref_or_inline_obj:
-        filename = ref_or_inline_obj['ref']
-        return _apply_ref(filename, alias_mapping)
+        return ref_or_inline_obj['ref']
     else: #inline
         return ref_or_inline_obj[inline_key_name]
 
@@ -359,8 +372,7 @@ def _process_node_relationships(alias_mapping, app_name, node, node_name, node_n
             del (complete_relationship['name'])
             complete_relationship['target'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
             if 'workflow' in relationship and relationship['workflow']:
-                complete_relationship['workflow'] = _process_ref_or_inline_value(relationship['workflow'], 'radial',
-                                                                                 alias_mapping)
+                complete_relationship['workflow'] = _process_ref_or_inline_value(relationship['workflow'], 'radial')
             elif 'workflow' not in complete_relationship or not complete_relationship['workflow']:
                 complete_relationship['workflow'] = 'define stub_workflow\n\t'
             complete_relationship['state'] = 'reachable'
@@ -548,13 +560,17 @@ def _extract_complete_type(dsl_type, dsl_type_name, parsed_dsl):
         [], False)
 
 
-def _apply_ref(filename, alias_mapping):
+def _apply_ref(filename, path_context, alias_mapping, resources_base_url):
     filename = _apply_alias_mapping_if_available(filename, alias_mapping)
+    ref_url = _get_resource_location(filename, resources_base_url, path_context)
+    if not ref_url:
+        raise DSLParsingLogicException(31, 'Failed on ref - Unable to locate ref {0}'.format(filename))
     try:
-        with open(filename, 'r') as f:
+        with contextlib.closing(urlopen(ref_url)) as f:
             return f.read()
-    except EnvironmentError:
-        raise DSLParsingLogicException(15, 'Failed on ref - Unable to open file {0}'.format(filename))
+    except URLError:
+        raise DSLParsingLogicException(31, 'Failed on ref - Unable to open file {0} (searched for {1})'.format(
+            filename, ref_url))
 
 
 def _replace_or_add_interface(merged_interfaces, interface_element):
@@ -601,7 +617,7 @@ def _autowire_plugin(plugins, interface_name, type_name):
     return matching_plugins[0]
 
 
-def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_url):
+def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_base_url):
     def _merge_into_dict_or_throw_on_duplicate(from_dict, to_dict, top_level_key, path):
         for key, value in from_dict.iteritems():
             if key not in to_dict:
@@ -615,13 +631,15 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_url):
     merge_one_nested_level_no_override = {POLICIES}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
+    _replace_ref_with_inline_paths(combined_parsed_dsl, dsl_location, alias_mapping, resources_base_url)
+
     if IMPORTS not in parsed_dsl:
         return combined_parsed_dsl
 
     _validate_imports_section(parsed_dsl[IMPORTS], dsl_location)
 
     ordered_imports_list = []
-    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, dsl_location, resources_url)
+    _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, dsl_location, resources_base_url)
     if dsl_location:
         ordered_imports_list = ordered_imports_list[1:]
 
@@ -636,6 +654,8 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_url):
                 single_import, ex.message))
             error.failed_import = single_import
             raise error
+
+        _replace_ref_with_inline_paths(parsed_imported_dsl, single_import, alias_mapping, resources_base_url)
 
         #combine the current file with the combined parsed dsl we have thus far
         for key, value in parsed_imported_dsl.iteritems():
@@ -666,22 +686,38 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_url):
     return combined_parsed_dsl
 
 
-def _get_import_location_candidate(import_str, resources_url, current_import_context=None):
+def _replace_ref_with_inline_paths(dsl, path_context, alias_mapping, resources_base_url):
+    if type(dsl) == str:
+        return
+
+    if type(dsl) == list:
+        for item in dsl:
+            _replace_ref_with_inline_paths(item, path_context, alias_mapping, resources_base_url)
+        return
+
+    for key, value in dsl.iteritems():
+        if key == 'ref':
+            dsl[key] = _apply_ref(value, path_context, alias_mapping, resources_base_url)
+        else:
+            _replace_ref_with_inline_paths(value, path_context, alias_mapping, resources_base_url)
+
+
+def _get_resource_location(resource_name, resources_base_url, current_resource_context=None):
     #Already url format
-    if import_str.startswith('http:') or import_str.startswith('ftp:') or import_str.startswith('file:'):
-        return import_str
+    if resource_name.startswith('http:') or resource_name.startswith('ftp:') or resource_name.startswith('file:'):
+        return resource_name
 
     #Points to an existing file
-    if os.path.exists(import_str):
-        return 'file:{0}'.format(pathname2url(import_str))
+    if os.path.exists(resource_name):
+        return 'file:{0}'.format(pathname2url(resource_name))
 
-    if current_import_context:
-        candidate_url = current_import_context[:current_import_context.rfind('/') + 1] + import_str
+    if current_resource_context:
+        candidate_url = current_resource_context[:current_resource_context.rfind('/') + 1] + resource_name
         if _validate_url_exists(candidate_url):
             return candidate_url
 
-    if resources_url:
-        return resources_url + import_str
+    if resources_base_url:
+        return resources_base_url + resource_name
 
 
 def _validate_url_exists(url):
@@ -692,7 +728,7 @@ def _validate_url_exists(url):
         return False
 
 
-def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import, resources_url):
+def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping, current_import, resources_base_url):
     def _build_ordered_imports_list_recursive(parsed_dsl, current_import):
         if current_import is not None:
             ordered_imports_list.append(current_import)
@@ -702,7 +738,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
 
         for another_import in parsed_dsl[IMPORTS]:
             another_import = _apply_alias_mapping_if_available(another_import, alias_mapping)
-            import_url = _get_import_location_candidate(another_import, resources_url, current_import)
+            import_url = _get_resource_location(another_import, resources_base_url, current_import)
             if import_url is None:
                 ex = DSLParsingLogicException(13, 'Failed on import - no suitable location found for import {0}'.
                 format(another_import))
@@ -718,15 +754,6 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
                     format(import_url, ex.message))
                     ex.failed_import = import_url
                     raise ex
-
-    current_import = _apply_alias_mapping_if_available(current_import, alias_mapping)
-    if current_import is not None:
-        current_import = _get_import_location_candidate(current_import, resources_url)
-        if current_import is None:
-            ex = DSLParsingLogicException(13, 'Failed on import - no suitable location found for import {0}'.
-            format(current_import))
-            ex.failed_import = current_import
-            raise ex
     _build_ordered_imports_list_recursive(parsed_dsl, current_import)
 
 

@@ -214,7 +214,7 @@ workflows:
     install:
         ref: {0}
         """.format(ref_alias)
-        self._assert_dsl_parsing_exception_error_code(yaml, 15)
+        self._assert_dsl_parsing_exception_error_code(yaml, 31)
 
     def test_type_duplicate_interface(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
@@ -237,7 +237,7 @@ policies:
             message: "custom message"
             ref: {0}
         """.format(ref_alias)
-        self._assert_dsl_parsing_exception_error_code(yaml, 15)
+        self._assert_dsl_parsing_exception_error_code(yaml, 31)
 
     def test_illegal_merge_on_mergeable_properties_on_import(self):
         yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """

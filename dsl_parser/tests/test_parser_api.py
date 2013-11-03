@@ -433,6 +433,7 @@ types:
         radial_file1_path = self.make_file_with_name('ref install2', 'radial_file1.radial')
         ref_alias2 = 'ref_alias2'
         radial_file2_path = self.make_file_with_name('parent ref install5', 'radial_file2.radial')
+        ref_file_3 = self.make_file_with_name('some radial code', 'ref_3.radial')
 
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
@@ -450,22 +451,22 @@ types:
         derived_from: "test_type_grandparent"
         workflows:
             install1:
-                ref: "parent ref install1"
+                ref: "{0}"
             install2:
                 radial: "parent radial install2"
             install5:
-                ref: {0}""".format(ref_alias2) + """
+                ref: {1}""".format(ref_file_3, ref_alias2) + """
     test_type_grandparent:
         workflows:
             install1:
                 radial: "grandparent radial install1"
             install2:
-                ref: "grandparent ref install2"
+                ref: "{0}"
             install3:
                 radial: "grandparent radial install3"
             install4:
-                ref: "grandparent ref install4"
-            """
+                ref: "{1}"
+            """.format(ref_file_3, ref_file_3)
 
         result = parse(yaml, alias_mapping_dict={
             '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
@@ -489,6 +490,8 @@ types:
         radial_file1_path = self.make_file_with_name('node ref install2', 'radial_file1.radial')
         ref_alias2 = 'ref_alias2'
         radial_file2_path = self.make_file_with_name('ref install5', 'radial_file2.radial')
+        ref_file_3 = self.make_file_with_name('some radial code', 'ref_3.radial')
+        ref_file_4 = self.make_file_with_name('some radial code', 'ref_4.radial')
 
         yaml = self.BASIC_BLUEPRINT_SECTION + """
             workflows:
@@ -503,23 +506,23 @@ types:
         derived_from: "test_type_parent"
         workflows:
             install1:
-                ref: "ref install1"
+                ref: "{0}"
             install2:
                 radial: "radial install2"
             install5:
-                ref: {0}""".format(ref_alias2) + """
+                ref: {1}""".format(ref_file_3, ref_alias2) + """
 
     test_type_parent:
         workflows:
             install1:
                 radial: "parent radial install1"
             install2:
-                ref: "parent ref install2"
+                ref: "{0}"
             install3:
                 radial: "parent radial install3"
             install4:
-                ref: "parent ref install4"
-            """
+                ref: "{1}"
+            """.format(ref_file_4, ref_file_4)
 
         result = parse(yaml, alias_mapping_dict={
             '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
@@ -1942,7 +1945,7 @@ relationships:
         yaml = """
 imports:
     -   {0}""".format(resource_file_name)
-        result = parse(yaml, resources_url=file_url[:-len(resource_file_name)])
+        result = parse(yaml, resources_base_url=file_url[:-len(resource_file_name)])
         self._assert_minimal_blueprint(result)
 
     def test_import_resources_from_url(self):
@@ -1953,7 +1956,7 @@ imports:
 imports:
     -   {0}""".format(resource_file_name)
         top_file = self.make_yaml_file(yaml, True)
-        result = parse_from_url(top_file, resources_url=file_url[:-len(resource_file_name)])
+        result = parse_from_url(top_file, resources_base_url=file_url[:-len(resource_file_name)])
         self._assert_minimal_blueprint(result)
 
     def test_recursive_imports_with_inner_circular(self):
@@ -2004,8 +2007,18 @@ imports:
         result = parse(yaml)
         self._assert_blueprint(result)
 
+    def test_relative_ref(self):
+        self.make_file_with_name('my custom radial', 'radial_file.radial')
 
-
+        yaml = self.MINIMAL_BLUEPRINT + """
+workflows:
+        install:
+            ref: {0}
+        """.format('radial_file.radial')
+        file_path = self.make_yaml_file(yaml)
+        result = parse_from_path(file_path)
+        self._assert_minimal_blueprint(result)
+        self.assertEquals('my custom radial', result['workflows']['install'])
 
 
     #TODO: contained-in relationships tests such as loops etc.
