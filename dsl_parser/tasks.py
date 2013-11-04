@@ -125,7 +125,7 @@ def _create_node_instances(node, suffixes_map):
     node_suffixes = suffixes_map[node_id]
 
     host_id = None
-    if 'host_id' in node['host_id']:
+    if 'host_id' in node:
         host_id = node['host_id']
         host_suffixes = suffixes_map[host_id]
     number_of_instances = len(node_suffixes)
