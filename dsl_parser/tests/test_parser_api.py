@@ -34,6 +34,9 @@ class TestParserApi(AbstractTestParser):
     def _get_policy_from_node(self, node, policy_name):
         return next(policy for policy in node['policies'] if policy['name'] == policy_name)
 
+    def _get_plugin_to_install_from_node(self, node, plugin_name):
+        return next(plugin for plugin in node['plugins_to_install'] if plugin['name'] == plugin_name)
+
     def test_single_node_blueprint(self):
         result = parse(self.MINIMAL_BLUEPRINT)
         self._assert_minimal_blueprint(result)
@@ -1549,6 +1552,11 @@ plugins:
         self.assertEquals('reachable', relationship['state'])
         self.assertEquals('test_plugin', relationship['plugin'])
         self.assertEquals(7, len(relationship))
+        plugin_def = result['nodes'][1]['plugins']['test_plugin']
+        self.assertEquals('test_plugin', plugin_def['name'])
+        self.assertEquals('test_interface1', plugin_def['interface'])
+        self.assertEquals('false', plugin_def['agent_plugin'])
+        self.assertEquals('http://test_url.zip', plugin_def['url'])
 
     def test_instance_relationships_duplicate_relationship(self):
         #right now, having two relationships with the same (type,target) under one node is valid
@@ -1799,7 +1807,7 @@ plugins:
             url: "http://test_plugin.zip"
             """
         result = parse(yaml)
-        plugin = result['nodes'][0]['plugins_to_install']['test_plugin']
+        plugin = result['nodes'][0]['plugins_to_install'][0]
         self.assertEquals('test_plugin', plugin['name'])
         self.assertEquals('test_interface', plugin['interface'])
         self.assertEquals('true', plugin['agent_plugin'])
@@ -1832,7 +1840,7 @@ plugins:
         """
         #note that we're expecting an empty dict since every node which is a host should have one
         result = parse(yaml)
-        self.assertEquals({}, result['nodes'][0]['plugins_to_install'])
+        self.assertEquals([], result['nodes'][0]['plugins_to_install'])
 
     def test_node_plugins_to_install_field_remote_plugin(self):
         #testing to ensure that only plugins of type agent_plugin are put on the plugins_to_install field
@@ -1859,7 +1867,7 @@ plugins:
         """
 
         result = parse(yaml)
-        self.assertEquals({}, result['nodes'][0]['plugins_to_install'])
+        self.assertEquals([], result['nodes'][0]['plugins_to_install'])
 
     def test_node_plugins_to_install_field_plugins_from_contained_nodes(self):
         #testing to ensure plugins from nodes with contained_in relationships to a host node (whether direct
@@ -1921,15 +1929,17 @@ plugins:
         #ensuring non-host nodes don't have this field
         self.assertTrue('plugins_to_install' not in result['nodes'][1])
 
-        plugins_to_install = result['nodes'][0]['plugins_to_install']
-        self.assertEquals('test_plugin', plugins_to_install['test_plugin']['name'])
-        self.assertEquals('test_interface', plugins_to_install['test_plugin']['interface'])
-        self.assertEquals('true', plugins_to_install['test_plugin']['agent_plugin'])
-        self.assertEquals('http://test_plugin.zip', plugins_to_install['test_plugin']['url'])
-        self.assertEquals('test_plugin2', plugins_to_install['test_plugin2']['name'])
-        self.assertEquals('test_interface2', plugins_to_install['test_plugin2']['interface'])
-        self.assertEquals('true', plugins_to_install['test_plugin2']['agent_plugin'])
-        self.assertEquals('http://test_plugin2.zip', plugins_to_install['test_plugin2']['url'])
+        node = result['nodes'][0]
+        test_plugin = self._get_plugin_to_install_from_node(node, 'test_plugin')
+        test_plugin2 = self._get_plugin_to_install_from_node(node, 'test_plugin2')
+        self.assertEquals('test_plugin', test_plugin['name'])
+        self.assertEquals('test_interface', test_plugin['interface'])
+        self.assertEquals('true', test_plugin['agent_plugin'])
+        self.assertEquals('http://test_plugin.zip', test_plugin['url'])
+        self.assertEquals('test_plugin2', test_plugin2['name'])
+        self.assertEquals('test_interface2', test_plugin2['interface'])
+        self.assertEquals('true', test_plugin2['agent_plugin'])
+        self.assertEquals('http://test_plugin2.zip', test_plugin2['url'])
         self.assertEquals(2, len(result['nodes'][0]['plugins_to_install']))
 
     def test_node_cloudify_runtime_property(self):
@@ -2053,5 +2063,70 @@ types:
         result = parse(yaml)
         self.assertFalse('host_id' in result['nodes'][0])
         self.assertEquals('test_app.test_node2', result['nodes'][1]['host_id'])
+
+    def test_instance_relationships_run_on_target_plugin(self):
+        #tests that plugins defined on instance relationships as "run_on_node"="target" will
+        #indeed appear in the output on the target node's plugins section
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: "test_relationship"
+                    target: "test_node"
+                    run_on_node: "source"
+                    plugin: "test_plugin1"
+                -   type: "test_relationship"
+                    target: "test_node"
+                    run_on_node: "target"
+                    plugin: "test_plugin2"
+relationships:
+    test_relationship: {}
+interfaces:
+    test_interface1:
+        operations:
+            -   "install"
+plugins:
+    test_plugin1:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            interface: "test_interface1"
+            url: "http://test_url1.zip"
+    test_plugin2:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            interface: "test_interface1"
+            url: "http://test_url2.zip"
+                """
+        result = parse(yaml)
+        self.assertEquals(2, len(result['nodes']))
+        self.assertEquals('test_app.test_node2', result['nodes'][1]['id'])
+        self.assertEquals(2, len(result['nodes'][1]['relationships']))
+        relationship1 = result['nodes'][1]['relationships'][0]
+        self.assertEquals('test_relationship', relationship1['type'])
+        self.assertEquals('test_app.test_node', relationship1['target_id'])
+        self.assertEquals('source', relationship1['run_on_node'])
+        self.assertEquals('reachable', relationship1['state'])
+        self.assertEquals('test_plugin1', relationship1['plugin'])
+        self.assertEquals('define stub_workflow\n\t', relationship1['workflow'])
+        self.assertEquals(6, len(relationship1))
+        plugin1_def = result['nodes'][1]['plugins']['test_plugin1']
+        self.assertEquals('test_plugin1', plugin1_def['name'])
+        self.assertEquals('test_interface1', plugin1_def['interface'])
+        self.assertEquals('false', plugin1_def['agent_plugin'])
+        self.assertEquals('http://test_url1.zip', plugin1_def['url'])
+        relationship2 = result['nodes'][1]['relationships'][1]
+        self.assertEquals('test_relationship', relationship2['type'])
+        self.assertEquals('test_app.test_node', relationship2['target_id'])
+        self.assertEquals('target', relationship2['run_on_node'])
+        self.assertEquals('reachable', relationship2['state'])
+        self.assertEquals('test_plugin2', relationship2['plugin'])
+        self.assertEquals('define stub_workflow\n\t', relationship2['workflow'])
+        self.assertEquals(6, len(relationship2))
+        #expecting the other plugin to be under test_node rather than test_node2:
+        plugin2_def = result['nodes'][0]['plugins']['test_plugin2']
+        self.assertEquals('test_plugin2', plugin2_def['name'])
+        self.assertEquals('test_interface1', plugin2_def['interface'])
+        self.assertEquals('false', plugin2_def['agent_plugin'])
+        self.assertEquals('http://test_url2.zip', plugin2_def['url'])
 
     #TODO: contained-in relationships tests such as loops etc.

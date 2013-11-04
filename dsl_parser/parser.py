@@ -110,7 +110,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url
     processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
                                                      top_level_relationships, node_names_set, alias_mapping), nodes)
     _post_process_nodes(processed_nodes, _get_dict_prop(combined_parsed_dsl, TYPES),
-                        _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS))
+                        _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS), _get_dict_prop(combined_parsed_dsl,
+                                                                                           PLUGINS))
 
     top_level_workflows = _process_workflows(combined_parsed_dsl[WORKFLOWS], alias_mapping) if WORKFLOWS in \
                                                                                                combined_parsed_dsl else {}
@@ -130,16 +131,29 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url
     return plan
 
 
-def _post_process_nodes(processed_nodes, types, relationships):
+def _post_process_nodes(processed_nodes, types, relationships, plugins):
     node_name_to_node = {node['id']: node for node in processed_nodes}
+
+    for node in processed_nodes:
+        if RELATIONSHIPS in node:
+            for relationship in node[RELATIONSHIPS]:
+                if 'plugin' in relationship:
+                    plugin_name = relationship['plugin']
+                    node_for_plugin = node
+                    if 'run_on_node' in relationship and relationship['run_on_node'] == 'target':
+                        node_for_plugin = node_name_to_node[relationship['target_id']]
+                    node_for_plugin[PLUGINS][plugin_name] = _process_plugin(plugins[plugin_name], plugin_name)
+
+
+    #set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
     contained_in_rel_types = _build_family_descendants_set(relationships, CONTAINED_IN_REL_TYPE)
-
     for node in processed_nodes:
         host_id = _extract_node_host_id(node, node_name_to_node, host_types, contained_in_rel_types)
         if host_id:
             node['host_id'] = host_id
 
+    #set plugins_to_install property
     for node in processed_nodes:
         if node['type'] in host_types:
             plugins_to_install = {}
@@ -151,7 +165,7 @@ def _post_process_nodes(processed_nodes, types, relationships):
                         #only wish to add agent plugins, and only if they're not the installer plugin
                         if plugin_obj['agent_plugin'] == 'true' and plugin_obj['name'] != PLUGIN_INSTALLER_PLUGIN:
                             plugins_to_install[plugin_name] = plugin_obj
-            node['plugins_to_install'] = plugins_to_install
+            node['plugins_to_install'] = plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
 
