@@ -123,14 +123,18 @@ def _create_node_instances(node, suffixes_map):
 
     node_id = node['id']
     node_suffixes = suffixes_map[node_id]
-    host_id = node['host_id'] if 'host_id' in node else node_id
-    host_suffixes = suffixes_map[host_id]
+
+    host_id = None
+    if 'host_id' in node['host_id']:
+        host_id = node['host_id']
+        host_suffixes = suffixes_map[host_id]
     number_of_instances = len(node_suffixes)
 
     for i in range(number_of_instances):
         node_copy = node.copy()
         node_copy['id'] = _build_node_instance_id(node_id, node_suffixes[i])
-        node_copy['host_id'] = _build_node_instance_id(host_id, host_suffixes[i])
+        if host_id and host_suffixes:
+            node_copy['host_id'] = _build_node_instance_id(host_id, host_suffixes[i])
         logger.debug("generated new node instance {0}".format(node_copy))
         if 'relationships' in node_copy:
             new_relationships = []
