@@ -143,6 +143,16 @@ DSL_SCHEMA = {
                             'type': {
                                 'type': 'string'
                             },
+                            'instances': {
+                                'type': 'object',
+                                'properties': {
+                                    'deploy': {
+                                        'type': 'number'
+                                    }
+                                },
+                                'required': ['deploy'],
+                                'additionalProperties': False
+                            },
                             'interfaces': INSTANCE_OR_TYPE_INTERFACES_SCHEMA,
                             'workflows': WORKFLOWS_SCHEMA,
                             'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,

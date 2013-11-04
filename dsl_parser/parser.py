@@ -474,7 +474,8 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
     processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS], alias_mapping)
     _validate_node_policies(processed_node[POLICIES], node_name, top_level_policies_and_rules_tuple)
-    processed_node['instances'] = {'deploy': 1}
+
+    processed_node['instances'] = node['instances'] if 'instances' in node else {'deploy': 1}
 
     return processed_node
 

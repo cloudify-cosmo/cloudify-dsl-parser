@@ -957,3 +957,24 @@ types:
                             ref: "{0}"
                 """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_multiple_instances_with_extra_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+            instances:
+                deploy: 2
+                extra_prop: value
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_multiple_instances_without_deploy_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+            instances:
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_multiple_instances_string_value(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+            instances:
+                deploy: '2'
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)

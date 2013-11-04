@@ -2129,4 +2129,18 @@ plugins:
         self.assertEquals('false', plugin2_def['agent_plugin'])
         self.assertEquals('http://test_url2.zip', plugin2_def['url'])
 
+    def test_multiple_instances(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+            instances:
+                deploy: 2
+                """
+        result = parse(yaml)
+        self.assertEquals('test_app', result['name'])
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_app.test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        self.assertEquals('val', node['properties']['key'])
+        self.assertEquals(2, node['instances']['deploy'])
+
     #TODO: contained-in relationships tests such as loops etc.
