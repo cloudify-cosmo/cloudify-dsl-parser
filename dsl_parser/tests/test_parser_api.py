@@ -2143,4 +2143,26 @@ plugins:
         self.assertEquals('val', node['properties']['key'])
         self.assertEquals(2, node['instances']['deploy'])
 
+    def test_import_types_combination(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type2
+            """]) + """
+types:
+    test_type2: {}
+        """
+
+        result = parse(yaml)
+        self.assertEquals('test_app', result['name'])
+        self.assertEquals(2, len(result['nodes']))
+        node1 = result['nodes'][0]
+        node2 = result['nodes'][1]
+        self.assertEquals('test_app.test_node', node1['id'])
+        self.assertEquals('test_type', node1['type'])
+        self.assertEquals('val', node1['properties']['key'])
+        self.assertEquals(1, node1['instances']['deploy'])
+        self.assertEquals('test_app.test_node2', node2['id'])
+        self.assertEquals('test_type2', node2['type'])
+        self.assertEquals(1, node2['instances']['deploy'])
+
     #TODO: contained-in relationships tests such as loops etc.

@@ -639,7 +639,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_base_url
                 raise DSLParsingLogicException(4, 'Failed on import: Could not merge {0} due to conflict '
                                                   'on path {1}'.format(top_level_key, ' --> '.join(path)))
 
-    merge_no_override = {INTERFACES, PLUGINS, WORKFLOWS, RELATIONSHIPS}
+    merge_no_override = {INTERFACES, TYPES, PLUGINS, WORKFLOWS, RELATIONSHIPS}
     merge_one_nested_level_no_override = {POLICIES}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
