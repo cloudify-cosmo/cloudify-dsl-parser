@@ -83,11 +83,13 @@ def create_node_suffixes_map(nodes):
             suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
 
     for node in nodes:
-        if not is_host(node) and is_hosted(node):
-            host_id = node["host_id"]
-            number_of_hosts = len(suffix_map[host_id])
-            suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
-
+        if not is_host(node):
+            if is_hosted(node):
+                host_id = node["host_id"]
+                number_of_hosts = len(suffix_map[host_id])
+                suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
+            else:
+                suffix_map[node["id"]] = [node["id"]]
     return suffix_map
 
 
