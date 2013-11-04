@@ -698,7 +698,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_base_url
 
 
 def _replace_ref_with_inline_paths(dsl, path_context, alias_mapping, resources_base_url):
-    if type(dsl) == str:
+    if type(dsl) not in (list, dict):
         return
 
     if type(dsl) == list:
