@@ -130,6 +130,7 @@ def _create_node_instances(node, suffixes_map):
         host_suffixes = suffixes_map[host_id]
     number_of_instances = len(node_suffixes)
 
+    #TODO: rewrite in parser properly (and make sure to change _build_node_instance_id method)
     for i in range(number_of_instances):
         node_copy = node.copy()
         node_copy['id'] = _build_node_instance_id(node_id, node_suffixes[i])
