@@ -29,6 +29,7 @@ PLUGIN_INSTALLER_PLUGIN = 'cloudify.plugins.plugin_installer'
 __author__ = 'ran'
 
 import os
+import sys
 import yaml
 import copy
 import contextlib
@@ -60,7 +61,8 @@ def _get_alias_mapping(alias_mapping_dict, alias_mapping_url):
     if alias_mapping_url is not None:
         with contextlib.closing(urlopen(alias_mapping_url)) as f:
             alias_mapping_string = f.read()
-        alias_mapping = dict(alias_mapping.items() + yaml.safe_load(alias_mapping_string).items())
+        alias_mapping = dict(alias_mapping.items() + _load_yaml(alias_mapping_string, 'Failed to parse alias-mapping')
+                             .items())
     if alias_mapping_dict is not None:
         alias_mapping = dict(alias_mapping.items() + alias_mapping_dict.items())
     return alias_mapping
@@ -79,14 +81,20 @@ def _dsl_location_to_url(dsl_location, alias_mapping, resources_base_url):
     return dsl_location
 
 
+def _load_yaml(yaml_stream, error_message):
+    try:
+        parsed_dsl = yaml.safe_load(yaml_stream)
+    except ParserError, ex:
+        raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'.format(error_message, ex))
+    if parsed_dsl is None:
+        raise DSLParsingFormatException(0, '{0}: Empty yaml'.format(error_message))
+    return parsed_dsl
+
+
 def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url, dsl_location=None):
     alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
-    try:
-        parsed_dsl = yaml.safe_load(dsl_string)
-    except ParserError, ex:
-        raise DSLParsingFormatException(-1, 'Failed to parse DSL: Illegal yaml')
-    if parsed_dsl is None:
-        raise DSLParsingFormatException(0, 'Failed to parse DSL: Empty yaml')
+
+    parsed_dsl = _load_yaml(dsl_string, 'Failed to parse DSL')
 
     if dsl_location:
         dsl_location = _dsl_location_to_url(dsl_location, alias_mapping, resources_base_url)
@@ -259,11 +267,11 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name):
     if 'bind_at' in rel_obj and rel_obj['bind_at'] not in ('pre_started', 'post_started'):
         raise DSLParsingLogicException(20, 'Relationship {0} has an illegal "bind_at" value {1}; value must '
                                            'be either {2} or {3}'.format(rel_name, rel_obj['bind_at'],
-                                       'pre_started', 'post_started'))
+                                                                         'pre_started', 'post_started'))
     if 'run_on_node' in rel_obj and rel_obj['run_on_node'] not in ('source', 'target'):
         raise DSLParsingLogicException(21, 'Relationship {0} has an illegal "run_on_node" value {1}; value must '
                                            'be either {2} or {3}'.format(rel_name, rel_obj['run_on_node'],
-                                       'source', 'target'))
+                                                                         'source', 'target'))
 
 
 def _create_response_policies_section(processed_nodes):
@@ -437,7 +445,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
                                                        'to implement interface {1} for type {2}'.format(plugin_name,
                                                                                                         interface_name,
                                                                                                         node_type_name))
-                #validate the explicit plugin does indeed implement the right interface
+                    #validate the explicit plugin does indeed implement the right interface
                 if parsed_dsl[PLUGINS][plugin_name][PROPERTIES]['interface'] != interface_name:
                     raise DSLParsingLogicException(6, 'Illegal explicit plugin declaration for type {0}: the plugin {'
                                                       '1} does not implement interface {2}'.format(node_type_name,
@@ -568,7 +576,7 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node):
         return merged_type
 
     complete_type = _extract_complete_type_recursive(dsl_type, dsl_type_name, parsed_dsl[TYPES],
-                                             types_inheritance_merging_func, [], False)
+                                                     types_inheritance_merging_func, [], False)
     return types_inheritance_merging_func(complete_type, copy.deepcopy(node))
 
 
@@ -639,6 +647,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_base_url
                 raise DSLParsingLogicException(4, 'Failed on import: Could not merge {0} due to conflict '
                                                   'on path {1}'.format(top_level_key, ' --> '.join(path)))
 
+    #TODO: Find a solution for top level workflows, which should be probably somewhat merged with override
     merge_no_override = {INTERFACES, TYPES, PLUGINS, WORKFLOWS, RELATIONSHIPS}
     merge_one_nested_level_no_override = {POLICIES}
 
@@ -660,7 +669,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location, resources_base_url
             #(note that this check is only to verify nothing went wrong in the meanwhile, as we've already read
             # from all imported files earlier)
             with contextlib.closing(urlopen(single_import)) as f:
-                parsed_imported_dsl = yaml.safe_load(f)
+                parsed_imported_dsl = _load_yaml(f, 'Failed to parse import {0}'.format(single_import))
         except URLError, ex:
             error = DSLParsingLogicException(13, 'Failed on import - Unable to open import url {0}; {1}'.format(
                 single_import, ex.message))
@@ -759,13 +768,15 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list, alias_mapping,
             if import_url not in ordered_imports_list:
                 try:
                     with contextlib.closing(urlopen(import_url)) as f:
-                        imported_dsl = yaml.safe_load(f)
+                        imported_dsl = _load_yaml(f, 'Failed to parse import {0} (via {1})'.format(another_import,
+                                                                                                   import_url))
                     _build_ordered_imports_list_recursive(imported_dsl, import_url)
                 except URLError, ex:
                     ex = DSLParsingLogicException(13, 'Failed on import - Unable to open import url {0}; {1}'.
                     format(import_url, ex.message))
                     ex.failed_import = import_url
                     raise ex
+
     _build_ordered_imports_list_recursive(parsed_dsl, current_import)
 
 
