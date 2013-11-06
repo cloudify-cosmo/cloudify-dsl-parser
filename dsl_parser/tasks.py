@@ -21,12 +21,14 @@ __author__ = 'idanmo'
 
 import json
 import random
+import parser
 
 NODES = "nodes"
 POLICIES = "policies"
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
+
 
 @task
 def prepare_multi_instance_plan(plan, **kwargs):
@@ -37,8 +39,14 @@ def prepare_multi_instance_plan(plan, **kwargs):
     return json.dumps(plan)
 
 
-def modify_to_multi_instance_plan(plan):
+@task
+def parse_dsl(dsl_location, alias_mapping_url, resources_base_url, **kwargs):
+    result = parser.parse_from_url(dsl_url=dsl_location, alias_mapping_url=alias_mapping_url,
+                                   resources_base_url=resources_base_url)
+    return json.dumps(result)
 
+
+def modify_to_multi_instance_plan(plan):
     nodes = plan[NODES]
     policies = plan[POLICIES]
 
@@ -53,8 +61,8 @@ def modify_to_multi_instance_plan(plan):
         instances = _create_node_instances(node, nodes_suffixes_map)
         new_nodes.extend(instances)
         instances_policies = _create_node_instances_policies(node_id,
-                                                            policies,
-                                                            nodes_suffixes_map)
+                                                             policies,
+                                                             nodes_suffixes_map)
         new_policies.update(instances_policies)
 
     plan[NODES] = new_nodes
@@ -76,19 +84,24 @@ def create_node_suffixes_map(nodes):
 
     for node in nodes:
         if not is_host(node):
-            host_id = node["host_id"]
-            number_of_hosts = len (suffix_map[host_id])
-            suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
-
+            if is_hosted(node):
+                host_id = node["host_id"]
+                number_of_hosts = len(suffix_map[host_id])
+                suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
+            else:
+                suffix_map[node["id"]] = [node["id"]]
     return suffix_map
 
 
 def is_host(node):
-    return node["host_id"] == node["id"]
+    return is_hosted(node) and node["host_id"] == node["id"]
+
+
+def is_hosted(node):
+    return 'host_id' in node
 
 
 def get_node(node_id, nodes):
-
     """
     Retrieves a node from the nodes list based on the node id.
     """
@@ -99,7 +112,6 @@ def get_node(node_id, nodes):
 
 
 def _create_node_instances(node, suffixes_map):
-
     """
     This method duplicates the given node 'number_of_instances' times and return an array with the duplicated instance.
     Each instance has a different id and each instance has a different host_id.
@@ -111,14 +123,19 @@ def _create_node_instances(node, suffixes_map):
 
     node_id = node['id']
     node_suffixes = suffixes_map[node_id]
-    host_id = node['host_id']
-    host_suffixes = suffixes_map[host_id]
+
+    host_id = None
+    if 'host_id' in node:
+        host_id = node['host_id']
+        host_suffixes = suffixes_map[host_id]
     number_of_instances = len(node_suffixes)
 
+    #TODO: rewrite in parser properly (and make sure to change _build_node_instance_id method)
     for i in range(number_of_instances):
         node_copy = node.copy()
         node_copy['id'] = _build_node_instance_id(node_id, node_suffixes[i])
-        node_copy['host_id'] = _build_node_instance_id(host_id, host_suffixes[i])
+        if host_id and host_suffixes:
+            node_copy['host_id'] = _build_node_instance_id(host_id, host_suffixes[i])
         logger.debug("generated new node instance {0}".format(node_copy))
         if 'relationships' in node_copy:
             new_relationships = []
@@ -129,7 +146,7 @@ def _create_node_instances(node, suffixes_map):
                     new_relationship = relationship.copy()
                     new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][i])
                 elif (relationship['type'].endswith('relationships.connected_to') or
-                      relationship['type'].endswith('relationships.depends_on')):
+                          relationship['type'].endswith('relationships.depends_on')):
                     new_relationship = relationship.copy()
                     # TODO support connected_to with tiers
                     # currently only 1 instance for connected_to (and depends_on) is supported
@@ -143,7 +160,6 @@ def _create_node_instances(node, suffixes_map):
 
 
 def _create_node_instances_policies(node_id, policies, node_suffixes_map):
-
     """
     This method duplicates the policies for each node_id. and returns a map. let us use an example:
     Given:
@@ -170,14 +186,13 @@ def _create_node_instances_policies(node_id, policies, node_suffixes_map):
 
 
 def _build_node_instance_id(node_id, node_suffix):
-    return node_id + node_suffix
+    return node_id + node_suffix if node_id != node_suffix else node_id
 
 
 def _generate_unique_ids(number_of_ids):
-
     ids = []
     while len(ids) < number_of_ids:
-        rand_id = '_%05x' % random.randrange(16**5)
+        rand_id = '_%05x' % random.randrange(16 ** 5)
         if rand_id not in ids:
             ids.append(rand_id)
 
