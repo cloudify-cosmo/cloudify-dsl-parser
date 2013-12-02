@@ -25,6 +25,9 @@ PROPERTIES = 'properties'
 HOST_TYPE = 'cloudify.types.host'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 PLUGIN_INSTALLER_PLUGIN = 'cloudify.plugins.plugin_installer'
+KV_STORE_PLUGIN = 'cloudify.plugins.kv_store'
+
+PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN}
 
 __author__ = 'ran'
 
@@ -171,7 +174,7 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins):
                     #ok to override here since we assume it is the same plugin
                     for plugin_name, plugin_obj in another_node[PLUGINS].iteritems():
                         #only wish to add agent plugins, and only if they're not the installer plugin
-                        if plugin_obj['agent_plugin'] == 'true' and plugin_obj['name'] != PLUGIN_INSTALLER_PLUGIN:
+                        if plugin_obj['agent_plugin'] == 'true' and plugin_obj['name'] not in PLUGINS_TO_INSTALL_EXCLUDE_LIST:
                             plugins_to_install[plugin_name] = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
 
