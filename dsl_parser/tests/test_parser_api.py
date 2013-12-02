@@ -1833,7 +1833,7 @@ interfaces:
             -   start
 plugins:
     cloudify.plugins.plugin_installer:
-        derived_from: "cloudify.plugins.remote_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "test_interface"
             url: "http://test_plugin.zip"
@@ -2165,4 +2165,31 @@ types:
         self.assertEquals('test_type2', node2['type'])
         self.assertEquals(1, node2['instances']['deploy'])
 
+    def test_node_plugins_to_install_field_kv_store_plugin(self):
+        #testing to ensure the kv store is treated differently and is not
+        #put on the plugins_to_install dict like the rest of the plugins
+        yaml = """
+    blueprint:
+        name: test_app
+        topology:
+            -   name: test_node1
+                type: cloudify.types.host
+    types:
+        cloudify.types.host:
+            interfaces:
+                -   "test_interface"
+    interfaces:
+        test_interface:
+            operations:
+                -   start
+    plugins:
+        cloudify.plugins.kv_store:
+            derived_from: "cloudify.plugins.agent_plugin"
+            properties:
+                interface: "test_interface"
+                url: "http://test_plugin.zip"
+            """
+        #note that we're expecting an empty dict since every node which is a host should have one
+        result = parse(yaml)
+        self.assertEquals([], result['nodes'][0]['plugins_to_install'])
     #TODO: contained-in relationships tests such as loops etc.
