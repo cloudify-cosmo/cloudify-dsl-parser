@@ -32,7 +32,6 @@ PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN}
 __author__ = 'ran'
 
 import os
-import sys
 import yaml
 import copy
 import contextlib
@@ -155,6 +154,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins):
                         node_for_plugin = node_name_to_node[relationship['target_id']]
                     node_for_plugin[PLUGINS][plugin_name] = _process_plugin(plugins[plugin_name], plugin_name)
 
+                target_node = node_name_to_node[relationship['target_id']]
+                _add_dependent(target_node, node)
 
     #set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
@@ -179,6 +180,15 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins):
             node['plugins_to_install'] = plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
+
+
+def _add_dependent(node, dependent_node):
+    dependents = node.get('dependents', [])
+    #There can be two relation ships defined between same couple of nodes, avoid duplicate dependent
+    if dependent_node['id'] in dependents:
+        return
+    dependents.append(dependent_node['id'])
+    node['dependents'] = dependents
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
@@ -614,11 +624,11 @@ def _get_interface_name(interface_element):
 
 
 def _get_list_prop(dictionary, prop_name):
-    return dictionary[prop_name] if prop_name in dictionary else []
+    return dictionary.get(prop_name, [])
 
 
 def _get_dict_prop(dictionary, prop_name):
-    return dictionary[prop_name] if prop_name in dictionary else {}
+    return dictionary.get(prop_name, {})
 
 
 def _autowire_plugin(plugins, interface_name, type_name):
