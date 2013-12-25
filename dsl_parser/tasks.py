@@ -30,14 +30,6 @@ logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
 
-@task
-def prepare_multi_instance_plan(plan, **kwargs):
-    """
-    Expand node instances based on number of instances to deploy
-    """
-    modify_to_multi_instance_plan(plan)
-    return json.dumps(plan)
-
 
 @task
 def parse_dsl(dsl_location, alias_mapping_url, resources_base_url, **kwargs):
@@ -46,18 +38,30 @@ def parse_dsl(dsl_location, alias_mapping_url, resources_base_url, **kwargs):
     return json.dumps(result)
 
 
-def modify_to_multi_instance_plan(plan):
+@task
+def prepare_deployment_plan(plan, **kwargs):
+    """
+    Prepare a plan for deployment
+    """
+    _modify_to_multi_instance_plan(plan)
+    return json.dumps(plan)
+
+
+def _modify_to_multi_instance_plan(plan):
+    """
+    Expand node instances based on number of instances to deploy
+    """
     nodes = plan[NODES]
     policies = plan[POLICIES]
 
     new_nodes = []
     new_policies = {}
 
-    nodes_suffixes_map = create_node_suffixes_map(nodes)
-    node_ids = create_node_suffixes_map(nodes).iterkeys()
+    nodes_suffixes_map = _create_node_suffixes_map(nodes)
+    node_ids = _create_node_suffixes_map(nodes).iterkeys()
 
     for node_id in node_ids:
-        node = get_node(node_id, nodes)
+        node = _get_node(node_id, nodes)
         instances = _create_node_instances(node, nodes_suffixes_map)
         new_nodes.extend(instances)
         instances_policies = _create_node_instances_policies(node_id,
@@ -69,7 +73,7 @@ def modify_to_multi_instance_plan(plan):
     plan[POLICIES] = new_policies
 
 
-def create_node_suffixes_map(nodes):
+def _create_node_suffixes_map(nodes):
     """
     This method inspects the current nodes and creates a list of random suffixes.
     That is, for every node, it determines how many instances are needed
@@ -78,13 +82,13 @@ def create_node_suffixes_map(nodes):
 
     suffix_map = {}
     for node in nodes:
-        if is_host(node):
+        if _is_host(node):
             number_of_hosts = node["instances"]["deploy"]
             suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
 
     for node in nodes:
-        if not is_host(node):
-            if is_hosted(node):
+        if not _is_host(node):
+            if _is_hosted(node):
                 host_id = node["host_id"]
                 number_of_hosts = len(suffix_map[host_id])
                 suffix_map[node["id"]] = _generate_unique_ids(number_of_hosts)
@@ -93,15 +97,15 @@ def create_node_suffixes_map(nodes):
     return suffix_map
 
 
-def is_host(node):
-    return is_hosted(node) and node["host_id"] == node["id"]
+def _is_host(node):
+    return _is_hosted(node) and node["host_id"] == node["id"]
 
 
-def is_hosted(node):
+def _is_hosted(node):
     return 'host_id' in node
 
 
-def get_node(node_id, nodes):
+def _get_node(node_id, nodes):
     """
     Retrieves a node from the nodes list based on the node id.
     """

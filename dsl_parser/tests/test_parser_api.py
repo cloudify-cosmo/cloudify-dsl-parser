@@ -1557,6 +1557,8 @@ plugins:
         self.assertEquals('test_interface1', plugin_def['interface'])
         self.assertEquals('false', plugin_def['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_def['url'])
+        dependents = result['nodes'][0]['dependents']
+        self.assertListEqual(['test_app.test_node2'], dependents)
 
     def test_instance_relationships_duplicate_relationship(self):
         #right now, having two relationships with the same (type,target) under one node is valid
@@ -1583,6 +1585,8 @@ relationships:
         self.assertEquals('reachable', result['nodes'][1]['relationships'][1]['state'])
         self.assertEquals(4, len(result['nodes'][1]['relationships'][0]))
         self.assertEquals(4, len(result['nodes'][1]['relationships'][1]))
+        dependents = result['nodes'][0]['dependents']
+        self.assertListEqual(['test_app.test_node2'], dependents)
 
     def test_instance_relationships_relationship_inheritance(self):
         #possibly 'inheritance' is the wrong term to use here,
@@ -1619,6 +1623,8 @@ relationships:
         self.assertEquals('custom radial', relationship['workflow'])
         self.assertEquals('reachable', relationship['state'])
         self.assertEquals(7, len(relationship))
+        dependents = result['nodes'][0]['dependents']
+        self.assertListEqual(['test_app.test_node2'], dependents)
 
     def test_relationships_and_node_recursive_inheritance(self):
         #testing for a complete inheritance path for relationships
@@ -1672,6 +1678,8 @@ plugins:
         self.assertEquals(5, len(parent_relationship))
         self.assertEquals(6, len(relationship))
         self.assertEquals(8, len(node_relationship))
+        dependents = result['nodes'][0]['dependents']
+        self.assertListEqual(['test_app.test_node2'], dependents)
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals('target', parent_relationship['run_on_node'])
