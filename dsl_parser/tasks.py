@@ -44,18 +44,7 @@ def prepare_deployment_plan(plan, **kwargs):
     Prepare a plan for deployment
     """
     _modify_to_multi_instance_plan(plan)
-    _enrich_plan(plan)
     return json.dumps(plan)
-
-
-def _enrich_plan(plan):
-    """
-    Enrich plan for deployment
-    """
-    nodes = plan.get('nodes', [])
-    nodes_map = {node['id']: node for node in nodes}
-    enrichment = {'nodes_map': nodes_map}
-    plan['enrichment'] = enrichment
 
 
 def _modify_to_multi_instance_plan(plan):
