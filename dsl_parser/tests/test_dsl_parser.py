@@ -375,3 +375,41 @@ class TestDSLParser(unittest.TestCase):
         new_plan = json.loads(tasks.prepare_deployment_plan(plan))
 
         self.assertDictContainsSubset(expected_plan, new_plan)
+
+    def test_prepare_deployment_plan_single_none_host_node(self):
+
+        plan = {
+            "nodes": [
+                {
+                    "id": "node1_id",
+                    "instances":
+                    {
+                        "deploy": 1
+                    }
+                }
+            ],
+            "policies": {
+                "node1_id": "stub",
+            }
+        }
+
+        # everything in the new plan stays the same except for nodes that belonged to a tier.
+        expected_plan = {
+            "nodes": [
+                {
+                    "id": "node1_id_d82c0",
+                    "instances": {
+                        "deploy": 1
+                    }
+                }
+            ],
+            "policies": {
+                "node1_id_d82c0": "stub",
+
+            },
+        }
+
+        random.seed(0)
+        new_plan = json.loads(tasks.prepare_deployment_plan(plan))
+        self.assertDictContainsSubset(expected_plan, new_plan)
+
