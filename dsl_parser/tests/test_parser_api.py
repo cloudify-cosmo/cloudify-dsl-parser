@@ -2238,3 +2238,31 @@ types:
         self._assert_minimal_blueprint(result, expected_type='specific_test_type', expected_declared_type='test_type')
         node = result['nodes'][0]
         self.assertEquals('merged_value', node['properties']['merged_key'])
+
+    def test_anonymous_type_autowire(self):
+
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION]) + """
+types:
+    specific_test_type:
+        implements: test_type
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result, expected_type='specific_test_type', expected_declared_type='test_type')
+
+    def test_anonymous_type_autowire_and_derive(self):
+
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION]) + """
+types:
+    specific_test_type:
+        derived_from: base_type
+        implements: test_type
+    base_type:
+        properties:
+            key: "overriden val"
+            merged_key: "merged_value"
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result, expected_type='specific_test_type', expected_declared_type='test_type')
+        result = parse(yaml)
+        node = result['nodes'][0]
+        self.assertEquals('merged_value', node['properties']['merged_key'])

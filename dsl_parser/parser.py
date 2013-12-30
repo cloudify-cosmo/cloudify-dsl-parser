@@ -147,10 +147,15 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url
 def _build_types_descendants(types):
     types_descendants = {dsl_type_name: [] for dsl_type_name in types.iterkeys()}
     for type_name, type_content in types.iteritems():
-        if 'derived_from' in type_content:
-            descendants = types_descendants.get(type_content['derived_from'], [])
-            descendants.append(type_name)
-            types_descendants[type_content['derived_from']] = descendants
+
+        def _add_descendants_if_exists(property_name, type_content, type_name):
+            if property_name in type_content:
+                descendants = types_descendants.get(type_content[property_name], [])
+                descendants.append(type_name)
+                types_descendants[type_content[property_name]] = descendants
+
+        _add_descendants_if_exists('derived_from', type_content, type_name)
+        _add_descendants_if_exists('implements', type_content, type_name)
 
     return types_descendants
 

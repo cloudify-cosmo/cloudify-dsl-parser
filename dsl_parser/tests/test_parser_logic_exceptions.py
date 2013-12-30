@@ -603,3 +603,15 @@ types:
 """
         ex = self._assert_dsl_parsing_exception_error_code(yaml, 103, DSLParsingLogicException)
         self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'], ex.descendants)
+
+    def test_type_derive_auto_wire_ambiguous_with_implements(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+types:
+    specific1_test_type:
+        derived_from: test_type
+    specific2_test_type:
+        implements: test_type
+
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(yaml, 103, DSLParsingLogicException)
+        self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'], ex.descendants)
