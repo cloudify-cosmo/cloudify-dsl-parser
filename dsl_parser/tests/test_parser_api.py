@@ -22,12 +22,13 @@ import os
 
 class TestParserApi(AbstractTestParser):
 
-    def _assert_minimal_blueprint(self, result):
+    def _assert_minimal_blueprint(self, result, expected_type='test_type', expected_declared_type='test_type'):
         self.assertEquals('test_app', result['name'])
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_app.test_node', node['id'])
-        self.assertEquals('test_type', node['type'])
+        self.assertEquals(expected_type, node['type'])
+        self.assertEquals(expected_declared_type, node['declared_type'])
         self.assertEquals('val', node['properties']['key'])
         self.assertEquals(1, node['instances']['deploy'])
 
@@ -2177,27 +2178,91 @@ types:
         #testing to ensure the kv store is treated differently and is not
         #put on the plugins_to_install dict like the rest of the plugins
         yaml = """
-    blueprint:
-        name: test_app
-        topology:
-            -   name: test_node1
-                type: cloudify.types.host
-    types:
-        cloudify.types.host:
-            interfaces:
-                -   "test_interface"
-    interfaces:
-        test_interface:
-            operations:
-                -   start
-    plugins:
-        cloudify.plugins.kv_store:
-            derived_from: "cloudify.plugins.agent_plugin"
-            properties:
-                interface: "test_interface"
-                url: "http://test_plugin.zip"
-            """
+blueprint:
+    name: test_app
+    topology:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            -   "test_interface"
+interfaces:
+    test_interface:
+        operations:
+            -   start
+plugins:
+    cloudify.plugins.kv_store:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "test_interface"
+            url: "http://test_plugin.zip"
+        """
         #note that we're expecting an empty dict since every node which is a host should have one
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]['plugins_to_install'])
     #TODO: contained-in relationships tests such as loops etc.
+
+    def test_type_derive_one_level_auto_wire(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+types:
+    specific_test_type:
+        derived_from: test_type
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result, expected_type='specific_test_type', expected_declared_type='test_type')
+
+    def test_type_derive_two_level_auto_wire(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT, """
+types:
+    specific_test_type:
+        derived_from: test_type
+"""]) + """
+types:
+    more_specific_test_type:
+        derived_from: specific_test_type
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result, expected_type='more_specific_test_type', expected_declared_type='test_type')
+
+    def test_type_derive_auto_wire_properties_override_merge_topology_level(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+types:
+    specific_test_type:
+        derived_from: test_type
+        properties:
+            key: "overriden val"
+            merged_key: "merged_value"
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result, expected_type='specific_test_type', expected_declared_type='test_type')
+        node = result['nodes'][0]
+        self.assertEquals('merged_value', node['properties']['merged_key'])
+
+    def test_anonymous_type_autowire(self):
+
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION]) + """
+types:
+    specific_test_type:
+        implements: test_type
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result, expected_type='specific_test_type', expected_declared_type='test_type')
+
+    def test_anonymous_type_autowire_and_derive(self):
+
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION]) + """
+types:
+    specific_test_type:
+        derived_from: base_type
+        implements: test_type
+    base_type:
+        properties:
+            key: "overriden val"
+            merged_key: "merged_value"
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result, expected_type='specific_test_type', expected_declared_type='test_type')
+        result = parse(yaml)
+        node = result['nodes'][0]
+        self.assertEquals('merged_value', node['properties']['merged_key'])

@@ -15,10 +15,8 @@
 
 __author__ = 'ran'
 
-import os
 from dsl_parser.parser import DSLParsingLogicException, parse_from_path
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from urllib import pathname2url
 
 
 class TestParserLogicExceptions(AbstractTestParser):
@@ -593,3 +591,27 @@ plugins:
             url: "http://test_plugin.zip"
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 24, DSLParsingLogicException)
+
+    def test_type_derive_auto_wire_ambiguous(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+types:
+    specific1_test_type:
+        derived_from: test_type
+    specific2_test_type:
+        derived_from: test_type
+
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(yaml, 103, DSLParsingLogicException)
+        self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'], ex.descendants)
+
+    def test_type_derive_auto_wire_ambiguous_with_implements(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+types:
+    specific1_test_type:
+        derived_from: test_type
+    specific2_test_type:
+        implements: test_type
+
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(yaml, 103, DSLParsingLogicException)
+        self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'], ex.descendants)
