@@ -1370,6 +1370,12 @@ relationships:
             operations:
                 -   "install"
                 -   "terminate"
+        source_interfaces:
+            test_interface3:
+                - test_interface3_op1
+        target_interfaces:
+            test_interface4:
+                - test_interface4_op1: test_plugin.task_name
         """
         result = parse(yaml)
         self._assert_blueprint(result)
@@ -1382,6 +1388,11 @@ relationships:
         self.assertEquals('source', test_relationship['run_on_node'])
         self.assertEquals('custom radial', test_relationship['workflow'])
         self.assertEquals(2, len(test_relationship['interface']['operations']))
+
+        result_test_interface_3 = test_relationship['source_interfaces']['test_interface3']
+        self.assertEquals('test_interface3_op1', result_test_interface_3[0])
+        result_test_interface_4 = test_relationship['target_interfaces']['test_interface4']
+        self.assertEquals({'test_interface4_op1': 'test_plugin.task_name'}, result_test_interface_4[0])
 
     def test_top_level_relationships_relationship_with_ref_workflow(self):
         ref_alias = 'ref_alias'
@@ -1521,11 +1532,9 @@ relationships:
             relationships:
                 -   type: "test_relationship"
                     target: "test_node"
-                    bind_at: "pre_started"
-                    run_on_node: "source"
-                    plugin: "test_plugin"
-                    workflow:
-                        radial: "custom workflow"
+                    source_interfaces:
+                        test_interface1:
+                            - install: test_plugin.install
 relationships:
     test_relationship: {}
 interfaces:
@@ -1546,12 +1555,10 @@ plugins:
         relationship = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_app.test_node', relationship['target_id'])
-        self.assertEquals('pre_started', relationship['bind_at'])
-        self.assertEquals('source', relationship['run_on_node'])
-        self.assertEquals('custom workflow', relationship['workflow'])
+        self.assertDictEqual({'install': 'test_plugin.install'}, relationship['source_interfaces'][
+            'test_interface1'][0])
         self.assertEquals('reachable', relationship['state'])
-        self.assertEquals('test_plugin', relationship['plugin'])
-        self.assertEquals(7, len(relationship))
+        self.assertEquals(4, len(relationship))
         plugin_def = result['nodes'][1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
         self.assertEquals('test_interface1', plugin_def['interface'])
@@ -1583,8 +1590,8 @@ relationships:
         self.assertEquals('test_app.test_node', result['nodes'][1]['relationships'][1]['target_id'])
         self.assertEquals('reachable', result['nodes'][1]['relationships'][0]['state'])
         self.assertEquals('reachable', result['nodes'][1]['relationships'][1]['state'])
-        self.assertEquals(4, len(result['nodes'][1]['relationships'][0]))
-        self.assertEquals(4, len(result['nodes'][1]['relationships'][1]))
+        self.assertEquals(3, len(result['nodes'][1]['relationships'][0]))
+        self.assertEquals(3, len(result['nodes'][1]['relationships'][1]))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
 
@@ -1599,30 +1606,25 @@ relationships:
             relationships:
                 -   type: test_relationship
                     target: test_node
-                    bind_at: "pre_started"
+                    source_interfaces:
+                        interface1:
+                            - op1: test_plugin.task_name1
 relationships:
     relationship: {}
     test_relationship:
-        run_on_node: "source"
         derived_from: "relationship"
-        workflow:
-            radial: "custom radial"
-        interface:
-            name: "test_interface2"
-            operations:
-                -   "install"
-                -   "terminate"
+        target_interfaces:
+            interface2:
+                - op2: test_plugin.task_name2
                     """
         result = parse(yaml)
         relationship = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_app.test_node', relationship['target_id'])
-        self.assertEquals('pre_started', relationship['bind_at'])
-        self.assertEquals('source', relationship['run_on_node'])
-        self.assertEquals(2, len(relationship['interface']['operations']))
-        self.assertEquals('custom radial', relationship['workflow'])
         self.assertEquals('reachable', relationship['state'])
-        self.assertEquals(7, len(relationship))
+        self.assertDictEqual({'op1': 'test_plugin.task_name1'}, relationship['source_interfaces']['interface1'][0])
+        self.assertDictEqual({'op2': 'test_plugin.task_name2'}, relationship['target_interfaces']['interface2'][0])
+        self.assertEquals(5, len(relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
 
@@ -1635,28 +1637,20 @@ relationships:
             relationships:
                 -   type: relationship
                     target: test_node
-                    run_on_node: "target"
-                    workflow:
-                        radial: "node custom radial"
+                    target_interfaces:
+                        test_interface1:
+                            - install: test_plugin.install
 relationships:
     relationship:
-        plugin: "test_plugin"
-        run_on_node: "source"
         derived_from: "parent_relationship"
-        interface:
-            name: "test_interface2"
-            operations:
-                -   "install"
-                -   "terminate"
+        source_interfaces:
+            test_interface2:
+                -   install: test_plugin.install
+                -   terminate: test_plugin.terminate
     parent_relationship:
-        run_on_node: "target"
-        bind_at: "pre_started"
-        workflow:
-            radial: "parent custom radial"
-        interface:
-            name: "test_interface3"
-            operations:
-                -   "install"
+        target_interfaces:
+            test_interface3:
+                - install
 interfaces:
     test_interface1:
         operations:
@@ -1675,41 +1669,44 @@ plugins:
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
-        self.assertEquals(5, len(parent_relationship))
-        self.assertEquals(6, len(relationship))
-        self.assertEquals(8, len(node_relationship))
+        self.assertEquals(2, len(parent_relationship))
+        self.assertEquals(3, len(relationship))
+        self.assertEquals(5, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
-        self.assertEquals('target', parent_relationship['run_on_node'])
-        self.assertEquals('pre_started', parent_relationship['bind_at'])
-        self.assertEquals('parent custom radial', parent_relationship['workflow'])
-        self.assertEquals('test_interface3', parent_relationship['interface']['name'])
-        self.assertEquals(1, len(parent_relationship['interface']['operations']))
-        self.assertEquals('install', parent_relationship['interface']['operations'][0])
+        self.assertEquals(1, len(parent_relationship['target_interfaces']))
+        self.assertEquals(1, len(parent_relationship['target_interfaces']['test_interface3']))
+        self.assertEquals('install', parent_relationship['target_interfaces']['test_interface3'][0])
 
         self.assertEquals('relationship', relationship['name'])
-        self.assertEquals('source', relationship['run_on_node'])
-        self.assertEquals('test_plugin', relationship['plugin'])
-        self.assertEquals('pre_started', relationship['bind_at'])
-        self.assertEquals('parent custom radial', relationship['workflow'])
-        self.assertEquals('test_interface2', relationship['interface']['name'])
-        self.assertEquals(2, len(relationship['interface']['operations']))
-        self.assertEquals('install', relationship['interface']['operations'][0])
-        self.assertEquals('terminate', relationship['interface']['operations'][1])
+        self.assertEquals(1, len(relationship['target_interfaces']))
+        self.assertEquals(1, len(relationship['target_interfaces']['test_interface3']))
+        self.assertEquals('install', relationship['target_interfaces']['test_interface3'][0])
+        self.assertEquals(1, len(relationship['source_interfaces']))
+        self.assertEquals(2, len(relationship['source_interfaces']['test_interface2']))
+        self.assertDictEqual({'install': 'test_plugin.install'}, relationship['source_interfaces']['test_interface2'][
+            0])
+        self.assertDictEqual({'terminate': 'test_plugin.terminate'}, relationship['source_interfaces'][
+            'test_interface2'][1])
 
         self.assertEquals('relationship', node_relationship['type'])
         self.assertEquals('test_app.test_node', node_relationship['target_id'])
-        self.assertEquals('target', node_relationship['run_on_node'])
-        self.assertEquals('test_plugin', node_relationship['plugin'])
-        self.assertEquals('pre_started', node_relationship['bind_at'])
-        self.assertEquals('node custom radial', node_relationship['workflow'])
         self.assertEquals('reachable', node_relationship['state'])
-        self.assertEquals('test_interface2', node_relationship['interface']['name'])
-        self.assertEquals(2, len(node_relationship['interface']['operations']))
-        self.assertEquals('install', node_relationship['interface']['operations'][0])
-        self.assertEquals('terminate', node_relationship['interface']['operations'][1])
+        self.assertEquals(2, len(relationship['target_interfaces']))
+        self.assertEquals(1, len(relationship['target_interfaces']['test_interface3']))
+        self.assertEquals('install', relationship['target_interfaces']['test_interface3'][0])
+        self.assertEquals(1, len(relationship['target_interfaces']['test_interface1']))
+        self.assertDictEqual({'install': 'test_plugin.install'}, relationship['target_interfaces']['test_interface1'][
+            0])
+
+        self.assertEquals(1, len(relationship['source_interfaces']))
+        self.assertEquals(2, len(relationship['source_interfaces']['test_interface2']))
+        self.assertEquals({'install': 'test_plugin.install'}, relationship['source_interfaces']['test_interface2'][0])
+        self.assertEquals({'terminate': 'test_plugin.terminate'}, relationship['source_interfaces']['test_interface2'][
+            0])
+
 
     def test_node_host_id_field(self):
         yaml = """
@@ -1955,19 +1952,6 @@ plugins:
         result = parse(yaml)
         self.assertEquals({}, result['nodes'][0]['properties']['cloudify_runtime'])
 
-    def test_instance_relationships_stub_relationship_workflow(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: test_relationship
-                    target: test_node
-relationships:
-    test_relationship: {}
-        """
-        result = parse(yaml)
-        self.assertEquals('define stub_workflow\n\t', result['nodes'][1]['relationships'][0]['workflow'])
-
     def test_import_resources(self):
         resource_file_name = 'resource_file.yaml'
         file_name = self.make_file_with_name(self.MINIMAL_BLUEPRINT, resource_file_name, 'resources')
@@ -2082,11 +2066,9 @@ types:
                 -   type: "test_relationship"
                     target: "test_node"
                     run_on_node: "source"
-                    plugin: "test_plugin1"
                 -   type: "test_relationship"
                     target: "test_node"
                     run_on_node: "target"
-                    plugin: "test_plugin2"
 relationships:
     test_relationship: {}
 interfaces:

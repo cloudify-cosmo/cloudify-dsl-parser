@@ -17,6 +17,8 @@ IMPORTS = 'imports'
 TYPES = 'types'
 PLUGINS = 'plugins'
 INTERFACES = 'interfaces'
+SOURCE_INTERFACES = 'source_interfaces'
+TARGET_INTERFACES = 'target_interfaces'
 WORKFLOWS = 'workflows'
 POLICIES = 'policies'
 RELATIONSHIPS = 'relationships'
@@ -251,8 +253,16 @@ def _process_relationships(combined_parsed_dsl):
     relationships = combined_parsed_dsl[RELATIONSHIPS]
 
     def rel_inheritance_merging_func(complete_super_type, current_level_type):
-        #derive fields
-        merged_type = dict(complete_super_type.items() + current_level_type.items())
+        merged_type = current_level_type
+        # derived source interfaces
+        merged_source_interfaces = _merge_interface_dicts(complete_super_type, merged_type, SOURCE_INTERFACES)
+        if len(merged_source_interfaces) > 0:
+            merged_type[SOURCE_INTERFACES] = merged_source_interfaces
+        # derived target interfaces
+        merged_target_interfaces = _merge_interface_dicts(complete_super_type, merged_type, TARGET_INTERFACES)
+        if len(merged_target_interfaces) > 0:
+            merged_type[TARGET_INTERFACES] = merged_target_interfaces
+
         return merged_type
 
     for rel_name, rel_obj in relationships.iteritems():
@@ -260,31 +270,32 @@ def _process_relationships(combined_parsed_dsl):
                                                             rel_inheritance_merging_func, [], True)
 
         plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
-        _validate_relationship_fields(complete_rel_obj, plugins, rel_name)
         processed_relationships[rel_name] = copy.deepcopy(complete_rel_obj)
         processed_relationships[rel_name]['name'] = rel_name
         if 'derived_from' in processed_relationships[rel_name]:
             del (processed_relationships[rel_name]['derived_from'])
 
-        if 'workflow' in processed_relationships[rel_name]:
-            processed_relationships[rel_name]['workflow'] = _process_ref_or_inline_value(processed_relationships[
-                                                                                             rel_name]['workflow'],
-                                                                                         'radial')
     return processed_relationships
 
 
-def _validate_relationship_fields(rel_obj, plugins, rel_name):
-    if 'plugin' in rel_obj and rel_obj['plugin'] not in plugins:
-        raise DSLParsingLogicException(19, 'Missing definition for plugin {0}, which is declared for relationship'
-                                           ' {1}'.format(rel_obj['plugin'], rel_name))
-    if 'bind_at' in rel_obj and rel_obj['bind_at'] not in ('pre_started', 'post_started'):
-        raise DSLParsingLogicException(20, 'Relationship {0} has an illegal "bind_at" value {1}; value must '
-                                           'be either {2} or {3}'.format(rel_name, rel_obj['bind_at'],
-                                                                         'pre_started', 'post_started'))
-    if 'run_on_node' in rel_obj and rel_obj['run_on_node'] not in ('source', 'target'):
-        raise DSLParsingLogicException(21, 'Relationship {0} has an illegal "run_on_node" value {1}; value must '
-                                           'be either {2} or {3}'.format(rel_name, rel_obj['run_on_node'],
-                                                                         'source', 'target'))
+def _merge_interface_dicts(overridden_relationship, overriding_relationship, interface_attribute):
+    if interface_attribute not in overridden_relationship and interface_attribute not in overriding_relationship:
+        return {}
+    if interface_attribute not in overridden_relationship:
+        return overriding_relationship[interface_attribute]
+    if interface_attribute not in overriding_relationship:
+        return overridden_relationship[interface_attribute]
+    merged_interfaces = overridden_relationship[interface_attribute]
+    for overriding_interface, interface_obj in overriding_relationship[interface_attribute].items():
+        if overriding_interface not in overridden_relationship[interface_attribute]:
+            merged_interfaces[overriding_interface] = interface_obj
+        else:
+            merged_interfaces[overriding_interface] = \
+                _merge_interface_list(overridden_relationship[overriding_interface], interface_obj)
+
+
+def _merge_interface_list(overridden_interface, overriding_interface):
+    for operation in
 
 
 def _create_response_policies_section(processed_nodes):
@@ -385,7 +396,6 @@ def _process_node_relationships(app_name, node, node_name, node_names_set, plugi
             relationship_type = relationship['type']
             #validating only the instance relationship values - the inherited relationship values if any
             #should have been validated when the top level relationships were processed.
-            _validate_relationship_fields(relationship, plugins, relationship_type)
             #validate target field (done separately since it's only available in instance relationships)
             if relationship['target'] not in node_names_set:
                 raise DSLParsingLogicException(25, 'a relationship instance under node {0} of type {1} declares an '
@@ -407,10 +417,6 @@ def _process_node_relationships(app_name, node, node_name, node_names_set, plugi
             del (complete_relationship['name'])
             complete_relationship['target_id'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
             del (complete_relationship['target'])
-            if 'workflow' in relationship and relationship['workflow']:
-                complete_relationship['workflow'] = _process_ref_or_inline_value(relationship['workflow'], 'radial')
-            elif 'workflow' not in complete_relationship or not complete_relationship['workflow']:
-                complete_relationship['workflow'] = 'define stub_workflow\n\t'
             complete_relationship['state'] = 'reachable'
             relationships.append(complete_relationship)
 

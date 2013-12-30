@@ -40,6 +40,34 @@ SINGLE_WORKFLOW_SCHEMA = {
     ]
 }
 
+INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'array',
+            'items': {
+                'oneOf': [
+                    {
+                        'type': 'object',
+                        'patternProperties': {
+                            '^': {
+                                'type': 'string'
+                            }
+                        },
+                        'maxProperties': 1,
+                        'minProperties': 1
+                    },
+                    {
+                        'type': 'string'
+                    }
+                ]
+            },
+            'uniqueItems': True,
+            'minItems': 1
+        }
+    }
+}
+
 WORKFLOWS_SCHEMA = {
     'type': 'object',
     'patternProperties': {
@@ -168,34 +196,8 @@ DSL_SCHEMA = {
                                         'target': {
                                             'type': 'string'
                                         },
-                                        'plugin': {
-                                            'type': 'string'
-                                        },
-                                        'bind_at': {
-                                            'type': 'string'
-                                        },
-                                        'run_on_node': {
-                                            'type': 'string'
-                                        },
-                                        'workflow': SINGLE_WORKFLOW_SCHEMA,
-                                        'interface': {
-                                            'type': 'object',
-                                            'properties': {
-                                                'name': {
-                                                    'type': 'string'
-                                                },
-                                                'operations': {
-                                                    'type': 'array',
-                                                    'items': {
-                                                        'type': 'string'
-                                                    },
-                                                    'uniqueItems': True,
-                                                    'minItems': 1
-                                                }
-                                            },
-                                            'required': ['name', 'operations'],
-                                            'additionalProperties': False
-                                        }
+                                        'source_interfaces': INTERFACES_SCHEMA,
+                                        'target_interfaces': INTERFACES_SCHEMA
                                     },
                                     'required': ['type', 'target'],
                                     'additionalProperties': False
@@ -356,37 +358,11 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        'plugin': {
-                            'type': 'string'
-                        },
-                        'bind_at': {
-                            'type': 'string'
-                        },
-                        'run_on_node': {
-                            'type': 'string'
-                        },
                         'derived_from': {
                             'type': 'string'
                         },
-                        'workflow': SINGLE_WORKFLOW_SCHEMA,
-                        'interface': {
-                            'type': 'object',
-                            'properties': {
-                                'name': {
-                                    'type': 'string'
-                                },
-                                'operations': {
-                                    'type': 'array',
-                                    'items': {
-                                        'type': 'string'
-                                    },
-                                    'uniqueItems': True,
-                                    'minItems': 1
-                                }
-                            },
-                            'required': ['name', 'operations'],
-                            'additionalProperties': False
-                        }
+                        'source_interfaces': INTERFACES_SCHEMA,
+                        'target_interfaces': INTERFACES_SCHEMA
                     },
                     'additionalProperties': False
                 }
