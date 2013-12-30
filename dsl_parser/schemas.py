@@ -345,6 +345,9 @@ DSL_SCHEMA = {
                         },
                         'derived_from': {
                             'type': 'string'
+                        },
+                        'implements': {
+                            'type': 'string'
                         }
                     },
                     'additionalProperties': False

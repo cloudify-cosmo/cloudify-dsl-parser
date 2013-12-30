@@ -115,18 +115,21 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url
 
     top_level_relationships = _process_relationships(combined_parsed_dsl)
 
-    top_level_policies_and_rules_tuple = _process_policies(combined_parsed_dsl[POLICIES], alias_mapping) if \
+    top_level_policies_and_rules_tuple = _process_policies(combined_parsed_dsl[POLICIES]) if \
         POLICIES in combined_parsed_dsl else ({}, {})
+
+    types_descendants = _build_types_descendants(_get_dict_prop(combined_parsed_dsl, TYPES))
 
     node_names_set = {node['name'] for node in nodes}
     processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
-                                                     top_level_relationships, node_names_set, alias_mapping), nodes)
+                                                     top_level_relationships, node_names_set, types_descendants,
+                                                     alias_mapping), nodes)
     _post_process_nodes(processed_nodes, _get_dict_prop(combined_parsed_dsl, TYPES),
                         _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS), _get_dict_prop(combined_parsed_dsl,
                                                                                            PLUGINS))
 
-    top_level_workflows = _process_workflows(combined_parsed_dsl[WORKFLOWS], alias_mapping) if WORKFLOWS in \
-                                                                                               combined_parsed_dsl else {}
+    top_level_workflows = _process_workflows(combined_parsed_dsl[WORKFLOWS]) if WORKFLOWS in \
+                                             combined_parsed_dsl else {}
 
     response_policies_section = _create_response_policies_section(processed_nodes)
 
@@ -141,6 +144,22 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url
     }
 
     return plan
+
+
+def _build_types_descendants(types):
+    types_descendants = {dsl_type_name: [] for dsl_type_name in types.iterkeys()}
+    for type_name, type_content in types.iteritems():
+
+        def _add_descendants_if_exists(property_name, type_content, type_name):
+            if property_name in type_content:
+                descendants = types_descendants.get(type_content[property_name], [])
+                descendants.append(type_name)
+                types_descendants[type_content[property_name]] = descendants
+
+        _add_descendants_if_exists('derived_from', type_content, type_name)
+        _add_descendants_if_exists('implements', type_content, type_name)
+
+    return types_descendants
 
 
 def _post_process_nodes(processed_nodes, types, relationships, plugins):
@@ -306,7 +325,7 @@ def _create_response_policies_section(processed_nodes):
     return response_policies_section
 
 
-def _process_policies(policies, alias_mapping):
+def _process_policies(policies):
     processed_policies_events = {}
     processed_rules = {}
 
@@ -322,7 +341,7 @@ def _process_policies(policies, alias_mapping):
     return processed_policies_events, processed_rules
 
 
-def _process_workflows(workflows, alias_mapping):
+def _process_workflows(workflows):
     processed_workflows = {}
 
     for name, flow_obj in workflows.iteritems():
@@ -423,20 +442,51 @@ def _process_node_relationships(app_name, node, node_name, node_names_set, plugi
         processed_node[RELATIONSHIPS] = relationships
 
 
+def _autowire_node_type_name(node_type_name, types_descendants):
+
+    def _autowire_node_type_name_recursive(node_type_name, current_path):
+        descendants = types_descendants[node_type_name]
+        if not descendants:
+            return node_type_name
+
+        if len(descendants) > 1:
+            ex = DSLParsingLogicException(103, 'Ambiguous autowiring of type {0} detected, more than one candidate - {'
+                                               '1}'.format(current_path[0], descendants))
+            ex.descendants = list(descendants)
+            raise ex
+        autowire_candidate = descendants[0]
+        if autowire_candidate in current_path:
+            ex = DSLParsingLogicException(100, 'Failed parsing type {0}, Circular dependency detected: {1}'.format(
+                current_path[0], ' --> '.join(current_path)))
+            current_path.append(current_path[0])
+            current_path.reverse()
+            ex.circular_dependency = current_path
+            raise ex
+
+        current_path.append(autowire_candidate)
+        return _autowire_node_type_name_recursive(autowire_candidate, current_path)
+
+    return _autowire_node_type_name_recursive(node_type_name, [node_type_name])
+
+
 def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_level_relationships, node_names_set,
-                  alias_mapping):
-    node_type_name = node['type']
+                  types_descendants, alias_mapping):
+    declared_node_type_name = node['type']
     node_name = node['name']
     app_name = parsed_dsl[BLUEPRINT]['name']
     processed_node = {'id': '{0}.{1}'.format(app_name, node_name),
-                      'type': node_type_name}
+                      'declared_type': declared_node_type_name}
 
     #handle types
-    if TYPES not in parsed_dsl or node_type_name not in parsed_dsl[TYPES]:
-        err_message = 'Could not locate node type: {0}; existing types: {1}'.format(node_type_name,
+    if TYPES not in parsed_dsl or declared_node_type_name not in types_descendants:
+        err_message = 'Could not locate node type: {0}; existing types: {1}'.format(declared_node_type_name,
                                                                                     parsed_dsl[TYPES].keys() if
                                                                                     TYPES in parsed_dsl else 'None')
         raise DSLParsingLogicException(7, err_message)
+
+    node_type_name = _autowire_node_type_name(declared_node_type_name, types_descendants)
+    processed_node['type'] = node_type_name
+
 
     node_type = parsed_dsl[TYPES][node_type_name]
     complete_node_type = _extract_complete_node_type(node_type, node_type_name, parsed_dsl, node)
@@ -499,7 +549,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
                                 processed_node, top_level_relationships)
 
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
-    processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS], alias_mapping)
+    processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS])
     _validate_node_policies(processed_node[POLICIES], node_name, top_level_policies_and_rules_tuple)
 
     processed_node['instances'] = node['instances'] if 'instances' in node else {'deploy': 1}
