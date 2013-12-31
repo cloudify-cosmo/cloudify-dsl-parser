@@ -155,6 +155,11 @@ def _create_node_instances(node, suffixes_map):
                     new_relationship['target_id'] = _build_node_instance_id(target_id, suffixes_map[target_id][0])
                 new_relationships.append(new_relationship)
             node_copy['relationships'] = new_relationships
+        if 'dependents' in node_copy:
+            new_dependents = []
+            for dependent in node_copy['dependents']:
+                new_dependents.append(_build_node_instance_id(dependent, suffixes_map[dependent][i]))
+            node_copy['dependents'] = new_dependents
 
         instances.append(node_copy)
 

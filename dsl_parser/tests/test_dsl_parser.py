@@ -135,6 +135,10 @@ class TestDSLParser(unittest.TestCase):
                     "instances" : {
                         "deploy": 2
                     }
+                    ,
+                    "dependents": [
+                        "multi_instance.db"
+                    ]
                 }
             ],
             "policies": {
@@ -171,14 +175,20 @@ class TestDSLParser(unittest.TestCase):
                     "host_id": "multi_instance.host_d82c0",
                     "instances" : {
                         "deploy": 2
-                    }
+                    },
+                    "dependents": [
+                        "multi_instance.db_6baa9"
+                    ]
                 },
                 {
                     "id": "multi_instance.host_c2094",
                     "host_id": "multi_instance.host_c2094",
                     "instances" : {
                         "deploy": 2
-                    }
+                    },
+                    "dependents": [
+                        "multi_instance.db_42485"
+                    ]
                 }
             ],
             "policies": {
@@ -212,7 +222,10 @@ class TestDSLParser(unittest.TestCase):
                     "host_id": "multi_instance.host",
                     "instances" : {
                         "deploy": 1
-                    }
+                    },
+                    "dependents": [
+                        "multi_instance.db"
+                    ]
                 }
             ],
             "policies": {
@@ -238,7 +251,10 @@ class TestDSLParser(unittest.TestCase):
                     "host_id": "multi_instance.host_d82c0",
                     "instances" : {
                         "deploy": 1
-                    }
+                    },
+                    "dependents": [
+                        "multi_instance.db_c2094"
+                    ]
                 }
             ],
             "policies": {
@@ -260,14 +276,20 @@ class TestDSLParser(unittest.TestCase):
                     "host_id": "multi_instance.host1",
                     "instances": {
                         "deploy": 1
-                    }
+                    },
+                    "dependents": [
+                        "multi_instance.db"
+                    ]
                 },
                 {
                     "id": "multi_instance.host2",
                     "host_id": "multi_instance.host2",
                     "instances": {
                         "deploy": 1
-                    }
+                    },
+                    "dependents": [
+                        "multi_instance.webserver"
+                    ]
                 },
                 {
                     "id": "multi_instance.db",
@@ -278,6 +300,10 @@ class TestDSLParser(unittest.TestCase):
                             "target_id": "multi_instance.host1",
                         }
                     ],
+                    "dependents": [
+                        "multi_instance.webserver",
+                        "multi_instance.db_dependent"
+                    ]
                 },
                 {
                     "id": "multi_instance.webserver",
@@ -323,20 +349,30 @@ class TestDSLParser(unittest.TestCase):
                             "target_id": "multi_instance.host1_d82c0",
                         }
                     ],
+                    "dependents": [
+                        "multi_instance.webserver_42485",
+                        "multi_instance.db_dependent_82e2e"
+                    ]
                 },
                 {
                     "id": "multi_instance.host2_c2094",
                     "host_id": "multi_instance.host2_c2094",
                     "instances": {
                         "deploy": 1
-                    }
+                    },
+                    "dependents": [
+                        "multi_instance.webserver_42485"
+                    ]
                 },
                 {
                     "id": "multi_instance.host1_d82c0",
                     "host_id": "multi_instance.host1_d82c0",
                     "instances": {
                         "deploy": 1
-                    }
+                    },
+                    "dependents": [
+                        "multi_instance.db_6baa9",
+                    ]
                 },
                 {
                     "id": "multi_instance.webserver_42485",
@@ -359,7 +395,7 @@ class TestDSLParser(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.depends_on",
                             "target_id": "multi_instance.db_6baa9",
-                            }
+                        }
                     ],
                 },
             ],
