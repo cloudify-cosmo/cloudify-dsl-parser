@@ -175,11 +175,25 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins):
                     if interfaces == TARGET_INTERFACES:
                         node_for_plugins = target_node
                     if interfaces in relationship:
-                        for interface in relationship[interfaces].values():
-                            relationship_plugin_names = _extract_plugin_names_from_interface(interface, plugins)
-                            for plugin_name in relationship_plugin_names:
-                                node_for_plugins[PLUGINS][plugin_name] = \
-                                    _process_plugin(plugins[plugin_name], plugin_name)
+                        for interface_name, interface in relationship[interfaces].items():
+                            operation_mappings = \
+                                _extract_plugin_names_and_operation_mapping_from_interface(interface, plugins)
+                            for operation_name, plugin_name, operation_mapping in operation_mappings:
+                                if plugin_name is not None:
+                                    node_for_plugins[PLUGINS][plugin_name] = \
+                                        _process_plugin(plugins[plugin_name], plugin_name)
+                                elif operation_mapping is not None:
+                                    # This means we couldn't find a matching plugin in the operation mapping
+                                    raise DSLParsingLogicException(19, 'Could not extract plugin from operation '
+                                                                       'mapping {0}, '
+                                                                       'which is declared for operation'
+                                                                       ' {1} in interface {2}'
+                                                                       ' in relationship of type {3} in node {4}'
+                                                                       .format(operation_mapping,
+                                                                               operation_name,
+                                                                               interface_name,
+                                                                               relationship['type'],
+                                                                               node['id']))
 
     #set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
@@ -205,14 +219,16 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins):
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
 
-def _extract_plugin_names_from_interface(interface, plugins):
+
+def _extract_plugin_names_and_operation_mapping_from_interface(interface, plugins):
     plugin_names = plugins.keys()
-    interface_plugin_names = []
+    result = []
     for operation in interface:
-        plugin_name = _extract_plugin_name_from_operation(plugin_names, operation)
-        if plugin_name:
-            interface_plugin_names.append(plugin_name)
-    return interface_plugin_names
+        operation_name, plugin_name, operation_mapping = _extract_plugin_name_and_operation_mapping_from_operation(
+            plugin_names, operation)
+        result.append((operation_name, plugin_name, operation_mapping))
+    return result
+
 
 def _add_dependent(node, dependent_node):
     dependents = node.get('dependents', [])
@@ -297,14 +313,18 @@ def _process_relationships(combined_parsed_dsl):
 
 
 def _validate_relationship_fields(rel_obj, plugins, rel_name):
-    if 'plugin' in rel_obj and rel_obj['plugin'] not in plugins:
-        raise DSLParsingLogicException(19, 'Missing definition for plugin {0}, which is declared for relationship')
     for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
         if interfaces in rel_obj:
             for interface in rel_obj[interfaces].values():
-                # TODO extract validation logic from internal method so we don't do this call
-                # because it is currently here simply for validation reasons
-                _extract_plugin_names_from_interface(interface, plugins)
+                mapping = _extract_plugin_names_and_operation_mapping_from_interface(interface, plugins)
+                for operation_name, plugin_name, operation_mapping in mapping:
+                    if plugin_name is None and operation_mapping is not None:
+                        raise DSLParsingLogicException(19, 'Cannot find plugin matching operation {0}, '
+                                                           'which is declared for relationship '
+                                                           ' {1} ({2})'.format(operation_name,
+                                                                               rel_name,
+                                                                               operation_mapping))
+
 
 def _rel_inheritance_merging_func(complete_super_type, current_level_type):
     merged_type = current_level_type
@@ -359,23 +379,23 @@ def _merge_interface_list(overridden_interface, overriding_interface):
     return result
 
 
-def _extract_plugin_name_from_operation(plugin_names, operation):
+def _extract_plugin_name_and_operation_mapping_from_operation(plugin_names, operation):
     if type(operation) == str:
-        return None
-    _, operation_mapping = operation.items()[0]
+        return operation, None, None
+    operation_name, operation_mapping = operation.items()[0]
     longest_prefix = 0
     longest_prefix_plugin_name = None
     for plugin_name in plugin_names:
-        if operation_mapping.startswith(plugin_name):
+        if operation_mapping.startswith('{0}.'.format(plugin_name)):
             plugin_name_length = len(plugin_name)
             if plugin_name_length > longest_prefix:
                 longest_prefix = plugin_name_length
                 longest_prefix_plugin_name = plugin_name
-    if longest_prefix_plugin_name is None:
-        raise DSLParsingLogicException(19, 'Cannot extract plugin name from operation {0}'.format(operation))
-
-    return longest_prefix_plugin_name
-
+    if longest_prefix_plugin_name is not None:
+        return operation_name, longest_prefix_plugin_name, operation_mapping[longest_prefix+1:]
+    else:
+        # This is an error for validation done somewhere down the current stack trace
+        return operation_name, None, operation_mapping
 
 
 def _create_response_policies_section(processed_nodes):
@@ -549,7 +569,6 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     node_type_name = _autowire_node_type_name(declared_node_type_name, types_descendants)
     processed_node['type'] = node_type_name
 
-
     node_type = parsed_dsl[TYPES][node_type_name]
     complete_node_type = _extract_complete_node_type(node_type, node_type_name, parsed_dsl, node)
     processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
@@ -560,47 +579,40 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     plugins = {}
     operations = {}
     if INTERFACES in complete_node_type:
-        if complete_node_type[INTERFACES] and PLUGINS not in parsed_dsl:
-            raise DSLParsingLogicException(5, 'Must provide plugins section when providing interfaces section')
 
-        implementation_interfaces = complete_node_type[INTERFACES]
-        _validate_no_duplicate_interfaces_for_node(implementation_interfaces, node_name)
-        for implementation_interface in implementation_interfaces:
-            if type(implementation_interface) == dict:
-                #explicit declaration
-                interface_name = implementation_interface.iterkeys().next()
-                plugin_name = implementation_interface.itervalues().next()
-                #validate the explicit plugin declared is defined in the DSL
-                if plugin_name not in parsed_dsl[PLUGINS]:
-                    raise DSLParsingLogicException(10, 'Missing definition for plugin {0} which is explicitly declared '
-                                                       'to implement interface {1} for type {2}'.format(plugin_name,
-                                                                                                        interface_name,
-                                                                                                        node_type_name))
-                    #validate the explicit plugin does indeed implement the right interface
-                if parsed_dsl[PLUGINS][plugin_name][PROPERTIES]['interface'] != interface_name:
-                    raise DSLParsingLogicException(6, 'Illegal explicit plugin declaration for type {0}: the plugin {'
-                                                      '1} does not implement interface {2}'.format(node_type_name,
-                                                                                                   plugin_name,
-                                                                                                   interface_name))
-            else:
-                #implicit declaration ('autowiring')
-                interface_name = implementation_interface
-                plugin_name = _autowire_plugin(parsed_dsl[PLUGINS], interface_name, node_type_name)
-            plugin = parsed_dsl[PLUGINS][plugin_name]
-            plugins[plugin_name] = _process_plugin(plugin, plugin_name)
+        interface_objects = complete_node_type[INTERFACES]
+        for interface_name, interface_object in interface_objects.items():
+            mappings = _extract_plugin_names_and_operation_mapping_from_interface(interface_object, parsed_dsl[
+                PLUGINS])
+            for operation_name, plugin_name, operation_mapping in mappings:
+                # Operation mapping was defined for a non existent plugin
+                if plugin_name is None and operation_mapping is not None:
+                    pass
+                    # raise DSLParsingLogicException(19, 'Could not extract plugin from operation '
+                    #                                    'mapping {0}, '
+                    #                                    'which is declared for operation'
+                    #                                    ' {1} in interface {2}'
+                    #                                    ' in node {3} of type {4}'
+                    #                                    .format(operation_mapping,
+                    #                                            operation_name,
+                    #                                            interface_name,
+                    #                                            processed_node['id'],
+                    #                                            processed_node['types']))
+                # TODO maybe keep operation anyway to be used later?
+                # No mapping was defined for this operation
+                if plugin_name is None and operation_mapping is None:
+                    pass
 
-            #put operations into node
-            if interface_name not in parsed_dsl[INTERFACES]:
-                raise DSLParsingLogicException(9, 'Missing interface {0} definition'.format(interface_name))
-            interface = parsed_dsl[INTERFACES][interface_name]
-            for operation in interface['operations']:
-                if operation in operations:
-                    #Indicate this implicit operation name needs to be removed as we can only
-                    #support explicit implementation in this case
-                    operations[operation] = None
+                plugin = parsed_dsl[PLUGINS][plugin_name]
+                if not plugin_name in plugins:
+                    plugins[plugin_name] = _process_plugin(plugin, plugin_name)
+                if operation_name in operations:
+                    # Indicate this implicit operation name needs to be removed as we can only
+                    # support explicit implementation in this case
+                    operations[operation_name] = None
                 else:
-                    operations[operation] = plugin_name
-                operations['{0}.{1}'.format(interface_name, operation)] = plugin_name
+                    operations[operation_name] = plugin_name
+                operations['{0}.{1}'.format(interface_name, operation_name)] = plugin_name
 
         operations = dict((operation, plugin) for operation, plugin in operations.iteritems() if plugin is not None)
         processed_node[PLUGINS] = plugins
@@ -672,17 +684,6 @@ def _merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
     return dict(overridden_sub_dict.items() + overriding_sub_dict.items())
 
 
-def _validate_no_duplicate_interfaces_for_node(implementation_interfaces, node_name):
-    duplicate = _validate_no_duplicate_element(implementation_interfaces, lambda interface: _get_interface_name(
-        interface))
-    if duplicate is not None:
-        ex = DSLParsingLogicException(102, 'Duplicate interface definition detected on node {0}, '
-                                           'interface {1} has duplicate definition'.format(node_name, duplicate[0]))
-        ex.duplicate_interface_name = duplicate[0]
-        ex.node_name = node_name
-        raise ex
-
-
 def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node):
     def types_inheritance_merging_func(complete_super_type, current_level_type):
         merged_type = current_level_type
@@ -693,16 +694,7 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node):
         #derive policies
         merged_type[POLICIES] = _merge_sub_list(complete_super_type, merged_type, POLICIES)
         #derive interfaces
-        complete_super_type_interfaces = _get_list_prop(complete_super_type, INTERFACES)
-        current_level_type_interfaces = _get_list_prop(merged_type, INTERFACES)
-        merged_interfaces = complete_super_type_interfaces
-
-        for interface_element in current_level_type_interfaces:
-            #we need to replace interface elements in the merged_interfaces if their interface name
-            #matches this interface_element
-            _replace_or_add_interface(merged_interfaces, interface_element)
-
-        merged_type[INTERFACES] = merged_interfaces
+        merged_type[INTERFACES] = _merge_interface_dicts(complete_super_type, merged_type, INTERFACES)
 
         return merged_type
 

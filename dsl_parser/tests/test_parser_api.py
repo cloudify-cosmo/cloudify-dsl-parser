@@ -56,9 +56,8 @@ class TestParserApi(AbstractTestParser):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('test_interface1', plugin_props['interface'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
         operations = node['operations']
@@ -68,11 +67,14 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('test_plugin', operations['test_interface1.terminate'])
 
     def test_type_with_single_explicit_interface_and_plugin(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin"
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
+                - start: test_plugin.start
         properties:
             install_agent: 'false'
             """
@@ -85,25 +87,22 @@ types:
         result = parse(yaml)
         self._assert_blueprint(result)
 
-    def test_dsl_with_type_with_both_explicit_and_implicit_interfaces_declarations(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+    def test_dsl_with_type_with_operation_mappings(self):
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin"
-            -   test_interface2
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "shutdown"
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.install
+            test_interface2:
+                - start: other_test_plugin.start
+                - shutdown: other_test_plugin.shutdown
 
 plugins:
     other_test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
 """
         result = parse(yaml)
@@ -111,8 +110,7 @@ plugins:
         self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
@@ -123,32 +121,28 @@ plugins:
         self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
 
     def test_merge_plugins_and_interfaces_imports(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 plugins:
     other_test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
 types:
     test_type:
         interfaces:
-            -   test_interface1
-            -   test_interface2
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "shutdown"
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
+            test_interface2:
+                - start: other_test_plugin.start
+                - shutdown: other_test_plugin.shutdown
         """
         result = parse(yaml)
         node = result['nodes'][0]
         self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -246,7 +240,7 @@ imports:
         bottom_level_yaml = self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -279,7 +273,7 @@ imports: []
         bottom_level_yaml = self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -597,49 +591,45 @@ types:
         self.assertEquals('val4_parent', node['properties']['key4'])
 
     def test_type_interface_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         interfaces:
-            -   test_interface1
-            -   test_interface2: test_plugin2
-            -   test_interface3
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.install
+            test_interface2:
+                - start: test_plugin2.start
+                - stop: test_plugin2.stop
+            test_interface3:
+                - op1: test_plugin3.op
         derived_from: "test_type_parent"
 
     test_type_parent:
         interfaces:
-            -   test_interface1: nop-plugin
-            -   test_interface2
-            -   test_interface3
-            -   test_interface4
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "stop"
-    test_interface3:
-        operations:
-            -   "op1"
-    test_interface4:
-        operations:
-            -   "op2"
+            test_interface1:
+                - install: nop_plugin.install
+                - terminate: nop_plugin.install
+            test_interface2:
+                - start: test_plugin2.start
+                - stop: test_plugin2.stop
+            test_interface3:
+                 - op1: test_plugin3.op
+            test_interface4:
+                - op2: test_plugin4.op2
 
 plugins:
     test_plugin2:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
     test_plugin3:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface3"
             url: "http://test_url3.zip"
     test_plugin4:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface4"
             url: "http://test_url4.zip"
     """
 
@@ -647,8 +637,7 @@ plugins:
         self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('test_plugin2', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -665,11 +654,13 @@ plugins:
         self.assertEquals(4, len(node['plugins']))
 
     def test_type_interface_recursive_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         interfaces:
-            -   test_interface1
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
         derived_from: "test_type_parent"
 
     test_type_parent:
@@ -677,20 +668,17 @@ types:
 
     test_type_grandparent:
         interfaces:
-            -   test_interface1: "non_plugin"
-            -   test_interface2: "test_plugin2"
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "stop"
+            test_interface1:
+                - install: non_plugin.install
+                - terminate: non_plugin.terminate
+            test_interface2:
+                - start: test_plugin2.start
+                - stop: test_plugin2.stop
 
 plugins:
     test_plugin2:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
         """
 
@@ -698,8 +686,7 @@ plugins:
         self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('test_plugin2', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -712,32 +699,27 @@ plugins:
         self.assertEquals(2, len(node['plugins']))
 
     def test_two_explicit_interfaces_with_same_operation_name(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin"
-            -   test_interface2: "other_test_plugin"
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "install"
-            -   "shutdown"
-
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
+            test_interface2:
+                - install: other_test_plugin.install
+                - shutdown: other_test_plugin.shutdown
 plugins:
     other_test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
     """
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface1', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -746,8 +728,7 @@ plugins:
         self.assertEquals('test_plugin', operations['terminate'])
         self.assertEquals('test_plugin', operations['test_interface1.terminate'])
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -761,27 +742,19 @@ plugins:
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin1"
-            -   test_interface2: "test_plugin2"
-
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-    test_interface2:
-        operations:
-            -   "install"
+            test_interface1:
+                - install: test_plugin1.install
+            test_interface2:
+                - install: test_plugin2.install
 
 plugins:
     test_plugin1:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url1.zip"
     test_plugin2:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
     """
         result = parse(yaml)
@@ -793,7 +766,7 @@ plugins:
         bottom_level_yaml = self.BASIC_TYPE
         self.make_file_with_name(bottom_level_yaml, 'bottom_level.yaml')
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   \"bottom_level.yaml\""""
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -813,7 +786,7 @@ imports:
         bottom_level_yaml = self.BASIC_TYPE
         self.make_file_with_name(bottom_level_yaml, 'bottom_level.yaml')
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   \"bottom_level.yaml\""""
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -1322,7 +1295,7 @@ policies:
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
-        node_policies = node['policies']        
+        node_policies = node['policies']
         self.assertEquals(2, len(node_policies))
         self.assertEquals(1, len(self._get_policy_from_node(node, 'policy1')['rules']))
         self.assertEquals('rule1', self._get_policy_from_node(node, 'policy1')['rules'][0]['type'])
@@ -1478,15 +1451,10 @@ imports:
                             - install: test_plugin.install
 relationships:
     test_relationship: {}
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url.zip"
                     """
         result = parse(yaml)
@@ -1502,7 +1470,6 @@ plugins:
         self.assertEquals(4, len(relationship))
         plugin_def = result['nodes'][1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
-        self.assertEquals('test_interface1', plugin_def['interface'])
         self.assertEquals('false', plugin_def['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_def['url'])
         dependents = result['nodes'][0]['dependents']
@@ -1561,7 +1528,6 @@ plugins:
     test_plugin:
         derived_from: cloudify.plugins.remote_plugin
         properties:
-            interface: interface2
             url: some_url
                     """
         result = parse(yaml)
@@ -1598,16 +1564,10 @@ relationships:
         target_interfaces:
             test_interface3:
                 - install
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-            -   "terminate"
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url.zip"
 
         """
@@ -1692,7 +1652,6 @@ plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url.zip"
 
         """
@@ -1831,22 +1790,17 @@ blueprint:
 types:
     cloudify.types.host:
         interfaces:
-            -   "test_interface"
-interfaces:
-    test_interface:
-        operations:
-            -   start
+            test_interface:
+                - start: test_plugin.start
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
             """
         result = parse(yaml)
         plugin = result['nodes'][0]['plugins_to_install'][0]
         self.assertEquals('test_plugin', plugin['name'])
-        self.assertEquals('test_interface', plugin['interface'])
         self.assertEquals('true', plugin['agent_plugin'])
         self.assertEquals('http://test_plugin.zip', plugin['url'])
         self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
@@ -1863,16 +1817,12 @@ blueprint:
 types:
     cloudify.types.host:
         interfaces:
-            -   "test_interface"
-interfaces:
-    test_interface:
-        operations:
-            -   start
+            test_interface:
+                - start: cloudify.plugins.plugin_installer.start
 plugins:
     cloudify.plugins.plugin_installer:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
         """
         #note that we're expecting an empty dict since every node which is a host should have one
@@ -1890,16 +1840,12 @@ blueprint:
 types:
     cloudify.types.host:
         interfaces:
-            -   "test_interface"
-interfaces:
-    test_interface:
-        operations:
-            -   start
+            test_interface:
+                - start: test_plugin.start
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
         """
 
@@ -1936,29 +1882,22 @@ types:
     cloudify.types.host: {}
     test_type:
         interfaces:
-            -   "test_interface"
+            test_interface:
+                - start: test_plugin.start
     test_type2:
         interfaces:
-            -   "test_interface2"
-interfaces:
-    test_interface:
-        operations:
-            -   start
-    test_interface2:
-        operations:
-            -   install
+            test_interface2:
+                - install: test_plugin2.install
 relationships:
     cloudify.relationships.contained_in: {}
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
     test_plugin2:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_plugin2.zip"
         """
 
@@ -1970,11 +1909,9 @@ plugins:
         test_plugin = self._get_plugin_to_install_from_node(node, 'test_plugin')
         test_plugin2 = self._get_plugin_to_install_from_node(node, 'test_plugin2')
         self.assertEquals('test_plugin', test_plugin['name'])
-        self.assertEquals('test_interface', test_plugin['interface'])
         self.assertEquals('true', test_plugin['agent_plugin'])
         self.assertEquals('http://test_plugin.zip', test_plugin['url'])
         self.assertEquals('test_plugin2', test_plugin2['name'])
-        self.assertEquals('test_interface2', test_plugin2['interface'])
         self.assertEquals('true', test_plugin2['agent_plugin'])
         self.assertEquals('http://test_plugin2.zip', test_plugin2['url'])
         self.assertEquals(2, len(result['nodes'][0]['plugins_to_install']))
@@ -2012,7 +1949,7 @@ imports:
         """.format(os.path.join(self._temp_dir, "mid_level.yaml")) + self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_file_with_name(mid_level_yaml, 'mid_level.yaml')
@@ -2031,7 +1968,7 @@ imports:
             """.format(os.path.join(self._temp_dir, "top_level.yaml")) + self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -2044,7 +1981,7 @@ imports:
         self._assert_blueprint(result)
 
     def test_plugins_with_root_plugin(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_TYPE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_TYPE + self.BASIC_PLUGIN + """
     cloudify.plugins.plugin: {}
     cloudify.plugins.remote_plugin:
         derived_from: "cloudify.plugins.plugin"
@@ -2066,10 +2003,12 @@ workflows:
         self._assert_minimal_blueprint(result)
         self.assertEquals('my custom radial', result['workflows']['install'])
 
-    def test_node_interfaces_with_explicit_interface(self):
-        yaml = self.BASIC_INTERFACE_AND_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+    def test_node_interfaces_operation_mapping(self):
+        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
             interfaces:
-                -   test_interface1: "test_plugin"
+                test_interface1:
+                    - install: test_plugin.install
+                    - terminate: test_plugin.terminate
 types:
     test_type: {}
             """
@@ -2107,20 +2046,14 @@ types:
                             - install: test_plugin2.install
 relationships:
     test_relationship: {}
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
 plugins:
     test_plugin1:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url1.zip"
     test_plugin2:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url2.zip"
                 """
 
@@ -2137,7 +2070,6 @@ plugins:
 
         plugin1_def = result['nodes'][1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
-        self.assertEquals('test_interface1', plugin1_def['interface'])
         self.assertEquals('false', plugin1_def['agent_plugin'])
         self.assertEquals('http://test_url1.zip', plugin1_def['url'])
 
@@ -2150,7 +2082,6 @@ plugins:
         #expecting the other plugin to be under test_node rather than test_node2:
         plugin2_def = result['nodes'][0]['plugins']['test_plugin2']
         self.assertEquals('test_plugin2', plugin2_def['name'])
-        self.assertEquals('test_interface1', plugin2_def['interface'])
         self.assertEquals('false', plugin2_def['agent_plugin'])
         self.assertEquals('http://test_url2.zip', plugin2_def['url'])
 
@@ -2202,16 +2133,12 @@ blueprint:
 types:
     cloudify.types.host:
         interfaces:
-            -   "test_interface"
-interfaces:
-    test_interface:
-        operations:
-            -   start
+            test_interface:
+                - start: cloudify.plugins.kv_store.start
 plugins:
     cloudify.plugins.kv_store:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
         """
         #note that we're expecting an empty dict since every node which is a host should have one

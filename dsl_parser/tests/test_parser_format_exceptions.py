@@ -117,7 +117,7 @@ interfaces:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_illegal_interface_declaration(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -128,7 +128,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_illegal_interface_declaration_2(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -139,7 +139,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_empty_interfaces_declaration(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces: {}
@@ -147,7 +147,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_dsl_with_explicit_interface_mapped_to_two_plugins(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:

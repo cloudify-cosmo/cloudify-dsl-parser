@@ -28,7 +28,7 @@ class TestParserLogicExceptions(AbstractTestParser):
         self._assert_dsl_parsing_exception_error_code(self.BASIC_BLUEPRINT_SECTION, 7, DSLParsingLogicException)
 
     def test_explicit_interface_with_missing_plugin(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -39,7 +39,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 10, DSLParsingLogicException)
 
     def test_missing_interface_definition(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -86,7 +86,7 @@ types:
         self._assert_dsl_parsing_exception_error_code(yaml, 6, DSLParsingLogicException)
 
     def test_implicit_interface_with_no_matching_plugins(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -124,7 +124,7 @@ interfaces:
         self._assert_dsl_parsing_exception_error_code(yaml, 5, DSLParsingLogicException)
 
     def test_merge_non_mergeable_properties_on_import(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 blueprint:
     name: test_app2
     topology:
@@ -215,7 +215,7 @@ workflows:
         self._assert_dsl_parsing_exception_error_code(yaml, 31)
 
     def test_type_duplicate_interface(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -238,7 +238,7 @@ policies:
         self._assert_dsl_parsing_exception_error_code(yaml, 31)
 
     def test_illegal_merge_on_mergeable_properties_on_import(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 plugins:
     test_plugin:
         properties:
