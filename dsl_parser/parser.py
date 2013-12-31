@@ -42,7 +42,7 @@ from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
-
+from collections import OrderedDict
 
 def parse_from_path(dsl_file_path, alias_mapping_dict=None, alias_mapping_url=None, resources_base_url=None):
     with open(dsl_file_path, 'r') as f:
@@ -168,15 +168,18 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins):
     for node in processed_nodes:
         if RELATIONSHIPS in node:
             for relationship in node[RELATIONSHIPS]:
-                if 'plugin' in relationship:
-                    plugin_name = relationship['plugin']
-                    node_for_plugin = node
-                    if 'run_on_node' in relationship and relationship['run_on_node'] == 'target':
-                        node_for_plugin = node_name_to_node[relationship['target_id']]
-                    node_for_plugin[PLUGINS][plugin_name] = _process_plugin(plugins[plugin_name], plugin_name)
-
                 target_node = node_name_to_node[relationship['target_id']]
                 _add_dependent(target_node, node)
+                for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
+                    node_for_plugins = node
+                    if interfaces == TARGET_INTERFACES:
+                        node_for_plugins = target_node
+                    if interfaces in relationship:
+                        for interface in relationship[interfaces].values():
+                            relationship_plugin_names = _extract_plugin_names_from_interface(interface, plugins)
+                            for plugin_name in relationship_plugin_names:
+                                node_for_plugins[PLUGINS][plugin_name] = \
+                                    _process_plugin(plugins[plugin_name], plugin_name)
 
     #set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
@@ -202,6 +205,14 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins):
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
 
+def _extract_plugin_names_from_interface(interface, plugins):
+    plugin_names = plugins.keys()
+    interface_plugin_names = []
+    for operation in interface:
+        plugin_name = _extract_plugin_name_from_operation(plugin_names, operation)
+        if plugin_name:
+            interface_plugin_names.append(plugin_name)
+    return interface_plugin_names
 
 def _add_dependent(node, dependent_node):
     dependents = node.get('dependents', [])
@@ -271,24 +282,12 @@ def _process_relationships(combined_parsed_dsl):
 
     relationships = combined_parsed_dsl[RELATIONSHIPS]
 
-    def rel_inheritance_merging_func(complete_super_type, current_level_type):
-        merged_type = current_level_type
-        # derived source interfaces
-        merged_source_interfaces = _merge_interface_dicts(complete_super_type, merged_type, SOURCE_INTERFACES)
-        if len(merged_source_interfaces) > 0:
-            merged_type[SOURCE_INTERFACES] = merged_source_interfaces
-        # derived target interfaces
-        merged_target_interfaces = _merge_interface_dicts(complete_super_type, merged_type, TARGET_INTERFACES)
-        if len(merged_target_interfaces) > 0:
-            merged_type[TARGET_INTERFACES] = merged_target_interfaces
-
-        return merged_type
-
     for rel_name, rel_obj in relationships.iteritems():
         complete_rel_obj = _extract_complete_type_recursive(rel_obj, rel_name, relationships,
-                                                            rel_inheritance_merging_func, [], True)
+                                                            _rel_inheritance_merging_func, [], True)
 
         plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
+        _validate_relationship_fields(complete_rel_obj, plugins, rel_name)
         processed_relationships[rel_name] = copy.deepcopy(complete_rel_obj)
         processed_relationships[rel_name]['name'] = rel_name
         if 'derived_from' in processed_relationships[rel_name]:
@@ -297,24 +296,86 @@ def _process_relationships(combined_parsed_dsl):
     return processed_relationships
 
 
-def _merge_interface_dicts(overridden_relationship, overriding_relationship, interface_attribute):
-    if interface_attribute not in overridden_relationship and interface_attribute not in overriding_relationship:
+def _validate_relationship_fields(rel_obj, plugins, rel_name):
+    if 'plugin' in rel_obj and rel_obj['plugin'] not in plugins:
+        raise DSLParsingLogicException(19, 'Missing definition for plugin {0}, which is declared for relationship')
+    for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
+        if interfaces in rel_obj:
+            for interface in rel_obj[interfaces].values():
+                # TODO extract validation logic from internal method so we don't do this call
+                # because it is currently here simply for validation reasons
+                _extract_plugin_names_from_interface(interface, plugins)
+
+def _rel_inheritance_merging_func(complete_super_type, current_level_type):
+    merged_type = current_level_type
+    
+    # derived source and target interfaces
+    for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
+        merged_interfaces = _merge_interface_dicts(complete_super_type, merged_type, interfaces)
+        if len(merged_interfaces) > 0:
+            merged_type[interfaces] = merged_interfaces
+
+    return merged_type
+
+
+def _merge_interface_dicts(overridden, overriding, interfaces_attribute):
+    if interfaces_attribute not in overridden and interfaces_attribute not in overriding:
         return {}
-    if interface_attribute not in overridden_relationship:
-        return overriding_relationship[interface_attribute]
-    if interface_attribute not in overriding_relationship:
-        return overridden_relationship[interface_attribute]
-    merged_interfaces = overridden_relationship[interface_attribute]
-    for overriding_interface, interface_obj in overriding_relationship[interface_attribute].items():
-        if overriding_interface not in overridden_relationship[interface_attribute]:
-            merged_interfaces[overriding_interface] = interface_obj
+    if interfaces_attribute not in overridden:
+        return overriding[interfaces_attribute]
+    if interfaces_attribute not in overriding:
+        return overridden[interfaces_attribute]
+    merged_interfaces = copy.deepcopy(overridden[interfaces_attribute])
+    for overriding_interface, interface_obj in overriding[interfaces_attribute].items():
+        interface_obj_copy = copy.deepcopy(interface_obj)
+        if overriding_interface not in overridden[interfaces_attribute]:
+            merged_interfaces[overriding_interface] = interface_obj_copy
         else:
-            merged_interfaces[overriding_interface] = \
-                _merge_interface_list(overridden_relationship[overriding_interface], interface_obj)
+            merged_interfaces[overriding_interface] = _merge_interface_list(
+                overridden[interfaces_attribute][overriding_interface], interface_obj_copy)
+    return merged_interfaces
 
 
 def _merge_interface_list(overridden_interface, overriding_interface):
-    for operation in
+
+    def op_and_op_name(op):
+        if type(op) == str:
+            return op, op
+        key, value = op.items()[0]
+        return key, op
+
+    # OrderedDict for easier testability
+    overridden = OrderedDict((x, y) for x, y in map(op_and_op_name, overridden_interface))
+    overriding = OrderedDict((x, y) for x, y in map(op_and_op_name, overriding_interface))
+    result = []
+    for op_name, operation in overridden.items():
+        if op_name not in overriding:
+            result.append(operation)
+        else:
+            result.append(overriding[op_name])
+    for op_name, operation in overriding.items():
+        if op_name not in overridden:
+            result.append(operation)
+    return result
+
+
+def _extract_plugin_name_from_operation(plugin_names, operation):
+    if type(operation) == str:
+        return None
+    _, operation_mapping = operation.items()[0]
+    longest_prefix = 0
+    longest_prefix_plugin_name = None
+    for plugin_name in plugin_names:
+        if operation_mapping.startswith(plugin_name):
+            plugin_name_length = len(plugin_name)
+            if plugin_name_length > longest_prefix:
+                longest_prefix = plugin_name_length
+                longest_prefix_plugin_name = plugin_name
+    if longest_prefix_plugin_name is None:
+        raise DSLParsingLogicException(19, 'Cannot extract plugin name from operation {0}'.format(operation))
+
+    return longest_prefix_plugin_name
+
 
 
 def _create_response_policies_section(processed_nodes):
@@ -428,12 +489,13 @@ def _process_node_relationships(app_name, node, node_name, node_names_set, plugi
             if relationship_type not in top_level_relationships:
                 raise DSLParsingLogicException(26, 'a relationship instance under node {0} declares an undefined '
                                                    'relationship type {1}'.format(node_name, relationship_type))
-            complete_relationship = dict(top_level_relationships[relationship_type].items() + relationship.items())
+
+            complete_relationship = _rel_inheritance_merging_func(top_level_relationships[relationship_type],
+                                                                  relationship)
             #since we've merged with the already-processed top_level_relationships, there are a few changes that need
             #to take place - 'name' is replaced with a [fully qualified] 'target' field, and 'workflow' needs to be
             #re-processed if it is defined in 'relationship', since it overrides any possible already-processed
             #workflows that might have been inherited, and has not yet been processed
-            del (complete_relationship['name'])
             complete_relationship['target_id'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
             del (complete_relationship['target'])
             complete_relationship['state'] = 'reachable'
