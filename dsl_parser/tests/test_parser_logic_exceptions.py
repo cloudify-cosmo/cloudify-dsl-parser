@@ -32,7 +32,9 @@ class TestParserLogicExceptions(AbstractTestParser):
 types:
     test_type:
         interfaces:
-            -   test_interface1: "missing_plugin"
+            test_interface1:
+                - install: missing_plugin.install
+                - terminate: missing_plugin.terminate
         properties:
             install_agent: 'false'
 """
@@ -85,43 +87,6 @@ types:
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 6, DSLParsingLogicException)
 
-    def test_implicit_interface_with_no_matching_plugins(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
-types:
-    test_type:
-        interfaces:
-            -   test_interface2
-        properties:
-            install_agent: 'false'
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "install"
-            -   "terminate"
-"""
-        self._assert_dsl_parsing_exception_error_code(yaml, 11, DSLParsingLogicException)
-
-    def test_implicit_interface_with_ambiguous_matches(self):
-        yaml = self.create_yaml_with_imports([self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS]) + """
-plugins:
-    other_test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            interface: "test_interface1"
-            url: "http://other_test_url.zip"
-"""
-        self._assert_dsl_parsing_exception_error_code(yaml, 12, DSLParsingLogicException)
-
-    def test_dsl_with_interface_without_plugin(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_TYPE + """
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-            -   "terminate"
-        """
-        self._assert_dsl_parsing_exception_error_code(yaml, 5, DSLParsingLogicException)
 
     def test_merge_non_mergeable_properties_on_import(self):
         yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """

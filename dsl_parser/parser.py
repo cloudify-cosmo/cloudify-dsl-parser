@@ -587,17 +587,16 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
             for operation_name, plugin_name, operation_mapping in mappings:
                 # Operation mapping was defined for a non existent plugin
                 if plugin_name is None and operation_mapping is not None:
-                    pass
-                    # raise DSLParsingLogicException(19, 'Could not extract plugin from operation '
-                    #                                    'mapping {0}, '
-                    #                                    'which is declared for operation'
-                    #                                    ' {1} in interface {2}'
-                    #                                    ' in node {3} of type {4}'
-                    #                                    .format(operation_mapping,
-                    #                                            operation_name,
-                    #                                            interface_name,
-                    #                                            processed_node['id'],
-                    #                                            processed_node['types']))
+                    raise DSLParsingLogicException(10, 'Could not extract plugin from operation '
+                                                       'mapping {0}, '
+                                                       'which is declared for operation'
+                                                       ' {1} in interface {2}'
+                                                       ' in node {3} of type {4}'
+                                                       .format(operation_mapping,
+                                                               operation_name,
+                                                               interface_name,
+                                                               processed_node['id'],
+                                                               processed_node['type']))
                 # TODO maybe keep operation anyway to be used later?
                 # No mapping was defined for this operation
                 if plugin_name is None and operation_mapping is None:

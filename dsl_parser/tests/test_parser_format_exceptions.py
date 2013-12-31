@@ -26,8 +26,8 @@ class TestParserFormatExceptions(AbstractTestParser):
 
     def test_illegal_yaml_dsl(self):
         yaml = """
-interfaces:
-    test_interface:
+plugins:
+    plugin1:
         -   item1: {}
     -   bad_format: {}
         """
@@ -35,11 +35,11 @@ interfaces:
 
     def test_no_blueprint(self):
         yaml = """
-interfaces:
-    test_interface2:
-        operations:
-            -   "install"
-            -   "terminate"
+plugins:
+    plugin1:
+        derived_from: cloudify.plugins.remote_plugin
+        properties:
+            url: some_url
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
