@@ -367,3 +367,87 @@ types:
 """
         ex = self._assert_dsl_parsing_exception_error_code(yaml, 103, DSLParsingLogicException)
         self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'], ex.descendants)
+
+    def test_node_interface_duplicate_operation_with_mapping(self):
+        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+            interfaces:
+                test_interface1:
+                    - install
+                    - install: test_plugin.install
+types:
+    test_type: {}
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+
+    def test_type_interface_duplicate_operation_with_mapping(self):
+        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+types:
+    test_type:
+        interfaces:
+            test_interface1:
+                - install
+                - install: test_plugin.install
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+
+    def test_relationship_source_interface_duplicate_operation_with_mapping(self):
+        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+types:
+    test_type: {}
+relationships:
+    empty_relationship:
+        source_interfaces:
+            test_interface1:
+                - install
+                - install: test_plugin.install
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+
+    def test_relationship_target_interface_duplicate_operation_with_mapping(self):
+        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+types:
+    test_type: {}
+relationships:
+    empty_relationship:
+        target_interfaces:
+            test_interface1:
+                - install
+                - install: test_plugin.install
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+
+    def test_instance_relationship_source_interface_duplicate_operation_with_mapping(self):
+        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: empty_relationship
+                    target: test_node
+                    source_interfaces:
+                        test_interface1:
+                            - install
+                            - install: test_plugin.install
+types:
+    test_type: {}
+relationships:
+    empty_relationship: {}
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+
+    def test_instance_relationship_target_interface_duplicate_operation_with_mapping(self):
+        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: empty_relationship
+                    target: test_node
+                    target_interfaces:
+                        test_interface1:
+                            - install
+                            - install: test_plugin.install
+types:
+    test_type: {}
+relationships:
+    empty_relationship: {}
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
