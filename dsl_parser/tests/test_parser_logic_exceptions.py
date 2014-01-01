@@ -40,54 +40,6 @@ types:
 """
         self._assert_dsl_parsing_exception_error_code(yaml, 10, DSLParsingLogicException)
 
-    def test_missing_interface_definition(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
-types:
-    test_type:
-        interfaces:
-            -   missing_interface: "test_plugin2"
-        properties:
-            install_agent: 'false'
-
-plugins:
-    test_plugin2:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            interface: "missing_interface"
-            url: "http://test_url2.zip"
-"""
-        self._assert_dsl_parsing_exception_error_code(yaml, 9, DSLParsingLogicException)
-
-    def test_type_with_interface_with_explicit_illegal_plugin(self):
-        #testing to see what happens when the plugin which is explicitly declared for an interface is in fact
-        #a plugin which doesn't implement the said interface (even if it supports another interface with same
-        # name operations)
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-            -   "terminate"
-    test_interface2:
-        operations:
-            -   "install"
-            -   "terminate"
-
-plugins:
-    test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            interface: "test_interface1"
-            url: "http://test_url.zip"
-
-types:
-    test_type:
-        interfaces:
-            -   test_interface2: "test_plugin"
-        """
-        self._assert_dsl_parsing_exception_error_code(yaml, 6, DSLParsingLogicException)
-
-
     def test_merge_non_mergeable_properties_on_import(self):
         yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 blueprint:
@@ -121,8 +73,6 @@ policies:
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
-        interfaces:
-            -   test_interface1
         derived_from: "non_existing_type_parent"
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 14, DSLParsingLogicException)
@@ -179,18 +129,6 @@ workflows:
         """.format(ref_alias)
         self._assert_dsl_parsing_exception_error_code(yaml, 31)
 
-    def test_type_duplicate_interface(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
-types:
-    test_type:
-        interfaces:
-            -   test_interface1
-            -   test_interface1: test_plugin
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(yaml, 102, DSLParsingLogicException)
-        self.assertEquals('test_node', ex.node_name)
-        self.assertEquals('test_interface1', ex.duplicate_interface_name)
-
     def test_first_level_policy_unavailable_ref(self):
         ref_alias = 'custom_ref_alias'
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -207,19 +145,9 @@ policies:
 plugins:
     test_plugin:
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
 types:
-    test_type:
-        interfaces:
-            -   test_interface1
-            -   test_interface2
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "shutdown"
+    test_type: {}
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
 
@@ -294,22 +222,18 @@ types:
 
     def test_plugin_with_wrongful_derived_from_field(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-
 plugins:
     test_plugin:
         derived_from: "bad value"
         properties:
-            interface: "test_interface1"
             url: "http://test_url.zip"
 
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin"
+            test_interface1:
+                - install: test_plugin.install
+
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 18, DSLParsingLogicException)
 
@@ -322,7 +246,6 @@ relationships:
                 - op: no_plugin.op
                         """
         self._assert_dsl_parsing_exception_error_code(yaml, 19, DSLParsingLogicException)
-
 
     def test_top_level_relationships_import_same_name_relationship(self):
         imported_yaml = self.MINIMAL_BLUEPRINT + """
@@ -401,7 +324,6 @@ relationships:
                         """
         self._assert_dsl_parsing_exception_error_code(yaml, 19, DSLParsingLogicException)
 
-
     def test_validate_agent_plugin_on_non_host_node(self):
         yaml = """
 blueprint:
@@ -412,16 +334,12 @@ blueprint:
 types:
     test_type:
         interfaces:
-            -   "test_interface"
-interfaces:
-    test_interface:
-        operations:
-            -   start
+            test_interface:
+                - start: test_plugin.start
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 24, DSLParsingLogicException)

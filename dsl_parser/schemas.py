@@ -65,7 +65,8 @@ INTERFACES_SCHEMA = {
             'uniqueItems': True,
             'minItems': 1
         }
-    }
+    },
+    'minProperties': 1
 }
 
 WORKFLOWS_SCHEMA = {

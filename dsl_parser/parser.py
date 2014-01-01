@@ -111,7 +111,6 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url
 
     nodes = blueprint['topology']
     _validate_no_duplicate_nodes(nodes)
-    _validate_no_duplicate_interfaces(combined_parsed_dsl)
 
     top_level_relationships = _process_relationships(combined_parsed_dsl)
 
@@ -447,35 +446,6 @@ def _validate_no_duplicate_nodes(nodes):
         raise ex
 
 
-def _validate_no_duplicate_interfaces(parsed_dsl):
-    def _add_interface_name_or_throw(rel_obj, unique_interfaces):
-        if 'interface' in rel_obj:
-            if rel_obj['interface']['name'] in unique_interfaces:
-                raise DSLParsingLogicException(22, 'Illegal duplicate - interface {0} is defined more than once'
-                .format(rel_obj['interface']['name']))
-            unique_interfaces.add(rel_obj['interface']['name'])
-
-    top_level_interfaces = _get_dict_prop(parsed_dsl, INTERFACES)
-    top_level_relationships = _get_dict_prop(parsed_dsl, RELATIONSHIPS)
-    nodes = parsed_dsl[BLUEPRINT]['topology']
-
-    unique_interfaces = set()
-    #adding interfaces names from the top-level interfaces definitions -
-    #no need to check for duplicates here because of the yaml inherent structure
-    unique_interfaces.update(top_level_interfaces.keys())
-    #unique_interfaces.update((name for name in top_level_interfaces.keys()))
-
-    #adding interfaces names from the top level relationships definitions
-    for rel_obj in top_level_relationships.itervalues():
-        _add_interface_name_or_throw(rel_obj, unique_interfaces)
-
-    #adding interfaces names from the instance relationships definitions
-    for node in nodes:
-        if RELATIONSHIPS in node:
-            for rel_obj in node[RELATIONSHIPS]:
-                _add_interface_name_or_throw(rel_obj, unique_interfaces)
-
-
 def _validate_no_duplicate_element(elements, keyfunc):
     elements.sort(key=keyfunc)
     groups = []
@@ -551,6 +521,10 @@ def _autowire_node_type_name(node_type_name, types_descendants):
     return _autowire_node_type_name_recursive(node_type_name, [node_type_name])
 
 
+def _validate_no_duplicate_operations(interface_operation_mappings):
+    operation_names = set()
+
+
 def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_level_relationships, node_names_set,
                   types_descendants, alias_mapping):
     declared_node_type_name = node['type']
@@ -599,8 +573,8 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
                                                                processed_node['type']))
                 # TODO maybe keep operation anyway to be used later?
                 # No mapping was defined for this operation
-                if plugin_name is None and operation_mapping is None:
-                    pass
+                if plugin_name is None:
+                    continue
 
                 plugin = parsed_dsl[PLUGINS][plugin_name]
                 if not plugin_name in plugins:
@@ -612,6 +586,8 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
                 else:
                     operations[operation_name] = plugin_name
                 operations['{0}.{1}'.format(interface_name, operation_name)] = plugin_name
+                
+            _validate_no_duplicate_operations(mappings)
 
         operations = dict((operation, plugin) for operation, plugin in operations.iteritems() if plugin is not None)
         processed_node[PLUGINS] = plugins
