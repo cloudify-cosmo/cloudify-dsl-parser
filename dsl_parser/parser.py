@@ -567,6 +567,8 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     processed_node[WORKFLOWS] = complete_node_type[WORKFLOWS]
     processed_node[POLICIES] = complete_node_type[POLICIES]
 
+
+
     #handle plugins and operations
     plugins = {}
     operations = {}
@@ -575,6 +577,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
         for interface_name, interface_object in interface_objects.items():
             mappings = _extract_plugin_names_and_operation_mapping_from_interface(interface_object,
                                                                                   parsed_dsl[PLUGINS])
+            operation_struct = lambda plg_name, op_mapping: {'plugin': plg_name, 'operation': op_mapping}
             for operation_name, plugin_name, operation_mapping in mappings:
                 if plugin_name is not None:
                     plugin = parsed_dsl[PLUGINS][plugin_name]
@@ -585,8 +588,9 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
                         # support explicit implementation in this case
                         operations[operation_name] = None
                     else:
-                        operations[operation_name] = plugin_name
-                    operations['{0}.{1}'.format(interface_name, operation_name)] = plugin_name
+                        operations[operation_name] = operation_struct(plugin_name, operation_mapping)
+                    operations['{0}.{1}'.format(interface_name, operation_name)] = operation_struct(plugin_name,
+                                                                                                    operation_mapping)
                 # Operation mapping was defined for a non existent plugin
                 elif operation_mapping is not None:
                     raise DSLParsingLogicException(10, 'Could not extract plugin from operation '
@@ -601,7 +605,8 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
                                                                processed_node['type']))
             _validate_no_duplicate_operations(mappings, interface_name, processed_node['id'], processed_node['type'])
 
-        operations = dict((operation, plugin) for operation, plugin in operations.iteritems() if plugin is not None)
+        operations = dict((operation, op_struct)
+                          for operation, op_struct in operations.iteritems() if op_struct is not None)
         processed_node[PLUGINS] = plugins
         processed_node['operations'] = operations
 

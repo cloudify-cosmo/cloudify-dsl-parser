@@ -20,6 +20,11 @@ from dsl_parser.parser import parse, parse_from_path, parse_from_url
 from urllib import pathname2url
 import os
 
+
+def op_struct(plugin_name, operation_mapping):
+    return {'plugin': plugin_name, 'operation': operation_mapping}
+
+
 class TestParserApi(AbstractTestParser):
 
     def _assert_minimal_blueprint(self, result, expected_type='test_type', expected_declared_type='test_type'):
@@ -61,10 +66,10 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
         operations = node['operations']
-        self.assertEquals('test_plugin', operations['install'])
-        self.assertEquals('test_plugin', operations['test_interface1.install'])
-        self.assertEquals('test_plugin', operations['terminate'])
-        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        self.assertEquals(op_struct('test_plugin', 'install'), operations['install'])
+        self.assertEquals(op_struct('test_plugin', 'install'), operations['test_interface1.install'])
+        self.assertEquals(op_struct('test_plugin', 'terminate'), operations['terminate'])
+        self.assertEquals(op_struct('test_plugin', 'terminate'), operations['test_interface1.terminate'])
 
     def test_type_with_single_explicit_interface_and_plugin(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
@@ -94,7 +99,7 @@ types:
         interfaces:
             test_interface1:
                 - install: test_plugin.install
-                - terminate: test_plugin.install
+                - terminate: test_plugin.terminate
             test_interface2:
                 - start: other_test_plugin.start
                 - shutdown: other_test_plugin.shutdown
@@ -115,10 +120,10 @@ plugins:
         self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         operations = node['operations']
-        self.assertEquals('other_test_plugin', operations['start'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.start'])
-        self.assertEquals('other_test_plugin', operations['shutdown'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'start'), operations['start'])
+        self.assertEquals(op_struct('other_test_plugin', 'start'), operations['test_interface2.start'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['test_interface2.shutdown'])
 
     def test_merge_plugins_and_interfaces_imports(self):
         yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
@@ -147,10 +152,10 @@ types:
         self.assertEquals('other_test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
-        self.assertEquals('other_test_plugin', operations['start'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.start'])
-        self.assertEquals('other_test_plugin', operations['shutdown'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'start'), operations['start'])
+        self.assertEquals(op_struct('other_test_plugin', 'start'), operations['test_interface2.start'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['test_interface2.shutdown'])
 
     def test_workflows_recursive_imports(self):
         bottom_level_yaml = self.MINIMAL_BLUEPRINT + """
@@ -597,7 +602,7 @@ types:
         interfaces:
             test_interface1:
                 - install: test_plugin.install
-                - terminate: test_plugin.install
+                - terminate: test_plugin.terminate
             test_interface2:
                 - start: test_plugin2.start
                 - stop: test_plugin2.stop
@@ -643,14 +648,14 @@ plugins:
         self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals(12, len(operations))
-        self.assertEquals('test_plugin2', operations['start'])
-        self.assertEquals('test_plugin2', operations['test_interface2.start'])
-        self.assertEquals('test_plugin2', operations['stop'])
-        self.assertEquals('test_plugin2', operations['test_interface2.stop'])
-        self.assertEquals('test_plugin3', operations['op1'])
-        self.assertEquals('test_plugin3', operations['test_interface3.op1'])
-        self.assertEquals('test_plugin4', operations['op2'])
-        self.assertEquals('test_plugin4', operations['test_interface4.op2'])
+        self.assertEquals(op_struct('test_plugin2', 'start'), operations['start'])
+        self.assertEquals(op_struct('test_plugin2', 'start'), operations['test_interface2.start'])
+        self.assertEquals(op_struct('test_plugin2', 'stop'), operations['stop'])
+        self.assertEquals(op_struct('test_plugin2', 'stop'), operations['test_interface2.stop'])
+        self.assertEquals(op_struct('test_plugin3', 'op'), operations['op1'])
+        self.assertEquals(op_struct('test_plugin3', 'op'), operations['test_interface3.op1'])
+        self.assertEquals(op_struct('test_plugin4', 'op2'), operations['op2'])
+        self.assertEquals(op_struct('test_plugin4', 'op2'), operations['test_interface4.op2'])
         self.assertEquals(4, len(node['plugins']))
 
     def test_type_interface_recursive_derivation(self):
@@ -692,10 +697,10 @@ plugins:
         self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals(8, len(operations))
-        self.assertEquals('test_plugin2', operations['start'])
-        self.assertEquals('test_plugin2', operations['test_interface2.start'])
-        self.assertEquals('test_plugin2', operations['stop'])
-        self.assertEquals('test_plugin2', operations['test_interface2.stop'])
+        self.assertEquals(op_struct('test_plugin2', 'start'), operations['start'])
+        self.assertEquals(op_struct('test_plugin2', 'start'), operations['test_interface2.start'])
+        self.assertEquals(op_struct('test_plugin2', 'stop'), operations['stop'])
+        self.assertEquals(op_struct('test_plugin2', 'stop'), operations['test_interface2.stop'])
         self.assertEquals(2, len(node['plugins']))
 
     def test_two_explicit_interfaces_with_same_operation_name(self):
@@ -724,17 +729,17 @@ plugins:
         self.assertEquals('test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
-        self.assertEquals('test_plugin', operations['test_interface1.install'])
-        self.assertEquals('test_plugin', operations['terminate'])
-        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        self.assertEquals(op_struct('test_plugin', 'install'), operations['test_interface1.install'])
+        self.assertEquals(op_struct('test_plugin', 'terminate'), operations['terminate'])
+        self.assertEquals(op_struct('test_plugin', 'terminate'), operations['test_interface1.terminate'])
         plugin_props = node['plugins']['other_test_plugin']
         self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.install'])
-        self.assertEquals('other_test_plugin', operations['shutdown'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'install'), operations['test_interface2.install'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['test_interface2.shutdown'])
         self.assertEquals(6, len(operations))
 
     def test_plugins_derived_from_field(self):
