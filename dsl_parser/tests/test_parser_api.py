@@ -1472,7 +1472,14 @@ plugins:
         self.assertDictEqual({'install': 'test_plugin.install'}, relationship['source_interfaces'][
             'test_interface1'][0])
         self.assertEquals('reachable', relationship['state'])
-        self.assertEquals(4, len(relationship))
+        relationship_source_operations = relationship['source_operations']
+        self.assertDictEqual(op_struct('test_plugin', 'install'),
+                             relationship_source_operations['install'])
+        self.assertDictEqual(op_struct('test_plugin', 'install'),
+                             relationship_source_operations['test_interface1.install'])
+        self.assertEqual(2, len(relationship_source_operations))
+
+        self.assertEquals(5, len(relationship))
         plugin_def = result['nodes'][1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
         self.assertEquals('false', plugin_def['agent_plugin'])
@@ -1542,7 +1549,19 @@ plugins:
         self.assertEquals('reachable', relationship['state'])
         self.assertDictEqual({'op1': 'test_plugin.task_name1'}, relationship['source_interfaces']['interface1'][0])
         self.assertDictEqual({'op2': 'test_plugin.task_name2'}, relationship['target_interfaces']['interface2'][0])
-        self.assertEquals(5, len(relationship))
+
+        rel_source_ops = relationship['source_operations']
+
+        self.assertDictEqual(op_struct('test_plugin', 'task_name1'), rel_source_ops['op1'])
+        self.assertDictEqual(op_struct('test_plugin', 'task_name1'), rel_source_ops['interface1.op1'])
+        self.assertEquals(2, len(rel_source_ops))
+
+        rel_target_ops = relationship['target_operations']
+        self.assertDictEqual(op_struct('test_plugin', 'task_name2'), rel_target_ops['op2'])
+        self.assertDictEqual(op_struct('test_plugin', 'task_name2'), rel_target_ops['interface2.op2'])
+        self.assertEquals(2, len(rel_target_ops))
+
+        self.assertEquals(7, len(relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
 
@@ -1555,6 +1574,9 @@ plugins:
             relationships:
                 -   type: relationship
                     target: test_node
+                    source_interfaces:
+                        test_interface3:
+                            - install: test_plugin.install
                     target_interfaces:
                         test_interface1:
                             - install: test_plugin.install
@@ -1583,7 +1605,7 @@ plugins:
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(2, len(parent_relationship))
         self.assertEquals(3, len(relationship))
-        self.assertEquals(5, len(node_relationship))
+        self.assertEquals(7, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
 
@@ -1612,12 +1634,27 @@ plugins:
         self.assertEquals(1, len(node_relationship['target_interfaces']['test_interface1']))
         self.assertDictEqual({'install': 'test_plugin.install'},
                              node_relationship['target_interfaces']['test_interface1'][0])
-        self.assertEquals(1, len(node_relationship['source_interfaces']))
+        self.assertEquals(2, len(node_relationship['source_interfaces']))
+        self.assertEquals(1, len(node_relationship['source_interfaces']['test_interface3']))
+        self.assertEquals({'install': 'test_plugin.install'},
+                          node_relationship['source_interfaces']['test_interface2'][0])
         self.assertEquals(2, len(node_relationship['source_interfaces']['test_interface2']))
         self.assertEquals({'install': 'test_plugin.install'},
                           node_relationship['source_interfaces']['test_interface2'][0])
         self.assertEquals({'terminate': 'test_plugin.terminate'},
                           node_relationship['source_interfaces']['test_interface2'][1])
+
+        rel_source_ops = node_relationship['source_operations']
+        self.assertEquals(4, len(rel_source_ops))
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_source_ops['test_interface2.install'])
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_source_ops['test_interface3.install'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_source_ops['terminate'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_source_ops['test_interface2.terminate'])
+
+        rel_target_ops = node_relationship['target_operations']
+        self.assertEquals(2, len(rel_target_ops))
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_target_ops['install'])
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_target_ops['test_interface1.install'])
 
     def test_relationship_interfaces_inheritance_merge(self):
         #testing for a complete inheritance path for relationships
@@ -1667,7 +1704,7 @@ plugins:
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(3, len(parent_relationship))
         self.assertEquals(3, len(relationship))
-        self.assertEquals(5, len(node_relationship))
+        self.assertEquals(7, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
 
@@ -1703,6 +1740,23 @@ plugins:
         self.assertDictEqual({'terminate2': 'test_plugin.terminate'}, relationship['source_interfaces']['test_interface'][1])
         self.assertEquals({'destroy2': 'test_plugin.destroy2'}, node_relationship['source_interfaces']['test_interface'][2])
 
+        rel_source_ops = node_relationship['source_operations']
+        self.assertDictEqual(op_struct('test_plugin', 'install2'), rel_source_ops['install2'])
+        self.assertDictEqual(op_struct('test_plugin', 'install2'), rel_source_ops['test_interface.install2'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_source_ops['terminate2'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_source_ops['test_interface.terminate2'])
+        self.assertDictEqual(op_struct('test_plugin', 'destroy2'), rel_source_ops['destroy2'])
+        self.assertDictEqual(op_struct('test_plugin', 'destroy2'), rel_source_ops['test_interface.destroy2'])
+        self.assertEquals(6, len(rel_source_ops))
+
+        rel_target_ops = node_relationship['target_operations']
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_target_ops['install'])
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_target_ops['test_interface.install'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_target_ops['terminate'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_target_ops['test_interface.terminate'])
+        self.assertDictEqual(op_struct('test_plugin', 'destroy1'), rel_target_ops['destroy'])
+        self.assertDictEqual(op_struct('test_plugin', 'destroy1'), rel_target_ops['test_interface.destroy'])
+        self.assertEquals(6, len(rel_source_ops))
 
     def test_node_host_id_field(self):
         yaml = """
@@ -2071,8 +2125,11 @@ plugins:
         self.assertEquals('test_relationship', relationship1['type'])
         self.assertEquals('test_app.test_node', relationship1['target_id'])
         self.assertEquals('reachable', relationship1['state'])
-        self.assertEquals(4, len(relationship1))
-
+        rel1_source_ops = relationship1['source_operations']
+        self.assertDictEqual(op_struct('test_plugin1', 'install'), rel1_source_ops['install'])
+        self.assertDictEqual(op_struct('test_plugin1', 'install'), rel1_source_ops['test_interface1.install'])
+        self.assertEquals(2, len(rel1_source_ops))
+        self.assertEquals(5, len(relationship1))
         plugin1_def = result['nodes'][1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
         self.assertEquals('false', plugin1_def['agent_plugin'])
@@ -2082,7 +2139,11 @@ plugins:
         self.assertEquals('test_relationship', relationship2['type'])
         self.assertEquals('test_app.test_node', relationship2['target_id'])
         self.assertEquals('reachable', relationship2['state'])
-        self.assertEquals(4, len(relationship2))
+        rel2_source_ops = relationship2['target_operations']
+        self.assertDictEqual(op_struct('test_plugin2', 'install'), rel2_source_ops['install'])
+        self.assertDictEqual(op_struct('test_plugin2', 'install'), rel2_source_ops['test_interface1.install'])
+        self.assertEquals(2, len(rel2_source_ops))
+        self.assertEquals(5, len(relationship2))
 
         #expecting the other plugin to be under test_node rather than test_node2:
         plugin2_def = result['nodes'][0]['plugins']['test_plugin2']
