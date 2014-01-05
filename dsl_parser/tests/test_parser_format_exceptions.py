@@ -26,8 +26,8 @@ class TestParserFormatExceptions(AbstractTestParser):
 
     def test_illegal_yaml_dsl(self):
         yaml = """
-interfaces:
-    test_interface:
+plugins:
+    plugin1:
         -   item1: {}
     -   bad_format: {}
         """
@@ -35,11 +35,11 @@ interfaces:
 
     def test_no_blueprint(self):
         yaml = """
-interfaces:
-    test_interface2:
-        operations:
-            -   "install"
-            -   "terminate"
+plugins:
+    plugin1:
+        derived_from: cloudify.plugins.remote_plugin
+        properties:
+            url: some_url
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -92,71 +92,62 @@ blueprint:
 
     def test_interface_with_no_operations(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
-interfaces:
-    test_interface1: {}
-        """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_interface_with_empty_operations_list(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-interfaces:
-    test_interface1:
-        operations: {}
+types:
+    my_type:
+        interfaces:
+            my_interface: []
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_interface_with_duplicate_operations(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-            -   "terminate"
-            -   "install"
+        yaml = self.BASIC_BLUEPRINT_SECTION + """
+types:
+    my_type:
+        interfaces:
+            test_interface1:
+                -   install
+                -   terminate
+                -   install
         """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_illegal_interface_declaration(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin"
-                some_other_property: "meh"
-
+            test_interface1:
+                should: be
+                a: list
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_illegal_interface_declaration_2(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
-            -   test_interface1:
-                    explicit_plugin1: "test_plugin1"
-                    explicit_plugin2: "test_plugin2"
+            test_interface1:
+                - 1 # not a string
+            """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_type_with_illegal_interface_declaration_3(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        interfaces:
+            test_interface1:
+                - a: 1 # key not a string
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_with_empty_interfaces_declaration(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces: {}
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_dsl_with_explicit_interface_mapped_to_two_plugins(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
-types:
-    test_type:
-        interfaces:
-            -   test_interface1:
-                    -   "test_plugin"
-                    -   "test_plugin2"
-        properties:
-            install_agent: 'false'
-"""
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_node_extra_properties(self):
@@ -168,16 +159,11 @@ types:
 
     def test_plugin_without_url(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
+
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -229,50 +215,22 @@ types:
     """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
-    def test_plugin_without_interface(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-
-plugins:
-    test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
-            """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
     def test_plugin_without_derived_from_field(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-
 plugins:
     test_plugin:
         properties:
             url: "http://test_url.zip"
-            interface: "test_interface1"
-            extra_prop: "some_val"
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_plugin_with_extra_properties(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
             url: "http://test_url.zip"
-            interface: "test_interface1"
             extra_prop: "some_val"
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
@@ -702,17 +660,7 @@ relationships:
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
     test_relationship:
-        interface: {}
-                """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_top_level_relationships_interface_without_name(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        interface:
-            operations:
-                -   "install"
+        source_interfaces: {}
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -720,18 +668,8 @@ relationships:
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
     test_relationship:
-        interface:
-            name: "test_rel_interface"
-                """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_top_level_relationships_interface_with_empty_operations(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        interface:
-            name: "test_rel_interface"
-            operations: []
+        source_interfaces:
+            my_interface: []
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -739,9 +677,8 @@ relationships:
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
     test_relationship:
-        interface:
-            name: "test_rel_interface"
-            operations: "install"
+        source_interfaces:
+            test_rel_interface: string
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -749,45 +686,12 @@ relationships:
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
     test_relationship:
-        interface:
-            name: "test_rel_interface"
-            operations:
-                -   "install"
-                -   "remove"
-                -   "install"
+        source_interfaces:
+            test_rel_interface:
+                -   install
+                -   remove
+                -   install
                 """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_top_level_relationships_workflow_with_no_ref_or_radial(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        workflow:
-            install: {}
-                """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_top_level_relationships_workflow_with_no_ref_or_radial(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        workflow:
-            install:
-                radial: "custom radial"
-                some_other_prop: "val"
-                """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_top_level_relationships_workflow_with_both_ref_or_radial(self):
-        file_name = self.make_file_with_name('some radial code', 'custom_ref.radial')
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        workflow:
-            install:
-                radial: "custom radial"
-                ref: "{0}"
-                """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_type_relationship(self):
@@ -803,13 +707,6 @@ types:
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships:
                 -   target: "fake_node"
-                """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationships_relationship_without_target(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-            relationships:
-                -   type: "fake_relationship"
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
@@ -850,112 +747,42 @@ types:
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
-
-
-
-
-
-
-
-    def test_instance_relationships_relationship_with_empty_interface(self):
+    def test_instance_relationships_relationship_with_empty_source_interfaces(self):
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships:
                 -   type: "fake_relationship"
                     target: "fake_node"
-                    interface: {}
+                    source_interfaces: {}
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
-    def test_instance_relationships_relationship_with_interface_without_name(self):
+    def test_instance_relationships_relationship_with_empty_target_interfaces(self):
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships:
                 -   type: "fake_relationship"
                     target: "fake_node"
-                    interface:
-                        operations:
-                            -   "install"
+                    target_interfaces: {}
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
-    def test_instance_relationships_relationship_with_interface_without_operations(self):
+    def test_instance_relationships_relationship_with_source_interface_without_operations(self):
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships:
                 -   type: "fake_relationship"
                     target: "fake_node"
-                    interface:
-                        name: "test_rel_interface"
+                    source_interfaces:
+                        my_interface: []
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
-    def test_instance_relationships_relationship_with_interface_with_empty_operations(self):
+    def test_instance_relationships_relationship_with_target_interface_without_operations(self):
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships:
                 -   type: "fake_relationship"
                     target: "fake_node"
-                    interface:
-                        name: "test_rel_interface"
-                        operations: []
+                    target_interfaces:
+                        my_interface: []
                 """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationships_relationship_with_interface_with_operations_string(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-            relationships:
-                -   type: "fake_relationship"
-                    target: "fake_node"
-                    interface:
-                        name: "test_rel_interface"
-                        operations: "install"
-                """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationships_relationship_with_interface_with_duplicate_operations(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-            relationships:
-                -   type: "fake_relationship"
-                    target: "fake_node"
-                    interface:
-                        name: "test_rel_interface"
-                        operations:
-                            -   "install"
-                            -   "remove"
-                            -   "install"
-                """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationships_relationship_with_workflow_with_no_ref_or_radial(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-            relationships:
-                -   type: "fake_relationship"
-                    target: "fake_node"
-                    workflow:
-                        install: {}
-                """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationships_relationship_with_workflow_with_no_ref_or_radial(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-            relationships:
-                -   type: "fake_relationship"
-                    target: "fake_node"
-                    workflow:
-                        install:
-                            radial: "custom radial"
-                            some_other_prop: "val"
-                """
-        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationships_relationship_with_workflow_with_both_ref_or_radial(self):
-        file_name = self.make_file_with_name('some radial code', 'custom_ref.radial')
-        yaml = self.MINIMAL_BLUEPRINT + """
-            relationships:
-                -   type: "fake_relationship"
-                    target: "fake_node"
-                    workflow:
-                        install:
-                            radial: "custom radial"
-                            ref: "{0}"
-                """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
     def test_multiple_instances_with_extra_property(self):

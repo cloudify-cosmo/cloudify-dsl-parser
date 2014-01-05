@@ -20,6 +20,11 @@ from dsl_parser.parser import parse, parse_from_path, parse_from_url
 from urllib import pathname2url
 import os
 
+
+def op_struct(plugin_name, operation_mapping):
+    return {'plugin': plugin_name, 'operation': operation_mapping}
+
+
 class TestParserApi(AbstractTestParser):
 
     def _assert_minimal_blueprint(self, result, expected_type='test_type', expected_declared_type='test_type'):
@@ -56,23 +61,25 @@ class TestParserApi(AbstractTestParser):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('test_interface1', plugin_props['interface'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
         operations = node['operations']
-        self.assertEquals('test_plugin', operations['install'])
-        self.assertEquals('test_plugin', operations['test_interface1.install'])
-        self.assertEquals('test_plugin', operations['terminate'])
-        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        self.assertEquals(op_struct('test_plugin', 'install'), operations['install'])
+        self.assertEquals(op_struct('test_plugin', 'install'), operations['test_interface1.install'])
+        self.assertEquals(op_struct('test_plugin', 'terminate'), operations['terminate'])
+        self.assertEquals(op_struct('test_plugin', 'terminate'), operations['test_interface1.terminate'])
 
     def test_type_with_single_explicit_interface_and_plugin(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin"
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
+                - start: test_plugin.start
         properties:
             install_agent: 'false'
             """
@@ -85,25 +92,22 @@ types:
         result = parse(yaml)
         self._assert_blueprint(result)
 
-    def test_dsl_with_type_with_both_explicit_and_implicit_interfaces_declarations(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+    def test_dsl_with_type_with_operation_mappings(self):
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin"
-            -   test_interface2
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "shutdown"
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
+            test_interface2:
+                - start: other_test_plugin.start
+                - shutdown: other_test_plugin.shutdown
 
 plugins:
     other_test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
 """
         result = parse(yaml)
@@ -111,52 +115,47 @@ plugins:
         self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         operations = node['operations']
-        self.assertEquals('other_test_plugin', operations['start'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.start'])
-        self.assertEquals('other_test_plugin', operations['shutdown'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'start'), operations['start'])
+        self.assertEquals(op_struct('other_test_plugin', 'start'), operations['test_interface2.start'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['test_interface2.shutdown'])
 
     def test_merge_plugins_and_interfaces_imports(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 plugins:
     other_test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
 types:
     test_type:
         interfaces:
-            -   test_interface1
-            -   test_interface2
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "shutdown"
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
+            test_interface2:
+                - start: other_test_plugin.start
+                - shutdown: other_test_plugin.shutdown
         """
         result = parse(yaml)
         node = result['nodes'][0]
         self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
-        self.assertEquals('other_test_plugin', operations['start'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.start'])
-        self.assertEquals('other_test_plugin', operations['shutdown'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'start'), operations['start'])
+        self.assertEquals(op_struct('other_test_plugin', 'start'), operations['test_interface2.start'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['test_interface2.shutdown'])
 
     def test_workflows_recursive_imports(self):
         bottom_level_yaml = self.MINIMAL_BLUEPRINT + """
@@ -246,7 +245,7 @@ imports:
         bottom_level_yaml = self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -279,7 +278,7 @@ imports: []
         bottom_level_yaml = self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -597,49 +596,45 @@ types:
         self.assertEquals('val4_parent', node['properties']['key4'])
 
     def test_type_interface_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         interfaces:
-            -   test_interface1
-            -   test_interface2: test_plugin2
-            -   test_interface3
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
+            test_interface2:
+                - start: test_plugin2.start
+                - stop: test_plugin2.stop
+            test_interface3:
+                - op1: test_plugin3.op
         derived_from: "test_type_parent"
 
     test_type_parent:
         interfaces:
-            -   test_interface1: nop-plugin
-            -   test_interface2
-            -   test_interface3
-            -   test_interface4
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "stop"
-    test_interface3:
-        operations:
-            -   "op1"
-    test_interface4:
-        operations:
-            -   "op2"
+            test_interface1:
+                - install: nop_plugin.install
+                - terminate: nop_plugin.install
+            test_interface2:
+                - start: test_plugin2.start
+                - stop: test_plugin2.stop
+            test_interface3:
+                 - op1: test_plugin3.op
+            test_interface4:
+                - op2: test_plugin4.op2
 
 plugins:
     test_plugin2:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
     test_plugin3:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface3"
             url: "http://test_url3.zip"
     test_plugin4:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface4"
             url: "http://test_url4.zip"
     """
 
@@ -647,29 +642,30 @@ plugins:
         self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('test_plugin2', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals(12, len(operations))
-        self.assertEquals('test_plugin2', operations['start'])
-        self.assertEquals('test_plugin2', operations['test_interface2.start'])
-        self.assertEquals('test_plugin2', operations['stop'])
-        self.assertEquals('test_plugin2', operations['test_interface2.stop'])
-        self.assertEquals('test_plugin3', operations['op1'])
-        self.assertEquals('test_plugin3', operations['test_interface3.op1'])
-        self.assertEquals('test_plugin4', operations['op2'])
-        self.assertEquals('test_plugin4', operations['test_interface4.op2'])
+        self.assertEquals(op_struct('test_plugin2', 'start'), operations['start'])
+        self.assertEquals(op_struct('test_plugin2', 'start'), operations['test_interface2.start'])
+        self.assertEquals(op_struct('test_plugin2', 'stop'), operations['stop'])
+        self.assertEquals(op_struct('test_plugin2', 'stop'), operations['test_interface2.stop'])
+        self.assertEquals(op_struct('test_plugin3', 'op'), operations['op1'])
+        self.assertEquals(op_struct('test_plugin3', 'op'), operations['test_interface3.op1'])
+        self.assertEquals(op_struct('test_plugin4', 'op2'), operations['op2'])
+        self.assertEquals(op_struct('test_plugin4', 'op2'), operations['test_interface4.op2'])
         self.assertEquals(4, len(node['plugins']))
 
     def test_type_interface_recursive_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         interfaces:
-            -   test_interface1
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
         derived_from: "test_type_parent"
 
     test_type_parent:
@@ -677,20 +673,17 @@ types:
 
     test_type_grandparent:
         interfaces:
-            -   test_interface1: "non_plugin"
-            -   test_interface2: "test_plugin2"
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "start"
-            -   "stop"
+            test_interface1:
+                - install: non_plugin.install
+                - terminate: non_plugin.terminate
+            test_interface2:
+                - start: test_plugin2.start
+                - stop: test_plugin2.stop
 
 plugins:
     test_plugin2:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
         """
 
@@ -698,62 +691,55 @@ plugins:
         self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('test_plugin2', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
         self.assertEquals(8, len(operations))
-        self.assertEquals('test_plugin2', operations['start'])
-        self.assertEquals('test_plugin2', operations['test_interface2.start'])
-        self.assertEquals('test_plugin2', operations['stop'])
-        self.assertEquals('test_plugin2', operations['test_interface2.stop'])
+        self.assertEquals(op_struct('test_plugin2', 'start'), operations['start'])
+        self.assertEquals(op_struct('test_plugin2', 'start'), operations['test_interface2.start'])
+        self.assertEquals(op_struct('test_plugin2', 'stop'), operations['stop'])
+        self.assertEquals(op_struct('test_plugin2', 'stop'), operations['test_interface2.stop'])
         self.assertEquals(2, len(node['plugins']))
 
     def test_two_explicit_interfaces_with_same_operation_name(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_INTERFACE_AND_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin"
-            -   test_interface2: "other_test_plugin"
-
-interfaces:
-    test_interface2:
-        operations:
-            -   "install"
-            -   "shutdown"
-
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
+            test_interface2:
+                - install: other_test_plugin.install
+                - shutdown: other_test_plugin.shutdown
 plugins:
     other_test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
     """
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface1', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
         operations = node['operations']
-        self.assertEquals('test_plugin', operations['test_interface1.install'])
-        self.assertEquals('test_plugin', operations['terminate'])
-        self.assertEquals('test_plugin', operations['test_interface1.terminate'])
+        self.assertEquals(op_struct('test_plugin', 'install'), operations['test_interface1.install'])
+        self.assertEquals(op_struct('test_plugin', 'terminate'), operations['terminate'])
+        self.assertEquals(op_struct('test_plugin', 'terminate'), operations['test_interface1.terminate'])
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('test_interface2', plugin_props['interface'])
+        self.assertEquals(3, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.install'])
-        self.assertEquals('other_test_plugin', operations['shutdown'])
-        self.assertEquals('other_test_plugin', operations['test_interface2.shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'install'), operations['test_interface2.install'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'), operations['test_interface2.shutdown'])
         self.assertEquals(6, len(operations))
 
     def test_plugins_derived_from_field(self):
@@ -761,27 +747,19 @@ plugins:
 types:
     test_type:
         interfaces:
-            -   test_interface1: "test_plugin1"
-            -   test_interface2: "test_plugin2"
-
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-    test_interface2:
-        operations:
-            -   "install"
+            test_interface1:
+                - install: test_plugin1.install
+            test_interface2:
+                - install: test_plugin2.install
 
 plugins:
     test_plugin1:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url1.zip"
     test_plugin2:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_url2.zip"
     """
         result = parse(yaml)
@@ -793,7 +771,7 @@ plugins:
         bottom_level_yaml = self.BASIC_TYPE
         self.make_file_with_name(bottom_level_yaml, 'bottom_level.yaml')
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   \"bottom_level.yaml\""""
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -813,7 +791,7 @@ imports:
         bottom_level_yaml = self.BASIC_TYPE
         self.make_file_with_name(bottom_level_yaml, 'bottom_level.yaml')
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   \"bottom_level.yaml\""""
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -1322,7 +1300,7 @@ policies:
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
-        node_policies = node['policies']        
+        node_policies = node['policies']
         self.assertEquals(2, len(node_policies))
         self.assertEquals(1, len(self._get_policy_from_node(node, 'policy1')['rules']))
         self.assertEquals('rule1', self._get_policy_from_node(node, 'policy1')['rules'][0]['type'])
@@ -1360,31 +1338,28 @@ relationships:
 relationships:
     empty_rel: {}
     test_relationship:
-        plugin: "test_plugin"
-        bind_at: "pre_started"
-        run_on_node: "source"
         derived_from: "empty_rel"
-        workflow:
-            radial: "custom radial"
-        interface:
-            name: "test_interface2"
-            operations:
-                -   "install"
-                -   "terminate"
+        source_interfaces:
+            test_interface3:
+                - test_interface3_op1
+        target_interfaces:
+            test_interface4:
+                - test_interface4_op1: test_plugin.task_name
         """
         result = parse(yaml)
         self._assert_blueprint(result)
-        test_relationship = result['relationships']['test_relationship']
         self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
+        test_relationship = result['relationships']['test_relationship']
         self.assertTrue('derived_from' not in test_relationship)
         self.assertEquals('test_relationship', test_relationship['name'])
-        self.assertEquals('test_plugin', test_relationship['plugin'])
-        self.assertEquals('pre_started', test_relationship['bind_at'])
-        self.assertEquals('source', test_relationship['run_on_node'])
-        self.assertEquals('custom radial', test_relationship['workflow'])
-        self.assertEquals(2, len(test_relationship['interface']['operations']))
 
-    def test_top_level_relationships_relationship_with_ref_workflow(self):
+        result_test_interface_3 = test_relationship['source_interfaces']['test_interface3']
+        self.assertEquals('test_interface3_op1', result_test_interface_3[0])
+        result_test_interface_4 = test_relationship['target_interfaces']['test_interface4']
+        self.assertEquals({'test_interface4_op1': 'test_plugin.task_name'}, result_test_interface_4[0])
+
+    # TODO rewrite test once we put workflows in relationship
+    def _test_top_level_relationships_relationship_with_ref_workflow(self):
         ref_alias = 'ref_alias'
         radial_file_path = self.make_file_with_name('ref custom radial', 'radial_file.radial')
 
@@ -1403,26 +1378,17 @@ relationships:
 relationships:
     empty_rel: {}
     test_relationship:
-        plugin: "test_plugin"
-        bind_at: "pre_started"
-        run_on_node: "source"
         derived_from: "empty_rel"
-        workflow:
-            radial: "custom radial"
-        interface:
-            name: "test_interface2"
-            operations:
-                -   "install"
-                -   "terminate"
+        source_interfaces:
+            test_interface2:
+                -   install: test_plugin.install
+                -   terminate: test_plugin.terminate
         """
 
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
         mid_level_yaml = """
 relationships:
     test_relationship2:
-        plugin: "test_plugin"
-        bind_at: "pre_started"
-        run_on_node: "source"
         derived_from: "test_relationship3"
 imports:
     -   {0}""".format(bottom_file_name)
@@ -1430,82 +1396,45 @@ imports:
         top_level_yaml = """
 relationships:
     test_relationship3:
-        bind_at: "post_started"
-        run_on_node: "target"
+        target_interfaces:
+            test_interface2:
+                -   install: test_plugin.install
+                -   terminate: test_plugin.terminate
+
 imports:
     -   {0}""".format(mid_file_name)
 
         result = parse(top_level_yaml)
         self._assert_blueprint(result)
-        test_relationship = result['relationships']['test_relationship']
         self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
+        test_relationship = result['relationships']['test_relationship']
         self.assertEquals('test_relationship', test_relationship['name'])
-        self.assertEquals('test_plugin', test_relationship['plugin'])
-        self.assertEquals('pre_started', test_relationship['bind_at'])
-        self.assertEquals('source', test_relationship['run_on_node'])
-        self.assertEquals('custom radial', test_relationship['workflow'])
-        self.assertEquals(2, len(test_relationship['interface']['operations']))
-        self.assertEquals(6, len(test_relationship))
+        self.assertDictEqual({'install': 'test_plugin.install'}, test_relationship['source_interfaces'][
+            'test_interface2'][0])
+        self.assertDictEqual({'terminate': 'test_plugin.terminate'}, test_relationship['source_interfaces'][
+            'test_interface2'][1])
+        self.assertEquals(2, len(test_relationship['source_interfaces']['test_interface2']))
+        self.assertEquals(2, len(test_relationship))
+
         test_relationship2 = result['relationships']['test_relationship2']
         self.assertEquals('test_relationship2', test_relationship2['name'])
-        self.assertEquals('test_plugin', test_relationship2['plugin'])
-        self.assertEquals('pre_started', test_relationship2['bind_at'])
-        self.assertEquals('source', test_relationship2['run_on_node'])
-        self.assertEquals(4, len(test_relationship2))
+        self.assertDictEqual({'install': 'test_plugin.install'}, test_relationship2['target_interfaces'][
+            'test_interface2'][0])
+        self.assertDictEqual({'terminate': 'test_plugin.terminate'}, test_relationship2['target_interfaces'][
+            'test_interface2'][1])
+        self.assertEquals(2, len(test_relationship2['target_interfaces']['test_interface2']))
+        self.assertEquals(2, len(test_relationship2))
+
         test_relationship3 = result['relationships']['test_relationship3']
         self.assertEquals('test_relationship3', test_relationship3['name'])
-        self.assertEquals('post_started', test_relationship3['bind_at'])
-        self.assertEquals('target', test_relationship3['run_on_node'])
-        self.assertEquals(3, len(test_relationship3))
-
-    def test_top_level_relationships_inheritance(self):
-        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
-relationships:
-    empty_rel: {}
-    test_relationship:
-        plugin: "test_plugin"
-        bind_at: "pre_started"
-        run_on_node: "source"
-        derived_from: "empty_rel"
+        self.assertDictEqual({'install': 'test_plugin.install'}, test_relationship3['target_interfaces'][
+            'test_interface2'][0])
+        self.assertDictEqual({'terminate': 'test_plugin.terminate'}, test_relationship3['target_interfaces'][
+            'test_interface2'][1])
+        self.assertEquals(2, len(test_relationship3['target_interfaces']['test_interface2']))
+        self.assertEquals(2, len(test_relationship3))
 
 
-    test_relationship2:
-        plugin: "test_plugin"
-        bind_at: "post_started"
-        derived_from: "test_relationship"
-        interface:
-            name: "test_interface2"
-            operations:
-                -   "install"
-                -   "terminate"
-
-    test_relationship3:
-        derived_from: "test_relationship2"
-        workflow:
-            radial: "custom radial"
-        """
-        result = parse(yaml)
-        self._assert_blueprint(result)
-        test_relationship = result['relationships']['test_relationship']
-        test_relationship2 = result['relationships']['test_relationship2']
-        test_relationship3 = result['relationships']['test_relationship3']
-        self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
-        self.assertEquals('test_relationship', test_relationship['name'])
-        self.assertEquals('test_relationship2', test_relationship2['name'])
-        self.assertEquals('test_relationship3', test_relationship3['name'])
-
-        self.assertEquals('test_plugin', test_relationship['plugin'])
-        self.assertEquals('pre_started', test_relationship['bind_at'])
-        self.assertEquals('source', test_relationship['run_on_node'])
-        self.assertEquals('test_plugin', test_relationship2['plugin'])
-        self.assertEquals('post_started', test_relationship2['bind_at'])
-        self.assertEquals('source', test_relationship2['run_on_node'])
-        self.assertEquals(2, len(test_relationship2['interface']['operations']))
-        self.assertEquals('test_plugin', test_relationship3['plugin'])
-        self.assertEquals('post_started', test_relationship3['bind_at'])
-        self.assertEquals('source', test_relationship3['run_on_node'])
-        self.assertEquals(2, len(test_relationship3['interface']['operations']))
-        self.assertEquals('custom radial', test_relationship3['workflow'])
 
     def test_instance_relationships_empty_relationships_section(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -1522,22 +1451,15 @@ relationships:
             relationships:
                 -   type: "test_relationship"
                     target: "test_node"
-                    bind_at: "pre_started"
-                    run_on_node: "source"
-                    plugin: "test_plugin"
-                    workflow:
-                        radial: "custom workflow"
+                    source_interfaces:
+                        test_interface1:
+                            - install: test_plugin.install
 relationships:
     test_relationship: {}
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url.zip"
                     """
         result = parse(yaml)
@@ -1547,15 +1469,19 @@ plugins:
         relationship = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_app.test_node', relationship['target_id'])
-        self.assertEquals('pre_started', relationship['bind_at'])
-        self.assertEquals('source', relationship['run_on_node'])
-        self.assertEquals('custom workflow', relationship['workflow'])
+        self.assertDictEqual({'install': 'test_plugin.install'}, relationship['source_interfaces'][
+            'test_interface1'][0])
         self.assertEquals('reachable', relationship['state'])
-        self.assertEquals('test_plugin', relationship['plugin'])
-        self.assertEquals(7, len(relationship))
+        relationship_source_operations = relationship['source_operations']
+        self.assertDictEqual(op_struct('test_plugin', 'install'),
+                             relationship_source_operations['install'])
+        self.assertDictEqual(op_struct('test_plugin', 'install'),
+                             relationship_source_operations['test_interface1.install'])
+        self.assertEqual(2, len(relationship_source_operations))
+
+        self.assertEquals(5, len(relationship))
         plugin_def = result['nodes'][1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
-        self.assertEquals('test_interface1', plugin_def['interface'])
         self.assertEquals('false', plugin_def['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_def['url'])
         dependents = result['nodes'][0]['dependents']
@@ -1584,8 +1510,8 @@ relationships:
         self.assertEquals('test_app.test_node', result['nodes'][1]['relationships'][1]['target_id'])
         self.assertEquals('reachable', result['nodes'][1]['relationships'][0]['state'])
         self.assertEquals('reachable', result['nodes'][1]['relationships'][1]['state'])
-        self.assertEquals(4, len(result['nodes'][1]['relationships'][0]))
-        self.assertEquals(4, len(result['nodes'][1]['relationships'][1]))
+        self.assertEquals(3, len(result['nodes'][1]['relationships'][0]))
+        self.assertEquals(3, len(result['nodes'][1]['relationships'][1]))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
 
@@ -1600,29 +1526,41 @@ relationships:
             relationships:
                 -   type: test_relationship
                     target: test_node
-                    bind_at: "pre_started"
+                    source_interfaces:
+                        interface1:
+                            - op1: test_plugin.task_name1
 relationships:
     relationship: {}
     test_relationship:
-        run_on_node: "source"
         derived_from: "relationship"
-        workflow:
-            radial: "custom radial"
-        interface:
-            name: "test_interface2"
-            operations:
-                -   "install"
-                -   "terminate"
+        target_interfaces:
+            interface2:
+                - op2: test_plugin.task_name2
+plugins:
+    test_plugin:
+        derived_from: cloudify.plugins.remote_plugin
+        properties:
+            url: some_url
                     """
         result = parse(yaml)
         relationship = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_app.test_node', relationship['target_id'])
-        self.assertEquals('pre_started', relationship['bind_at'])
-        self.assertEquals('source', relationship['run_on_node'])
-        self.assertEquals(2, len(relationship['interface']['operations']))
-        self.assertEquals('custom radial', relationship['workflow'])
         self.assertEquals('reachable', relationship['state'])
+        self.assertDictEqual({'op1': 'test_plugin.task_name1'}, relationship['source_interfaces']['interface1'][0])
+        self.assertDictEqual({'op2': 'test_plugin.task_name2'}, relationship['target_interfaces']['interface2'][0])
+
+        rel_source_ops = relationship['source_operations']
+
+        self.assertDictEqual(op_struct('test_plugin', 'task_name1'), rel_source_ops['op1'])
+        self.assertDictEqual(op_struct('test_plugin', 'task_name1'), rel_source_ops['interface1.op1'])
+        self.assertEquals(2, len(rel_source_ops))
+
+        rel_target_ops = relationship['target_operations']
+        self.assertDictEqual(op_struct('test_plugin', 'task_name2'), rel_target_ops['op2'])
+        self.assertDictEqual(op_struct('test_plugin', 'task_name2'), rel_target_ops['interface2.op2'])
+        self.assertEquals(2, len(rel_target_ops))
+
         self.assertEquals(7, len(relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
@@ -1636,38 +1574,27 @@ relationships:
             relationships:
                 -   type: relationship
                     target: test_node
-                    run_on_node: "target"
-                    workflow:
-                        radial: "node custom radial"
+                    source_interfaces:
+                        test_interface3:
+                            - install: test_plugin.install
+                    target_interfaces:
+                        test_interface1:
+                            - install: test_plugin.install
 relationships:
     relationship:
-        plugin: "test_plugin"
-        run_on_node: "source"
         derived_from: "parent_relationship"
-        interface:
-            name: "test_interface2"
-            operations:
-                -   "install"
-                -   "terminate"
+        source_interfaces:
+            test_interface2:
+                -   install: test_plugin.install
+                -   terminate: test_plugin.terminate
     parent_relationship:
-        run_on_node: "target"
-        bind_at: "pre_started"
-        workflow:
-            radial: "parent custom radial"
-        interface:
-            name: "test_interface3"
-            operations:
-                -   "install"
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-            -   "terminate"
+        target_interfaces:
+            test_interface3:
+                - install
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url.zip"
 
         """
@@ -1676,41 +1603,160 @@ plugins:
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
-        self.assertEquals(5, len(parent_relationship))
-        self.assertEquals(6, len(relationship))
-        self.assertEquals(8, len(node_relationship))
+        self.assertEquals(2, len(parent_relationship))
+        self.assertEquals(3, len(relationship))
+        self.assertEquals(7, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
-        self.assertEquals('target', parent_relationship['run_on_node'])
-        self.assertEquals('pre_started', parent_relationship['bind_at'])
-        self.assertEquals('parent custom radial', parent_relationship['workflow'])
-        self.assertEquals('test_interface3', parent_relationship['interface']['name'])
-        self.assertEquals(1, len(parent_relationship['interface']['operations']))
-        self.assertEquals('install', parent_relationship['interface']['operations'][0])
+        self.assertEquals(1, len(parent_relationship['target_interfaces']))
+        self.assertEquals(1, len(parent_relationship['target_interfaces']['test_interface3']))
+        self.assertEquals('install', parent_relationship['target_interfaces']['test_interface3'][0])
 
         self.assertEquals('relationship', relationship['name'])
-        self.assertEquals('source', relationship['run_on_node'])
-        self.assertEquals('test_plugin', relationship['plugin'])
-        self.assertEquals('pre_started', relationship['bind_at'])
-        self.assertEquals('parent custom radial', relationship['workflow'])
-        self.assertEquals('test_interface2', relationship['interface']['name'])
-        self.assertEquals(2, len(relationship['interface']['operations']))
-        self.assertEquals('install', relationship['interface']['operations'][0])
-        self.assertEquals('terminate', relationship['interface']['operations'][1])
+        self.assertEquals(1, len(relationship['target_interfaces']))
+        self.assertEquals(1, len(relationship['target_interfaces']['test_interface3']))
+        self.assertEquals('install', relationship['target_interfaces']['test_interface3'][0])
+        self.assertEquals(1, len(relationship['source_interfaces']))
+        self.assertEquals(2, len(relationship['source_interfaces']['test_interface2']))
+        self.assertDictEqual({'install': 'test_plugin.install'}, relationship['source_interfaces']['test_interface2'][
+            0])
+        self.assertDictEqual({'terminate': 'test_plugin.terminate'}, relationship['source_interfaces'][
+            'test_interface2'][1])
 
         self.assertEquals('relationship', node_relationship['type'])
         self.assertEquals('test_app.test_node', node_relationship['target_id'])
-        self.assertEquals('target', node_relationship['run_on_node'])
-        self.assertEquals('test_plugin', node_relationship['plugin'])
-        self.assertEquals('pre_started', node_relationship['bind_at'])
-        self.assertEquals('node custom radial', node_relationship['workflow'])
         self.assertEquals('reachable', node_relationship['state'])
-        self.assertEquals('test_interface2', node_relationship['interface']['name'])
-        self.assertEquals(2, len(node_relationship['interface']['operations']))
-        self.assertEquals('install', node_relationship['interface']['operations'][0])
-        self.assertEquals('terminate', node_relationship['interface']['operations'][1])
+        self.assertEquals(2, len(node_relationship['target_interfaces']))
+        self.assertEquals(1, len(node_relationship['target_interfaces']['test_interface3']))
+        self.assertEquals('install', node_relationship['target_interfaces']['test_interface3'][0])
+        self.assertEquals(1, len(node_relationship['target_interfaces']['test_interface1']))
+        self.assertDictEqual({'install': 'test_plugin.install'},
+                             node_relationship['target_interfaces']['test_interface1'][0])
+        self.assertEquals(2, len(node_relationship['source_interfaces']))
+        self.assertEquals(1, len(node_relationship['source_interfaces']['test_interface3']))
+        self.assertEquals({'install': 'test_plugin.install'},
+                          node_relationship['source_interfaces']['test_interface2'][0])
+        self.assertEquals(2, len(node_relationship['source_interfaces']['test_interface2']))
+        self.assertEquals({'install': 'test_plugin.install'},
+                          node_relationship['source_interfaces']['test_interface2'][0])
+        self.assertEquals({'terminate': 'test_plugin.terminate'},
+                          node_relationship['source_interfaces']['test_interface2'][1])
+
+        rel_source_ops = node_relationship['source_operations']
+        self.assertEquals(4, len(rel_source_ops))
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_source_ops['test_interface2.install'])
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_source_ops['test_interface3.install'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_source_ops['terminate'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_source_ops['test_interface2.terminate'])
+
+        rel_target_ops = node_relationship['target_operations']
+        self.assertEquals(2, len(rel_target_ops))
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_target_ops['install'])
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_target_ops['test_interface1.install'])
+
+    def test_relationship_interfaces_inheritance_merge(self):
+        #testing for a complete inheritance path for relationships
+        #from top-level relationships to a relationship instance
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: relationship
+                    target: test_node
+                    target_interfaces:
+                        test_interface:
+                            - destroy: test_plugin.destroy1
+                    source_interfaces:
+                        test_interface:
+                            - install2: test_plugin.install2
+                            - destroy2: test_plugin.destroy2
+relationships:
+    relationship:
+        derived_from: "parent_relationship"
+        target_interfaces:
+            test_interface:
+                -   install: test_plugin.install
+                -   terminate: test_plugin.terminate
+        source_interfaces:
+            test_interface:
+                -   install2: test_plugin.install
+                -   terminate2: test_plugin.terminate
+    parent_relationship:
+        target_interfaces:
+            test_interface:
+                - install
+        source_interfaces:
+            test_interface:
+                - install2
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            url: "http://test_url.zip"
+
+        """
+        result = parse(yaml)
+        node_relationship = result['nodes'][1]['relationships'][0]
+        relationship = result['relationships']['relationship']
+        parent_relationship = result['relationships']['parent_relationship']
+        self.assertEquals(2, len(result['relationships']))
+        self.assertEquals(3, len(parent_relationship))
+        self.assertEquals(3, len(relationship))
+        self.assertEquals(7, len(node_relationship))
+        dependents = result['nodes'][0]['dependents']
+        self.assertListEqual(['test_app.test_node2'], dependents)
+
+        self.assertEquals('parent_relationship', parent_relationship['name'])
+        self.assertEquals(1, len(parent_relationship['target_interfaces']))
+        self.assertEquals(1, len(parent_relationship['target_interfaces']['test_interface']))
+        self.assertEquals('install', parent_relationship['target_interfaces']['test_interface'][0])
+        self.assertEquals(1, len(parent_relationship['source_interfaces']))
+        self.assertEquals(1, len(parent_relationship['source_interfaces']['test_interface']))
+        self.assertEquals('install2', parent_relationship['source_interfaces']['test_interface'][0])
+
+        self.assertEquals('relationship', relationship['name'])
+        self.assertEquals(1, len(relationship['target_interfaces']))
+        self.assertEquals(2, len(relationship['target_interfaces']['test_interface']))
+        self.assertDictEqual({'install': 'test_plugin.install'}, relationship['target_interfaces']['test_interface'][0])
+        self.assertDictEqual({'terminate': 'test_plugin.terminate'}, relationship['target_interfaces']['test_interface'][1])
+        self.assertEquals(1, len(relationship['source_interfaces']))
+        self.assertEquals(2, len(relationship['source_interfaces']['test_interface']))
+        self.assertDictEqual({'install2': 'test_plugin.install'}, relationship['source_interfaces']['test_interface'][0])
+        self.assertDictEqual({'terminate2': 'test_plugin.terminate'}, relationship['source_interfaces']['test_interface'][1])
+
+        self.assertEquals('relationship', node_relationship['type'])
+        self.assertEquals('test_app.test_node', node_relationship['target_id'])
+        self.assertEquals('reachable', node_relationship['state'])
+        self.assertEquals(1, len(node_relationship['target_interfaces']))
+        self.assertEquals(3, len(node_relationship['target_interfaces']['test_interface']))
+        self.assertDictEqual({'install': 'test_plugin.install'}, node_relationship['target_interfaces']['test_interface'][0])
+        self.assertDictEqual({'terminate': 'test_plugin.terminate'}, relationship['target_interfaces']['test_interface'][1])
+        self.assertDictEqual({'destroy': 'test_plugin.destroy1'}, node_relationship['target_interfaces']['test_interface'][2])
+        self.assertEquals(1, len(node_relationship['source_interfaces']))
+        self.assertEquals(3, len(node_relationship['source_interfaces']['test_interface']))
+        self.assertEquals({'install2': 'test_plugin.install2'}, node_relationship['source_interfaces']['test_interface'][0])
+        self.assertDictEqual({'terminate2': 'test_plugin.terminate'}, relationship['source_interfaces']['test_interface'][1])
+        self.assertEquals({'destroy2': 'test_plugin.destroy2'}, node_relationship['source_interfaces']['test_interface'][2])
+
+        rel_source_ops = node_relationship['source_operations']
+        self.assertDictEqual(op_struct('test_plugin', 'install2'), rel_source_ops['install2'])
+        self.assertDictEqual(op_struct('test_plugin', 'install2'), rel_source_ops['test_interface.install2'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_source_ops['terminate2'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_source_ops['test_interface.terminate2'])
+        self.assertDictEqual(op_struct('test_plugin', 'destroy2'), rel_source_ops['destroy2'])
+        self.assertDictEqual(op_struct('test_plugin', 'destroy2'), rel_source_ops['test_interface.destroy2'])
+        self.assertEquals(6, len(rel_source_ops))
+
+        rel_target_ops = node_relationship['target_operations']
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_target_ops['install'])
+        self.assertDictEqual(op_struct('test_plugin', 'install'), rel_target_ops['test_interface.install'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_target_ops['terminate'])
+        self.assertDictEqual(op_struct('test_plugin', 'terminate'), rel_target_ops['test_interface.terminate'])
+        self.assertDictEqual(op_struct('test_plugin', 'destroy1'), rel_target_ops['destroy'])
+        self.assertDictEqual(op_struct('test_plugin', 'destroy1'), rel_target_ops['test_interface.destroy'])
+        self.assertEquals(6, len(rel_source_ops))
 
     def test_node_host_id_field(self):
         yaml = """
@@ -1803,22 +1849,17 @@ blueprint:
 types:
     cloudify.types.host:
         interfaces:
-            -   "test_interface"
-interfaces:
-    test_interface:
-        operations:
-            -   start
+            test_interface:
+                - start: test_plugin.start
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
             """
         result = parse(yaml)
         plugin = result['nodes'][0]['plugins_to_install'][0]
         self.assertEquals('test_plugin', plugin['name'])
-        self.assertEquals('test_interface', plugin['interface'])
         self.assertEquals('true', plugin['agent_plugin'])
         self.assertEquals('http://test_plugin.zip', plugin['url'])
         self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
@@ -1835,16 +1876,12 @@ blueprint:
 types:
     cloudify.types.host:
         interfaces:
-            -   "test_interface"
-interfaces:
-    test_interface:
-        operations:
-            -   start
+            test_interface:
+                - start: cloudify.plugins.plugin_installer.start
 plugins:
     cloudify.plugins.plugin_installer:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
         """
         #note that we're expecting an empty dict since every node which is a host should have one
@@ -1862,16 +1899,12 @@ blueprint:
 types:
     cloudify.types.host:
         interfaces:
-            -   "test_interface"
-interfaces:
-    test_interface:
-        operations:
-            -   start
+            test_interface:
+                - start: test_plugin.start
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
         """
 
@@ -1908,29 +1941,22 @@ types:
     cloudify.types.host: {}
     test_type:
         interfaces:
-            -   "test_interface"
+            test_interface:
+                - start: test_plugin.start
     test_type2:
         interfaces:
-            -   "test_interface2"
-interfaces:
-    test_interface:
-        operations:
-            -   start
-    test_interface2:
-        operations:
-            -   install
+            test_interface2:
+                - install: test_plugin2.install
 relationships:
     cloudify.relationships.contained_in: {}
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
     test_plugin2:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface2"
             url: "http://test_plugin2.zip"
         """
 
@@ -1942,11 +1968,9 @@ plugins:
         test_plugin = self._get_plugin_to_install_from_node(node, 'test_plugin')
         test_plugin2 = self._get_plugin_to_install_from_node(node, 'test_plugin2')
         self.assertEquals('test_plugin', test_plugin['name'])
-        self.assertEquals('test_interface', test_plugin['interface'])
         self.assertEquals('true', test_plugin['agent_plugin'])
         self.assertEquals('http://test_plugin.zip', test_plugin['url'])
         self.assertEquals('test_plugin2', test_plugin2['name'])
-        self.assertEquals('test_interface2', test_plugin2['interface'])
         self.assertEquals('true', test_plugin2['agent_plugin'])
         self.assertEquals('http://test_plugin2.zip', test_plugin2['url'])
         self.assertEquals(2, len(result['nodes'][0]['plugins_to_install']))
@@ -1955,19 +1979,6 @@ plugins:
         yaml = self.MINIMAL_BLUEPRINT
         result = parse(yaml)
         self.assertEquals({}, result['nodes'][0]['properties']['cloudify_runtime'])
-
-    def test_instance_relationships_stub_relationship_workflow(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: test_relationship
-                    target: test_node
-relationships:
-    test_relationship: {}
-        """
-        result = parse(yaml)
-        self.assertEquals('define stub_workflow\n\t', result['nodes'][1]['relationships'][0]['workflow'])
 
     def test_import_resources(self):
         resource_file_name = 'resource_file.yaml'
@@ -1997,7 +2008,7 @@ imports:
         """.format(os.path.join(self._temp_dir, "mid_level.yaml")) + self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_file_with_name(mid_level_yaml, 'mid_level.yaml')
@@ -2016,7 +2027,7 @@ imports:
             """.format(os.path.join(self._temp_dir, "top_level.yaml")) + self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
 
-        mid_level_yaml = self.BASIC_INTERFACE_AND_PLUGIN + """
+        mid_level_yaml = self.BASIC_PLUGIN + """
 imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
@@ -2029,7 +2040,7 @@ imports:
         self._assert_blueprint(result)
 
     def test_plugins_with_root_plugin(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_TYPE + self.BASIC_INTERFACE_AND_PLUGIN + """
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_TYPE + self.BASIC_PLUGIN + """
     cloudify.plugins.plugin: {}
     cloudify.plugins.remote_plugin:
         derived_from: "cloudify.plugins.plugin"
@@ -2051,10 +2062,12 @@ workflows:
         self._assert_minimal_blueprint(result)
         self.assertEquals('my custom radial', result['workflows']['install'])
 
-    def test_node_interfaces_with_explicit_interface(self):
-        yaml = self.BASIC_INTERFACE_AND_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+    def test_node_interfaces_operation_mapping(self):
+        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
             interfaces:
-                -   test_interface1: "test_plugin"
+                test_interface1:
+                    - install: test_plugin.install
+                    - terminate: test_plugin.terminate
 types:
     test_type: {}
             """
@@ -2073,7 +2086,7 @@ types:
         self.assertFalse('host_id' in result['nodes'][0])
         self.assertEquals('test_app.test_node2', result['nodes'][1]['host_id'])
 
-    def test_instance_relationships_run_on_target_plugin(self):
+    def test_instance_relationships_target_node_plugins(self):
         #tests that plugins defined on instance relationships as "run_on_node"="target" will
         #indeed appear in the output on the target node's plugins section
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -2082,59 +2095,59 @@ types:
             relationships:
                 -   type: "test_relationship"
                     target: "test_node"
-                    run_on_node: "source"
-                    plugin: "test_plugin1"
+                    source_interfaces:
+                        test_interface1:
+                            - install: test_plugin1.install
                 -   type: "test_relationship"
                     target: "test_node"
-                    run_on_node: "target"
-                    plugin: "test_plugin2"
+                    target_interfaces:
+                        test_interface1:
+                            - install: test_plugin2.install
 relationships:
     test_relationship: {}
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
 plugins:
     test_plugin1:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url1.zip"
     test_plugin2:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url2.zip"
                 """
+
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         self.assertEquals('test_app.test_node2', result['nodes'][1]['id'])
         self.assertEquals(2, len(result['nodes'][1]['relationships']))
+
         relationship1 = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship1['type'])
         self.assertEquals('test_app.test_node', relationship1['target_id'])
-        self.assertEquals('source', relationship1['run_on_node'])
         self.assertEquals('reachable', relationship1['state'])
-        self.assertEquals('test_plugin1', relationship1['plugin'])
-        self.assertEquals('define stub_workflow\n\t', relationship1['workflow'])
-        self.assertEquals(6, len(relationship1))
+        rel1_source_ops = relationship1['source_operations']
+        self.assertDictEqual(op_struct('test_plugin1', 'install'), rel1_source_ops['install'])
+        self.assertDictEqual(op_struct('test_plugin1', 'install'), rel1_source_ops['test_interface1.install'])
+        self.assertEquals(2, len(rel1_source_ops))
+        self.assertEquals(5, len(relationship1))
         plugin1_def = result['nodes'][1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
-        self.assertEquals('test_interface1', plugin1_def['interface'])
         self.assertEquals('false', plugin1_def['agent_plugin'])
         self.assertEquals('http://test_url1.zip', plugin1_def['url'])
+
         relationship2 = result['nodes'][1]['relationships'][1]
         self.assertEquals('test_relationship', relationship2['type'])
         self.assertEquals('test_app.test_node', relationship2['target_id'])
-        self.assertEquals('target', relationship2['run_on_node'])
         self.assertEquals('reachable', relationship2['state'])
-        self.assertEquals('test_plugin2', relationship2['plugin'])
-        self.assertEquals('define stub_workflow\n\t', relationship2['workflow'])
-        self.assertEquals(6, len(relationship2))
+        rel2_source_ops = relationship2['target_operations']
+        self.assertDictEqual(op_struct('test_plugin2', 'install'), rel2_source_ops['install'])
+        self.assertDictEqual(op_struct('test_plugin2', 'install'), rel2_source_ops['test_interface1.install'])
+        self.assertEquals(2, len(rel2_source_ops))
+        self.assertEquals(5, len(relationship2))
+
         #expecting the other plugin to be under test_node rather than test_node2:
         plugin2_def = result['nodes'][0]['plugins']['test_plugin2']
         self.assertEquals('test_plugin2', plugin2_def['name'])
-        self.assertEquals('test_interface1', plugin2_def['interface'])
         self.assertEquals('false', plugin2_def['agent_plugin'])
         self.assertEquals('http://test_url2.zip', plugin2_def['url'])
 
@@ -2186,16 +2199,12 @@ blueprint:
 types:
     cloudify.types.host:
         interfaces:
-            -   "test_interface"
-interfaces:
-    test_interface:
-        operations:
-            -   start
+            test_interface:
+                - start: cloudify.plugins.kv_store.start
 plugins:
     cloudify.plugins.kv_store:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "test_interface"
             url: "http://test_plugin.zip"
         """
         #note that we're expecting an empty dict since every node which is a host should have one

@@ -36,18 +36,11 @@ blueprint:
                 key: "val"
         """
 
-    BASIC_INTERFACE_AND_PLUGIN = """
-interfaces:
-    test_interface1:
-        operations:
-            -   "install"
-            -   "terminate"
-
+    BASIC_PLUGIN = """
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "test_interface1"
             url: "http://test_url.zip"
             """
 
@@ -55,7 +48,9 @@ plugins:
 types:
     test_type:
         interfaces:
-            -   test_interface1
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
         properties:
             install_agent: 'false'
             """
@@ -79,7 +74,7 @@ types:
     """ + BASIC_BLUEPRINT_SECTION
 
     BLUEPRINT_WITH_INTERFACES_AND_PLUGINS = BASIC_BLUEPRINT_SECTION + \
-                                            BASIC_INTERFACE_AND_PLUGIN + BASIC_TYPE
+                                            BASIC_PLUGIN + BASIC_TYPE
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
