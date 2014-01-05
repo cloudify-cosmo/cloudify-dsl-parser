@@ -197,51 +197,59 @@ def _post_process_node_relationships(node, node_name_to_node, plugins):
         for relationship in node[RELATIONSHIPS]:
             target_node = node_name_to_node[relationship['target_id']]
             _add_dependent(target_node, node)
-            for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
-                if interfaces in relationship:
-                    operations = {}
-                    node_for_plugins = node if interfaces == SOURCE_INTERFACES else target_node
-                    operations_attribute = 'source_operations' if interfaces == SOURCE_INTERFACES else \
-                                           'target_operations'
-                    for interface_name, interface in relationship[interfaces].items():
-                        operation_mappings = _extract_plugin_names_and_operation_mapping_from_interface(interface,
-                                                                                                        plugins)
-                        for operation_name, plugin_name, operation_mapping in operation_mappings:
-                            if plugin_name is not None:
-                                node_for_plugins[PLUGINS][plugin_name] = _process_plugin(plugins[plugin_name],
-                                                                                         plugin_name)
-                                op_struct = _operation_struct(plugin_name, operation_mapping)
-                                if operation_name in operations:
-                                    # Indicate this implicit operation name needs to be removed as we can only
-                                    # support explicit implementation in this case
-                                    operations[operation_name] = None
-                                else:
-                                    operations[operation_name] = op_struct
-                                operations['{0}.{1}'.format(interface_name, operation_name)] = op_struct
-                            elif operation_mapping is not None:
-                                # This means we couldn't find a matching plugin in the operation mapping
-                                raise DSLParsingLogicException(19, 'Could not extract plugin from operation '
-                                                                   'mapping {0}, '
-                                                                   'which is declared for operation'
-                                                                   ' {1} in interface {2}'
-                                                                   ' in relationship of type {3} in node {4}'
-                                                                   .format(operation_mapping,
-                                                                           operation_name,
-                                                                           interface_name,
-                                                                           relationship['type'],
-                                                                           node['id']))
-                        _validate_no_duplicate_operations(operation_mappings, interface_name, node['id'], node['type'])
-                    operations = dict((operation, op_struct)
-                                      for operation, op_struct in operations.iteritems() if op_struct is not None)
-                    relationship[operations_attribute] = operations
+            _process_node_relationships_operations(relationship, 'source_interfaces', 'source_operations', node,
+                                                   plugins)
+            _process_node_relationships_operations(relationship, 'target_interfaces', 'target_operations', target_node,
+                                                   plugins)
 
 
-def _extract_plugin_names_and_operation_mapping_from_interface(interface, plugins):
+def _process_node_relationships_operations(relationship,
+                                           interfaces_attribute,
+                                           operations_attribute,
+                                           node_for_plugins,
+                                           plugins):
+    if interfaces_attribute in relationship:
+        operations = {}
+        for interface_name, interface in relationship[interfaces_attribute].items():
+            partial_error_message = 'In interface {0}' + \
+                                    ' in relationship of type {1} in node {2}' \
+                                    .format(interface_name,
+                                            relationship['type'],
+                                            node_for_plugins['id'])
+            operation_mapping_context = _extract_plugin_names_and_operation_mapping_from_interface(
+                interface,
+                plugins,
+                19,
+                partial_error_message)
+            _validate_no_duplicate_operations(operation_mapping_context, interface_name, node_for_plugins['id'],
+                                              node_for_plugins['type'])
+            for operation_name, plugin_name, operation_mapping in operation_mapping_context:
+                if plugin_name is not None:
+                    node_for_plugins[PLUGINS][plugin_name] = _process_plugin(plugins[plugin_name],
+                                                                             plugin_name)
+                    op_struct = _operation_struct(plugin_name, operation_mapping)
+                    if operation_name in operations:
+                        # Indicate this implicit operation name needs to be removed as we can only
+                        # support explicit implementation in this case
+                        operations[operation_name] = None
+                    else:
+                        operations[operation_name] = op_struct
+                    operations['{0}.{1}'.format(interface_name, operation_name)] = op_struct
+
+        operations = dict((operation, op_struct)
+                          for operation, op_struct in operations.iteritems() if op_struct is not None)
+        relationship[operations_attribute] = operations
+
+
+def _extract_plugin_names_and_operation_mapping_from_interface(interface,
+                                                               plugins,
+                                                               error_code,
+                                                               partial_error_message):
     plugin_names = plugins.keys()
     result = []
     for operation in interface:
         operation_name, plugin_name, operation_mapping = _extract_plugin_name_and_operation_mapping_from_operation(
-            plugin_names, operation)
+            plugin_names, operation, error_code, partial_error_message)
         result.append((operation_name, plugin_name, operation_mapping))
     return result
 
@@ -332,15 +340,12 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name):
     for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
         if interfaces in rel_obj:
             for interface_name, interface in rel_obj[interfaces].items():
-                mapping = _extract_plugin_names_and_operation_mapping_from_interface(interface, plugins)
-                for operation_name, plugin_name, operation_mapping in mapping:
-                    if plugin_name is None and operation_mapping is not None:
-                        raise DSLParsingLogicException(19, 'Cannot find plugin matching operation {0}, '
-                                                           'which is declared for relationship '
-                                                           ' {1} ({2})'.format(operation_name,
-                                                                               rel_name,
-                                                                               operation_mapping))
-                _validate_no_duplicate_operations(mapping, interface_name, relationship_name=rel_name)
+                operation_mapping_context = _extract_plugin_names_and_operation_mapping_from_interface(
+                    interface,
+                    plugins,
+                    19,
+                    'Relationship: {0}'.format(rel_name))
+                _validate_no_duplicate_operations(operation_mapping_context, interface_name, relationship_name=rel_name)
 
 
 def _rel_inheritance_merging_func(complete_super_type, current_level_type):
@@ -396,7 +401,10 @@ def _merge_interface_list(overridden_interface, overriding_interface):
     return result
 
 
-def _extract_plugin_name_and_operation_mapping_from_operation(plugin_names, operation):
+def _extract_plugin_name_and_operation_mapping_from_operation(plugin_names,
+                                                              operation,
+                                                              error_code,
+                                                              partial_error_message):
     if type(operation) == str:
         return operation, None, None
     operation_name, operation_mapping = operation.items()[0]
@@ -412,7 +420,11 @@ def _extract_plugin_name_and_operation_mapping_from_operation(plugin_names, oper
         return operation_name, longest_prefix_plugin_name, operation_mapping[longest_prefix+1:]
     else:
         # This is an error for validation done somewhere down the current stack trace
-        return operation_name, None, operation_mapping
+        base_error_message = 'Could not extract plugin from operation ' + \
+                             'mapping {0}, which is declared for operation {1}.'.format(operation_mapping,
+                                                                                        operation_name)
+        error_message = base_error_message + partial_error_message
+        raise DSLParsingLogicException(error_code, error_message)
 
 
 def _create_response_policies_section(processed_nodes):
@@ -500,10 +512,6 @@ def _process_node_relationships(app_name, node, node_name, node_names_set, plugi
 
             complete_relationship = _rel_inheritance_merging_func(top_level_relationships[relationship_type],
                                                                   relationship)
-            #since we've merged with the already-processed top_level_relationships, there are a few changes that need
-            #to take place - 'name' is replaced with a [fully qualified] 'target' field, and 'workflow' needs to be
-            #re-processed if it is defined in 'relationship', since it overrides any possible already-processed
-            #workflows that might have been inherited, and has not yet been processed
             complete_relationship['target_id'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
             del (complete_relationship['target'])
             complete_relationship['state'] = 'reachable'
@@ -592,9 +600,21 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     if INTERFACES in complete_node_type:
         interface_objects = complete_node_type[INTERFACES]
         for interface_name, interface_object in interface_objects.items():
-            mappings = _extract_plugin_names_and_operation_mapping_from_interface(interface_object,
-                                                                                  parsed_dsl[PLUGINS])
-            for operation_name, plugin_name, operation_mapping in mappings:
+            error_code = 10
+            partial_error_message = ' in interface {0}' + \
+                                    ' in node {1} of type {2}' \
+                                    .format(interface_name,
+                                            processed_node['id'],
+                                            processed_node['type'])
+
+            operation_mapping_context = _extract_plugin_names_and_operation_mapping_from_interface(
+                interface_object,
+                parsed_dsl[PLUGINS],
+                error_code,
+                partial_error_message)
+            _validate_no_duplicate_operations(operation_mapping_context, interface_name, processed_node['id'],
+                                              processed_node['type'])
+            for operation_name, plugin_name, operation_mapping in operation_mapping_context:
                 if plugin_name is not None:
                     plugin = parsed_dsl[PLUGINS][plugin_name]
                     if not plugin_name in plugins:
@@ -607,19 +627,6 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
                         operations[operation_name] = _operation_struct(plugin_name, operation_mapping)
                     operations['{0}.{1}'.format(interface_name, operation_name)] = _operation_struct(plugin_name,
                                                                                                      operation_mapping)
-                # Operation mapping was defined for a non existent plugin
-                elif operation_mapping is not None:
-                    raise DSLParsingLogicException(10, 'Could not extract plugin from operation '
-                                                       'mapping {0}, '
-                                                       'which is declared for operation'
-                                                       ' {1} in interface {2}'
-                                                       ' in node {3} of type {4}'
-                                                       .format(operation_mapping,
-                                                               operation_name,
-                                                               interface_name,
-                                                               processed_node['id'],
-                                                               processed_node['type']))
-            _validate_no_duplicate_operations(mappings, interface_name, processed_node['id'], processed_node['type'])
 
         operations = dict((operation, op_struct)
                           for operation, op_struct in operations.iteritems() if op_struct is not None)
