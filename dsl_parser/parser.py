@@ -203,41 +203,48 @@ def _post_process_node_relationships(node, node_name_to_node, plugins):
                                                    plugins)
 
 
+def _process_context_operations(partial_error_message, interfaces, plugins, node, error_code):
+    '''
+    partial_error_message should have a place holder for a single argument which is the interface name
+    '''
+    operations = {}
+    for interface_name, interface in interfaces.items():
+        operation_mapping_context = _extract_plugin_names_and_operation_mapping_from_interface(
+            interface,
+            plugins,
+            error_code,
+            'In interface {0} {1}'.format(interface_name, partial_error_message))
+        _validate_no_duplicate_operations(operation_mapping_context, interface_name, node['id'],
+                                          node['type'])
+        for operation_name, plugin_name, operation_mapping, operation_properties in operation_mapping_context:
+            if plugin_name is not None:
+                plugin = plugins[plugin_name]
+                node[PLUGINS][plugin_name] = _process_plugin(plugin, plugin_name)
+                op_struct = _operation_struct(plugin_name, operation_mapping, operation_properties)
+                if operation_name in operations:
+                    # Indicate this implicit operation name needs to be removed as we can only
+                    # support explicit implementation in this case
+                    operations[operation_name] = None
+                else:
+                    operations[operation_name] = op_struct
+                operations['{0}.{1}'.format(interface_name, operation_name)] = op_struct
+
+    return dict((operation, op_struct) for operation, op_struct in operations.iteritems() if op_struct is not None)
+
+
 def _process_node_relationships_operations(relationship,
                                            interfaces_attribute,
                                            operations_attribute,
                                            node_for_plugins,
                                            plugins):
     if interfaces_attribute in relationship:
-        operations = {}
-        for interface_name, interface in relationship[interfaces_attribute].items():
-            partial_error_message = 'In interface {0}' + \
-                                    ' in relationship of type {1} in node {2}' \
-                                    .format(interface_name,
-                                            relationship['type'],
-                                            node_for_plugins['id'])
-            operation_mapping_context = _extract_plugin_names_and_operation_mapping_from_interface(
-                interface,
-                plugins,
-                19,
-                partial_error_message)
-            _validate_no_duplicate_operations(operation_mapping_context, interface_name, node_for_plugins['id'],
-                                              node_for_plugins['type'])
-            for operation_name, plugin_name, operation_mapping, operation_properties in operation_mapping_context:
-                if plugin_name is not None:
-                    node_for_plugins[PLUGINS][plugin_name] = _process_plugin(plugins[plugin_name],
-                                                                             plugin_name)
-                    op_struct = _operation_struct(plugin_name, operation_mapping, operation_properties)
-                    if operation_name in operations:
-                        # Indicate this implicit operation name needs to be removed as we can only
-                        # support explicit implementation in this case
-                        operations[operation_name] = None
-                    else:
-                        operations[operation_name] = op_struct
-                    operations['{0}.{1}'.format(interface_name, operation_name)] = op_struct
+        partial_error_message = 'in relationship of type {0} in node {0}'.format(relationship['type'],
+                                                                                 node_for_plugins['id'])
 
-        operations = dict((operation, op_struct)
-                          for operation, op_struct in operations.iteritems() if op_struct is not None)
+        operations = _process_context_operations(partial_error_message,
+                                                 relationship[interfaces_attribute],
+                                                 plugins, node_for_plugins, 19)
+
         relationship[operations_attribute] = operations
 
 
@@ -497,7 +504,7 @@ def _validate_no_duplicate_element(elements, keyfunc):
             return keyfunc(group[0]), len(group)
 
 
-def _process_node_relationships(app_name, node, node_name, node_names_set, plugins, processed_node,
+def _process_node_relationships(app_name, node, node_name, node_names_set, processed_node,
                                 top_level_relationships):
     if RELATIONSHIPS in node:
         relationships = []
@@ -605,50 +612,19 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_leve
     processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
     processed_node[WORKFLOWS] = complete_node_type[WORKFLOWS]
     processed_node[POLICIES] = complete_node_type[POLICIES]
-
+    processed_node[PLUGINS] = {}
     #handle plugins and operations
-    plugins = {}
-    operations = {}
     if INTERFACES in complete_node_type:
-        interface_objects = complete_node_type[INTERFACES]
-        for interface_name, interface_object in interface_objects.items():
-            error_code = 10
-            partial_error_message = ' in interface {0}' + \
-                                    ' in node {1} of type {2}' \
-                                    .format(interface_name,
-                                            processed_node['id'],
-                                            processed_node['type'])
+        partial_error_message = 'in node {0} of type {1}'.format(processed_node['id'], processed_node['type'])
+        operations = _process_context_operations(partial_error_message,
+                                                 complete_node_type[INTERFACES],
+                                                 _get_dict_prop(parsed_dsl, PLUGINS),
+                                                 processed_node, 10)
 
-            operation_mapping_context = _extract_plugin_names_and_operation_mapping_from_interface(
-                interface_object,
-                parsed_dsl[PLUGINS],
-                error_code,
-                partial_error_message)
-            _validate_no_duplicate_operations(operation_mapping_context, interface_name, processed_node['id'],
-                                              processed_node['type'])
-            for operation_name, plugin_name, operation_mapping, operation_properties in operation_mapping_context:
-                if plugin_name is not None:
-                    plugin = parsed_dsl[PLUGINS][plugin_name]
-                    if not plugin_name in plugins:
-                        plugins[plugin_name] = _process_plugin(plugin, plugin_name)
-                    if operation_name in operations:
-                        # Indicate this implicit operation name needs to be removed as we can only
-                        # support explicit implementation in this case
-                        operations[operation_name] = None
-                    else:
-                        operations[operation_name] = _operation_struct(plugin_name, operation_mapping,
-                                                                       operation_properties)
-                    operations['{0}.{1}'.format(interface_name, operation_name)] = _operation_struct(plugin_name,
-                                                                                                     operation_mapping,
-                                                                                                     operation_properties)
-
-        operations = dict((operation, op_struct)
-                          for operation, op_struct in operations.iteritems() if op_struct is not None)
-        processed_node[PLUGINS] = plugins
         processed_node['operations'] = operations
 
     #handle relationships
-    _process_node_relationships(app_name, node, node_name, node_names_set, _get_dict_prop(parsed_dsl, PLUGINS),
+    _process_node_relationships(app_name, node, node_name, node_names_set,
                                 processed_node, top_level_relationships)
 
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
