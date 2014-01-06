@@ -59,6 +59,27 @@ INTERFACES_SCHEMA = {
                     },
                     {
                         'type': 'string'
+                    },
+                    {
+                        'type': 'object',
+                        'patternProperties': {
+                            '^': {
+                                'type': 'object',
+                                'properties': {
+                                    'mapping': {
+                                        'type': 'string'
+                                    },
+                                    'properties': {
+                                        'type': 'object',
+                                        'minProperties': 1
+                                    }
+                                },
+                                'required': ['mapping', 'properties'],
+                                'additionalProperties': False
+                            }
+                        },
+                        'maxProperties': 1,
+                        'minProperties': 1
                     }
                 ]
             },
