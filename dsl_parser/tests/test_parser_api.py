@@ -21,8 +21,11 @@ from urllib import pathname2url
 import os
 
 
-def op_struct(plugin_name, operation_mapping):
-    return {'plugin': plugin_name, 'operation': operation_mapping}
+def op_struct(plugin_name, operation_mapping, properties=None):
+    result = {'plugin': plugin_name, 'operation': operation_mapping}
+    if properties:
+        result['properties'] = properties
+    return result
 
 
 class TestParserApi(AbstractTestParser):
@@ -2275,3 +2278,54 @@ types:
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('merged_value', node['properties']['merged_key'])
+
+    def test_operation_mapping_with_properties_injection(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        interfaces:
+            test_interface1:
+                - install:
+                    mapping: test_plugin.install
+                    properties:
+                        key: "value"
+"""
+        result = parse(yaml)
+        node = result['nodes'][0]
+        self.assertEquals('test_type', node['type'])
+        plugin_props = node['plugins']['test_plugin']
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('false', plugin_props['agent_plugin'])
+        self.assertEquals('http://test_url.zip', plugin_props['url'])
+        self.assertEquals('test_plugin', plugin_props['name'])
+        operations = node['operations']
+        self.assertEquals(op_struct('test_plugin', 'install', {'key': 'value'}), operations['install'])
+        self.assertEquals(op_struct('test_plugin', 'install', {'key': 'value'}), operations['test_interface1.install'])
+
+    def test_relationship_operation_mapping_with_properties_injection(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: "test_relationship"
+                    target: "test_node"
+                    source_interfaces:
+                        test_interface1:
+                            - install:
+                                mapping: test_plugin.install
+                                properties:
+                                    key: "value"
+relationships:
+    test_relationship: {}
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            url: "http://test_url.zip"
+                """
+
+        result = parse(yaml)
+        relationship1 = result['nodes'][1]['relationships'][0]
+        rel1_source_ops = relationship1['source_operations']
+        self.assertDictEqual(op_struct('test_plugin', 'install', {'key': 'value'}), rel1_source_ops['install'])
+        self.assertDictEqual(op_struct('test_plugin', 'install', {'key': 'value'}), rel1_source_ops['test_interface1.install'])

@@ -805,3 +805,52 @@ types:
                 deploy: '2'
                 """
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_interface_operation_mapping_no_mapping_prop(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        interfaces:
+            test_interface1:
+                - install:
+                    properties:
+                        key: "value"
+"""
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_interface_operation_mapping_no_properties(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        interfaces:
+            test_interface1:
+                - install:
+                    mapping: test_plugin.install
+"""
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_interface_operation_mapping_empty_properties(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        interfaces:
+            test_interface1:
+                - install:
+                    mapping: test_plugin.install
+                    properties: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_interface_operation_mapping_unknown_extra_attributes(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        interfaces:
+            test_interface1:
+                - install:
+                    mapping: test_plugin.install
+                    properties:
+                        key: 'value'
+                    unknown: 'bla'
+"""
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
