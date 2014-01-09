@@ -204,9 +204,6 @@ def _post_process_node_relationships(node, node_name_to_node, plugins):
 
 
 def _process_context_operations(partial_error_message, interfaces, plugins, node, error_code):
-    '''
-    partial_error_message should have a place holder for a single argument which is the interface name
-    '''
     operations = {}
     for interface_name, interface in interfaces.items():
         operation_mapping_context = _extract_plugin_names_and_operation_mapping_from_interface(
@@ -238,7 +235,7 @@ def _process_node_relationships_operations(relationship,
                                            node_for_plugins,
                                            plugins):
     if interfaces_attribute in relationship:
-        partial_error_message = 'in relationship of type {0} in node {0}'.format(relationship['type'],
+        partial_error_message = 'in relationship of type {0} in node {1}'.format(relationship['type'],
                                                                                  node_for_plugins['id'])
 
         operations = _process_context_operations(partial_error_message,
