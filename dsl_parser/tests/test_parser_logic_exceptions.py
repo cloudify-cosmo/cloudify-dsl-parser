@@ -451,3 +451,36 @@ relationships:
     empty_relationship: {}
             """
         self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+
+    def test_operation_properties_injection_get_property_non_existing_prop(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        interfaces:
+            test_interface1:
+                - install:
+                    mapping: test_plugin.install
+                    properties:
+                        key: { get_property: 'non_existing_prop' }
+
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(yaml, 104, DSLParsingLogicException)
+        self.assertEqual('non_existing_prop', ex.property_name)
+
+    def test_operation_properties_injection_get_property_with_other_key(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        properties:
+            some_key: 'val'
+        interfaces:
+            test_interface1:
+                - install:
+                    mapping: test_plugin.install
+                    properties:
+                        key:
+                            get_property: 'some_key'
+                            some_prop: 'some_value'
+
+"""
+        self._assert_dsl_parsing_exception_error_code(yaml, 105, DSLParsingLogicException)
