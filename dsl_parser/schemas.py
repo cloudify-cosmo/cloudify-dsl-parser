@@ -197,7 +197,8 @@ DSL_SCHEMA = {
                                             'type': 'string'
                                         },
                                         'source_interfaces': INTERFACES_SCHEMA,
-                                        'target_interfaces': INTERFACES_SCHEMA
+                                        'target_interfaces': INTERFACES_SCHEMA,
+                                        'workflows': WORKFLOWS_SCHEMA
                                     },
                                     'required': ['type', 'target'],
                                     'additionalProperties': False
@@ -342,7 +343,8 @@ DSL_SCHEMA = {
                             'type': 'string'
                         },
                         'source_interfaces': INTERFACES_SCHEMA,
-                        'target_interfaces': INTERFACES_SCHEMA
+                        'target_interfaces': INTERFACES_SCHEMA,
+                        'workflows': WORKFLOWS_SCHEMA
                     },
                     'additionalProperties': False
                 }

@@ -365,11 +365,14 @@ def _process_relationships(combined_parsed_dsl):
 
         plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
         _validate_relationship_fields(complete_rel_obj, plugins, rel_name)
-        processed_relationships[rel_name] = copy.deepcopy(complete_rel_obj)
+        complete_rel_obj_copy = copy.deepcopy(complete_rel_obj)
+        if WORKFLOWS in complete_rel_obj_copy:
+            complete_rel_obj_copy[WORKFLOWS] = _process_workflows(
+                complete_rel_obj_copy[WORKFLOWS])
+        processed_relationships[rel_name] = complete_rel_obj_copy
         processed_relationships[rel_name]['name'] = rel_name
         if 'derived_from' in processed_relationships[rel_name]:
             del (processed_relationships[rel_name]['derived_from'])
-
     return processed_relationships
 
 

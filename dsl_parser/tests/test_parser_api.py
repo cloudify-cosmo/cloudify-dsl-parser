@@ -432,6 +432,43 @@ types:
         self.assertEquals('custom ref', node['workflows']['uninstall'])
         self.assertEquals(2, len(node['workflows']))
 
+    def test_relationship_empty_workflows(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        workflows: {}
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result)
+        relationships = result['relationships']
+        self.assertEquals(1, len(relationships))
+        test_relationship = relationships['test_relationship']
+        self.assertEquals(0, len(test_relationship['workflows']))
+
+    def test_relationship_workflows_both_radial_and_ref(self):
+        ref_alias = 'ref_alias'
+        radial_file_path = self.make_file_with_name('custom ref',
+                                                    'radial_file.radial')
+
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        workflows:
+            unlink:
+                radial: "my custom radial"
+            establish:
+                ref: {0}""".format(ref_alias)
+
+        result = parse(yaml, alias_mapping_dict={ref_alias: radial_file_path})
+        self._assert_minimal_blueprint(result)
+        test_relationship = result['relationships']['test_relationship']
+        self.assertEquals('my custom radial',
+                          test_relationship['workflows']['unlink'])
+        self.assertEquals('custom ref',
+                          test_relationship['workflows']['establish'])
+        self.assertEquals(2, len(test_relationship['workflows']))
+
+
     def test_type_workflows_recursive_inheritance(self):
         #tests for multiple-hierarchy workflows inheritance between types,
         #including back and forth switches between radial and ref overrides,
