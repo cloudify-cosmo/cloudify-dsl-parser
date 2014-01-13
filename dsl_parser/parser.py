@@ -366,9 +366,8 @@ def _process_relationships(combined_parsed_dsl):
         plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
         _validate_relationship_fields(complete_rel_obj, plugins, rel_name)
         complete_rel_obj_copy = copy.deepcopy(complete_rel_obj)
-        if WORKFLOWS in complete_rel_obj_copy:
-            complete_rel_obj_copy[WORKFLOWS] = _process_workflows(
-                complete_rel_obj_copy[WORKFLOWS])
+        complete_rel_obj_copy[WORKFLOWS] = _process_workflows(
+            _get_dict_prop(complete_rel_obj_copy, WORKFLOWS))
         processed_relationships[rel_name] = complete_rel_obj_copy
         processed_relationships[rel_name]['name'] = rel_name
         if 'derived_from' in processed_relationships[rel_name]:
@@ -514,9 +513,9 @@ def _process_ref_or_inline_value(ref_or_inline_obj, inline_key_name):
     if isinstance(ref_or_inline_obj, str):
         # already processed previously (inheritance)
         return ref_or_inline_obj
-    if 'ref' in ref_or_inline_obj:
+    elif 'ref' in ref_or_inline_obj:
         return ref_or_inline_obj['ref']
-    else: #inline
+    else:  # inline
         return ref_or_inline_obj[inline_key_name]
 
 
@@ -565,9 +564,8 @@ def _process_node_relationships(app_name, node, node_name, node_names_set, proce
 
             complete_relationship = _rel_inheritance_merging_func(top_level_relationships[relationship_type],
                                                                   relationship)
-            if WORKFLOWS in complete_relationship:
-                complete_relationship[WORKFLOWS] = _process_workflows(
-                    complete_relationship[WORKFLOWS])
+            complete_relationship[WORKFLOWS] = _process_workflows(
+                _get_dict_prop(complete_relationship, WORKFLOWS))
             complete_relationship['target_id'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
             del (complete_relationship['target'])
             complete_relationship['state'] = 'reachable'

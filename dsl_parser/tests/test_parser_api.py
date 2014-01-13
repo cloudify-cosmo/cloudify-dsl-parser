@@ -1552,7 +1552,8 @@ relationships:
                         """
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
-        self.assertDictEqual({'name': 'test_relationship'}, result['relationships']['test_relationship'])
+        self.assertDictEqual({'name': 'test_relationship',
+                              'workflows': {}}, result['relationships']['test_relationship'])
 
     def test_top_level_relationships_single_complete_relationship(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
@@ -1569,7 +1570,8 @@ relationships:
         """
         result = parse(yaml)
         self._assert_blueprint(result)
-        self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
+        self.assertDictEqual({'name': 'empty_rel',
+                              'workflows': {}}, result['relationships']['empty_rel'])
         test_relationship = result['relationships']['test_relationship']
         self.assertTrue('derived_from' not in test_relationship)
         self.assertEquals('test_relationship', test_relationship['name'])
@@ -1627,7 +1629,8 @@ imports:
 
         result = parse(top_level_yaml)
         self._assert_blueprint(result)
-        self.assertDictEqual({'name': 'empty_rel'}, result['relationships']['empty_rel'])
+        self.assertDictEqual({'name': 'empty_rel',
+                             'workflows': {}}, result['relationships']['empty_rel'])
         test_relationship = result['relationships']['test_relationship']
         self.assertEquals('test_relationship', test_relationship['name'])
         self.assertDictEqual({'install': 'test_plugin.install'}, test_relationship['source_interfaces'][
@@ -1653,7 +1656,7 @@ imports:
         self.assertDictEqual({'terminate': 'test_plugin.terminate'}, test_relationship3['target_interfaces'][
             'test_interface2'][1])
         self.assertEquals(2, len(test_relationship3['target_interfaces']['test_interface2']))
-        self.assertEquals(2, len(test_relationship3))
+        self.assertEquals(3, len(test_relationship3))
 
 
 
@@ -1824,7 +1827,7 @@ plugins:
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
-        self.assertEquals(2, len(parent_relationship))
+        self.assertEquals(3, len(parent_relationship))
         self.assertEquals(4, len(relationship))
         self.assertEquals(8, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
@@ -1923,7 +1926,7 @@ plugins:
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
-        self.assertEquals(3, len(parent_relationship))
+        self.assertEquals(4, len(parent_relationship))
         self.assertEquals(4, len(relationship))
         self.assertEquals(8, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
