@@ -121,8 +121,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url, resources_base_url
 
     node_names_set = {node['name'] for node in nodes}
     processed_nodes = map(lambda node: _process_node(node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
-                                                     top_level_relationships, node_names_set, types_descendants,
-                                                     alias_mapping), nodes)
+                                                     top_level_relationships, node_names_set, types_descendants), nodes)
     _post_process_nodes(processed_nodes, _get_dict_prop(combined_parsed_dsl, TYPES),
                         _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS), _get_dict_prop(combined_parsed_dsl,
                                                                                            PLUGINS))
@@ -203,6 +202,35 @@ def _post_process_node_relationships(node, node_name_to_node, plugins):
                                                    plugins)
 
 
+def _expand(context_properties, node_properties, node_id, operation_name):
+    if not context_properties:
+        return None
+    result = {}
+    for key, value in context_properties.items():
+        if type(value) == dict:
+            if len(value) == 1 and value.keys()[0] == 'get_property':
+                property_name = value.values()[0]
+                if property_name not in node_properties:
+                    ex = DSLParsingLogicException(104, 'Mapped property {0} does not exist in the context node '
+                                                       'properties {1} (node {2}, operation {3})'.format(
+                                                                                        property_name,
+                                                                                        node_properties,
+                                                                                        node_id,
+                                                                                        operation_name))
+                    ex.property_name = property_name
+                    raise ex
+                result[key] = node_properties[property_name]
+            else:
+                if 'get_property' in value:
+                    raise DSLParsingLogicException(105, "Additional properties are not allowed when using "
+                                                        "'get_property' (node {0}, operation {1}, property {2})"
+                                                        .format(key, node_id,operation_name))
+                result[key] = _expand(value, node_properties, node_id, operation_name)
+        else:
+            result[key] = value
+    return result
+
+
 def _process_context_operations(partial_error_message, interfaces, plugins, node, error_code):
     operations = {}
     for interface_name, interface in interfaces.items():
@@ -217,7 +245,11 @@ def _process_context_operations(partial_error_message, interfaces, plugins, node
             if plugin_name is not None:
                 plugin = plugins[plugin_name]
                 node[PLUGINS][plugin_name] = _process_plugin(plugin, plugin_name)
-                op_struct = _operation_struct(plugin_name, operation_mapping, operation_properties)
+                op_struct = _operation_struct(plugin_name, operation_mapping, _expand(operation_properties,
+                                                                                      _get_dict_prop(node,
+                                                                                                     'properties'),
+                                                                                      node['id'],
+                                                                                      operation_name))
                 if operation_name in operations:
                     # Indicate this implicit operation name needs to be removed as we can only
                     # support explicit implementation in this case
@@ -587,7 +619,7 @@ def _operation_struct(plugin_name, operation_mapping, operation_properties):
 
 
 def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple, top_level_relationships, node_names_set,
-                  types_descendants, alias_mapping):
+                  types_descendants):
     declared_node_type_name = node['type']
     node_name = node['name']
     app_name = parsed_dsl[BLUEPRINT]['name']
