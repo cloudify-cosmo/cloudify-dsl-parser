@@ -365,11 +365,13 @@ def _process_relationships(combined_parsed_dsl):
 
         plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
         _validate_relationship_fields(complete_rel_obj, plugins, rel_name)
-        processed_relationships[rel_name] = copy.deepcopy(complete_rel_obj)
+        complete_rel_obj_copy = copy.deepcopy(complete_rel_obj)
+        complete_rel_obj_copy[WORKFLOWS] = _process_workflows(
+            _get_dict_prop(complete_rel_obj_copy, WORKFLOWS))
+        processed_relationships[rel_name] = complete_rel_obj_copy
         processed_relationships[rel_name]['name'] = rel_name
         if 'derived_from' in processed_relationships[rel_name]:
             del (processed_relationships[rel_name]['derived_from'])
-
     return processed_relationships
 
 
@@ -388,6 +390,8 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name):
 def _rel_inheritance_merging_func(complete_super_type, current_level_type):
     merged_type = current_level_type
 
+    #derive workflows
+    merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type, merged_type, WORKFLOWS)
     # derived source and target interfaces
     for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
         merged_interfaces = _merge_interface_dicts(complete_super_type, merged_type, interfaces)
@@ -506,9 +510,12 @@ def _process_workflows(workflows):
 
 
 def _process_ref_or_inline_value(ref_or_inline_obj, inline_key_name):
-    if 'ref' in ref_or_inline_obj:
+    if isinstance(ref_or_inline_obj, str):
+        # already processed previously (inheritance)
+        return ref_or_inline_obj
+    elif 'ref' in ref_or_inline_obj:
         return ref_or_inline_obj['ref']
-    else: #inline
+    else:  # inline
         return ref_or_inline_obj[inline_key_name]
 
 
@@ -557,6 +564,8 @@ def _process_node_relationships(app_name, node, node_name, node_names_set, proce
 
             complete_relationship = _rel_inheritance_merging_func(top_level_relationships[relationship_type],
                                                                   relationship)
+            complete_relationship[WORKFLOWS] = _process_workflows(
+                _get_dict_prop(complete_relationship, WORKFLOWS))
             complete_relationship['target_id'] = '{0}.{1}'.format(app_name, complete_relationship['target'])
             del (complete_relationship['target'])
             complete_relationship['state'] = 'reachable'

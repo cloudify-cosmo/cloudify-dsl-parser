@@ -320,6 +320,85 @@ types:
                 """.format(file_name)
         self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
 
+    def test_relationship_workflows_no_ref_or_radial(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        workflows:
+            install: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_relationship_workflows_extra_properties(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        workflows:
+            install:
+                radial: radial
+                some_other_prop: "val"
+                """
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_relationship_workflows_both_ref_and_radial(self):
+        file_name = self.make_file_with_name('some radial code', 'custom_ref.radial')
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        workflows:
+            install:
+                radial: radial
+                ref: {0}
+                """.format(file_name)
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationship_workflows_no_ref_or_radial(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   target: test_node
+                    type: test_relationship
+                    workflows:
+                        install: {}
+relationships:
+    test_relationship: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationship_workflows_extra_properties(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   target: test_node
+                    type: test_relationship
+                    workflows:
+                        install:
+                            radial: radial
+                            some_extra_prop: value
+relationships:
+    test_relationship: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
+    def test_instance_relationship_workflows_both_ref_and_radial(self):
+        file_name = self.make_file_with_name('some radial code', 'custom_ref.radial')
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   target: test_node
+                    type: test_relationship
+                    workflows:
+                        install:
+                            radial: radial
+                            ref: {0}""".format(file_name) + """
+relationships:
+    test_relationship: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(yaml, 1, DSLParsingFormatException)
+
     def test_top_level_policies_extra_properties(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 policies:
