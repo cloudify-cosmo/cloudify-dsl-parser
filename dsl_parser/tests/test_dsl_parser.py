@@ -21,6 +21,7 @@ import dsl_parser.tasks as tasks
 import random
 import json
 
+
 class TestDSLParser(unittest.TestCase):
 
     maxDiff = None
@@ -29,24 +30,24 @@ class TestDSLParser(unittest.TestCase):
 
         node = {
             "id": "simple_web_server.host",
-            "properties": { "x" : "y" },
+            "properties": {"x": "y"},
             "host_id": "simple_web_server.host"
         }
 
         expected_instances = [
             {
                 "id": "simple_web_server.host_d82c0",
-                "properties": { "x" : "y" },
+                "properties": {"x": "y"},
                 "host_id": "simple_web_server.host_d82c0"
             },
             {
                 "id": "simple_web_server.host_c2094",
-                "properties": { "x" : "y" },
+                "properties": {"x": "y"},
                 "host_id": "simple_web_server.host_c2094"
             }
         ]
 
-        suffix_map = { 'simple_web_server.host': ['_d82c0', '_c2094']}
+        suffix_map = {'simple_web_server.host': ['_d82c0', '_c2094']}
         instances = tasks._create_node_instances(node, suffix_map)
         self.assertEqual(instances, expected_instances)
 
@@ -63,29 +64,26 @@ class TestDSLParser(unittest.TestCase):
             "simple_web_server.host_c2094": node_policies
         }
 
-        suffix_map = { 'simple_web_server.host': ['_d82c0', '_c2094']}
-        actual_policies = tasks._create_node_instances_policies(node_id, policies, suffix_map)
+        suffix_map = {'simple_web_server.host': ['_d82c0', '_c2094']}
+        actual_policies = tasks._create_node_instances_policies(node_id,
+                                                                policies,
+                                                                suffix_map)
         self.assertEqual(actual_policies, expected_policies)
 
     def test_create_multiple_node_suffix_map(self):
-
         nodes = [
-                {
-                    "id": "multi_instance.db",
-                    "host_id": "multi_instance.host"
-                },
-                {
-                    "id": "multi_instance.host",
-                    "host_id": "multi_instance.host",
-                    "instances" : {
-                        "deploy": 2
-                    }
-                }
-            ]
+            {"id": "multi_instance.db",
+             "host_id": "multi_instance.host"}, {
+                "id": "multi_instance.host",
+                "host_id": "multi_instance.host",
+                "instances": {
+                    "deploy": 2
+                }}
+        ]
 
         expected_suffix_map = {
-            "multi_instance.host" : ["_d82c0","_c2094"],
-            "multi_instance.db" : ["_6baa9", "_42485"] }
+            "multi_instance.host": ["_d82c0", "_c2094"],
+            "multi_instance.db": ["_6baa9", "_42485"]}
 
         random.seed(0)
         suffix_map = tasks._create_node_suffixes_map(nodes)
@@ -101,15 +99,15 @@ class TestDSLParser(unittest.TestCase):
             {
                 "id": "multi_instance.host",
                 "host_id": "multi_instance.host",
-                "instances" : {
+                "instances": {
                     "deploy": 1
                 }
             }
         ]
 
         expected_suffix_map = {
-            "multi_instance.host" : ["_d82c0"],
-            "multi_instance.db" : ["_c2094"] }
+            "multi_instance.host": ["_d82c0"],
+            "multi_instance.db": ["_c2094"]}
 
         random.seed(0)
         suffix_map = tasks._create_node_suffixes_map(nodes)
@@ -132,10 +130,9 @@ class TestDSLParser(unittest.TestCase):
                 {
                     "id": "multi_instance.host",
                     "host_id": "multi_instance.host",
-                    "instances" : {
+                    "instances": {
                         "deploy": 2
-                    }
-                    ,
+                    },
                     "dependents": [
                         "multi_instance.db"
                     ]
@@ -147,7 +144,8 @@ class TestDSLParser(unittest.TestCase):
             }
         }
 
-        # everything in the new plan stays the same except for nodes that belonged to a tier.
+        # everything in the new plan stays the same except for nodes that
+        # belonged to a tier.
         expected_plan = {
             "nodes": [
                 {
@@ -165,15 +163,15 @@ class TestDSLParser(unittest.TestCase):
                     "host_id": "multi_instance.host_c2094",
                     "relationships": [
                         {
-                        "type": "cloudify.relationships.contained_in",
-                        "target_id": "multi_instance.host_c2094",
+                            "type": "cloudify.relationships.contained_in",
+                            "target_id": "multi_instance.host_c2094",
                         }
                     ],
                 },
                 {
                     "id": "multi_instance.host_d82c0",
                     "host_id": "multi_instance.host_d82c0",
-                    "instances" : {
+                    "instances": {
                         "deploy": 2
                     },
                     "dependents": [
@@ -183,7 +181,7 @@ class TestDSLParser(unittest.TestCase):
                 {
                     "id": "multi_instance.host_c2094",
                     "host_id": "multi_instance.host_c2094",
-                    "instances" : {
+                    "instances": {
                         "deploy": 2
                     },
                     "dependents": [
@@ -220,7 +218,7 @@ class TestDSLParser(unittest.TestCase):
                 {
                     "id": "multi_instance.host",
                     "host_id": "multi_instance.host",
-                    "instances" : {
+                    "instances": {
                         "deploy": 1
                     },
                     "dependents": [
@@ -249,7 +247,7 @@ class TestDSLParser(unittest.TestCase):
                 {
                     "id": "multi_instance.host_d82c0",
                     "host_id": "multi_instance.host_d82c0",
-                    "instances" : {
+                    "instances": {
                         "deploy": 1
                     },
                     "dependents": [
@@ -262,7 +260,7 @@ class TestDSLParser(unittest.TestCase):
                 "multi_instance.host_d82c0": "stub"
             }
         }
-    
+
         random.seed(0)
         new_plan = json.loads(tasks.prepare_deployment_plan(plan))
         self.assertDictContainsSubset(expected_plan, new_plan)
@@ -429,7 +427,8 @@ class TestDSLParser(unittest.TestCase):
             }
         }
 
-        # everything in the new plan stays the same except for nodes that belonged to a tier.
+        # everything in the new plan stays the same except for nodes that
+        # belonged to a tier.
         expected_plan = {
             "nodes": [
                 {
@@ -448,4 +447,3 @@ class TestDSLParser(unittest.TestCase):
         random.seed(0)
         new_plan = json.loads(tasks.prepare_deployment_plan(plan))
         self.assertDictContainsSubset(expected_plan, new_plan)
-

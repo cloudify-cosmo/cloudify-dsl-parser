@@ -25,7 +25,8 @@ class TestParserLogicExceptions(AbstractTestParser):
         self.assertRaises(EnvironmentError, parse_from_path, 'fake-file.yaml')
 
     def test_no_type_definition(self):
-        self._assert_dsl_parsing_exception_error_code(self.BASIC_BLUEPRINT_SECTION, 7, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            self.BASIC_BLUEPRINT_SECTION, 7, DSLParsingLogicException)
 
     def test_explicit_interface_with_missing_plugin(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
@@ -38,10 +39,12 @@ types:
         properties:
             install_agent: 'false'
 """
-        self._assert_dsl_parsing_exception_error_code(yaml, 10, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 10, DSLParsingLogicException)
 
     def test_merge_non_mergeable_properties_on_import(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION,
+                                              self.BASIC_PLUGIN]) + """
 blueprint:
     name: test_app2
     topology:
@@ -50,7 +53,8 @@ blueprint:
             properties:
                 key: "val"
         """
-        self._assert_dsl_parsing_exception_error_code(yaml, 3, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 3, DSLParsingLogicException)
 
     def test_illegal_merge_on_nested_mergeable_rules_on_import(self):
         imported_yaml = self.MINIMAL_BLUEPRINT + """
@@ -67,7 +71,8 @@ policies:
             message: "some other message"
             rule: "some other code"
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 4, DSLParsingLogicException)
 
     def test_type_derive_non_from_none_existing(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
@@ -75,14 +80,16 @@ types:
     test_type:
         derived_from: "non_existing_type_parent"
         """
-        self._assert_dsl_parsing_exception_error_code(yaml, 14, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 14, DSLParsingLogicException)
 
     def test_import_bad_path(self):
         yaml = """
 imports:
     -   fake-file.yaml
         """
-        self._assert_dsl_parsing_exception_error_code(yaml, 13, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 13, DSLParsingLogicException)
 
     def test_cyclic_dependency(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
@@ -96,8 +103,10 @@ types:
     test_type_grandparent:
         derived_from: "test_type"
     """
-        ex = self._assert_dsl_parsing_exception_error_code(yaml, 100, DSLParsingLogicException)
-        expected_circular_dependency = ['test_type', 'test_type_parent', 'test_type_grandparent', 'test_type']
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 100, DSLParsingLogicException)
+        expected_circular_dependency = ['test_type', 'test_type_parent',
+                                        'test_type_grandparent', 'test_type']
         self.assertEquals(expected_circular_dependency, ex.circular_dependency)
 
     def test_node_duplicate_name(self):
@@ -117,7 +126,8 @@ blueprint:
 types:
     test_type: {}
 """
-        ex = self._assert_dsl_parsing_exception_error_code(yaml, 101, DSLParsingLogicException)
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 101, DSLParsingLogicException)
         self.assertEquals('test_node', ex.duplicate_node_name)
 
     def test_first_level_workflows_unavailable_ref(self):
@@ -141,7 +151,8 @@ policies:
         self._assert_dsl_parsing_exception_error_code(yaml, 31)
 
     def test_illegal_merge_on_mergeable_properties_on_import(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION, self.BASIC_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION,
+                                              self.BASIC_PLUGIN]) + """
 plugins:
     test_plugin:
         properties:
@@ -149,7 +160,8 @@ plugins:
 types:
     test_type: {}
         """
-        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 4, DSLParsingLogicException)
 
     def test_illegal_merge_on_nested_mergeable_policies_events_on_import(self):
         imported_yaml = self.MINIMAL_BLUEPRINT + """
@@ -166,7 +178,8 @@ policies:
             message: "some other message"
             policy: "some other code"
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 4, DSLParsingLogicException)
 
     def test_node_with_undefined_policy_event(self):
         yaml = self.POLICIES_SECTION + self.MINIMAL_BLUEPRINT + """
@@ -178,7 +191,8 @@ policies:
                                 state: "custom state"
                                 service: "custom value"
                 """
-        self._assert_dsl_parsing_exception_error_code(yaml, 16, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 16, DSLParsingLogicException)
 
     def test_node_with_undefined_rule(self):
         yaml = self.POLICIES_SECTION + self.MINIMAL_BLUEPRINT + """
@@ -190,7 +204,8 @@ policies:
                                 state: "custom state"
                                 service: "custom value"
                 """
-        self._assert_dsl_parsing_exception_error_code(yaml, 17, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 17, DSLParsingLogicException)
 
     def test_type_with_undefined_policy_event(self):
         yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
@@ -204,7 +219,8 @@ types:
                             state: "custom state"
                             service: "custom value"
                 """
-        self._assert_dsl_parsing_exception_error_code(yaml, 16, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 16, DSLParsingLogicException)
 
     def test_type_with_undefined_rule(self):
         yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
@@ -218,7 +234,8 @@ types:
                             state: "custom state"
                             service: "custom value"
                 """
-        self._assert_dsl_parsing_exception_error_code(yaml, 17, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 17, DSLParsingLogicException)
 
     def test_plugin_with_wrongful_derived_from_field(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
@@ -235,7 +252,8 @@ types:
                 - install: test_plugin.install
 
         """
-        self._assert_dsl_parsing_exception_error_code(yaml, 18, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 18, DSLParsingLogicException)
 
     def test_top_level_relationships_relationship_with_undefined_plugin(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -245,7 +263,8 @@ relationships:
             some_interface:
                 - op: no_plugin.op
                         """
-        self._assert_dsl_parsing_exception_error_code(yaml, 19, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 19, DSLParsingLogicException)
 
     def test_top_level_relationships_import_same_name_relationship(self):
         imported_yaml = self.MINIMAL_BLUEPRINT + """
@@ -256,7 +275,8 @@ relationships:
 relationships:
     test_relationship: {}
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 4, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 4, DSLParsingLogicException)
 
     def test_top_level_relationships_circular_inheritance(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -268,7 +288,8 @@ relationships:
     test_relationship3:
         derived_from: test_relationship1
         """
-        self._assert_dsl_parsing_exception_error_code(yaml, 100, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 100, DSLParsingLogicException)
 
     def test_instance_relationships_bad_target_value(self):
         #target value is a non-existent node
@@ -281,7 +302,8 @@ relationships:
 relationships:
     test_relationship: {}
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 25, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 25, DSLParsingLogicException)
 
     def test_instance_relationships_bad_type_value(self):
         #type value is a non-existent relationship
@@ -294,7 +316,8 @@ relationships:
 relationships:
     test_relationship: {}
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 26, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 26, DSLParsingLogicException)
 
     def test_instance_relationships_same_source_and_target(self):
         #A relationship from a node to itself is not valid
@@ -307,7 +330,8 @@ relationships:
 relationships:
     test_relationship: {}
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 23, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 23, DSLParsingLogicException)
 
     def test_instance_relationship_with_undefined_plugin(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -322,7 +346,8 @@ relationships:
 relationships:
     test_relationship: {}
                         """
-        self._assert_dsl_parsing_exception_error_code(yaml, 19, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 19, DSLParsingLogicException)
 
     def test_validate_agent_plugin_on_non_host_node(self):
         yaml = """
@@ -342,7 +367,8 @@ plugins:
         properties:
             url: "http://test_plugin.zip"
         """
-        self._assert_dsl_parsing_exception_error_code(yaml, 24, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 24, DSLParsingLogicException)
 
     def test_type_derive_auto_wire_ambiguous(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
@@ -353,8 +379,10 @@ types:
         derived_from: test_type
 
 """
-        ex = self._assert_dsl_parsing_exception_error_code(yaml, 103, DSLParsingLogicException)
-        self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'], ex.descendants)
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 103, DSLParsingLogicException)
+        self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'],
+                              ex.descendants)
 
     def test_type_derive_auto_wire_ambiguous_with_implements(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
@@ -365,8 +393,10 @@ types:
         implements: test_type
 
 """
-        ex = self._assert_dsl_parsing_exception_error_code(yaml, 103, DSLParsingLogicException)
-        self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'], ex.descendants)
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 103, DSLParsingLogicException)
+        self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'],
+                              ex.descendants)
 
     def test_node_interface_duplicate_operation_with_mapping(self):
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
@@ -377,7 +407,8 @@ types:
 types:
     test_type: {}
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 20, DSLParsingLogicException)
 
     def test_type_interface_duplicate_operation_with_mapping(self):
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
@@ -388,9 +419,11 @@ types:
                 - install
                 - install: test_plugin.install
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 20, DSLParsingLogicException)
 
-    def test_relationship_source_interface_duplicate_operation_with_mapping(self):
+    def test_relationship_source_interface_duplicate_operation_with_mapping(
+            self):
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type: {}
@@ -401,9 +434,11 @@ relationships:
                 - install
                 - install: test_plugin.install
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 20, DSLParsingLogicException)
 
-    def test_relationship_target_interface_duplicate_operation_with_mapping(self):
+    def test_relationship_target_interface_duplicate_operation_with_mapping(
+            self):
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type: {}
@@ -414,9 +449,10 @@ relationships:
                 - install
                 - install: test_plugin.install
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 20, DSLParsingLogicException)
 
-    def test_instance_relationship_source_interface_duplicate_operation_with_mapping(self):
+    def test_instance_relationship_source_interface_duplicate_operation_with_mapping(self):  # NOQA
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
         -   name: test_node2
             type: test_type
@@ -432,9 +468,10 @@ types:
 relationships:
     empty_relationship: {}
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 20, DSLParsingLogicException)
 
-    def test_instance_relationship_target_interface_duplicate_operation_with_mapping(self):
+    def test_instance_relationship_target_interface_duplicate_operation_with_mapping(self):  # NOQA
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
         -   name: test_node2
             type: test_type
@@ -450,9 +487,11 @@ types:
 relationships:
     empty_relationship: {}
             """
-        self._assert_dsl_parsing_exception_error_code(yaml, 20, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 20, DSLParsingLogicException)
 
-    def test_operation_properties_injection_get_property_non_existing_prop(self):
+    def test_operation_properties_injection_get_property_non_existing_prop(
+            self):
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
@@ -464,7 +503,8 @@ types:
                         key: { get_property: 'non_existing_prop' }
 
 """
-        ex = self._assert_dsl_parsing_exception_error_code(yaml, 104, DSLParsingLogicException)
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 104, DSLParsingLogicException)
         self.assertEqual('non_existing_prop', ex.property_name)
 
     def test_operation_properties_injection_get_property_with_other_key(self):
@@ -483,4 +523,5 @@ types:
                             some_prop: 'some_value'
 
 """
-        self._assert_dsl_parsing_exception_error_code(yaml, 105, DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 105, DSLParsingLogicException)

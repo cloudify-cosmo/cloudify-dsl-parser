@@ -4,7 +4,8 @@ from setuptools import setup
 
 COSMO_CELERY_VERSION = '0.3'
 COSMO_CELERY_BRANCH = 'develop'
-COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_BRANCH)
+COSMO_CELERY = "https://github.com/CloudifySource/" \
+               "cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_BRANCH)
 
 setup(
     name='cosmo-plugin-dsl-parser',
@@ -21,5 +22,6 @@ setup(
         'jsonschema'
     ],
 
-    dependency_links=["{0}#egg=cosmo-celery-common-{1}".format(COSMO_CELERY, COSMO_CELERY_VERSION)]
+    dependency_links=["{0}#egg=cosmo-celery-common-{1}"
+                      .format(COSMO_CELERY, COSMO_CELERY_VERSION)]
 )
