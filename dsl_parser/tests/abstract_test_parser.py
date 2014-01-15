@@ -67,14 +67,15 @@ policies:
             rule: "test rule code"
             """
 
-    #note that some tests extend the BASIC_BLUEPRINT 'inline', which is why it's appended in the end
+    #note that some tests extend the BASIC_BLUEPRINT 'inline',
+    # which is why it's appended in the end
     MINIMAL_BLUEPRINT = """
 types:
     test_type: {}
     """ + BASIC_BLUEPRINT_SECTION
 
     BLUEPRINT_WITH_INTERFACES_AND_PLUGINS = BASIC_BLUEPRINT_SECTION + \
-                                            BASIC_PLUGIN + BASIC_TYPE
+        BASIC_PLUGIN + BASIC_TYPE
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
@@ -90,7 +91,8 @@ types:
         return self._path2url(filename_path)
 
     def make_file_with_name(self, content, filename, base_dir=None):
-        base_dir = os.path.join(self._temp_dir, base_dir) if base_dir else self._temp_dir
+        base_dir = os.path.join(self._temp_dir, base_dir) \
+            if base_dir else self._temp_dir
         filename_path = os.path.join(base_dir, filename)
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
@@ -101,7 +103,7 @@ types:
     def make_yaml_file(self, content, as_uri=False):
         filename = 'tempfile{0}.yaml'.format(uuid.uuid4())
         filename_path = self.make_file_with_name(content, filename)
-        return (filename_path if not as_uri else self._path2url(filename_path))
+        return filename_path if not as_uri else self._path2url(filename_path)
 
     def _path2url(self, path):
         from urllib import pathname2url
@@ -117,8 +119,10 @@ imports:"""
     -   {0}""".format(filename if not as_uri else self._path2url(filename))
         return yaml
 
-    def _assert_dsl_parsing_exception_error_code(self, dsl, expected_error_code, exception_type=DSLParsingException,
-                                                 parsing_method=parse):
+    def _assert_dsl_parsing_exception_error_code(
+            self, dsl,
+            expected_error_code, exception_type=DSLParsingException,
+            parsing_method=parse):
         try:
             parsing_method(dsl)
             self.fail()
