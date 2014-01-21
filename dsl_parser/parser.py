@@ -876,10 +876,9 @@ def _merge_properties_arrays(overridden, overriding,
                 result[property_element.keys()[0]] = property_element
         return result.items()
 
-    merged_properties_dict = dict(prop_array_to_dict(
-                                  overridden_properties_schema) +
-                                  prop_array_to_dict(
-                                  overriding_properties_schema))
+    merged_properties_dict = \
+        dict(prop_array_to_dict(overridden_properties_schema) +
+             prop_array_to_dict(overriding_properties_schema))
     return merged_properties_dict.values()
 
 
@@ -936,11 +935,10 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node):
 
     for key in node_properties.iterkeys():
         if key not in complete_type_properties:
-            ex = DSLParsingLogicException(106, '{0} node \'{1}\' property is '
-                                               'not'
-                                               ' part of the derived type '
-                                               'properties schema'.format(
-                                          node['name'], key))
+            ex = \
+                DSLParsingLogicException(
+                    106, '{0} node \'{1}\' property is not part of the derived'
+                    ' type properties schema'.format(node['name'], key))
             ex.property = key
             raise ex
 
