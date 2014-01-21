@@ -37,7 +37,8 @@ types:
                 - install: missing_plugin.install
                 - terminate: missing_plugin.terminate
         properties:
-            install_agent: 'false'
+            - install_agent: 'false'
+            - key
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 10, DSLParsingLogicException)
@@ -211,6 +212,8 @@ policies:
         yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
+        properties:
+            - key
         policies:
             -   name: undefined_policy
                 rules:
@@ -226,6 +229,8 @@ types:
         yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
+        properties:
+            - key
         policies:
             -   name: test_policy
                 rules:
@@ -247,6 +252,8 @@ plugins:
 
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -405,7 +412,9 @@ types:
                     - install
                     - install: test_plugin.install
 types:
-    test_type: {}
+    test_type:
+        properties:
+            - key
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 20, DSLParsingLogicException)
@@ -414,6 +423,8 @@ types:
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install
@@ -464,7 +475,9 @@ relationships:
                             - install
                             - install: test_plugin.install
 types:
-    test_type: {}
+    test_type:
+        properties:
+            - key: default
 relationships:
     empty_relationship: {}
             """
@@ -483,7 +496,9 @@ relationships:
                             - install
                             - install: test_plugin.install
 types:
-    test_type: {}
+    test_type:
+        properties:
+            - key: default
 relationships:
     empty_relationship: {}
             """
@@ -495,6 +510,8 @@ relationships:
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install:
@@ -512,7 +529,8 @@ types:
 types:
     test_type:
         properties:
-            some_key: 'val'
+            - some_key: 'val'
+            - key
         interfaces:
             test_interface1:
                 - install:
@@ -525,3 +543,24 @@ types:
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 105, DSLParsingLogicException)
+
+    def test_node_set_non_existing_property(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type: {}
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 106, DSLParsingLogicException)
+        self.assertEquals('key', ex.property)
+
+    def test_node_doesnt_implement_schema_mandatory_property(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        properties:
+            - key
+            - mandatory
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 107, DSLParsingLogicException)
+        self.assertEquals('mandatory', ex.property)

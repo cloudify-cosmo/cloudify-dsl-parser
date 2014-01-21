@@ -860,13 +860,32 @@ def _merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
     return dict(overridden_sub_dict.items() + overriding_sub_dict.items())
 
 
+def _merge_properties_arrays(overridden, overriding,
+                             properties_attribute):
+    overridden_properties_schema = _get_list_prop(overridden,
+                                                  properties_attribute)
+    overriding_properties_schema = _get_list_prop(overriding,
+                                                  properties_attribute)
+
+    def prop_array_to_dict(properties_schema):
+        result = {}
+        for property_element in properties_schema:
+            if type(property_element) == str:
+                result[property_element] = property_element
+            else:
+                result[property_element.keys()[0]] = property_element
+        return result.items()
+
+    merged_properties_dict = dict(prop_array_to_dict(
+                                  overridden_properties_schema) +
+                                  prop_array_to_dict(
+                                  overriding_properties_schema))
+    return merged_properties_dict.values()
+
+
 def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node):
-    def types_inheritance_merging_func(complete_super_type,
-                                       current_level_type):
-        merged_type = current_level_type
-        #derive properties
-        merged_type[PROPERTIES] = _merge_sub_dicts(complete_super_type,
-                                                   merged_type, PROPERTIES)
+    def types_and_node_inheritance_common_merging_func(complete_super_type,
+                                                       merged_type):
         #derive workflows
         merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
                                                   merged_type, WORKFLOWS)
@@ -880,11 +899,67 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node):
 
         return merged_type
 
+    def types_inheritance_merging_func(complete_super_type,
+                                       current_level_type):
+        merged_type = current_level_type
+        #derive properties, need special handling as node properties and type
+        #properties are not of the same format
+        merged_type[PROPERTIES] = _merge_properties_arrays(complete_super_type,
+                                                           merged_type,
+                                                           PROPERTIES)
+
+        types_and_node_inheritance_common_merging_func(complete_super_type,
+                                                       merged_type)
+
+        return merged_type
+
     complete_type = _extract_complete_type_recursive(
         dsl_type, dsl_type_name,
         parsed_dsl[TYPES],
         types_inheritance_merging_func, [], False)
-    return types_inheritance_merging_func(complete_type, copy.deepcopy(node))
+
+    complete_node = types_and_node_inheritance_common_merging_func(
+        complete_type,
+        copy.deepcopy(node))
+
+    node_properties = _get_dict_prop(node, PROPERTIES)
+    #Convert type schema props to prop dictionary
+    complete_type_properties_schema = _get_list_prop(complete_type,
+                                                     PROPERTIES)
+    complete_type_properties = {}
+    for property_element in complete_type_properties_schema:
+        if type(property_element) == str:
+            complete_type_properties[property_element] = None
+        else:
+            complete_type_properties[property_element.keys()[0]] = \
+                property_element.values()[0]
+
+    for key in node_properties.iterkeys():
+        if key not in complete_type_properties:
+            ex = DSLParsingLogicException(106, '{0} node \'{1}\' property is '
+                                               'not'
+                                               ' part of the derived type '
+                                               'properties schema'.format(
+                                          node['name'], key))
+            ex.property = key
+            raise ex
+
+    merged_node_properties = dict(complete_type_properties.items() +
+                                  node_properties.items())
+
+    for key, value in merged_node_properties.iteritems():
+        if value is None:
+            ex = DSLParsingLogicException(107, '{0} node does not provide a '
+                                               'value for mandatory  '
+                                               '\'{1}\' property which is '
+                                               'part of its type schema'
+                                          .format(node['name'], key))
+            ex.property = key
+            raise ex
+
+    complete_node[PROPERTIES] = merged_node_properties
+
+    return complete_node
 
 
 def _apply_ref(filename, path_context, alias_mapping, resources_base_url):

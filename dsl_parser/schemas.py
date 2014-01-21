@@ -320,7 +320,24 @@ DSL_SCHEMA = {
                         'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
                         #non-meta 'properties'
                         'properties': {
-                            'type': 'object'
+                            'type': 'array',
+                            'items': {
+                                'oneOf': [
+                                    {
+                                        'type': 'object',
+                                        'patternProperties': {
+                                            '^': {
+                                                'type': 'string'
+                                            }
+                                        },
+                                        'maxProperties': 1,
+                                        'minProperties': 1
+                                    },
+                                    {
+                                        'type': 'string'
+                                    }
+                                ]
+                            }
                         },
                         'derived_from': {
                             'type': 'string'
