@@ -221,17 +221,17 @@ imports:
 types:
     test_type:
         properties:
-            key: "not_val"
+            - key: "not_val"
         derived_from:
             -   "test_type_parent"
             -   "test_type_parent2"
 
     test_type_parent:
         properties:
-            key: "val1_parent"
+            - key: "val1_parent"
     test_type_parent2:
         properties:
-            key: "val1_parent2"
+            - key: "val1_parent2"
     """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -1003,6 +1003,27 @@ types:
                     properties:
                         key: 'value'
                     unknown: 'bla'
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_type_properties_not_schema_array_format(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        properties:
+            key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_type_properties_dictionary_with_multiple_values(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        properties:
+            -   key1: value
+                key2: value
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)

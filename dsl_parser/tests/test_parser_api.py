@@ -91,7 +91,8 @@ types:
                 - terminate: test_plugin.terminate
                 - start: test_plugin.start
         properties:
-            install_agent: 'false'
+            - install_agent: 'false'
+            - key
             """
 
         result = parse(yaml)
@@ -107,6 +108,8 @@ types:
                                               self.BASIC_PLUGIN]) + """
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -150,6 +153,8 @@ plugins:
             url: "http://test_url2.zip"
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -335,8 +340,8 @@ imports:
 types:
     test_type:
         properties:
-            key: "not_val"
-            key2: "val2"
+            - key: "not_val"
+            - key2: "val2"
     """
         result = parse(yaml)
         # this will also check property "key" = "val"
@@ -422,6 +427,8 @@ workflows:
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
+        properties:
+            - key
         workflows: {}
     """
         result = parse(yaml)
@@ -435,6 +442,8 @@ types:
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
+        properties:
+            - key
         workflows:
             install:
                 radial: "my custom radial"
@@ -576,6 +585,8 @@ relationships:
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
+        properties:
+            - key
         derived_from: "test_type_parent"
         workflows:
             install1:
@@ -647,6 +658,8 @@ types:
                     radial: "node radial install4"
 types:
     test_type:
+        properties:
+            - key
         derived_from: "test_type_parent"
         workflows:
             install1:
@@ -706,7 +719,10 @@ types:
                 - target: test_node
                   type: test_relationship
 types:
-    test_type: {}""" + """
+    test_type:
+        properties:
+            - key: default
+
 relationships:
     test_relationship:
         derived_from: "test_parent_relationships"
@@ -784,7 +800,10 @@ relationships:
                       install4:
                           radial: "node radial install4"
 types:
-    test_type: {}""" + """
+    test_type:
+        properties:
+            - key: default
+
 relationships:
     test_relationship:
         derived_from: "test_parent_relationships"
@@ -840,15 +859,15 @@ relationships:
 types:
     test_type:
         properties:
-            key: "not_val"
-            key2: "val2"
+            - key: "not_val"
+            - key2: "val2"
         derived_from: "test_type_parent"
 
     test_type_parent:
         properties:
-            key: "val1_parent"
-            key2: "val2_parent"
-            key3: "val3_parent"
+            - key: "val1_parent"
+            - key2: "val2_parent"
+            - key3: "val3_parent"
     """
         result = parse(yaml)
         #this will also check property "key" = "val"
@@ -862,22 +881,22 @@ types:
 types:
     test_type:
         properties:
-            key: "not_val"
-            key2: "val2"
+            - key: "not_val"
+            - key2: "val2"
         derived_from: "test_type_parent"
 
     test_type_parent:
         properties:
-            key: "val_parent"
-            key2: "val2_parent"
-            key4: "val4_parent"
+            - key: "val_parent"
+            - key2: "val2_parent"
+            - key4: "val4_parent"
         derived_from: "test_type_grandparent"
 
     test_type_grandparent:
         properties:
-            key: "val1_grandparent"
-            key2: "val2_grandparent"
-            key3: "val3_grandparent"
+            - key: "val1_grandparent"
+            - key2: "val2_grandparent"
+            - key3: "val3_grandparent"
         derived_from: "test_type_grandgrandparent"
 
     test_type_grandgrandparent: {}
@@ -895,6 +914,8 @@ types:
                                               self.BASIC_PLUGIN]) + """
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -967,6 +988,8 @@ plugins:
                                               self.BASIC_PLUGIN]) + """
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -1017,6 +1040,8 @@ plugins:
                                               self.BASIC_PLUGIN]) + """
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -1062,6 +1087,8 @@ plugins:
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install: test_plugin1.install
@@ -1234,8 +1261,8 @@ policies:
 
     def test_instance_empty_policies(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-                policies: {}
-                """
+            policies: []
+            """
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
 
@@ -1243,6 +1270,8 @@ policies:
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
+        properties:
+            - key
         policies: []
                 """
         result = parse(yaml)
@@ -1275,6 +1304,8 @@ types:
         yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
+        properties:
+            - key
         policies:
             -   name: test_policy
                 rules:
@@ -1354,6 +1385,8 @@ types:
 
 
     test_type_grandparent:
+        properties:
+            - key
         policies:
             -   name: policy3
                 rules:
@@ -1487,6 +1520,8 @@ policies:
                                 service: "value4"
 types:
     test_type:
+        properties:
+            - key
         derived_from: "test_type_parent"
         policies:
             -   name: policy2
@@ -1638,6 +1673,8 @@ types:
                             service: "value3"
 
     test_type_parent:
+        properties:
+            - key
         policies:
             -   name: policy1
                 rules:
@@ -2276,7 +2313,9 @@ blueprint:
             properties:
                 key: "val"
 types:
-    cloudify.types.host: {}
+    cloudify.types.host:
+        properties:
+            - key
             """
         result = parse(yaml)
         self.assertEquals('test_app.test_node', result['nodes'][0]['host_id'])
@@ -2597,7 +2636,9 @@ workflows:
                     - install: test_plugin.install
                     - terminate: test_plugin.terminate
 types:
-    test_type: {}
+    test_type:
+        properties:
+            - key
             """
         result = parse(yaml)
         self._assert_blueprint(result)
@@ -2608,7 +2649,9 @@ types:
             type: cloudify.types.host
 types:
     cloudify.types.host: {}
-    test_type: {}
+    test_type:
+        properties:
+            - key
         """
         result = parse(yaml)
         self.assertFalse('host_id' in result['nodes'][0])
@@ -2780,8 +2823,8 @@ types:
     specific_test_type:
         derived_from: test_type
         properties:
-            key: "overriden val"
-            merged_key: "merged_value"
+            - key: "overriden val"
+            - merged_key: "merged_value"
 """
         result = parse(yaml)
         self._assert_minimal_blueprint(result,
@@ -2796,6 +2839,8 @@ types:
             [self.BASIC_BLUEPRINT_SECTION]) + """
 types:
     specific_test_type:
+        properties:
+            - key
         implements: test_type
 """
         result = parse(yaml)
@@ -2813,8 +2858,8 @@ types:
         implements: test_type
     base_type:
         properties:
-            key: "overriden val"
-            merged_key: "merged_value"
+            - key: "overriden val"
+            - merged_key: "merged_value"
 """
         result = parse(yaml)
         self._assert_minimal_blueprint(result,
@@ -2828,6 +2873,8 @@ types:
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install:
@@ -2887,6 +2934,8 @@ plugins:
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
+        properties:
+            - key
         interfaces:
             test_interface1:
                 - install:

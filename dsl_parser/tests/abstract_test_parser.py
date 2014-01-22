@@ -52,7 +52,8 @@ types:
                 - install: test_plugin.install
                 - terminate: test_plugin.terminate
         properties:
-            install_agent: 'false'
+            - install_agent: 'false'
+            - key
             """
 
     POLICIES_SECTION = """
@@ -71,7 +72,9 @@ policies:
     # which is why it's appended in the end
     MINIMAL_BLUEPRINT = """
 types:
-    test_type: {}
+    test_type:
+        properties:
+            - key: default
     """ + BASIC_BLUEPRINT_SECTION
 
     BLUEPRINT_WITH_INTERFACES_AND_PLUGINS = BASIC_BLUEPRINT_SECTION + \
