@@ -93,6 +93,9 @@ types:
         properties:
             - install_agent: 'false'
             - key
+            - complex:
+                key1: value1
+                key2: value2
             """
 
         result = parse(yaml)

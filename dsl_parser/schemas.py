@@ -327,7 +327,14 @@ DSL_SCHEMA = {
                                         'type': 'object',
                                         'patternProperties': {
                                             '^': {
-                                                'type': 'string'
+                                                'oneOf': [
+                                                    {
+                                                        'type': 'object'                                                
+                                                    },
+                                                    {
+                                                        'type': 'string'
+                                                    }
+                                                ]
                                             }
                                         },
                                         'maxProperties': 1,
