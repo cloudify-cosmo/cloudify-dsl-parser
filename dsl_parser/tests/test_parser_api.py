@@ -93,6 +93,8 @@ types:
         properties:
             - install_agent: 'false'
             - key
+            - number: 80
+            - boolean: false
             - complex:
                 key1: value1
                 key2: value2

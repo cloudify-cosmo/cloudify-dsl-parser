@@ -328,12 +328,10 @@ DSL_SCHEMA = {
                                         'patternProperties': {
                                             '^': {
                                                 'oneOf': [
-                                                    {
-                                                        'type': 'object'                                                
-                                                    },
-                                                    {
-                                                        'type': 'string'
-                                                    }
+                                                    { 'type': 'object' },
+                                                    { 'type': 'string' },
+                                                    { 'type': 'number' },
+                                                    { 'type': 'boolean' }
                                                 ]
                                             }
                                         },
