@@ -377,7 +377,7 @@ plugins:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 24, DSLParsingLogicException)
 
-    def test_type_derive_auto_wire_ambiguous(self):
+    def test_type_implementation_ambiguous(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
 types:
     specific1_test_type:
@@ -385,25 +385,33 @@ types:
     specific2_test_type:
         derived_from: test_type
 
+type_implementations:
+    first_implementation:
+        derived_from: specific1_test_type
+        node_ref: test_node
+    second_implementation:
+        derived_from: specific2_test_type
+        node_ref: test_node
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 103, DSLParsingLogicException)
-        self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'],
-                              ex.descendants)
+        self.assertItemsEqual(
+            ['first_implementation', 'second_implementation'],
+            ex.implementations)
 
-    def test_type_derive_auto_wire_ambiguous_with_implements(self):
+    def test_type_implementation_not_derived_type(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
 types:
-    specific1_test_type:
-        derived_from: test_type
-    specific2_test_type:
-        implements: test_type
+    specific1_test_type: {}
 
+type_implementations:
+    impl:
+        derived_from: specific1_test_type
+        node_ref: test_node
 """
         ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 103, DSLParsingLogicException)
-        self.assertItemsEqual(['specific1_test_type', 'specific2_test_type'],
-                              ex.descendants)
+            yaml, 102, DSLParsingLogicException)
+        self.assertEquals('impl', ex.implementation)
 
     def test_node_interface_duplicate_operation_with_mapping(self):
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """

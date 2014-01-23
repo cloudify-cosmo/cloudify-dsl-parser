@@ -328,10 +328,10 @@ DSL_SCHEMA = {
                                         'patternProperties': {
                                             '^': {
                                                 'oneOf': [
-                                                    { 'type': 'object' },
-                                                    { 'type': 'string' },
-                                                    { 'type': 'number' },
-                                                    { 'type': 'boolean' }
+                                                    {'type': 'object'},
+                                                    {'type': 'string'},
+                                                    {'type': 'number'},
+                                                    {'type': 'boolean'}
                                                 ]
                                             }
                                         },
@@ -347,10 +347,29 @@ DSL_SCHEMA = {
                         'derived_from': {
                             'type': 'string'
                         },
-                        'implements': {
-                            'type': 'string'
-                        }
                     },
+                    'additionalProperties': False
+                }
+            }
+        },
+        'type_implementations': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'type': 'object',
+                    'properties': {
+                        #non-meta 'properties'
+                        'properties': {
+                            'type': 'object'
+                        },
+                        'derived_from': {
+                            'type': 'string'
+                        },
+                        'node_ref': {
+                            'type': 'string'
+                        },
+                    },
+                    'required': ['node_ref', 'derived_from'],
                     'additionalProperties': False
                 }
             }

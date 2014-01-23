@@ -15,6 +15,7 @@
 BLUEPRINT = 'blueprint'
 IMPORTS = 'imports'
 TYPES = 'types'
+TYPE_IMPLEMENTATIONS = 'type_implementations'
 PLUGINS = 'plugins'
 INTERFACES = 'interfaces'
 SOURCE_INTERFACES = 'source_interfaces'
@@ -136,13 +137,10 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         combined_parsed_dsl[POLICIES]) if \
         POLICIES in combined_parsed_dsl else ({}, {})
 
-    types_descendants = _build_types_descendants(
-        _get_dict_prop(combined_parsed_dsl, TYPES))
-
     node_names_set = {node['name'] for node in nodes}
     processed_nodes = map(lambda node: _process_node(
         node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
-        top_level_relationships, node_names_set, types_descendants), nodes)
+        top_level_relationships, node_names_set), nodes)
     _post_process_nodes(processed_nodes,
                         _get_dict_prop(combined_parsed_dsl, TYPES),
                         _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS),
@@ -166,24 +164,6 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     }
 
     return plan
-
-
-def _build_types_descendants(types):
-    types_descendants = {dsl_type_name: [] for dsl_type_name in
-                         types.iterkeys()}
-    for type_name, type_content in types.iteritems():
-
-        def _add_descendants_if_exists(property_name, type_content, type_name):
-            if property_name in type_content:
-                descendants = types_descendants.get(
-                    type_content[property_name], [])
-                descendants.append(type_name)
-                types_descendants[type_content[property_name]] = descendants
-
-        _add_descendants_if_exists('derived_from', type_content, type_name)
-        _add_descendants_if_exists('implements', type_content, type_name)
-
-    return types_descendants
 
 
 def _post_process_nodes(processed_nodes, types, relationships, plugins):
@@ -673,36 +653,36 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
         processed_node[RELATIONSHIPS] = relationships
 
 
-def _autowire_node_type_name(node_type_name, types_descendants):
+def _get_implementation_if_exists(node_name, node_type_name,
+                                  type_implementations, types):
+    candidates = {impl_name: impl_content for impl_name, impl_content in
+                  type_implementations.iteritems() if
+                  impl_content['node_ref'] == node_name}
+    if len(candidates) == 0:
+        return node_type_name, dict()
 
-    def _autowire_node_type_name_recursive(node_type_name, current_path):
-        descendants = types_descendants[node_type_name]
-        if not descendants:
-            return node_type_name
+    if len(candidates) > 1:
+        ex = \
+            DSLParsingLogicException(
+                103, 'Ambiguous implementation of node {0} detected, more than'
+                     ' one candidate - {1}'.format(node_name,
+                                                  candidates.keys()))
+        ex.implementations = list(candidates.keys())
+        raise ex
 
-        if len(descendants) > 1:
-            ex = DSLParsingLogicException(
-                103, 'Ambiguous autowiring of type {0} detected, more than '
-                     'one candidate - {1}'
-                     .format(current_path[0], descendants))
-            ex.descendants = list(descendants)
-            raise ex
-        autowire_candidate = descendants[0]
-        if autowire_candidate in current_path:
-            ex = DSLParsingLogicException(
-                100, 'Failed parsing type {0}, Circular dependency '
-                     'detected: {1}'.format(current_path[0],
-                                            ' --> '.join(current_path)))
-            current_path.append(current_path[0])
-            current_path.reverse()
-            ex.circular_dependency = current_path
-            raise ex
+    impl = candidates.values()[0]
+    impl_name = candidates.keys()[0]
+    impl_type = impl['derived_from']
+    if not _is_derived_from(impl_type, types, node_type_name):
+        ex = \
+            DSLParsingLogicException(
+                102, 'Type of implementation {0} of node {1} is not equal or'
+                     ' derives from the node type - {2} cannot replace {3}'
+                .format(impl_name, node_name, impl_type, node_type_name))
+        ex.implementation = impl_name
+        raise ex
 
-        current_path.append(autowire_candidate)
-        return _autowire_node_type_name_recursive(autowire_candidate,
-                                                  current_path)
-
-    return _autowire_node_type_name_recursive(node_type_name, [node_type_name])
+    return impl_type, _get_dict_prop(impl, 'properties')
 
 
 def _validate_no_duplicate_operations(interface_operation_mappings,
@@ -734,8 +714,7 @@ def _operation_struct(plugin_name, operation_mapping, operation_properties):
 
 
 def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
-                  top_level_relationships, node_names_set,
-                  types_descendants):
+                  top_level_relationships, node_names_set):
     declared_node_type_name = node['type']
     node_name = node['name']
     app_name = parsed_dsl[BLUEPRINT]['name']
@@ -744,20 +723,25 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
 
     #handle types
     if TYPES not in parsed_dsl or declared_node_type_name not in \
-            types_descendants:
+            parsed_dsl[TYPES]:
         err_message = 'Could not locate node type: {0}; existing types: {1}'\
                       .format(declared_node_type_name,
                               parsed_dsl[TYPES].keys() if
                               TYPES in parsed_dsl else 'None')
         raise DSLParsingLogicException(7, err_message)
 
-    node_type_name = _autowire_node_type_name(declared_node_type_name,
-                                              types_descendants)
+    node_type_name, impl_properties = \
+        _get_implementation_if_exists(node_name,
+                                      declared_node_type_name,
+                                      _get_dict_prop(parsed_dsl,
+                                      TYPE_IMPLEMENTATIONS),
+                                      parsed_dsl[TYPES])
     processed_node['type'] = node_type_name
 
     node_type = parsed_dsl[TYPES][node_type_name]
     complete_node_type = _extract_complete_node_type(node_type, node_type_name,
-                                                     parsed_dsl, node)
+                                                     parsed_dsl, node,
+                                                     impl_properties)
     processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
     processed_node[WORKFLOWS] = complete_node_type[WORKFLOWS]
     processed_node[POLICIES] = complete_node_type[POLICIES]
@@ -882,7 +866,8 @@ def _merge_properties_arrays(overridden, overriding,
     return merged_properties_dict.values()
 
 
-def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node):
+def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
+                                impl_properties):
     def types_and_node_inheritance_common_merging_func(complete_super_type,
                                                        merged_type):
         #derive workflows
@@ -921,7 +906,8 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node):
         complete_type,
         copy.deepcopy(node))
 
-    node_properties = _get_dict_prop(node, PROPERTIES)
+    node_properties = dict(_get_dict_prop(node, PROPERTIES).items() +
+                           impl_properties.items())
     #Convert type schema props to prop dictionary
     complete_type_properties_schema = _get_list_prop(complete_type,
                                                      PROPERTIES)
@@ -1001,29 +987,6 @@ def _get_list_prop(dictionary, prop_name):
 
 def _get_dict_prop(dictionary, prop_name):
     return dictionary.get(prop_name, {})
-
-
-def _autowire_plugin(plugins, interface_name, type_name):
-    matching_plugins = [plugin_name for plugin_name, plugin_data in
-                        plugins.items() if
-                        PROPERTIES in plugin_data and
-                        plugin_data[PROPERTIES]['interface'] == interface_name]
-
-    num_of_matches = len(matching_plugins)
-    if num_of_matches == 0:
-        raise DSLParsingLogicException(
-            11, 'Failed to find a plugin which implements interface {0} as '
-                'implicitly declared for type {1}'.format(interface_name,
-                                                          type_name))
-
-    if num_of_matches > 1:
-        raise DSLParsingLogicException(
-            12, 'Ambiguous implicit declaration for interface {0} '
-                'implementation under type {1} - Found multiple matching '
-                'plugins: ({2})'.format(interface_name, type_name,
-                                        ','.join(matching_plugins)))
-
-    return matching_plugins[0]
 
 
 def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
