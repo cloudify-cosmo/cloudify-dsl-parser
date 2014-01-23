@@ -1027,3 +1027,30 @@ types:
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
+
+    def test_implementation_properties_as_schema(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+type_implementations:
+    impl:
+        derived_from: test_type
+        node_ref: test_node
+        properties:
+            - new_key: default
+
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_implementation_with_interfaces(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+type_implementations:
+    impl:
+        derived_from: test_type
+        node_ref: test_node
+        interfaces:
+            test_interface1:
+                - install:
+                    mapping: test_plugin.install
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)

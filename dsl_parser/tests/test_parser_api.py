@@ -2793,86 +2793,6 @@ plugins:
         # is a host should have one
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]['plugins_to_install'])
-    #TODO: contained-in relationships tests such as loops etc.
-
-    def test_type_derive_one_level_auto_wire(self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-types:
-    specific_test_type:
-        derived_from: test_type
-"""
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result,
-                                       expected_type='specific_test_type',
-                                       expected_declared_type='test_type')
-
-    def test_type_derive_two_level_auto_wire(self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT, """
-types:
-    specific_test_type:
-        derived_from: test_type
-"""]) + """
-types:
-    more_specific_test_type:
-        derived_from: specific_test_type
-"""
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result,
-                                       expected_type='more_specific_test_type',
-                                       expected_declared_type='test_type')
-
-    def test_type_derive_auto_wire_properties_override_merge_topology_level(
-            self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-types:
-    specific_test_type:
-        derived_from: test_type
-        properties:
-            - key: "overriden val"
-            - merged_key: "merged_value"
-"""
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result,
-                                       expected_type='specific_test_type',
-                                       expected_declared_type='test_type')
-        node = result['nodes'][0]
-        self.assertEquals('merged_value', node['properties']['merged_key'])
-
-    def test_anonymous_type_autowire(self):
-
-        yaml = self.create_yaml_with_imports(
-            [self.BASIC_BLUEPRINT_SECTION]) + """
-types:
-    specific_test_type:
-        properties:
-            - key
-        implements: test_type
-"""
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result,
-                                       expected_type='specific_test_type',
-                                       expected_declared_type='test_type')
-
-    def test_anonymous_type_autowire_and_derive(self):
-
-        yaml = self.create_yaml_with_imports(
-            [self.BASIC_BLUEPRINT_SECTION]) + """
-types:
-    specific_test_type:
-        derived_from: base_type
-        implements: test_type
-    base_type:
-        properties:
-            - key: "overriden val"
-            - merged_key: "merged_value"
-"""
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result,
-                                       expected_type='specific_test_type',
-                                       expected_declared_type='test_type')
-        result = parse(yaml)
-        node = result['nodes'][0]
-        self.assertEquals('merged_value', node['properties']['merged_key'])
 
     def test_operation_mapping_with_properties_injection(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
@@ -3007,3 +2927,43 @@ plugins:
         self.assertDictEqual(
             op_struct('test_plugin', 'install', expected_props),
             rel1_source_ops['test_interface1.install'])
+
+    def test_type_implementation(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+types:
+    specific_test_type:
+        derived_from: test_type
+
+type_implementations:
+    implementation_of_specific_test_type:
+        derived_from: specific_test_type
+        node_ref: test_node
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result,
+                                       expected_type='specific_test_type',
+                                       expected_declared_type='test_type')
+
+    def test_type_implementation_with_new_propeties(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+types:
+    specific_test_type:
+        derived_from: test_type
+        properties:
+            - mandatory
+            - new_prop: default
+
+type_implementations:
+    implementation_of_specific_test_type:
+        derived_from: specific_test_type
+        node_ref: test_node
+        properties:
+            mandatory: mandatory_value
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result,
+                                       expected_type='specific_test_type',
+                                       expected_declared_type='test_type')
+        node = result['nodes'][0]
+        self.assertEquals('mandatory_value', node['properties']['mandatory'])
+        self.assertEquals('default', node['properties']['new_prop'])
