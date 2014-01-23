@@ -666,7 +666,7 @@ def _get_implementation_if_exists(node_name, node_type_name,
             DSLParsingLogicException(
                 103, 'Ambiguous implementation of node {0} detected, more than'
                      ' one candidate - {1}'.format(node_name,
-                                                  candidates.keys()))
+                                                   candidates.keys()))
         ex.implementations = list(candidates.keys())
         raise ex
 
@@ -731,11 +731,10 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
         raise DSLParsingLogicException(7, err_message)
 
     node_type_name, impl_properties = \
-        _get_implementation_if_exists(node_name,
-                                      declared_node_type_name,
-                                      _get_dict_prop(parsed_dsl,
-                                      TYPE_IMPLEMENTATIONS),
-                                      parsed_dsl[TYPES])
+        _get_implementation_if_exists(
+            node_name, declared_node_type_name,
+            _get_dict_prop(parsed_dsl, TYPE_IMPLEMENTATIONS),
+            parsed_dsl[TYPES])
     processed_node['type'] = node_type_name
 
     node_type = parsed_dsl[TYPES][node_type_name]
