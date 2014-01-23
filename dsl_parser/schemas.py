@@ -391,7 +391,25 @@ DSL_SCHEMA = {
                     'additionalProperties': False
                 }
             }
-        }
+        },
+        'relationship_implementations': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'type': 'object',
+                    'properties': {
+                        'derived_from': {
+                            'type': 'string'
+                        },
+                        'node_ref': {
+                            'type': 'string'
+                        },
+                    },
+                    'required': ['node_ref', 'derived_from'],
+                    'additionalProperties': False
+                }
+            }
+        },
     },
     'required': ['blueprint'],
     'additionalProperties': False

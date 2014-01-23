@@ -1802,7 +1802,6 @@ relationships:
                               'workflows': {}},
                              result['relationships']['empty_rel'])
         test_relationship = result['relationships']['test_relationship']
-        self.assertTrue('derived_from' not in test_relationship)
         self.assertEquals('test_relationship', test_relationship['name'])
 
         result_test_interface_3 = \
@@ -1813,7 +1812,6 @@ relationships:
         self.assertEquals({'test_interface4_op1': 'test_plugin.task_name'},
                           result_test_interface_4[0])
 
-    # TODO rewrite test once we put workflows in relationship
     def _test_top_level_relationships_relationship_with_ref_workflow(self):
         ref_alias = 'ref_alias'
         radial_file_path = self.make_file_with_name('ref custom radial',
@@ -1877,7 +1875,7 @@ imports:
                                               ['test_interface2'][1])
         self.assertEquals(
             2, len(test_relationship['source_interfaces']['test_interface2']))
-        self.assertEquals(3, len(test_relationship))
+        self.assertEquals(4, len(test_relationship))
 
         test_relationship2 = result['relationships']['test_relationship2']
         self.assertEquals('test_relationship2', test_relationship2['name'])
@@ -1889,7 +1887,7 @@ imports:
                                                ['test_interface2'][1])
         self.assertEquals(
             2, len(test_relationship2['target_interfaces']['test_interface2']))
-        self.assertEquals(3, len(test_relationship2))
+        self.assertEquals(4, len(test_relationship2))
 
         test_relationship3 = result['relationships']['test_relationship3']
         self.assertEquals('test_relationship3', test_relationship3['name'])
@@ -2090,7 +2088,7 @@ plugins:
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(3, len(parent_relationship))
-        self.assertEquals(4, len(relationship))
+        self.assertEquals(5, len(relationship))
         self.assertEquals(8, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
@@ -2104,6 +2102,7 @@ plugins:
                                              ['test_interface3'][0])
 
         self.assertEquals('relationship', relationship['name'])
+        self.assertEquals('parent_relationship', relationship['derived_from'])
         self.assertEquals(1, len(relationship['target_interfaces']))
         self.assertEquals(1, len(relationship['target_interfaces']
                                              ['test_interface3']))
@@ -2212,7 +2211,7 @@ plugins:
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(4, len(parent_relationship))
-        self.assertEquals(4, len(relationship))
+        self.assertEquals(5, len(relationship))
         self.assertEquals(8, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_app.test_node2'], dependents)
@@ -2231,6 +2230,7 @@ plugins:
                                              ['test_interface'][0])
 
         self.assertEquals('relationship', relationship['name'])
+        self.assertEquals('parent_relationship', relationship['derived_from'])
         self.assertEquals(1, len(relationship['target_interfaces']))
         self.assertEquals(2, len(relationship['target_interfaces']
                                              ['test_interface']))
@@ -2944,7 +2944,7 @@ type_implementations:
                                        expected_type='specific_test_type',
                                        expected_declared_type='test_type')
 
-    def test_type_implementation_with_new_propeties(self):
+    def test_type_implementation_with_new_properties(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
 types:
     specific_test_type:
@@ -2967,3 +2967,31 @@ type_implementations:
         node = result['nodes'][0]
         self.assertEquals('mandatory_value', node['properties']['mandatory'])
         self.assertEquals('default', node['properties']['new_prop'])
+
+    def test_relationship_implementations(self):
+
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                - type: test_relationship
+                  target: test_node
+                  workflows: {}
+relationships:
+    test_relationship: {} """]) + """
+
+relationships:
+    specific_test_relationship:
+        derived_from: test_relationship
+
+relationship_implementations:
+    specific_test_relationship_impl:
+        derived_from: specific_test_relationship
+        node_ref: test_node2
+"""
+        result = parse(yaml)
+        source_node = result['nodes'][1]
+        self.assertEquals(1, len(source_node['relationships']))
+        node_relationship = source_node['relationships'][0]
+        self.assertEquals('specific_test_relationship',
+                          node_relationship['type'])

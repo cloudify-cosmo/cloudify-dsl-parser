@@ -572,3 +572,55 @@ types:
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 107, DSLParsingLogicException)
         self.assertEquals('mandatory', ex.property)
+
+    def test_relationship_implementation_ambiguous(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                - type: test_relationship
+                  target: test_node
+
+relationships:
+    test_relationship: {} """]) + """
+
+relationships:
+    specific_test_relationship:
+        derived_from: test_relationship
+
+relationship_implementations:
+    specific_test_relationship_impl1:
+        derived_from: specific_test_relationship
+        node_ref: test_node2
+    specific_test_relationship_impl2:
+        derived_from: specific_test_relationship
+        node_ref: test_node2
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 108, DSLParsingLogicException)
+        self.assertItemsEqual(
+            ['specific_test_relationship_impl1',
+             'specific_test_relationship_impl2'],
+            ex.implementations)
+
+    def test_relationship_implementation_not_derived_type(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                - type: test_relationship
+                  target: test_node
+relationships:
+    test_relationship: {} """]) + """
+
+relationships:
+    specific_test_relationship: {}
+
+relationship_implementations:
+    impl:
+        derived_from: specific_test_relationship
+        node_ref: test_node2
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 109, DSLParsingLogicException)
+        self.assertEquals('impl', ex.implementation)

@@ -23,6 +23,7 @@ TARGET_INTERFACES = 'target_interfaces'
 WORKFLOWS = 'workflows'
 POLICIES = 'policies'
 RELATIONSHIPS = 'relationships'
+RELATIONSHIP_IMPLEMENTATIONS = 'relationship_implementations'
 PROPERTIES = 'properties'
 
 HOST_TYPE = 'cloudify.types.host'
@@ -420,8 +421,6 @@ def _process_relationships(combined_parsed_dsl):
             _get_dict_prop(complete_rel_obj_copy, WORKFLOWS))
         processed_relationships[rel_name] = complete_rel_obj_copy
         processed_relationships[rel_name]['name'] = rel_name
-        if 'derived_from' in processed_relationships[rel_name]:
-            del (processed_relationships[rel_name]['derived_from'])
     return processed_relationships
 
 
@@ -611,11 +610,17 @@ def _validate_no_duplicate_element(elements, keyfunc):
 
 
 def _process_node_relationships(app_name, node, node_name, node_names_set,
-                                processed_node, top_level_relationships):
+                                processed_node, top_level_relationships,
+                                relationship_impls):
     if RELATIONSHIPS in node:
         relationships = []
         for relationship in node[RELATIONSHIPS]:
             relationship_type = relationship['type']
+            relationship_type = \
+                _get_relationship_implementation_if_exists(
+                    node_name, relationship_impls, relationship_type,
+                    top_level_relationships)
+            relationship['type'] = relationship_type
             #validating only the instance relationship values - the inherited
             # relationship values if any
             #should have been validated when the top level relationships were
@@ -653,36 +658,74 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
         processed_node[RELATIONSHIPS] = relationships
 
 
-def _get_implementation_if_exists(node_name, node_type_name,
-                                  type_implementations, types):
+def _get_implementation(name, type_name, implementations,
+                        impl_category, types, err_code_ambig,
+                        err_code_derive):
     candidates = {impl_name: impl_content for impl_name, impl_content in
-                  type_implementations.iteritems() if
-                  impl_content['node_ref'] == node_name}
-    if len(candidates) == 0:
-        return node_type_name, dict()
+                  implementations.iteritems() if
+                  impl_content['node_ref'] == name}
 
     if len(candidates) > 1:
         ex = \
             DSLParsingLogicException(
-                103, 'Ambiguous implementation of node {0} detected, more than'
-                     ' one candidate - {1}'.format(node_name,
-                                                   candidates.keys()))
+                err_code_ambig, 'Ambiguous implementation of {0} {1} detected,'
+                ' more than one candidate - {2}'.format(impl_category,
+                                                        name,
+                                                        candidates.keys()))
         ex.implementations = list(candidates.keys())
         raise ex
+
+    if len(candidates) == 0:
+        return None
 
     impl = candidates.values()[0]
     impl_name = candidates.keys()[0]
     impl_type = impl['derived_from']
-    if not _is_derived_from(impl_type, types, node_type_name):
+    if not _is_derived_from(impl_type, types, type_name):
         ex = \
             DSLParsingLogicException(
-                102, 'Type of implementation {0} of node {1} is not equal or'
-                     ' derives from the node type - {2} cannot replace {3}'
-                .format(impl_name, node_name, impl_type, node_type_name))
+                err_code_derive,
+                'Type of implementation {0} of {1} {2} is not equal or'
+                ' derives from the node type - {3} cannot replace {4}'
+                .format(impl_name, impl_category, name, impl_type, type_name))
         ex.implementation = impl_name
         raise ex
 
+    return impl
+
+
+def _get_type_implementation_if_exists(node_name, node_type_name,
+                                       type_implementations, types):
+    impl = _get_implementation(node_name,
+                               node_type_name,
+                               type_implementations,
+                               'node',
+                               types,
+                               103,
+                               102)
+    if impl is None:
+        return node_type_name, dict()
+
+    impl_type = impl['derived_from']
+
     return impl_type, _get_dict_prop(impl, 'properties')
+
+
+def _get_relationship_implementation_if_exists(node_name, relationship_impls,
+                                               relationship_type,
+                                               relationships):
+    impl = _get_implementation(node_name,
+                               relationship_type,
+                               relationship_impls,
+                               'relationship',
+                               relationships,
+                               108,
+                               109)
+
+    if impl is None:
+        return relationship_type
+
+    return impl['derived_from']
 
 
 def _validate_no_duplicate_operations(interface_operation_mappings,
@@ -731,7 +774,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
         raise DSLParsingLogicException(7, err_message)
 
     node_type_name, impl_properties = \
-        _get_implementation_if_exists(
+        _get_type_implementation_if_exists(
             node_name, declared_node_type_name,
             _get_dict_prop(parsed_dsl, TYPE_IMPLEMENTATIONS),
             parsed_dsl[TYPES])
@@ -759,7 +802,9 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
 
     #handle relationships
     _process_node_relationships(app_name, node, node_name, node_names_set,
-                                processed_node, top_level_relationships)
+                                processed_node, top_level_relationships,
+                                _get_dict_prop(parsed_dsl,
+                                               RELATIONSHIP_IMPLEMENTATIONS))
 
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
     processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS])
