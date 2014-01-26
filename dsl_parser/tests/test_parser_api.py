@@ -2987,7 +2987,8 @@ relationships:
 relationship_implementations:
     specific_test_relationship_impl:
         type: specific_test_relationship
-        node_ref: test_node2
+        source_node_ref: test_node2
+        target_node_ref: test_node
 """
         result = parse(yaml)
         source_node = result['nodes'][1]

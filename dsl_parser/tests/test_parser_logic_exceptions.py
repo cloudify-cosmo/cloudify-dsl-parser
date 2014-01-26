@@ -591,10 +591,12 @@ relationships:
 relationship_implementations:
     specific_test_relationship_impl1:
         type: specific_test_relationship
-        node_ref: test_node2
+        source_node_ref: test_node2
+        target_node_ref: test_node
     specific_test_relationship_impl2:
         type: specific_test_relationship
-        node_ref: test_node2
+        source_node_ref: test_node2
+        target_node_ref: test_node
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 108, DSLParsingLogicException)
@@ -619,8 +621,56 @@ relationships:
 relationship_implementations:
     impl:
         type: specific_test_relationship
-        node_ref: test_node2
+        source_node_ref: test_node2
+        target_node_ref: test_node
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 109, DSLParsingLogicException)
         self.assertEquals('impl', ex.implementation)
+
+    def test_type_impl_non_existing_node(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+
+type_implementations:
+    impl:
+        type: test_type
+        node_ref: non_existing_node
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 110, DSLParsingLogicException)
+        self.assertEquals('impl', ex.implementation)
+        self.assertEquals('non_existing_node', ex.node_ref)
+
+    def test_relationship_impl_non_existing_source_node(self):
+
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+relationships:
+    test_relationship: {}
+
+relationship_implementations:
+    impl:
+        type: test_relationship
+        source_node_ref: non_existing_node
+        target_node_ref: test_node
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 111, DSLParsingLogicException)
+        self.assertEquals('impl', ex.implementation)
+        self.assertEquals('non_existing_node', ex.source_node_ref)
+
+    def test_relationship_impl_non_existing_target_node(self):
+
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship: {}
+
+relationship_implementations:
+    impl:
+        type: test_relationship
+        source_node_ref: test_node
+        target_node_ref: non_existing_node
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 111, DSLParsingLogicException)
+        self.assertEquals('impl', ex.implementation)
+        self.assertEquals('non_existing_node', ex.target_node_ref)

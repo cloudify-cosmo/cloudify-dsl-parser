@@ -401,11 +401,15 @@ DSL_SCHEMA = {
                         'type': {
                             'type': 'string'
                         },
-                        'node_ref': {
+                        'source_node_ref': {
+                            'type': 'string'
+                        },
+                        'target_node_ref': {
                             'type': 'string'
                         },
                     },
-                    'required': ['node_ref', 'type'],
+                    'required': ['source_node_ref', 'target_node_ref',
+                                 'type'],
                     'additionalProperties': False
                 }
             }

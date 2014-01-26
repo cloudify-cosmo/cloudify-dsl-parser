@@ -139,13 +139,20 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         POLICIES in combined_parsed_dsl else ({}, {})
 
     node_names_set = {node['name'] for node in nodes}
+
     processed_nodes = map(lambda node: _process_node(
         node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
         top_level_relationships, node_names_set), nodes)
+
     _post_process_nodes(processed_nodes,
                         _get_dict_prop(combined_parsed_dsl, TYPES),
                         _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS),
-                        _get_dict_prop(combined_parsed_dsl, PLUGINS))
+                        _get_dict_prop(combined_parsed_dsl, PLUGINS),
+                        _get_dict_prop(combined_parsed_dsl,
+                                       TYPE_IMPLEMENTATIONS),
+                        _get_dict_prop(combined_parsed_dsl,
+                                       RELATIONSHIP_IMPLEMENTATIONS),
+                        node_names_set)
 
     top_level_workflows = _process_workflows(
         combined_parsed_dsl[WORKFLOWS]) if WORKFLOWS in \
@@ -167,7 +174,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     return plan
 
 
-def _post_process_nodes(processed_nodes, types, relationships, plugins):
+def _post_process_nodes(processed_nodes, types, relationships, plugins,
+                        type_impls, relationship_impls, node_names):
     node_name_to_node = {node['id']: node for node in processed_nodes}
 
     for node in processed_nodes:
@@ -205,6 +213,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins):
             node['plugins_to_install'] = plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
+    _validate_type_impls(type_impls, node_names)
+    _validate_relationship_impls(relationship_impls, node_names)
 
 
 def _post_process_node_relationships(node, node_name_to_node, plugins):
@@ -336,6 +346,46 @@ def _add_dependent(node, dependent_node):
         return
     dependents.append(dependent_node['id'])
     node['dependents'] = dependents
+
+
+def _validate_type_impls(type_impls, node_names):
+    for impl_name, impl_content in type_impls.iteritems():
+        node_ref = impl_content['node_ref']
+        if node_ref not in node_names:
+            ex = \
+                DSLParsingLogicException(
+                    110, '\'{0}\' type implementation has a reference to a '
+                         'node which does not exist named \'{1}\''.
+                    format(impl_name, node_ref))
+            ex.implementation = impl_name
+            ex.node_ref = node_ref
+            raise ex
+
+
+def _validate_relationship_impls(relationship_impls, node_names):
+    for impl_name, impl_content in relationship_impls.iteritems():
+        source_node_ref = impl_content['source_node_ref']
+        target_node_ref = impl_content['target_node_ref']
+        if source_node_ref not in node_names:
+            ex = \
+                DSLParsingLogicException(
+                    111, '\'{0}\' relationship implementation has a '
+                         'reference to a source '
+                         'node which does not exist named \'{1}\''.
+                    format(impl_name, source_node_ref))
+            ex.implementation = impl_name
+            ex.source_node_ref = source_node_ref
+            raise ex
+        if target_node_ref not in node_names:
+            ex = \
+                DSLParsingLogicException(
+                    111, '\'{0}\' relationship implementation has a '
+                         'reference to a target '
+                         'node which does not exist named \'{1}\''.
+                    format(impl_name, target_node_ref))
+            ex.implementation = impl_name
+            ex.target_node_ref = target_node_ref
+            raise ex
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
@@ -618,8 +668,8 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
             relationship_type = relationship['type']
             relationship_type = \
                 _get_relationship_implementation_if_exists(
-                    node_name, relationship_impls, relationship_type,
-                    top_level_relationships)
+                    node_name, relationship['target'], relationship_impls,
+                    relationship_type, top_level_relationships)
             relationship['type'] = relationship_type
             #validating only the instance relationship values - the inherited
             # relationship values if any
@@ -658,19 +708,19 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
         processed_node[RELATIONSHIPS] = relationships
 
 
-def _get_implementation(name, type_name, implementations,
+def _get_implementation(lookup_message_str, type_name, implementations,
                         impl_category, types, err_code_ambig,
-                        err_code_derive):
+                        err_code_derive, candidate_func):
     candidates = {impl_name: impl_content for impl_name, impl_content in
                   implementations.iteritems() if
-                  impl_content['node_ref'] == name}
+                  candidate_func(impl_content)}
 
     if len(candidates) > 1:
         ex = \
             DSLParsingLogicException(
                 err_code_ambig, 'Ambiguous implementation of {0} {1} detected,'
                 ' more than one candidate - {2}'.format(impl_category,
-                                                        name,
+                                                        lookup_message_str,
                                                         candidates.keys()))
         ex.implementations = list(candidates.keys())
         raise ex
@@ -687,7 +737,8 @@ def _get_implementation(name, type_name, implementations,
                 err_code_derive,
                 'Type of implementation {0} of {1} {2} is not equal or'
                 ' derives from the node type - {3} cannot replace {4}'
-                .format(impl_name, impl_category, name, impl_type, type_name))
+                .format(impl_name, impl_category, lookup_message_str,
+                        impl_type, type_name))
         ex.implementation = impl_name
         raise ex
 
@@ -696,13 +747,18 @@ def _get_implementation(name, type_name, implementations,
 
 def _get_type_implementation_if_exists(node_name, node_type_name,
                                        type_implementations, types):
+
+    def candidate_function(impl_content):
+        return impl_content['node_ref'] == node_name
+
     impl = _get_implementation(node_name,
                                node_type_name,
                                type_implementations,
                                'node',
                                types,
                                103,
-                               102)
+                               102,
+                               candidate_function)
     if impl is None:
         return node_type_name, dict()
 
@@ -711,16 +767,25 @@ def _get_type_implementation_if_exists(node_name, node_type_name,
     return impl_type, _get_dict_prop(impl, 'properties')
 
 
-def _get_relationship_implementation_if_exists(node_name, relationship_impls,
+def _get_relationship_implementation_if_exists(source_node_name,
+                                               target_node_name,
+                                               relationship_impls,
                                                relationship_type,
                                                relationships):
-    impl = _get_implementation(node_name,
+    def candidate_function(impl_content):
+        return \
+            impl_content['source_node_ref'] == source_node_name and \
+            impl_content['target_node_ref'] == target_node_name
+
+    impl = _get_implementation('{0}->{1}'.format(source_node_name,
+                                                 target_node_name),
                                relationship_type,
                                relationship_impls,
                                'relationship',
                                relationships,
                                108,
-                               109)
+                               109,
+                               candidate_function)
 
     if impl is None:
         return relationship_type
@@ -1048,7 +1113,9 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
 
     #TODO: Find a solution for top level workflows, which should be probably
     # somewhat merged with override
-    merge_no_override = {INTERFACES, TYPES, PLUGINS, WORKFLOWS, RELATIONSHIPS}
+    merge_no_override = {INTERFACES, TYPES, PLUGINS, WORKFLOWS,
+                         TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
+                         RELATIONSHIP_IMPLEMENTATIONS}
     merge_one_nested_level_no_override = {POLICIES}
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
