@@ -680,7 +680,7 @@ def _get_implementation(name, type_name, implementations,
 
     impl = candidates.values()[0]
     impl_name = candidates.keys()[0]
-    impl_type = impl['derived_from']
+    impl_type = impl['type']
     if not _is_derived_from(impl_type, types, type_name):
         ex = \
             DSLParsingLogicException(
@@ -706,7 +706,7 @@ def _get_type_implementation_if_exists(node_name, node_type_name,
     if impl is None:
         return node_type_name, dict()
 
-    impl_type = impl['derived_from']
+    impl_type = impl['type']
 
     return impl_type, _get_dict_prop(impl, 'properties')
 
@@ -725,7 +725,7 @@ def _get_relationship_implementation_if_exists(node_name, relationship_impls,
     if impl is None:
         return relationship_type
 
-    return impl['derived_from']
+    return impl['type']
 
 
 def _validate_no_duplicate_operations(interface_operation_mappings,

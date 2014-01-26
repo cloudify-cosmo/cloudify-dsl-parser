@@ -1032,7 +1032,7 @@ types:
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 type_implementations:
     impl:
-        derived_from: test_type
+        type: test_type
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -1050,7 +1050,7 @@ type_implementations:
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 type_implementations:
     impl:
-        derived_from: test_type
+        type: test_type
         node_ref: test_node
         properties:
             - new_key: default
@@ -1063,7 +1063,7 @@ type_implementations:
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 type_implementations:
     impl:
-        derived_from: test_type
+        type: test_type
         node_ref: test_node
         interfaces:
             test_interface1:
@@ -1077,7 +1077,7 @@ type_implementations:
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 relationship_implementations:
     impl:
-        derived_from: test_relationship
+        type: test_relationship
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)

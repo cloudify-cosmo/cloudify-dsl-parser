@@ -387,10 +387,10 @@ types:
 
 type_implementations:
     first_implementation:
-        derived_from: specific1_test_type
+        type: specific1_test_type
         node_ref: test_node
     second_implementation:
-        derived_from: specific2_test_type
+        type: specific2_test_type
         node_ref: test_node
 """
         ex = self._assert_dsl_parsing_exception_error_code(
@@ -406,7 +406,7 @@ types:
 
 type_implementations:
     impl:
-        derived_from: specific1_test_type
+        type: specific1_test_type
         node_ref: test_node
 """
         ex = self._assert_dsl_parsing_exception_error_code(
@@ -590,10 +590,10 @@ relationships:
 
 relationship_implementations:
     specific_test_relationship_impl1:
-        derived_from: specific_test_relationship
+        type: specific_test_relationship
         node_ref: test_node2
     specific_test_relationship_impl2:
-        derived_from: specific_test_relationship
+        type: specific_test_relationship
         node_ref: test_node2
 """
         ex = self._assert_dsl_parsing_exception_error_code(
@@ -618,7 +618,7 @@ relationships:
 
 relationship_implementations:
     impl:
-        derived_from: specific_test_relationship
+        type: specific_test_relationship
         node_ref: test_node2
 """
         ex = self._assert_dsl_parsing_exception_error_code(

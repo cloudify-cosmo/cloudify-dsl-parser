@@ -2936,7 +2936,7 @@ types:
 
 type_implementations:
     implementation_of_specific_test_type:
-        derived_from: specific_test_type
+        type: specific_test_type
         node_ref: test_node
 """
         result = parse(yaml)
@@ -2955,7 +2955,7 @@ types:
 
 type_implementations:
     implementation_of_specific_test_type:
-        derived_from: specific_test_type
+        type: specific_test_type
         node_ref: test_node
         properties:
             mandatory: mandatory_value
@@ -2986,7 +2986,7 @@ relationships:
 
 relationship_implementations:
     specific_test_relationship_impl:
-        derived_from: specific_test_relationship
+        type: specific_test_relationship
         node_ref: test_node2
 """
         result = parse(yaml)
