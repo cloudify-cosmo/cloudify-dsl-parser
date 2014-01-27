@@ -139,19 +139,22 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         POLICIES in combined_parsed_dsl else ({}, {})
 
     node_names_set = {node['name'] for node in nodes}
+    type_impls = _get_dict_prop(combined_parsed_dsl, TYPE_IMPLEMENTATIONS)\
+        .copy()
+    relationship_impls = _get_dict_prop(combined_parsed_dsl,
+                                        RELATIONSHIP_IMPLEMENTATIONS).copy()
 
     processed_nodes = map(lambda node: _process_node(
         node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
-        top_level_relationships, node_names_set), nodes)
+        top_level_relationships, node_names_set, type_impls,
+        relationship_impls), nodes)
 
     _post_process_nodes(processed_nodes,
                         _get_dict_prop(combined_parsed_dsl, TYPES),
                         _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS),
                         _get_dict_prop(combined_parsed_dsl, PLUGINS),
-                        _get_dict_prop(combined_parsed_dsl,
-                                       TYPE_IMPLEMENTATIONS),
-                        _get_dict_prop(combined_parsed_dsl,
-                                       RELATIONSHIP_IMPLEMENTATIONS),
+                        type_impls,
+                        relationship_impls,
                         node_names_set)
 
     top_level_workflows = _process_workflows(
@@ -213,8 +216,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
             node['plugins_to_install'] = plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
-    _validate_type_impls(type_impls, node_names)
-    _validate_relationship_impls(relationship_impls, node_names)
+    _validate_type_impls(type_impls)
+    _validate_relationship_impls(relationship_impls)
 
 
 def _post_process_node_relationships(node, node_name_to_node, plugins):
@@ -348,44 +351,31 @@ def _add_dependent(node, dependent_node):
     node['dependents'] = dependents
 
 
-def _validate_type_impls(type_impls, node_names):
+def _validate_type_impls(type_impls):
     for impl_name, impl_content in type_impls.iteritems():
         node_ref = impl_content['node_ref']
-        if node_ref not in node_names:
-            ex = \
-                DSLParsingLogicException(
-                    110, '\'{0}\' type implementation has a reference to a '
-                         'node which does not exist named \'{1}\''.
-                    format(impl_name, node_ref))
-            ex.implementation = impl_name
-            ex.node_ref = node_ref
-            raise ex
+        ex = \
+            DSLParsingLogicException(
+                110, '\'{0}\' type implementation has a reference to a '
+                     'node which does not exist named \'{1}\''.
+                format(impl_name, node_ref))
+        ex.implementation = impl_name
+        ex.node_ref = node_ref
+        raise ex
 
 
-def _validate_relationship_impls(relationship_impls, node_names):
+def _validate_relationship_impls(relationship_impls):
     for impl_name, impl_content in relationship_impls.iteritems():
         source_node_ref = impl_content['source_node_ref']
         target_node_ref = impl_content['target_node_ref']
-        if source_node_ref not in node_names:
-            ex = \
-                DSLParsingLogicException(
-                    111, '\'{0}\' relationship implementation has a '
-                         'reference to a source '
-                         'node which does not exist named \'{1}\''.
-                    format(impl_name, source_node_ref))
-            ex.implementation = impl_name
-            ex.source_node_ref = source_node_ref
-            raise ex
-        if target_node_ref not in node_names:
-            ex = \
-                DSLParsingLogicException(
-                    111, '\'{0}\' relationship implementation has a '
-                         'reference to a target '
-                         'node which does not exist named \'{1}\''.
-                    format(impl_name, target_node_ref))
-            ex.implementation = impl_name
-            ex.target_node_ref = target_node_ref
-            raise ex
+        ex = \
+            DSLParsingLogicException(
+                111, '\'{0}\' relationship implementation between \'{1}->{'
+                     '2}\' is not mapped to any matching node relationship'.
+                format(impl_name, source_node_ref, target_node_ref))
+        ex.implementation = impl_name
+        ex.source_node_ref = source_node_ref
+        raise ex
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
@@ -742,6 +732,8 @@ def _get_implementation(lookup_message_str, type_name, implementations,
         ex.implementation = impl_name
         raise ex
 
+    del implementations[impl_name]
+
     return impl
 
 
@@ -775,7 +767,9 @@ def _get_relationship_implementation_if_exists(source_node_name,
     def candidate_function(impl_content):
         return \
             impl_content['source_node_ref'] == source_node_name and \
-            impl_content['target_node_ref'] == target_node_name
+            impl_content['target_node_ref'] == target_node_name and \
+            _is_derived_from(impl_content['type'], relationships,
+                             relationship_type)
 
     impl = _get_implementation('{0}->{1}'.format(source_node_name,
                                                  target_node_name),
@@ -822,7 +816,8 @@ def _operation_struct(plugin_name, operation_mapping, operation_properties):
 
 
 def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
-                  top_level_relationships, node_names_set):
+                  top_level_relationships, node_names_set, type_impls,
+                  relationship_impls):
     declared_node_type_name = node['type']
     node_name = node['name']
     app_name = parsed_dsl[BLUEPRINT]['name']
@@ -841,7 +836,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
     node_type_name, impl_properties = \
         _get_type_implementation_if_exists(
             node_name, declared_node_type_name,
-            _get_dict_prop(parsed_dsl, TYPE_IMPLEMENTATIONS),
+            type_impls,
             parsed_dsl[TYPES])
     processed_node['type'] = node_type_name
 
@@ -868,8 +863,7 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
     #handle relationships
     _process_node_relationships(app_name, node, node_name, node_names_set,
                                 processed_node, top_level_relationships,
-                                _get_dict_prop(parsed_dsl,
-                                               RELATIONSHIP_IMPLEMENTATIONS))
+                                relationship_impls)
 
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
     processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS])
