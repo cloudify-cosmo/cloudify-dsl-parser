@@ -552,6 +552,44 @@ types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 105, DSLParsingLogicException)
 
+    def test_operation_properties_injection_get_property_path_no_dict(
+            self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        properties:
+            - key
+        interfaces:
+            test_interface1:
+                - install:
+                    mapping: test_plugin.install
+                    properties:
+                        key: { get_property: 'key.nested' }
+
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 104, DSLParsingLogicException)
+        self.assertEqual('key.nested', ex.property_name)
+
+    def test_operation_properties_injection_get_property_path_no_array(
+            self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+types:
+    test_type:
+        properties:
+            - key
+        interfaces:
+            test_interface1:
+                - install:
+                    mapping: test_plugin.install
+                    properties:
+                        key: { get_property: 'key[0]' }
+
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 104, DSLParsingLogicException)
+        self.assertEqual('key[0]', ex.property_name)
+
     def test_node_set_non_existing_property(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
 types:

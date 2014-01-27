@@ -39,6 +39,7 @@ import os
 import yaml
 import copy
 import contextlib
+import re
 from schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
@@ -233,25 +234,48 @@ def _post_process_node_relationships(node, node_name_to_node, plugins):
                 target_node, plugins)
 
 
+pattern = re.compile("(.+)\[(\d+)\]")
+
+
 def _expand(context_properties, node_properties, node_id, operation_name):
+
+    def raise_exception(property_path):
+        ex = DSLParsingLogicException(
+            104, 'Mapped property {0} does not exist in the '
+                 'context node properties {1} (node {2}, '
+                 'operation {3})'.format(property_path,
+                                         node_properties,
+                                         node_id,
+                                         operation_name))
+        ex.property_name = property_path
+        raise ex
+
     if not context_properties:
         return None
     result = {}
     for key, value in context_properties.items():
         if type(value) == dict:
             if len(value) == 1 and value.keys()[0] == 'get_property':
-                property_name = value.values()[0]
-                if property_name not in node_properties:
-                    ex = DSLParsingLogicException(
-                        104, 'Mapped property {0} does not exist in the '
-                             'context node properties {1} (node {2}, '
-                             'operation {3})'.format(property_name,
-                                                     node_properties,
-                                                     node_id,
-                                                     operation_name))
-                    ex.property_name = property_name
-                    raise ex
-                result[key] = node_properties[property_name]
+                property_path = value.values()[0]
+                current_properties_level = node_properties
+                for property_segment in property_path.split('.'):
+                    match = pattern.match(property_segment)
+                    if match:
+                        index = int(match.group(2))
+                        property_name = match.group(1)
+                        if property_name not in current_properties_level:
+                            raise_exception(property_path)
+                        if type(current_properties_level[property_name]) != \
+                                list:
+                            raise_exception(property_path)
+                        current_properties_level = \
+                            current_properties_level[property_name][index]
+                    else:
+                        if property_segment not in current_properties_level:
+                            raise_exception(property_path)
+                        current_properties_level = \
+                            current_properties_level[property_segment]
+                    result[key] = current_properties_level
             else:
                 if 'get_property' in value:
                     raise DSLParsingLogicException(

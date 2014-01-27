@@ -331,7 +331,8 @@ DSL_SCHEMA = {
                                                     {'type': 'object'},
                                                     {'type': 'string'},
                                                     {'type': 'number'},
-                                                    {'type': 'boolean'}
+                                                    {'type': 'boolean'},
+                                                    {'type': 'array'}
                                                 ]
                                             }
                                         },
