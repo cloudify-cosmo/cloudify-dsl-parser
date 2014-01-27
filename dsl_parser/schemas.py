@@ -362,14 +362,14 @@ DSL_SCHEMA = {
                         'properties': {
                             'type': 'object'
                         },
-                        'derived_from': {
+                        'type': {
                             'type': 'string'
                         },
                         'node_ref': {
                             'type': 'string'
                         },
                     },
-                    'required': ['node_ref', 'derived_from'],
+                    'required': ['node_ref', 'type'],
                     'additionalProperties': False
                 }
             }
@@ -398,14 +398,18 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        'derived_from': {
+                        'type': {
                             'type': 'string'
                         },
-                        'node_ref': {
+                        'source_node_ref': {
+                            'type': 'string'
+                        },
+                        'target_node_ref': {
                             'type': 'string'
                         },
                     },
-                    'required': ['node_ref', 'derived_from'],
+                    'required': ['source_node_ref', 'target_node_ref',
+                                 'type'],
                     'additionalProperties': False
                 }
             }

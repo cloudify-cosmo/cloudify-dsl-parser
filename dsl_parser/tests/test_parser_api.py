@@ -2936,7 +2936,7 @@ types:
 
 type_implementations:
     implementation_of_specific_test_type:
-        derived_from: specific_test_type
+        type: specific_test_type
         node_ref: test_node
 """
         result = parse(yaml)
@@ -2955,7 +2955,7 @@ types:
 
 type_implementations:
     implementation_of_specific_test_type:
-        derived_from: specific_test_type
+        type: specific_test_type
         node_ref: test_node
         properties:
             mandatory: mandatory_value
@@ -2986,8 +2986,9 @@ relationships:
 
 relationship_implementations:
     specific_test_relationship_impl:
-        derived_from: specific_test_relationship
-        node_ref: test_node2
+        type: specific_test_relationship
+        source_node_ref: test_node2
+        target_node_ref: test_node
 """
         result = parse(yaml)
         source_node = result['nodes'][1]
@@ -2995,3 +2996,43 @@ relationship_implementations:
         node_relationship = source_node['relationships'][0]
         self.assertEquals('specific_test_relationship',
                           node_relationship['type'])
+
+    def test_relationship_two_types_implementations(self):
+
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                - type: test_relationship1
+                  target: test_node
+                - type: test_relationship2
+                  target: test_node
+relationships:
+    test_relationship1: {}
+    test_relationship2: {} """]) + """
+
+relationships:
+    specific_test_relationship1:
+        derived_from: test_relationship1
+    specific_test_relationship2:
+        derived_from: test_relationship2
+
+relationship_implementations:
+    specific_test_relationship1_impl:
+        type: specific_test_relationship1
+        source_node_ref: test_node2
+        target_node_ref: test_node
+    specific_test_relationship2_impl:
+        type: specific_test_relationship2
+        source_node_ref: test_node2
+        target_node_ref: test_node
+"""
+        result = parse(yaml)
+        source_node = result['nodes'][1]
+        self.assertEquals(2, len(source_node['relationships']))
+        node_relationship1 = source_node['relationships'][0]
+        self.assertEquals('specific_test_relationship1',
+                          node_relationship1['type'])
+        node_relationship2 = source_node['relationships'][1]
+        self.assertEquals('specific_test_relationship2',
+                          node_relationship2['type'])
