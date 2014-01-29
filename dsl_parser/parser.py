@@ -713,8 +713,8 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
                 top_level_relationships[relationship_type], relationship)
             complete_relationship[WORKFLOWS] = _process_workflows(
                 _get_dict_prop(complete_relationship, WORKFLOWS))
-            complete_relationship['target_id'] = '{0}.{1}'.format(
-                app_name, complete_relationship['target'])
+            complete_relationship['target_id'] = \
+                complete_relationship['target']
             del (complete_relationship['target'])
             complete_relationship['state'] = 'reachable'
             relationships.append(complete_relationship)
@@ -843,9 +843,11 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
                   top_level_relationships, node_names_set, type_impls,
                   relationship_impls):
     declared_node_type_name = node['type']
+    declared_node_type_name = node['type']
     node_name = node['name']
     app_name = parsed_dsl[BLUEPRINT]['name']
-    processed_node = {'id': '{0}.{1}'.format(app_name, node_name),
+    processed_node = {'name': node_name,
+                      'id': node_name,
                       'declared_type': declared_node_type_name}
 
     #handle types
