@@ -35,7 +35,8 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('test_app', result['name'])
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
-        self.assertEquals('test_app.test_node', node['id'])
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_node', node['name'])
         self.assertEquals(expected_type, node['type'])
         self.assertEquals(expected_declared_type, node['declared_type'])
         self.assertEquals('val', node['properties']['key'])
@@ -1303,7 +1304,7 @@ types:
         #verifying the top-level policies section in the response also contains
         #  the same values
         self.assertListEqual(node['policies'],
-                             result['policies']['test_app.test_node'])
+                             result['policies']['test_node'])
 
     def test_type_policies(self):
         yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
@@ -1330,7 +1331,7 @@ types:
         #verifying the top-level policies section in the response also contains
         # the same values
         self.assertListEqual(node['policies'],
-                             result['policies']['test_app.test_node'])
+                             result['policies']['test_node'])
 
     def test_type_policies_recursive_inheritance(self):
         #policies 1,5,6 will come from each type separately,
@@ -1491,7 +1492,7 @@ policies:
         #verifying the top-level policies section in the response also contains
         #  the same values
         self.assertListEqual(node['policies'],
-                             result['policies']['test_app.test_node'])
+                             result['policies']['test_node'])
 
     def test_type_and_node_policies_recursive_inheritance(self):
         #policies 1,5,6 will come from each type separately,
@@ -1648,7 +1649,7 @@ policies:
         #verifying the top-level policies section in the response also contains
         #  the same values
         self.assertListEqual(node['policies'],
-                             result['policies']['test_app.test_node'])
+                             result['policies']['test_node'])
 
     def test_type_policies_multiple_and_same_name_rules(self):
         #a test to verify same-name rules don't cause any problem in
@@ -1762,7 +1763,7 @@ policies:
         #verifying the top-level policies section in the response also contains
         #  the same values
         self.assertListEqual(node['policies'],
-                             result['policies']['test_app.test_node'])
+                             result['policies']['test_node'])
 
     def test_empty_top_level_relationships(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -1929,11 +1930,11 @@ plugins:
                     """
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
-        self.assertEquals('test_app.test_node2', result['nodes'][1]['id'])
+        self.assertEquals('test_node2', result['nodes'][1]['id'])
         self.assertEquals(1, len(result['nodes'][1]['relationships']))
         relationship = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
-        self.assertEquals('test_app.test_node', relationship['target_id'])
+        self.assertEquals('test_node', relationship['target_id'])
         self.assertDictEqual({'install': 'test_plugin.install'},
                              relationship['source_interfaces']
                                          ['test_interface1'][0])
@@ -1952,7 +1953,7 @@ plugins:
         self.assertEquals('false', plugin_def['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_def['url'])
         dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_app.test_node2'], dependents)
+        self.assertListEqual(['test_node2'], dependents)
 
     def test_instance_relationships_duplicate_relationship(self):
         #right now, having two relationships with the same (type,target)
@@ -1970,15 +1971,15 @@ relationships:
                     """
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
-        self.assertEquals('test_app.test_node2', result['nodes'][1]['id'])
+        self.assertEquals('test_node2', result['nodes'][1]['id'])
         self.assertEquals(2, len(result['nodes'][1]['relationships']))
         self.assertEquals('test_relationship',
                           result['nodes'][1]['relationships'][0]['type'])
         self.assertEquals('test_relationship',
                           result['nodes'][1]['relationships'][1]['type'])
-        self.assertEquals('test_app.test_node',
+        self.assertEquals('test_node',
                           result['nodes'][1]['relationships'][0]['target_id'])
-        self.assertEquals('test_app.test_node',
+        self.assertEquals('test_node',
                           result['nodes'][1]['relationships'][1]['target_id'])
         self.assertEquals('reachable',
                           result['nodes'][1]['relationships'][0]['state'])
@@ -1987,7 +1988,7 @@ relationships:
         self.assertEquals(4, len(result['nodes'][1]['relationships'][0]))
         self.assertEquals(4, len(result['nodes'][1]['relationships'][1]))
         dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_app.test_node2'], dependents)
+        self.assertListEqual(['test_node2'], dependents)
 
     def test_instance_relationships_relationship_inheritance(self):
         #possibly 'inheritance' is the wrong term to use here,
@@ -2021,7 +2022,7 @@ plugins:
         result = parse(yaml)
         relationship = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
-        self.assertEquals('test_app.test_node', relationship['target_id'])
+        self.assertEquals('test_node', relationship['target_id'])
         self.assertEquals('reachable', relationship['state'])
         self.assertDictEqual({'op1': 'test_plugin.task_name1'},
                              relationship['source_interfaces']
@@ -2047,7 +2048,7 @@ plugins:
 
         self.assertEquals(8, len(relationship))
         dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_app.test_node2'], dependents)
+        self.assertListEqual(['test_node2'], dependents)
 
     def test_relationships_and_node_recursive_inheritance(self):
         #testing for a complete inheritance path for relationships
@@ -2091,7 +2092,7 @@ plugins:
         self.assertEquals(5, len(relationship))
         self.assertEquals(8, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_app.test_node2'], dependents)
+        self.assertListEqual(['test_node2'], dependents)
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
@@ -2119,7 +2120,7 @@ plugins:
                                          ['test_interface2'][1])
 
         self.assertEquals('relationship', node_relationship['type'])
-        self.assertEquals('test_app.test_node', node_relationship['target_id'])
+        self.assertEquals('test_node', node_relationship['target_id'])
         self.assertEquals('reachable', node_relationship['state'])
         self.assertEquals(2, len(node_relationship['target_interfaces']))
         self.assertEquals(1, len(node_relationship['target_interfaces']
@@ -2214,7 +2215,7 @@ plugins:
         self.assertEquals(5, len(relationship))
         self.assertEquals(8, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_app.test_node2'], dependents)
+        self.assertListEqual(['test_node2'], dependents)
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
@@ -2251,7 +2252,7 @@ plugins:
                                          ['test_interface'][1])
 
         self.assertEquals('relationship', node_relationship['type'])
-        self.assertEquals('test_app.test_node', node_relationship['target_id'])
+        self.assertEquals('test_node', node_relationship['target_id'])
         self.assertEquals('reachable', node_relationship['state'])
         self.assertEquals(1, len(node_relationship['target_interfaces']))
         self.assertEquals(
@@ -2323,7 +2324,7 @@ types:
             - key
             """
         result = parse(yaml)
-        self.assertEquals('test_app.test_node', result['nodes'][0]['host_id'])
+        self.assertEquals('test_node', result['nodes'][0]['host_id'])
 
     def test_node_host_id_field_via_relationship(self):
         yaml = """
@@ -2350,8 +2351,8 @@ relationships:
     cloudify.relationships.contained_in: {}
             """
         result = parse(yaml)
-        self.assertEquals('test_app.test_node1', result['nodes'][1]['host_id'])
-        self.assertEquals('test_app.test_node1', result['nodes'][2]['host_id'])
+        self.assertEquals('test_node1', result['nodes'][1]['host_id'])
+        self.assertEquals('test_node1', result['nodes'][2]['host_id'])
 
     def test_node_host_id_field_via_node_supertype(self):
         yaml = """
@@ -2366,7 +2367,7 @@ types:
         derived_from: cloudify.types.host
             """
         result = parse(yaml)
-        self.assertEquals('test_app.test_node1', result['nodes'][0]['host_id'])
+        self.assertEquals('test_node1', result['nodes'][0]['host_id'])
 
     def test_node_host_id_field_via_relationship_derived_from_inheritance(
             self):
@@ -2390,7 +2391,7 @@ relationships:
         derived_from: cloudify.relationships.contained_in
             """
         result = parse(yaml)
-        self.assertEquals('test_app.test_node1', result['nodes'][1]['host_id'])
+        self.assertEquals('test_node1', result['nodes'][1]['host_id'])
 
     def test_node_plugins_to_install_field(self):
         yaml = """
@@ -2660,7 +2661,7 @@ types:
         """
         result = parse(yaml)
         self.assertFalse('host_id' in result['nodes'][0])
-        self.assertEquals('test_app.test_node2', result['nodes'][1]['host_id'])
+        self.assertEquals('test_node2', result['nodes'][1]['host_id'])
 
     def test_instance_relationships_target_node_plugins(self):
         #tests that plugins defined on instance relationships as
@@ -2695,12 +2696,12 @@ plugins:
 
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
-        self.assertEquals('test_app.test_node2', result['nodes'][1]['id'])
+        self.assertEquals('test_node2', result['nodes'][1]['id'])
         self.assertEquals(2, len(result['nodes'][1]['relationships']))
 
         relationship1 = result['nodes'][1]['relationships'][0]
         self.assertEquals('test_relationship', relationship1['type'])
-        self.assertEquals('test_app.test_node', relationship1['target_id'])
+        self.assertEquals('test_node', relationship1['target_id'])
         self.assertEquals('reachable', relationship1['state'])
         rel1_source_ops = relationship1['source_operations']
         self.assertDictEqual(op_struct('test_plugin1', 'install'),
@@ -2716,7 +2717,7 @@ plugins:
 
         relationship2 = result['nodes'][1]['relationships'][1]
         self.assertEquals('test_relationship', relationship2['type'])
-        self.assertEquals('test_app.test_node', relationship2['target_id'])
+        self.assertEquals('test_node', relationship2['target_id'])
         self.assertEquals('reachable', relationship2['state'])
         rel2_source_ops = relationship2['target_operations']
         self.assertDictEqual(op_struct('test_plugin2', 'install'),
@@ -2742,7 +2743,7 @@ plugins:
         self.assertEquals('test_app', result['name'])
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
-        self.assertEquals('test_app.test_node', node['id'])
+        self.assertEquals('test_node', node['id'])
         self.assertEquals('test_type', node['type'])
         self.assertEquals('val', node['properties']['key'])
         self.assertEquals(2, node['instances']['deploy'])
@@ -2761,11 +2762,11 @@ types:
         self.assertEquals(2, len(result['nodes']))
         node1 = result['nodes'][0]
         node2 = result['nodes'][1]
-        self.assertEquals('test_app.test_node', node1['id'])
+        self.assertEquals('test_node', node1['id'])
         self.assertEquals('test_type', node1['type'])
         self.assertEquals('val', node1['properties']['key'])
         self.assertEquals(1, node1['instances']['deploy'])
-        self.assertEquals('test_app.test_node2', node2['id'])
+        self.assertEquals('test_node2', node2['id'])
         self.assertEquals('test_type2', node2['type'])
         self.assertEquals(1, node2['instances']['deploy'])
 
