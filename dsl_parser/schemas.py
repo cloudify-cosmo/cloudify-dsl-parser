@@ -126,7 +126,7 @@ INSTANCE_OR_TYPE_POLICIES_SCHEMA = {
                                     'type': 'string'
                                 }
                             },
-                            'required': ['service', 'state'],
+                            'required': ['state'],
                             'additionalProperties': False
                         }
                     },
