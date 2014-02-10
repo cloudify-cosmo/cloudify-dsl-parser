@@ -28,24 +28,26 @@ PROPERTIES = 'properties'
 
 HOST_TYPE = 'cloudify.types.host'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
-PLUGIN_INSTALLER_PLUGIN = 'cloudify.plugins.plugin_installer'
-KV_STORE_PLUGIN = 'cloudify.plugins.kv_store'
+PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
+KV_STORE_PLUGIN = 'kv_store'
 
 PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN}
 
 __author__ = 'ran'
 
 import os
-import yaml
 import copy
 import contextlib
 import re
-from schemas import DSL_SCHEMA, IMPORTS_SCHEMA
-from jsonschema import validate, ValidationError
-from yaml.parser import ParserError
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
 from collections import OrderedDict
+
+import yaml
+from jsonschema import validate, ValidationError
+from yaml.parser import ParserError
+
+from schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 
 
 def parse_from_path(dsl_file_path, alias_mapping_dict=None,

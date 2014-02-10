@@ -13,24 +13,19 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import logging
-from celery.utils.log import get_task_logger
-from celery import task
 
 __author__ = 'idanmo'
 
 import json
 import random
+
 import parser
+
 
 NODES = "nodes"
 POLICIES = "policies"
 
-logger = get_task_logger(__name__)
-logger.level = logging.DEBUG
 
-
-@task
 def parse_dsl(dsl_location, alias_mapping_url,
               resources_base_url, **kwargs):
     result = parser.parse_from_url(dsl_url=dsl_location,
@@ -39,7 +34,6 @@ def parse_dsl(dsl_location, alias_mapping_url,
     return json.dumps(result)
 
 
-@task
 def prepare_deployment_plan(plan, **kwargs):
     """
     Prepare a plan for deployment
@@ -146,7 +140,7 @@ def _create_node_instances(node, suffixes_map):
         if host_id and host_suffixes:
             node_copy['host_id'] = _build_node_instance_id(host_id,
                                                            host_suffixes[i])
-        logger.debug("generated new node instance {0}".format(node_copy))
+
         if 'relationships' in node_copy:
             new_relationships = []
             for relationship in node_copy['relationships']:
