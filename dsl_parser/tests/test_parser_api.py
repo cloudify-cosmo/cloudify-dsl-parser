@@ -15,10 +15,11 @@
 
 __author__ = 'ran'
 
-from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.parser import parse, parse_from_path, parse_from_url
 from urllib import pathname2url
 import os
+
+from dsl_parser.tests.abstract_test_parser import AbstractTestParser
+from dsl_parser.parser import parse, parse_from_path, parse_from_url
 
 
 def op_struct(plugin_name, operation_mapping, properties=None):
@@ -2432,9 +2433,9 @@ types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: cloudify.plugins.plugin_installer.start
+                - start: plugin_installer.start
 plugins:
-    cloudify.plugins.plugin_installer:
+    plugin_installer:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
             url: "http://test_plugin.zip"
@@ -2783,9 +2784,9 @@ types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: cloudify.plugins.kv_store.start
+                - start: kv_store.start
 plugins:
-    cloudify.plugins.kv_store:
+    kv_store:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
             url: "http://test_plugin.zip"
