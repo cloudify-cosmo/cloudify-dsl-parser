@@ -29,9 +29,13 @@ PROPERTIES = 'properties'
 HOST_TYPE = 'cloudify.types.host'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
+AGENT_INSTALLER_PLUGIN = "worker_installer"
+RIEMANN_CONFIGURER_PLUGIN = "riemann_config_loader"
 KV_STORE_PLUGIN = 'kv_store'
 
 PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN}
+MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN,
+                                                AGENT_INSTALLER_PLUGIN, RIEMANN_CONFIGURER_PLUGIN}
 
 __author__ = 'ran'
 
@@ -45,6 +49,7 @@ from collections import OrderedDict
 
 import yaml
 from jsonschema import validate, ValidationError
+
 from yaml.parser import ParserError
 
 from schemas import DSL_SCHEMA, IMPORTS_SCHEMA
@@ -201,6 +206,7 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     for node in processed_nodes:
         if node['type'] in host_types:
             plugins_to_install = {}
+            management_plugins_to_install = {}
             for another_node in processed_nodes:
                 #going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
@@ -211,12 +217,17 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                     for plugin_name, plugin_obj in \
                             another_node[PLUGINS].iteritems():
                         #only wish to add agent plugins, and only if they're
-                        # not the installer plugin
+                        # not in the excluded plugins list
                         if plugin_obj['agent_plugin'] == 'true' and \
                                 plugin_obj['name'] not in \
                                 PLUGINS_TO_INSTALL_EXCLUDE_LIST:
                             plugins_to_install[plugin_name] = plugin_obj
+                        if plugin_obj['agent_plugin'] == 'false' and \
+                                plugin_obj['name'] not in \
+                                MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
+                            management_plugins_to_install[plugin_name] = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
+            node['management_plugins_to_install'] = management_plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
