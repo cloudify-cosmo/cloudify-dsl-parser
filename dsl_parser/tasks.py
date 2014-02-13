@@ -23,7 +23,6 @@ import parser
 
 
 NODES = "nodes"
-POLICIES = "policies"
 
 
 def parse_dsl(dsl_location, alias_mapping_url,
@@ -47,10 +46,8 @@ def _modify_to_multi_instance_plan(plan):
     Expand node instances based on number of instances to deploy
     """
     nodes = plan[NODES]
-    policies = plan[POLICIES]
 
     new_nodes = []
-    new_policies = {}
 
     nodes_suffixes_map = _create_node_suffixes_map(nodes)
     node_ids = _create_node_suffixes_map(nodes).iterkeys()
@@ -59,14 +56,8 @@ def _modify_to_multi_instance_plan(plan):
         node = _get_node(node_id, nodes)
         instances = _create_node_instances(node, nodes_suffixes_map)
         new_nodes.extend(instances)
-        instances_policies = _create_node_instances_policies(
-            node_id,
-            policies,
-            nodes_suffixes_map)
-        new_policies.update(instances_policies)
 
     plan[NODES] = new_nodes
-    plan[POLICIES] = new_policies
 
 
 def _create_node_suffixes_map(nodes):
@@ -172,33 +163,6 @@ def _create_node_instances(node, suffixes_map):
         instances.append(node_copy)
 
     return instances
-
-
-def _create_node_instances_policies(node_id, policies, node_suffixes_map):
-    """
-    This method duplicates the policies for each node_id. and returns a map.
-    let us use an example:
-    Given:
-    node_id -> { ... node policies ... }
-    Returns:
-    {
-        node_id_suffix1 -> { ... node policies ... },
-        node_id_suffix2 -> { ... node policies ... (same as above) }
-        ...
-    }
-    """
-
-    if not node_id in policies:
-        return {}
-
-    node_suffixes = node_suffixes_map[node_id]
-    node_policies = policies[node_id]
-    node_instances_policies = {}
-    number_of_instances = len(node_suffixes)
-    for i in range(number_of_instances):
-        the_id = _build_node_instance_id(node_id, node_suffixes[i])
-        node_instances_policies[the_id] = node_policies
-    return node_instances_policies
 
 
 def _build_node_instance_id(node_id, node_suffix):

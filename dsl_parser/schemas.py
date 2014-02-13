@@ -98,50 +98,6 @@ WORKFLOWS_SCHEMA = {
     }
 }
 
-INSTANCE_OR_TYPE_POLICIES_SCHEMA = {
-    'type': 'array',
-    'items': {
-        'type': 'object',
-        'properties': {
-            'name': {
-                'type': 'string'
-            },
-            'rules': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        #non-meta 'type'
-                        'type': {
-                            'type': 'string'
-                        },
-                        #non-meta 'properties'
-                        'properties': {
-                            'type': 'object',
-                            'properties': {
-                                'service': {
-                                    'type': 'string'
-                                },
-                                'state': {
-                                    'type': 'string'
-                                }
-                            },
-                            'required': ['state'],
-                            'additionalProperties': False
-                        }
-                    },
-                    'required': ['type', 'properties'],
-                    'additionalProperties': False
-                },
-                'minItems': 1
-            }
-        },
-        'required': ['name', 'rules'],
-        'additionalProperties': False
-    }
-
-}
-
 # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
 # since no good YAML schema validator could be found (both for Python and at all).
 #
@@ -159,7 +115,7 @@ DSL_SCHEMA = {
                 'name': {
                     'type': 'string'
                 },
-                'topology': {
+                'nodes': {
                     'type': 'array',
                     'minItems': 1,
                     'items': {
@@ -184,7 +140,6 @@ DSL_SCHEMA = {
                             },
                             'interfaces': INTERFACES_SCHEMA,
                             'workflows': WORKFLOWS_SCHEMA,
-                            'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
                             'relationships': {
                                 'type': 'array',
                                 'items': {
@@ -215,7 +170,7 @@ DSL_SCHEMA = {
                     }
                 }
             },
-            'required': ['name', 'topology'],
+            'required': ['name', 'nodes'],
             'additionalProperties': False
         },
         'plugins': {
@@ -317,7 +272,6 @@ DSL_SCHEMA = {
                     'properties': {
                         'interfaces': INTERFACES_SCHEMA,
                         'workflows': WORKFLOWS_SCHEMA,
-                        'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
                         #non-meta 'properties'
                         'properties': {
                             'type': 'array',

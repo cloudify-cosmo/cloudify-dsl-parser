@@ -29,7 +29,7 @@ class AbstractTestParser(unittest.TestCase):
     BASIC_BLUEPRINT_SECTION = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node
             type: test_type
             properties:
@@ -54,18 +54,6 @@ types:
         properties:
             - install_agent: 'false'
             - key
-            """
-
-    POLICIES_SECTION = """
-policies:
-    types:
-        test_policy:
-            message: "test policy message"
-            policy: "test policy code"
-    rules:
-        test_rule:
-            message: "test rule message"
-            rule: "test rule code"
             """
 
     #note that some tests extend the BASIC_BLUEPRINT 'inline',
