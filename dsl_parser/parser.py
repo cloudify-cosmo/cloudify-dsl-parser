@@ -176,12 +176,15 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
+    is_plan_management_plugins = True if plan_management_plugins else False
+
     plan = {
         'name': app_name,
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
         WORKFLOWS: top_level_workflows,
-        'management_plugins_to_install': plan_management_plugins
+        'management_plugins_to_install': plan_management_plugins,
+        'is_management_plugins_to_install': is_plan_management_plugins
     }
 
     return plan
