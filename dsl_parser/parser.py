@@ -228,7 +228,7 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                                 plugin_obj['name'] not in \
                                 PLUGINS_TO_INSTALL_EXCLUDE_LIST:
                             plugins_to_install[plugin_name] = plugin_obj
-                        if plugin_obj['agent_plugin'] == 'false' and \
+                        if plugin_obj['manager_plugin'] == 'true' and \
                                 plugin_obj['name'] not in \
                                 MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
                             management_plugins_to_install[plugin_name] \
