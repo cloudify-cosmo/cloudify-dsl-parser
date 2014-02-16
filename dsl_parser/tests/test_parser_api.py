@@ -2439,7 +2439,7 @@ plugins:
         properties:
             url: "http://test_plugin.zip"
     test_management_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
+        derived_from: "cloudify.plugins.manager_plugin"
         properties:
             url: "http://test_management_plugin.zip"
             """
@@ -2447,6 +2447,7 @@ plugins:
         plugin = result['nodes'][0]['management_plugins_to_install'][0]
         self.assertEquals('test_management_plugin', plugin['name'])
         self.assertEquals('false', plugin['agent_plugin'])
+        self.assertEquals('true', plugin['manager_plugin'])
         self.assertEquals('http://test_management_plugin.zip', plugin['url'])
         self.assertEquals(1, len(result['nodes'][0]['management_plugins_to_install']))
 

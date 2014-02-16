@@ -49,7 +49,6 @@ from collections import OrderedDict
 
 import yaml
 from jsonschema import validate, ValidationError
-
 from yaml.parser import ParserError
 
 from schemas import DSL_SCHEMA, IMPORTS_SCHEMA
@@ -120,6 +119,14 @@ def _load_yaml(yaml_stream, error_message):
     return parsed_dsl
 
 
+def _create_plan_management_plugins(processed_nodes):
+    management_plugins = []
+    for node in processed_nodes:
+        for management_plugin in node['management_plugins_to_install']:
+            management_plugins.append(management_plugin)
+    return management_plugins
+
+
 def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
            resources_base_url, dsl_location=None):
     alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
@@ -172,6 +179,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     response_policies_section = _create_response_policies_section(
         processed_nodes)
 
+    plan_management_plugins = _create_plan_management_plugins(processed_nodes)
+
     plan = {
         'name': app_name,
         'nodes': processed_nodes,
@@ -179,10 +188,12 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         WORKFLOWS: top_level_workflows,
         POLICIES: response_policies_section,
         'policies_events': top_level_policies_and_rules_tuple[0],
-        'rules': top_level_policies_and_rules_tuple[1]
+        'rules': top_level_policies_and_rules_tuple[1],
+        'management_plugins_to_install': plan_management_plugins
     }
 
     return plan
+
 
 
 def _post_process_nodes(processed_nodes, types, relationships, plugins,
@@ -202,7 +213,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
         if host_id:
             node['host_id'] = host_id
 
-    #set plugins_to_install property
+    #set plugins_to_install property for nodes
+    #set management_plugins_to_install property nodes
     for node in processed_nodes:
         if node['type'] in host_types:
             plugins_to_install = {}
@@ -934,7 +946,8 @@ def _process_plugin(plugin, plugin_name):
     #'cloudify.plugins.plugin'
     if plugin['derived_from'] not in \
             ('cloudify.plugins.agent_plugin',
-             'cloudify.plugins.remote_plugin'):
+             'cloudify.plugins.remote_plugin',
+             'cloudify.plugins.manager_plugin'):
         #TODO: consider changing the below exception to type
         # DSLParsingFormatException..?
         raise DSLParsingLogicException(
@@ -943,11 +956,15 @@ def _process_plugin(plugin, plugin_name):
                     plugin_name,
                     plugin['derived_from'],
                     'cloudify.plugins.agent_plugin',
-                    'cloudify.plugins.remote_plugin'))
+                    'cloudify.plugins.remote_plugin',
+                    'cloudify.plugins.manager_plugin'))
     processed_plugin = copy.deepcopy(plugin[PROPERTIES])
     processed_plugin['name'] = plugin_name
     processed_plugin['agent_plugin'] = \
         str(plugin['derived_from'] == 'cloudify.plugins.agent_plugin').lower()
+    processed_plugin['manager_plugin'] = \
+        str(plugin['derived_from'] == 'cloudify.plugins.manager_plugin').lower()
+
     return processed_plugin
 
 
