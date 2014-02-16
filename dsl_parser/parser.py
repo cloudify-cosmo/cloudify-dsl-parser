@@ -36,8 +36,9 @@ RIEMANN_CONFIGURER_PLUGIN = "riemann_config_loader"
 KV_STORE_PLUGIN = 'kv_store'
 
 PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN}
-MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN,
-                                                AGENT_INSTALLER_PLUGIN, RIEMANN_CONFIGURER_PLUGIN}
+MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST \
+    = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN,
+       AGENT_INSTALLER_PLUGIN, RIEMANN_CONFIGURER_PLUGIN}
 
 import os
 import copy
@@ -122,8 +123,9 @@ def _load_yaml(yaml_stream, error_message):
 def _create_plan_management_plugins(processed_nodes):
     management_plugins = []
     for node in processed_nodes:
-        for management_plugin in node['management_plugins_to_install']:
-            management_plugins.append(management_plugin)
+        if "management_plugins_to_install" in node:
+            for management_plugin in node['management_plugins_to_install']:
+                management_plugins.append(management_plugin)
     return management_plugins
 
 
@@ -226,9 +228,11 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         if plugin_obj['agent_plugin'] == 'false' and \
                                 plugin_obj['name'] not in \
                                 MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
-                            management_plugins_to_install[plugin_name] = plugin_obj
+                            management_plugins_to_install[plugin_name] \
+                                = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
-            node['management_plugins_to_install'] = management_plugins_to_install.values()
+            node['management_plugins_to_install'] \
+                = management_plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
@@ -922,7 +926,8 @@ def _process_plugin(plugin, plugin_name):
     processed_plugin['agent_plugin'] = \
         str(plugin['derived_from'] == 'cloudify.plugins.agent_plugin').lower()
     processed_plugin['manager_plugin'] = \
-        str(plugin['derived_from'] == 'cloudify.plugins.manager_plugin').lower()
+        str(plugin['derived_from']
+            == 'cloudify.plugins.manager_plugin').lower()
 
     return processed_plugin
 
