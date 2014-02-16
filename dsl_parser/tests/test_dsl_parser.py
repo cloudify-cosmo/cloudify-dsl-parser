@@ -51,25 +51,6 @@ class TestDSLParser(unittest.TestCase):
         instances = tasks._create_node_instances(node, suffix_map)
         self.assertEqual(instances, expected_instances)
 
-    def test_create_node_instances_policies(self):
-
-        node_id = "simple_web_server.host"
-        node_policies = "stub"
-        policies = {
-            node_id: node_policies
-        }
-
-        expected_policies = {
-            "simple_web_server.host_d82c0": node_policies,
-            "simple_web_server.host_c2094": node_policies
-        }
-
-        suffix_map = {'simple_web_server.host': ['_d82c0', '_c2094']}
-        actual_policies = tasks._create_node_instances_policies(node_id,
-                                                                policies,
-                                                                suffix_map)
-        self.assertEqual(actual_policies, expected_policies)
-
     def test_create_multiple_node_suffix_map(self):
         nodes = [
             {"id": "multi_instance.db",
@@ -137,11 +118,7 @@ class TestDSLParser(unittest.TestCase):
                         "multi_instance.db"
                     ]
                 }
-            ],
-            "policies": {
-                "multi_instance.db": "stub",
-                "multi_instance.host": "stub"
-            }
+            ]
         }
 
         # everything in the new plan stays the same except for nodes that
@@ -188,13 +165,7 @@ class TestDSLParser(unittest.TestCase):
                         "multi_instance.db_42485"
                     ]
                 }
-            ],
-            "policies": {
-                "multi_instance.db_42485": "stub",
-                "multi_instance.db_6baa9": "stub",
-                "multi_instance.host_c2094": "stub",
-                "multi_instance.host_d82c0": "stub"
-            },
+            ]
         }
 
         random.seed(0)
@@ -225,11 +196,7 @@ class TestDSLParser(unittest.TestCase):
                         "multi_instance.db"
                     ]
                 }
-            ],
-            "policies": {
-                "multi_instance.db": "stub",
-                "multi_instance.host": "stub"
-            }
+            ]
         }
 
         expected_plan = {
@@ -254,11 +221,7 @@ class TestDSLParser(unittest.TestCase):
                         "multi_instance.db_c2094"
                     ]
                 }
-            ],
-            "policies": {
-                "multi_instance.db_c2094": "stub",
-                "multi_instance.host_d82c0": "stub"
-            }
+            ]
         }
 
         random.seed(0)
@@ -327,13 +290,7 @@ class TestDSLParser(unittest.TestCase):
                         }
                     ],
                 },
-            ],
-            "policies": {
-                "multi_instance.host1": "stub",
-                "multi_instance.host2": "stub",
-                "multi_instance.db": "stub",
-                "multi_instance.webserver": "stub"
-            }
+            ]
         }
 
         expected_plan = {
@@ -396,13 +353,7 @@ class TestDSLParser(unittest.TestCase):
                         }
                     ],
                 },
-            ],
-            "policies": {
-                "multi_instance.host1_d82c0": "stub",
-                "multi_instance.host2_c2094": "stub",
-                "multi_instance.db_6baa9": "stub",
-                "multi_instance.webserver_42485": "stub"
-            }
+            ]
         }
 
         random.seed(0)
@@ -421,10 +372,7 @@ class TestDSLParser(unittest.TestCase):
                         "deploy": 1
                     }
                 }
-            ],
-            "policies": {
-                "node1_id": "stub",
-            }
+            ]
         }
 
         # everything in the new plan stays the same except for nodes that
@@ -437,11 +385,7 @@ class TestDSLParser(unittest.TestCase):
                         "deploy": 1
                     }
                 }
-            ],
-            "policies": {
-                "node1_id_d82c0": "stub",
-
-            },
+            ]
         }
 
         random.seed(0)
