@@ -12,6 +12,9 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+
+__author__ = 'ran'
+
 BLUEPRINT = 'blueprint'
 IMPORTS = 'imports'
 TYPES = 'types'
@@ -21,7 +24,6 @@ INTERFACES = 'interfaces'
 SOURCE_INTERFACES = 'source_interfaces'
 TARGET_INTERFACES = 'target_interfaces'
 WORKFLOWS = 'workflows'
-POLICIES = 'policies'
 RELATIONSHIPS = 'relationships'
 RELATIONSHIP_IMPLEMENTATIONS = 'relationship_implementations'
 PROPERTIES = 'properties'
@@ -36,8 +38,6 @@ KV_STORE_PLUGIN = 'kv_store'
 PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN}
 MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN,
                                                 AGENT_INSTALLER_PLUGIN, RIEMANN_CONFIGURER_PLUGIN}
-
-__author__ = 'ran'
 
 import os
 import copy
@@ -144,14 +144,10 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     blueprint = combined_parsed_dsl[BLUEPRINT]
     app_name = blueprint['name']
 
-    nodes = blueprint['topology']
+    nodes = blueprint['nodes']
     _validate_no_duplicate_nodes(nodes)
 
     top_level_relationships = _process_relationships(combined_parsed_dsl)
-
-    top_level_policies_and_rules_tuple = _process_policies(
-        combined_parsed_dsl[POLICIES]) if \
-        POLICIES in combined_parsed_dsl else ({}, {})
 
     node_names_set = {node['name'] for node in nodes}
     type_impls = _get_dict_prop(combined_parsed_dsl, TYPE_IMPLEMENTATIONS)\
@@ -160,7 +156,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                                         RELATIONSHIP_IMPLEMENTATIONS).copy()
 
     processed_nodes = map(lambda node: _process_node(
-        node, combined_parsed_dsl, top_level_policies_and_rules_tuple,
+        node, combined_parsed_dsl,
         top_level_relationships, node_names_set, type_impls,
         relationship_impls), nodes)
 
@@ -176,9 +172,6 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         combined_parsed_dsl[WORKFLOWS]) if WORKFLOWS in \
         combined_parsed_dsl else {}
 
-    response_policies_section = _create_response_policies_section(
-        processed_nodes)
-
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
     plan = {
@@ -186,14 +179,10 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
         WORKFLOWS: top_level_workflows,
-        POLICIES: response_policies_section,
-        'policies_events': top_level_policies_and_rules_tuple[0],
-        'rules': top_level_policies_and_rules_tuple[1],
         'management_plugins_to_install': plan_management_plugins
     }
 
     return plan
-
 
 
 def _post_process_nodes(processed_nodes, types, relationships, plugins,
@@ -628,33 +617,6 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         raise DSLParsingLogicException(error_code, error_message)
 
 
-def _create_response_policies_section(processed_nodes):
-    response_policies_section = {}
-    for processed_node in processed_nodes:
-        if POLICIES in processed_node:
-            response_policies_section[processed_node['id']] = \
-                copy.deepcopy(processed_node[POLICIES])
-    return response_policies_section
-
-
-def _process_policies(policies):
-    processed_policies_events = {}
-    processed_rules = {}
-
-    if 'types' in policies:
-        for name, policy_event_obj in policies['types'].iteritems():
-            processed_policies_events[name] = {}
-            processed_policies_events[name]['message'] = \
-                policy_event_obj['message']
-            processed_policies_events[name]['policy'] = \
-                _process_ref_or_inline_value(policy_event_obj, 'policy')
-    if 'rules' in policies:
-        for name, rule_obj in policies['rules'].iteritems():
-            processed_rules[name] = copy.deepcopy(rule_obj)
-
-    return processed_policies_events, processed_rules
-
-
 def _process_workflows(workflows):
     processed_workflows = {}
 
@@ -864,7 +826,7 @@ def _operation_struct(plugin_name, operation_mapping, operation_properties):
     return result
 
 
-def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
+def _process_node(node, parsed_dsl,
                   top_level_relationships, node_names_set, type_impls,
                   relationship_impls):
     declared_node_type_name = node['type']
@@ -897,7 +859,6 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
                                                      impl_properties)
     processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
     processed_node[WORKFLOWS] = complete_node_type[WORKFLOWS]
-    processed_node[POLICIES] = complete_node_type[POLICIES]
     processed_node[PLUGINS] = {}
     #handle plugins and operations
     if INTERFACES in complete_node_type:
@@ -918,8 +879,6 @@ def _process_node(node, parsed_dsl, top_level_policies_and_rules_tuple,
 
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
     processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS])
-    _validate_node_policies(processed_node[POLICIES], node_name,
-                            top_level_policies_and_rules_tuple)
 
     processed_node['instances'] = node['instances'] \
         if 'instances' in node else {'deploy': 1}
@@ -968,24 +927,6 @@ def _process_plugin(plugin, plugin_name):
     return processed_plugin
 
 
-def _validate_node_policies(policies, node_name,
-                            top_level_policies_and_rules_tuple):
-    #validating all policies and rules declared are indeed defined in the top
-    # level policies section
-    for policy_obj in policies:
-        policy_name = policy_obj['name']
-        if policy_name not in top_level_policies_and_rules_tuple[0]:
-            raise DSLParsingLogicException(
-                16, 'Failed to parse node {0}: policy {1} not defined'
-                    .format(node_name, policy_name))
-        for rule in policy_obj['rules']:
-            if rule['type'] not in top_level_policies_and_rules_tuple[1]:
-                raise DSLParsingLogicException(
-                    17, 'Failed to parse node {0}: rule {1} under policy {2} '
-                        'not defined'.format(node_name, rule['type'],
-                                             policy_name))
-
-
 def _merge_sub_list(overridden_dict, overriding_dict, sub_list_key):
     def _get_named_list_dict(sub_list):
         return {entry['name']: entry for entry in sub_list}.items()
@@ -1032,9 +973,6 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
         #derive workflows
         merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
                                                   merged_type, WORKFLOWS)
-        #derive policies
-        merged_type[POLICIES] = _merge_sub_list(complete_super_type,
-                                                merged_type, POLICIES)
         #derive interfaces
         merged_type[INTERFACES] = _merge_interface_dicts(complete_super_type,
                                                          merged_type,
@@ -1166,7 +1104,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
     merge_no_override = {INTERFACES, TYPES, PLUGINS, WORKFLOWS,
                          TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
                          RELATIONSHIP_IMPLEMENTATIONS}
-    merge_one_nested_level_no_override = {POLICIES}
+    merge_one_nested_level_no_override = dict()
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
     _replace_ref_with_inline_paths(combined_parsed_dsl, dsl_location,

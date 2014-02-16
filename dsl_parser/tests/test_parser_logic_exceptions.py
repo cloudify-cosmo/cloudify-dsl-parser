@@ -43,38 +43,6 @@ types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 10, DSLParsingLogicException)
 
-    def test_merge_non_mergeable_properties_on_import(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION,
-                                              self.BASIC_PLUGIN]) + """
-blueprint:
-    name: test_app2
-    topology:
-        -   name: test_node2
-            type: test_type
-            properties:
-                key: "val"
-        """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 3, DSLParsingLogicException)
-
-    def test_illegal_merge_on_nested_mergeable_rules_on_import(self):
-        imported_yaml = self.MINIMAL_BLUEPRINT + """
-policies:
-    rules:
-        rule1:
-            message: "custom message"
-            rule: "custom clojure code"
-            """
-        yaml = self.create_yaml_with_imports([imported_yaml]) + """
-policies:
-    rules:
-        rule1:
-            message: "some other message"
-            rule: "some other code"
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 4, DSLParsingLogicException)
-
     def test_type_derive_non_from_none_existing(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
@@ -114,7 +82,7 @@ types:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
     -   name: test_node
         type: test_type
         properties:
@@ -139,108 +107,6 @@ workflows:
         ref: {0}
         """.format(ref_alias)
         self._assert_dsl_parsing_exception_error_code(yaml, 31)
-
-    def test_first_level_policy_unavailable_ref(self):
-        ref_alias = 'custom_ref_alias'
-        yaml = self.MINIMAL_BLUEPRINT + """
-policies:
-    types:
-        custom_policy:
-            message: "custom message"
-            ref: {0}
-        """.format(ref_alias)
-        self._assert_dsl_parsing_exception_error_code(yaml, 31)
-
-    def test_illegal_merge_on_mergeable_properties_on_import(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION,
-                                              self.BASIC_PLUGIN]) + """
-plugins:
-    test_plugin:
-        properties:
-            url: "http://test_url2.zip"
-types:
-    test_type: {}
-        """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 4, DSLParsingLogicException)
-
-    def test_illegal_merge_on_nested_mergeable_policies_events_on_import(self):
-        imported_yaml = self.MINIMAL_BLUEPRINT + """
-policies:
-    types:
-        policy1:
-            message: "custom message"
-            policy: "custom clojure code"
-            """
-        yaml = self.create_yaml_with_imports([imported_yaml]) + """
-policies:
-    types:
-        policy1:
-            message: "some other message"
-            policy: "some other code"
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 4, DSLParsingLogicException)
-
-    def test_node_with_undefined_policy_event(self):
-        yaml = self.POLICIES_SECTION + self.MINIMAL_BLUEPRINT + """
-            policies:
-                -   name: "undefined_policy_event"
-                    rules:
-                        -   type: "test_rule"
-                            properties:
-                                state: "custom state"
-                                service: "custom value"
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 16, DSLParsingLogicException)
-
-    def test_node_with_undefined_rule(self):
-        yaml = self.POLICIES_SECTION + self.MINIMAL_BLUEPRINT + """
-            policies:
-                -   name: "test_policy"
-                    rules:
-                        -   type: "undefined_rule"
-                            properties:
-                                state: "custom state"
-                                service: "custom value"
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 17, DSLParsingLogicException)
-
-    def test_type_with_undefined_policy_event(self):
-        yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        properties:
-            - key
-        policies:
-            -   name: undefined_policy
-                rules:
-                    -   type: "test_rule"
-                        properties:
-                            state: "custom state"
-                            service: "custom value"
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 16, DSLParsingLogicException)
-
-    def test_type_with_undefined_rule(self):
-        yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        properties:
-            - key
-        policies:
-            -   name: test_policy
-                rules:
-                    -   type: "undefined_rule"
-                        properties:
-                            state: "custom state"
-                            service: "custom value"
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 17, DSLParsingLogicException)
 
     def test_plugin_with_wrongful_derived_from_field(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
@@ -360,7 +226,7 @@ relationships:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node1
             type: test_type
 types:

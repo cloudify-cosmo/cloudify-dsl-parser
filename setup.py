@@ -12,7 +12,7 @@ setup(
     description='Plugin for transforming recipe DSLs',
     zip_safe=False,
     install_requires=[
-        "PyYAML",
-        'jsonschema'
+        "PyYAML==3.10",
+        'jsonschema==2.3.0'
     ]
 )

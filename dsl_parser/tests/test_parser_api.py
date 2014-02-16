@@ -43,10 +43,6 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('val', node['properties']['key'])
         self.assertEquals(1, node['instances']['deploy'])
 
-    def _get_policy_from_node(self, node, policy_name):
-        return next(policy for policy in node['policies']
-                    if policy['name'] == policy_name)
-
     def _get_plugin_to_install_from_node(self, node, plugin_name):
         return next(plugin for plugin in node['plugins_to_install']
                     if plugin['name'] == plugin_name)
@@ -220,73 +216,6 @@ imports:
                           result['workflows']['install2'])
         self.assertEquals('top radial install3',
                           result['workflows']['install3'])
-
-    def test_policies_and_rules_recursive_imports(self):
-        bottom_level_yaml = self.MINIMAL_BLUEPRINT + """
-policies:
-    types:
-        policy1:
-            message: "bottom policy1"
-            policy: "bottom clojure policy1"
-    rules:
-        rule1:
-            message: "bottom rule1"
-            rule: "bottom clojure rule1"
-        """
-
-        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
-        mid_level_yaml = """
-policies:
-    types:
-        policy2:
-            message: "mid policy2"
-            policy: "mid clojure policy2"
-        policy3:
-            message: "mid policy3"
-            policy: "mid clojure policy3"
-imports:
-    -   {0}""".format(bottom_file_name)
-        mid_file_name = self.make_yaml_file(mid_level_yaml)
-        top_level_yaml = """
-policies:
-    rules:
-        rule2:
-            message: "top rule2"
-            rule: "top clojure rule2"
-        rule3:
-            message: "top rule3"
-            rule: "top clojure rule3"
-imports:
-    -   {0}""".format(mid_file_name)
-
-        result = parse(top_level_yaml)
-        self._assert_minimal_blueprint(result)
-        self.assertEquals(3, len(result['policies_events']))
-        self.assertEquals(3, len(result['rules']))
-        self.assertEquals('bottom policy1',
-                          result['policies_events']['policy1']['message'])
-        self.assertEquals('bottom clojure policy1',
-                          result['policies_events']['policy1']['policy'])
-        self.assertEquals('mid policy2',
-                          result['policies_events']['policy2']['message'])
-        self.assertEquals('mid clojure policy2',
-                          result['policies_events']['policy2']['policy'])
-        self.assertEquals('mid policy3',
-                          result['policies_events']['policy3']['message'])
-        self.assertEquals('mid clojure policy3',
-                          result['policies_events']['policy3']['policy'])
-        self.assertEquals('bottom rule1',
-                          result['rules']['rule1']['message'])
-        self.assertEquals('bottom clojure rule1',
-                          result['rules']['rule1']['rule'])
-        self.assertEquals('top rule2',
-                          result['rules']['rule2']['message'])
-        self.assertEquals('top clojure rule2',
-                          result['rules']['rule2']['rule'])
-        self.assertEquals('top rule3',
-                          result['rules']['rule3']['message'])
-        self.assertEquals('top clojure rule3',
-                          result['rules']['rule3']['rule'])
 
     def test_recursive_imports(self):
         bottom_level_yaml = self.BASIC_TYPE
@@ -1154,618 +1083,6 @@ imports:
         result = parse(top_level_yaml)
         self._assert_blueprint(result)
 
-    def test_empty_top_level_policies(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-policies: {}
-        """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        self.assertEquals(0, len(result['policies_events']))
-        self.assertEquals(0, len(result['rules']))
-
-    def test_empty_top_level_policies_events_and_rules(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-policies:
-    types: {}
-    rules: {}
-        """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        self.assertEquals(0, len(result['policies_events']))
-        self.assertEquals(0, len(result['rules']))
-
-    def test_top_level_policies_with_inline_policy(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-policies:
-    types:
-        custom_policy:
-            message: "custom message"
-            policy: "custom clojure code"
-        """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        self.assertEquals(
-            'custom message',
-            result['policies_events']['custom_policy']['message'])
-        self.assertEquals(
-            'custom clojure code',
-            result['policies_events']['custom_policy']['policy'])
-
-    def test_top_level_policies_with_ref(self):
-        ref_alias = 'ref_alias'
-        clojure_file_path = self.make_file_with_name('custom clojure code',
-                                                     'clojure_file.clj')
-
-        yaml = self.MINIMAL_BLUEPRINT + """
-policies:
-    types:
-        custom_policy:
-            message: "custom message"
-            ref: {0}
-            """.format(ref_alias)
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias): '{0}'.format(clojure_file_path)})
-        self._assert_minimal_blueprint(result)
-        self.assertEquals(
-            'custom message',
-            result['policies_events']['custom_policy']['message'])
-        self.assertEquals(
-            'custom clojure code',
-            result['policies_events']['custom_policy']['policy'])
-
-    def test_top_level_policies_with_both_ref_and_inline_policy(self):
-        ref_alias = 'ref_alias'
-        clojure_file_path = self.make_file_with_name('custom clojure code 2',
-                                                     'clojure_file.clj')
-
-        yaml = self.MINIMAL_BLUEPRINT + """
-policies:
-    types:
-        custom_policy:
-            message: "custom message"
-            policy: "custom clojure code"
-        custom_policy2:
-            message: "custom message 2"
-            ref: "{0}"
-        """.format(ref_alias)
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias): '{0}'.format(clojure_file_path)})
-        self._assert_minimal_blueprint(result)
-        self.assertEquals(
-            'custom message',
-            result['policies_events']['custom_policy']['message'])
-        self.assertEquals(
-            'custom clojure code',
-            result['policies_events']['custom_policy']['policy'])
-        self.assertEquals(
-            'custom message 2',
-            result['policies_events']['custom_policy2']['message'])
-        self.assertEquals(
-            'custom clojure code 2',
-            result['policies_events']['custom_policy2']['policy'])
-
-    def test_top_level_rules(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-policies:
-    rules:
-        custom_rule:
-            message: "custom message"
-            rule: "custom clojure code"
-        custom_rule2:
-            message: "custom message 2"
-            rule: "custom clojure code 2"
-        """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        self.assertEquals('custom message',
-                          result['rules']['custom_rule']['message'])
-        self.assertEquals('custom clojure code',
-                          result['rules']['custom_rule']['rule'])
-        self.assertEquals('custom message 2',
-                          result['rules']['custom_rule2']['message'])
-        self.assertEquals('custom clojure code 2',
-                          result['rules']['custom_rule2']['rule'])
-
-    def test_instance_empty_policies(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-            policies: []
-            """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-
-    def test_type_empty_policies(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        properties:
-            - key
-        policies: []
-                """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-
-    def test_instance_policies(self):
-        yaml = self.POLICIES_SECTION + self.MINIMAL_BLUEPRINT + """
-            policies:
-                -   name: test_policy
-                    rules:
-                        -   type: "test_rule"
-                            properties:
-                                state: "custom state"
-                                service: "custom service"
-                """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        node = result['nodes'][0]
-        node_policy = self._get_policy_from_node(node, 'test_policy')
-        node_rule = node_policy['rules'][0]
-        self.assertEquals('test_rule', node_rule['type'])
-        self.assertEquals('custom state', node_rule['properties']['state'])
-        self.assertEquals('custom service', node_rule['properties']['service'])
-        #verifying the top-level policies section in the response also contains
-        #  the same values
-        self.assertListEqual(node['policies'],
-                             result['policies']['test_node'])
-
-    def test_type_policies(self):
-        yaml = self.POLICIES_SECTION + self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        properties:
-            - key
-        policies:
-            -   name: test_policy
-                rules:
-                    -   type: "test_rule"
-                        properties:
-                            state: "custom state"
-                            service: "custom value"
-                """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        node = result['nodes'][0]
-        node_policy = self._get_policy_from_node(node, 'test_policy')
-        node_rule = node_policy['rules'][0]
-        self.assertEquals('test_rule', node_rule['type'])
-        self.assertEquals('custom state', node_rule['properties']['state'])
-        self.assertEquals('custom value', node_rule['properties']['service'])
-        #verifying the top-level policies section in the response also contains
-        # the same values
-        self.assertListEqual(node['policies'],
-                             result['policies']['test_node'])
-
-    def test_type_policies_recursive_inheritance(self):
-        #policies 1,5,6 will come from each type separately,
-        #2 is a direct override, 3 is an indirect override, and 4 is a
-        # double override
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        derived_from: "test_type_parent"
-        policies:
-            -   name: policy1
-                rules:
-                    -   type: "rule1"
-                        properties:
-                            state: "state1"
-                            service: "value1"
-            -   name: policy2
-                rules:
-                    -   type: "rule2"
-                        properties:
-                            state: "state2"
-                            service: "value2"
-            -   name: policy3
-                rules:
-                    -   type: "rule3"
-                        properties:
-                            state: "state3"
-                            service: "value3"
-            -   name: policy4
-                rules:
-                    -   type: "rule4"
-                        properties:
-                            state: "state4"
-                            service: "value4"
-
-    test_type_parent:
-        derived_from: "test_type_grandparent"
-        policies:
-            -   name: policy2
-                rules:
-                    -   type: "parent_rule2"
-                        properties:
-                            state: "parent_state2"
-                            service: "parent_value2"
-            -   name: policy4
-                rules:
-                    -   type: "parent_rule4"
-                        properties:
-                            state: "parent_state4"
-                            service: "parent_value4"
-            -   name: policy5
-                rules:
-                    -   type: "parent_rule5"
-                        properties:
-                            state: "parent_state5"
-                            service: "parent_value5"
-
-
-    test_type_grandparent:
-        properties:
-            - key
-        policies:
-            -   name: policy3
-                rules:
-                    -   type: "grandparent_rule3"
-                        properties:
-                            state: "grandparent_state3"
-                            service: "grandparent_value3"
-            -   name: policy4
-                rules:
-                    -   type: "grandparent_rule4"
-                        properties:
-                            state: "grandparent_state4"
-                            service: "grandparent_value4"
-            -   name: policy6
-                rules:
-                    -   type: "grandparent_rule6"
-                        properties:
-                            state: "grandparent_state6"
-                            service: "grandparent_value6"
-
-policies:
-    types:
-        policy1:
-            message: "policy1 message"
-            policy: "policy1 code"
-        policy2:
-            message: "policy2 message"
-            policy: "policy2 code"
-        policy3:
-            message: "policy3 message"
-            policy: "policy3 code"
-        policy4:
-            message: "policy4 message"
-            policy: "policy4 code"
-        policy5:
-            message: "policy5 message"
-            policy: "policy5 code"
-        policy6:
-            message: "policy6 message"
-            policy: "policy6 code"
-
-    rules:
-        rule1:
-            message: "rule1 message"
-            rule: "rule1 code"
-        rule2:
-            message: "rule2 message"
-            rule: "rule2 code"
-        rule3:
-            message: "rule3 message"
-            rule: "rule3 code"
-        rule4:
-            message: "rule4 message"
-            rule: "rule4 code"
-        parent_rule2:
-            message: "parent_rule2 message"
-            rule: "parent_rule2 code"
-        parent_rule4:
-            message: "parent_rule4 message"
-            rule: "parent_rule4 code"
-        parent_rule5:
-            message: "parent_rule5 message"
-            rule: "parent_rule5 code"
-        grandparent_rule3:
-            message: "grandparent_rule3 message"
-            rule: "grandparent_rule3 code"
-        grandparent_rule4:
-            message: "grandparent_rule4 message"
-            rule: "grandparent_rule4 code"
-        grandparent_rule6:
-            message: "grandparent_rule6 message"
-            rule: "grandparent_rule6 code"
-            """
-
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        node = result['nodes'][0]
-        self.assertEquals(6, len(node['policies']))
-        self.assertEquals(
-            'rule1',
-            self._get_policy_from_node(node, 'policy1')['rules'][0]['type'])
-        self.assertEquals(
-            'rule2',
-            self._get_policy_from_node(node, 'policy2')['rules'][0]['type'])
-        self.assertEquals(
-            'rule3',
-            self._get_policy_from_node(node, 'policy3')['rules'][0]['type'])
-        self.assertEquals(
-            'rule4',
-            self._get_policy_from_node(node, 'policy4')['rules'][0]['type'])
-        self.assertEquals(
-            'parent_rule5',
-            self._get_policy_from_node(node, 'policy5')['rules'][0]['type'])
-        self.assertEquals(
-            'grandparent_rule6',
-            self._get_policy_from_node(node, 'policy6')['rules'][0]['type'])
-        #verifying the top-level policies section in the response also contains
-        #  the same values
-        self.assertListEqual(node['policies'],
-                             result['policies']['test_node'])
-
-    def test_type_and_node_policies_recursive_inheritance(self):
-        #policies 1,5,6 will come from each type separately,
-        #2 is a direct override, 3 is an indirect override, and 4 is a
-        # double override
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-            policies:
-                -   name: policy1
-                    rules:
-                        -   type: "rule1"
-                            properties:
-                                state: "state1"
-                                service: "value1"
-                -   name: policy2
-                    rules:
-                        -   type: "rule2"
-                            properties:
-                                state: "state2"
-                                service: "value2"
-                -   name: policy3
-                    rules:
-                        -   type: "rule3"
-                            properties:
-                                state: "state3"
-                                service: "value3"
-                -   name: policy4
-                    rules:
-                        -   type: "rule4"
-                            properties:
-                                state: "state4"
-                                service: "value4"
-types:
-    test_type:
-        properties:
-            - key
-        derived_from: "test_type_parent"
-        policies:
-            -   name: policy2
-                rules:
-                    -   type: "parent_rule2"
-                        properties:
-                            state: "parent_state2"
-                            service: "parent_value2"
-            -   name: policy4
-                rules:
-                    -   type: "parent_rule4"
-                        properties:
-                            state: "parent_state4"
-                            service: "parent_value4"
-            -   name: policy5
-                rules:
-                    -   type: "parent_rule5"
-                        properties:
-                            state: "parent_state5"
-                            service: "parent_value5"
-
-    test_type_parent:
-        policies:
-            -   name: policy3
-                rules:
-                    -   type: "grandparent_rule3"
-                        properties:
-                            state: "grandparent_state3"
-                            service: "grandparent_value3"
-            -   name: policy4
-                rules:
-                    -   type: "grandparent_rule4"
-                        properties:
-                            state: "grandparent_state4"
-                            service: "grandparent_value4"
-            -   name: policy6
-                rules:
-                    -   type: "grandparent_rule6"
-                        properties:
-                            state: "grandparent_state6"
-                            service: "grandparent_value6"
-
-policies:
-    types:
-        policy1:
-            message: "policy1 message"
-            policy: "policy1 code"
-        policy2:
-            message: "policy2 message"
-            policy: "policy2 code"
-        policy3:
-            message: "policy3 message"
-            policy: "policy3 code"
-        policy4:
-            message: "policy4 message"
-            policy: "policy4 code"
-        policy5:
-            message: "policy5 message"
-            policy: "policy5 code"
-        policy6:
-            message: "policy6 message"
-            policy: "policy6 code"
-
-    rules:
-        rule1:
-            message: "rule1 message"
-            rule: "rule1 code"
-        rule2:
-            message: "rule2 message"
-            rule: "rule2 code"
-        rule3:
-            message: "rule3 message"
-            rule: "rule3 code"
-        rule4:
-            message: "rule4 message"
-            rule: "rule4 code"
-        parent_rule2:
-            message: "parent_rule2 message"
-            rule: "parent_rule2 code"
-        parent_rule4:
-            message: "parent_rule4 message"
-            rule: "parent_rule4 code"
-        parent_rule5:
-            message: "parent_rule5 message"
-            rule: "parent_rule5 code"
-        grandparent_rule3:
-            message: "grandparent_rule3 message"
-            rule: "grandparent_rule3 code"
-        grandparent_rule4:
-            message: "grandparent_rule4 message"
-            rule: "grandparent_rule4 code"
-        grandparent_rule6:
-            message: "grandparent_rule6 message"
-            rule: "grandparent_rule6 code"
-            """
-
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        node = result['nodes'][0]
-        self.assertEquals(6, len(node['policies']))
-        self.assertEquals(
-            'rule1',
-            self._get_policy_from_node(node, 'policy1')['rules'][0]['type'])
-        self.assertEquals(
-            'rule2',
-            self._get_policy_from_node(node, 'policy2')['rules'][0]['type'])
-        self.assertEquals(
-            'rule3',
-            self._get_policy_from_node(node, 'policy3')['rules'][0]['type'])
-        self.assertEquals(
-            'rule4',
-            self._get_policy_from_node(node, 'policy4')['rules'][0]['type'])
-        self.assertEquals(
-            'parent_rule5',
-            self._get_policy_from_node(node, 'policy5')['rules'][0]['type'])
-        self.assertEquals(
-            'grandparent_rule6',
-            self._get_policy_from_node(node, 'policy6')['rules'][0]['type'])
-        #verifying the top-level policies section in the response also contains
-        #  the same values
-        self.assertListEqual(node['policies'],
-                             result['policies']['test_node'])
-
-    def test_type_policies_multiple_and_same_name_rules(self):
-        #a test to verify same-name rules don't cause any problem in
-        # inheritance,
-        #as well as verifying multiple rules under the same policy are
-        # inherited correctly
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        derived_from: "test_type_parent"
-        policies:
-            -   name: policy1
-                rules:
-                    -   type: "rule1"
-                        properties:
-                            state: "state1"
-                            service: "value1"
-            -   name: policy2
-                rules:
-                    -   type: "rule2"
-                        properties:
-                            state: "state2"
-                            service: "value2"
-                    -   type: "rule3"
-                        properties:
-                            state: "state3"
-                            service: "value3"
-
-    test_type_parent:
-        properties:
-            - key
-        policies:
-            -   name: policy1
-                rules:
-                    -   type: "rule1"
-                        properties:
-                            state: "parent_state2"
-                            service: "parent_value2"
-            -   name: policy2
-                rules:
-                    -   type: "rule4"
-                        properties:
-                            state: "parent_state4"
-                            service: "parent_value4"
-
-policies:
-    types:
-        policy1:
-            message: "policy1 message"
-            policy: "policy1 code"
-        policy2:
-            message: "policy2 message"
-            policy: "policy2 code"
-    rules:
-        rule1:
-            message: "rule1 message"
-            rule: "rule1 code"
-        rule2:
-            message: "rule2 message"
-            rule: "rule2 code"
-        rule3:
-            message: "rule3 message"
-            rule: "rule3 code"
-        rule4:
-            message: "rule4 message"
-            rule: "rule4 code"
-                """
-
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        node = result['nodes'][0]
-        node_policies = node['policies']
-        self.assertEquals(2, len(node_policies))
-        self.assertEquals(
-            1, len(self._get_policy_from_node(node, 'policy1')['rules']))
-        self.assertEquals(
-            'rule1',
-            self._get_policy_from_node(node, 'policy1')['rules'][0]['type'])
-        self.assertEquals(
-            'state1',
-            self._get_policy_from_node(
-                node, 'policy1')['rules'][0]['properties']['state'])
-        self.assertEquals(
-            'value1',
-            self._get_policy_from_node(
-                node, 'policy1')['rules'][0]['properties']['service'])
-        self.assertEquals(
-            2, len(self._get_policy_from_node(node, 'policy2')['rules']))
-        self.assertEquals(
-            'rule2',
-            self._get_policy_from_node(node, 'policy2')['rules'][0]['type'])
-        self.assertEquals(
-            'state2',
-            self._get_policy_from_node(
-                node, 'policy2')['rules'][0]['properties']['state'])
-        self.assertEquals(
-            'value2',
-            self._get_policy_from_node(
-                node, 'policy2')['rules'][0]['properties']['service'])
-        self.assertEquals(
-            'rule3',
-            self._get_policy_from_node(node, 'policy2')['rules'][1]['type'])
-        self.assertEquals(
-            'state3',
-            self._get_policy_from_node(
-                node, 'policy2')['rules'][1]['properties']['state'])
-        self.assertEquals(
-            'value3',
-            self._get_policy_from_node(
-                node, 'policy2')['rules'][1]['properties']['service'])
-        #verifying the top-level policies section in the response also contains
-        #  the same values
-        self.assertListEqual(node['policies'],
-                             result['policies']['test_node'])
-
     def test_empty_top_level_relationships(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships: {}
@@ -2314,7 +1631,7 @@ plugins:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node
             type: cloudify.types.host
             properties:
@@ -2331,7 +1648,7 @@ types:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node1
             type: cloudify.types.host
         -   name: test_node2
@@ -2359,7 +1676,7 @@ relationships:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node1
             type: another_type
 types:
@@ -2375,7 +1692,7 @@ types:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node1
             type: cloudify.types.host
         -   name: test_node2
@@ -2398,7 +1715,7 @@ relationships:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node1
             type: cloudify.types.host
 types:
@@ -2500,7 +1817,7 @@ plugins:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node1
             type: cloudify.types.host
 types:
@@ -2525,7 +1842,7 @@ plugins:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node1
             type: cloudify.types.host
 types:
@@ -2554,7 +1871,7 @@ plugins:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node1
             type: cloudify.types.host
         -   name: test_node2
@@ -2851,7 +2168,7 @@ types:
         yaml = """
 blueprint:
     name: test_app
-    topology:
+    nodes:
         -   name: test_node1
             type: cloudify.types.host
 types:
