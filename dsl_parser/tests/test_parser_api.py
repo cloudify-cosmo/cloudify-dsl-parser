@@ -1792,29 +1792,6 @@ plugins:
         self.assertEquals([], result['nodes'][0]
                           ['management_plugins_to_install'])
 
-    def test_node_management_plugins_to_install_field_riemann_configurer(
-            self):
-        yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
-    cloudify.types.host:
-        interfaces:
-            test_management_interface:
-                - start: riemann_config_loader.start
-plugins:
-    riemann_config_loader:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://riemann_config_loader.zip"
-            """
-        result = parse(yaml)
-        self.assertEquals([], result['nodes'][0]
-                          ['management_plugins_to_install'])
-
     def test_node_plugins_to_install_field_installer_plugin(self):
         #testing to ensure the installer plugin is treated differently and
         # is not
