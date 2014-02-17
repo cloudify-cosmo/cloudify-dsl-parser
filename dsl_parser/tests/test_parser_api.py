@@ -65,7 +65,7 @@ class TestParserApi(AbstractTestParser):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
@@ -132,7 +132,7 @@ plugins:
         self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
@@ -171,7 +171,7 @@ types:
         self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -895,7 +895,7 @@ plugins:
         self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('test_plugin2', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -955,7 +955,7 @@ plugins:
         self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('test_plugin2', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -995,7 +995,7 @@ plugins:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -1007,7 +1007,7 @@ plugins:
         self.assertEquals(op_struct('test_plugin', 'terminate'),
                           operations['test_interface1.terminate'])
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('http://test_url2.zip', plugin_props['url'])
         self.assertEquals('other_test_plugin', plugin_props['name'])
         self.assertEquals('false', plugin_props['agent_plugin'])
@@ -1736,6 +1736,62 @@ plugins:
         self.assertEquals('http://test_plugin.zip', plugin['url'])
         self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
 
+    def test_node_management_plugins_to_install_field(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            test_interface:
+                - start: test_plugin.start
+            test_management_interface:
+                - start: test_management_plugin.start
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            url: "http://test_plugin.zip"
+    test_management_plugin:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://test_management_plugin.zip"
+            """
+        result = parse(yaml)
+        plugin = result['nodes'][0]['management_plugins_to_install'][0]
+        self.assertEquals('test_management_plugin', plugin['name'])
+        self.assertEquals('false', plugin['agent_plugin'])
+        self.assertEquals('true', plugin['manager_plugin'])
+        self.assertEquals('http://test_management_plugin.zip', plugin['url'])
+        self.assertEquals(1, len(result['nodes'][0]
+                          ['management_plugins_to_install']))
+
+    def test_node_management_plugins_to_install_field_agent_installer_plugin(
+            self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            test_management_interface:
+                - start: worker_installer.start
+plugins:
+    worker_installer:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            url: "http://worker_installer.zip"
+            """
+        result = parse(yaml)
+        self.assertEquals([], result['nodes'][0]
+                          ['management_plugins_to_install'])
+
     def test_node_plugins_to_install_field_installer_plugin(self):
         #testing to ensure the installer plugin is treated differently and
         # is not
@@ -2130,7 +2186,7 @@ types:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
@@ -2196,7 +2252,7 @@ types:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
@@ -2376,7 +2432,7 @@ types:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])
@@ -2407,7 +2463,7 @@ types:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('false', plugin_props['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_props['url'])
         self.assertEquals('test_plugin', plugin_props['name'])

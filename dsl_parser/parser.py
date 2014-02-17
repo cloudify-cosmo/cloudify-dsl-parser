@@ -31,9 +31,13 @@ PROPERTIES = 'properties'
 HOST_TYPE = 'cloudify.types.host'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
+AGENT_INSTALLER_PLUGIN = "worker_installer"
 KV_STORE_PLUGIN = 'kv_store'
 
 PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN}
+MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST \
+    = {PLUGIN_INSTALLER_PLUGIN, KV_STORE_PLUGIN,
+       AGENT_INSTALLER_PLUGIN}
 
 import os
 import copy
@@ -115,6 +119,15 @@ def _load_yaml(yaml_stream, error_message):
     return parsed_dsl
 
 
+def _create_plan_management_plugins(processed_nodes):
+    management_plugins = []
+    for node in processed_nodes:
+        if "management_plugins_to_install" in node:
+            for management_plugin in node['management_plugins_to_install']:
+                management_plugins.append(management_plugin)
+    return management_plugins
+
+
 def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
            resources_base_url, dsl_location=None):
     alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
@@ -160,11 +173,17 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         combined_parsed_dsl[WORKFLOWS]) if WORKFLOWS in \
         combined_parsed_dsl else {}
 
+    plan_management_plugins = _create_plan_management_plugins(processed_nodes)
+
+    is_plan_management_plugins = True if plan_management_plugins else False
+
     plan = {
         'name': app_name,
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
-        WORKFLOWS: top_level_workflows
+        WORKFLOWS: top_level_workflows,
+        'management_plugins_to_install': plan_management_plugins,
+        'is_management_plugins_to_install': is_plan_management_plugins
     }
 
     return plan
@@ -187,10 +206,12 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
         if host_id:
             node['host_id'] = host_id
 
-    #set plugins_to_install property
+    #set plugins_to_install property for nodes
+    #set management_plugins_to_install property nodes
     for node in processed_nodes:
         if node['type'] in host_types:
             plugins_to_install = {}
+            management_plugins_to_install = {}
             for another_node in processed_nodes:
                 #going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
@@ -201,12 +222,19 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                     for plugin_name, plugin_obj in \
                             another_node[PLUGINS].iteritems():
                         #only wish to add agent plugins, and only if they're
-                        # not the installer plugin
+                        # not in the excluded plugins list
                         if plugin_obj['agent_plugin'] == 'true' and \
                                 plugin_obj['name'] not in \
                                 PLUGINS_TO_INSTALL_EXCLUDE_LIST:
                             plugins_to_install[plugin_name] = plugin_obj
+                        if plugin_obj['manager_plugin'] == 'true' and \
+                                plugin_obj['name'] not in \
+                                MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
+                            management_plugins_to_install[plugin_name] \
+                                = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
+            node['management_plugins_to_install'] \
+                = management_plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
@@ -883,7 +911,8 @@ def _process_plugin(plugin, plugin_name):
     #'cloudify.plugins.plugin'
     if plugin['derived_from'] not in \
             ('cloudify.plugins.agent_plugin',
-             'cloudify.plugins.remote_plugin'):
+             'cloudify.plugins.remote_plugin',
+             'cloudify.plugins.manager_plugin'):
         #TODO: consider changing the below exception to type
         # DSLParsingFormatException..?
         raise DSLParsingLogicException(
@@ -892,11 +921,16 @@ def _process_plugin(plugin, plugin_name):
                     plugin_name,
                     plugin['derived_from'],
                     'cloudify.plugins.agent_plugin',
-                    'cloudify.plugins.remote_plugin'))
+                    'cloudify.plugins.remote_plugin',
+                    'cloudify.plugins.manager_plugin'))
     processed_plugin = copy.deepcopy(plugin[PROPERTIES])
     processed_plugin['name'] = plugin_name
     processed_plugin['agent_plugin'] = \
         str(plugin['derived_from'] == 'cloudify.plugins.agent_plugin').lower()
+    processed_plugin['manager_plugin'] = \
+        str(plugin['derived_from']
+            == 'cloudify.plugins.manager_plugin').lower()
+
     return processed_plugin
 
 
