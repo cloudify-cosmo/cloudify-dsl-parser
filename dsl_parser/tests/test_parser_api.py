@@ -2652,3 +2652,35 @@ plugins:
         is_management_plugins_to_install = result["is_management_plugins_to_install"]
         self.assertFalse(is_management_plugins_to_install)
 
+    def test_two_identical_plugins_on_node(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+
+types:
+    cloudify.types.host:
+        interfaces:
+            test_interface:
+                - start: test_management_plugin.start
+                - create: test_management_plugin.create
+
+plugins:
+    test_management_plugin:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://test_management_plugin1.zip"
+            """
+        result = parse(yaml)
+        management_plugins_to_install_for_node = result['nodes'][0]['management_plugins_to_install']
+        self.assertEquals(1, len(management_plugins_to_install_for_node))
+
+        # check the property on the plan is correct
+        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        self.assertEquals(1, len(management_plugins_to_install_for_plan))
+
+        # check the boolean flag is correct
+        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        self.assertTrue(is_management_plugins_to_install)
