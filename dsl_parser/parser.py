@@ -121,10 +121,13 @@ def _load_yaml(yaml_stream, error_message):
 
 def _create_plan_management_plugins(processed_nodes):
     management_plugins = []
+    management_plugin_names = set()
     for node in processed_nodes:
         if "management_plugins_to_install" in node:
             for management_plugin in node['management_plugins_to_install']:
-                management_plugins.append(management_plugin)
+                if management_plugin['name'] not in management_plugin_names:
+                    management_plugins.append(management_plugin)
+                    management_plugin_names.add(management_plugin['name'])
     return management_plugins
 
 
