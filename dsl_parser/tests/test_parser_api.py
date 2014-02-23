@@ -30,7 +30,6 @@ def op_struct(plugin_name, operation_mapping, properties=None):
 
 
 class TestParserApi(AbstractTestParser):
-
     def _assert_minimal_blueprint(self, result, expected_type='test_type',
                                   expected_declared_type='test_type'):
         self.assertEquals('test_app', result['name'])
@@ -1181,17 +1180,17 @@ imports:
         result = parse(top_level_yaml)
         self._assert_blueprint(result)
         self.assertDictEqual({'name': 'empty_rel',
-                             'workflows': {}},
+                              'workflows': {}},
                              result['relationships']['empty_rel'])
         test_relationship = result['relationships']['test_relationship']
         self.assertEquals('test_relationship',
                           test_relationship['name'])
         self.assertDictEqual({'install': 'test_plugin.install'},
                              test_relationship['source_interfaces']
-                                              ['test_interface2'][0])
+                             ['test_interface2'][0])
         self.assertDictEqual({'terminate': 'test_plugin.terminate'},
                              test_relationship['source_interfaces']
-                                              ['test_interface2'][1])
+                             ['test_interface2'][1])
         self.assertEquals(
             2, len(test_relationship['source_interfaces']['test_interface2']))
         self.assertEquals(4, len(test_relationship))
@@ -1200,10 +1199,10 @@ imports:
         self.assertEquals('test_relationship2', test_relationship2['name'])
         self.assertDictEqual({'install': 'test_plugin.install'},
                              test_relationship2['target_interfaces']
-                                               ['test_interface2'][0])
+                             ['test_interface2'][0])
         self.assertDictEqual({'terminate': 'test_plugin.terminate'},
                              test_relationship2['target_interfaces']
-                                               ['test_interface2'][1])
+                             ['test_interface2'][1])
         self.assertEquals(
             2, len(test_relationship2['target_interfaces']['test_interface2']))
         self.assertEquals(4, len(test_relationship2))
@@ -1212,10 +1211,10 @@ imports:
         self.assertEquals('test_relationship3', test_relationship3['name'])
         self.assertDictEqual({'install': 'test_plugin.install'},
                              test_relationship3['target_interfaces']
-                                               ['test_interface2'][0])
+                             ['test_interface2'][0])
         self.assertDictEqual({'terminate': 'test_plugin.terminate'},
                              test_relationship3['target_interfaces']
-                                               ['test_interface2'][1])
+                             ['test_interface2'][1])
         self.assertEquals(
             2, len(test_relationship3['target_interfaces']['test_interface2']))
         self.assertEquals(3, len(test_relationship3))
@@ -1255,7 +1254,7 @@ plugins:
         self.assertEquals('test_node', relationship['target_id'])
         self.assertDictEqual({'install': 'test_plugin.install'},
                              relationship['source_interfaces']
-                                         ['test_interface1'][0])
+                             ['test_interface1'][0])
         self.assertEquals('reachable', relationship['state'])
         relationship_source_operations = relationship['source_operations']
         self.assertDictEqual(op_struct('test_plugin', 'install'),
@@ -1344,10 +1343,10 @@ plugins:
         self.assertEquals('reachable', relationship['state'])
         self.assertDictEqual({'op1': 'test_plugin.task_name1'},
                              relationship['source_interfaces']
-                                         ['interface1'][0])
+                             ['interface1'][0])
         self.assertDictEqual({'op2': 'test_plugin.task_name2'},
                              relationship['target_interfaces']
-                                         ['interface2'][0])
+                             ['interface2'][0])
 
         rel_source_ops = relationship['source_operations']
 
@@ -1735,62 +1734,6 @@ plugins:
         self.assertEquals('true', plugin['agent_plugin'])
         self.assertEquals('http://test_plugin.zip', plugin['url'])
         self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
-
-    def test_node_management_plugins_to_install_field(self):
-        yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
-    cloudify.types.host:
-        interfaces:
-            test_interface:
-                - start: test_plugin.start
-            test_management_interface:
-                - start: test_management_plugin.start
-plugins:
-    test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
-    test_management_plugin:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: "http://test_management_plugin.zip"
-            """
-        result = parse(yaml)
-        plugin = result['nodes'][0]['management_plugins_to_install'][0]
-        self.assertEquals('test_management_plugin', plugin['name'])
-        self.assertEquals('false', plugin['agent_plugin'])
-        self.assertEquals('true', plugin['manager_plugin'])
-        self.assertEquals('http://test_management_plugin.zip', plugin['url'])
-        self.assertEquals(1, len(result['nodes'][0]
-                          ['management_plugins_to_install']))
-
-    def test_node_management_plugins_to_install_field_agent_installer_plugin(
-            self):
-        yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
-    cloudify.types.host:
-        interfaces:
-            test_management_interface:
-                - start: worker_installer.start
-plugins:
-    worker_installer:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://worker_installer.zip"
-            """
-        result = parse(yaml)
-        self.assertEquals([], result['nodes'][0]
-                          ['management_plugins_to_install'])
 
     def test_node_plugins_to_install_field_installer_plugin(self):
         #testing to ensure the installer plugin is treated differently and
@@ -2473,3 +2416,239 @@ types:
                           operations['install'])
         self.assertEquals(op_struct('test_plugin', 'install', expected_props),
                           operations['test_interface1.install'])
+
+
+class ManagementPluginsToInstallTest(AbstractTestParser):
+    def test_one_manager_one_agent_plugin_on_same_node(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            test_interface:
+                - start: test_plugin.start
+                - create: test_management_plugin.create
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            url: "http://test_plugin.zip"
+    test_management_plugin:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://test_management_plugin.zip"
+            """
+        result = parse(yaml)
+        management_plugins_to_install_for_node = result['nodes'][0]['management_plugins_to_install']
+        self.assertEquals(1, len(management_plugins_to_install_for_node))
+        plugin = management_plugins_to_install_for_node[0]
+        self.assertEquals('test_management_plugin', plugin['name'])
+        self.assertEquals('false', plugin['agent_plugin'])
+        self.assertEquals('true', plugin['manager_plugin'])
+        self.assertEquals('http://test_management_plugin.zip', plugin['url'])
+
+        # check the property on the plan is correct
+        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        self.assertEquals(1, len(management_plugins_to_install_for_plan))
+
+        # check the boolean flag is correct
+        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        self.assertTrue(is_management_plugins_to_install)
+
+    def test_agent_installer_plugin_is_ignored(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            test_management_interface:
+                - start: worker_installer.start
+plugins:
+    worker_installer:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://worker_installer.zip"
+            """
+        result = parse(yaml)
+        self.assertEquals([], result['nodes'][0]
+                              ['management_plugins_to_install'])
+
+    def test_plugin_installer_plugin_is_ignored(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            test_management_interface:
+                - start: plugin_installer.start
+plugins:
+    plugin_installer:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            url: "http://worker_installer.zip"
+            """
+        result = parse(yaml)
+        self.assertEquals([], result['nodes'][0]
+                              ['management_plugins_to_install'])
+
+    def test_kv_store_plugin_is_ignored(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            test_management_interface:
+                - start: kv_store.start
+plugins:
+    kv_store:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            url: "http://worker_installer.zip"
+            """
+        result = parse(yaml)
+        self.assertEquals([], result['nodes'][0]
+                          ['management_plugins_to_install'])
+
+    def test_same_plugin_one_two_nodes(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+            interfaces:
+                test_interface:
+                    - create: test_management_plugin.create
+        -   name: test_node2
+            type: cloudify.types.host
+            interfaces:
+                test_interface:
+                    - create: test_management_plugin.create
+
+types:
+    cloudify.types.host:
+        interfaces:
+            test_interface:
+                - start: test_plugin.start
+
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            url: "http://test_plugin.zip"
+    test_management_plugin:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://test_management_plugin.zip"
+            """
+        result = parse(yaml)
+        for node in result['nodes']:
+            management_plugins_to_install_for_node = node['management_plugins_to_install']
+            self.assertEquals(1, len(management_plugins_to_install_for_node))
+            plugin = management_plugins_to_install_for_node[0]
+            self.assertEquals('test_management_plugin', plugin['name'])
+            self.assertEquals('false', plugin['agent_plugin'])
+            self.assertEquals('true', plugin['manager_plugin'])
+            self.assertEquals('http://test_management_plugin.zip', plugin['url'])
+
+
+        # check the property on the plan is correct
+        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        self.assertEquals(1, len(management_plugins_to_install_for_plan))
+
+        # check the boolean flag is correct
+        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        self.assertTrue(is_management_plugins_to_install)
+
+    def test_two_plugins_on_one_node(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+            interfaces:
+                test_interface:
+                    - start: test_management_plugin1.start
+                    - create: test_management_plugin2.create
+
+types:
+    cloudify.types.host:
+        interfaces:
+            test_interface:
+                - start: test_plugin.start
+
+plugins:
+    test_management_plugin1:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://test_management_plugin1.zip"
+    test_management_plugin2:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://test_management_plugin2.zip"
+            """
+        result = parse(yaml)
+        management_plugins_to_install_for_node = result['nodes'][0]['management_plugins_to_install']
+        self.assertEquals(2, len(management_plugins_to_install_for_node))
+
+        # check the property on the plan is correct
+        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        self.assertEquals(2, len(management_plugins_to_install_for_plan))
+
+        # check the boolean flag is correct
+        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        self.assertTrue(is_management_plugins_to_install)
+
+    def test_no_operation_mapping_no_plugin(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+
+types:
+    cloudify.types.host:
+        interfaces:
+            test_interface:
+                - start: test_plugin.start
+
+plugins:
+    test_management_plugin:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://test_management_plugin1.zip"
+    test_plugin:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            url: "http://test_plugin.zip"
+            """
+        result = parse(yaml)
+        management_plugins_to_install_for_node = result['nodes'][0]['management_plugins_to_install']
+        self.assertEquals(0, len(management_plugins_to_install_for_node))
+
+        # check the property on the plan is correct
+        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        self.assertEquals(0, len(management_plugins_to_install_for_plan))
+
+        # check the boolean flag is correct
+        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        self.assertFalse(is_management_plugins_to_install)
+
