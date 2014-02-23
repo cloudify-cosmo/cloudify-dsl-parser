@@ -2443,7 +2443,8 @@ plugins:
             url: "http://test_management_plugin.zip"
             """
         result = parse(yaml)
-        management_plugins_to_install_for_node = result['nodes'][0]['management_plugins_to_install']
+        management_plugins_to_install_for_node = \
+            result['nodes'][0]['management_plugins_to_install']
         self.assertEquals(1, len(management_plugins_to_install_for_node))
         plugin = management_plugins_to_install_for_node[0]
         self.assertEquals('test_management_plugin', plugin['name'])
@@ -2452,11 +2453,13 @@ plugins:
         self.assertEquals('http://test_management_plugin.zip', plugin['url'])
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        management_plugins_to_install_for_plan = \
+            result["management_plugins_to_install"]
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
 
         # check the boolean flag is correct
-        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        is_management_plugins_to_install = \
+            result["is_management_plugins_to_install"]
         self.assertTrue(is_management_plugins_to_install)
 
     def test_agent_installer_plugin_is_ignored(self):
@@ -2479,7 +2482,7 @@ plugins:
             """
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
-                              ['management_plugins_to_install'])
+                          ['management_plugins_to_install'])
 
     def test_plugin_installer_plugin_is_ignored(self):
         yaml = """
@@ -2501,7 +2504,7 @@ plugins:
             """
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
-                              ['management_plugins_to_install'])
+                          ['management_plugins_to_install'])
 
     def test_kv_store_plugin_is_ignored(self):
         yaml = """
@@ -2559,21 +2562,24 @@ plugins:
             """
         result = parse(yaml)
         for node in result['nodes']:
-            management_plugins_to_install_for_node = node['management_plugins_to_install']
+            management_plugins_to_install_for_node = \
+                node['management_plugins_to_install']
             self.assertEquals(1, len(management_plugins_to_install_for_node))
             plugin = management_plugins_to_install_for_node[0]
             self.assertEquals('test_management_plugin', plugin['name'])
             self.assertEquals('false', plugin['agent_plugin'])
             self.assertEquals('true', plugin['manager_plugin'])
-            self.assertEquals('http://test_management_plugin.zip', plugin['url'])
-
+            self.assertEquals('http://test_management_plugin.zip',
+                              plugin['url'])
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        management_plugins_to_install_for_plan = \
+            result["management_plugins_to_install"]
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
 
         # check the boolean flag is correct
-        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        is_management_plugins_to_install = \
+            result["is_management_plugins_to_install"]
         self.assertTrue(is_management_plugins_to_install)
 
     def test_two_plugins_on_one_node(self):
@@ -2605,15 +2611,18 @@ plugins:
             url: "http://test_management_plugin2.zip"
             """
         result = parse(yaml)
-        management_plugins_to_install_for_node = result['nodes'][0]['management_plugins_to_install']
+        management_plugins_to_install_for_node = \
+            result['nodes'][0]['management_plugins_to_install']
         self.assertEquals(2, len(management_plugins_to_install_for_node))
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        management_plugins_to_install_for_plan = \
+            result["management_plugins_to_install"]
         self.assertEquals(2, len(management_plugins_to_install_for_plan))
 
         # check the boolean flag is correct
-        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        is_management_plugins_to_install = \
+            result["is_management_plugins_to_install"]
         self.assertTrue(is_management_plugins_to_install)
 
     def test_no_operation_mapping_no_plugin(self):
@@ -2641,15 +2650,18 @@ plugins:
             url: "http://test_plugin.zip"
             """
         result = parse(yaml)
-        management_plugins_to_install_for_node = result['nodes'][0]['management_plugins_to_install']
+        management_plugins_to_install_for_node = \
+            result['nodes'][0]['management_plugins_to_install']
         self.assertEquals(0, len(management_plugins_to_install_for_node))
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        management_plugins_to_install_for_plan = \
+            result["management_plugins_to_install"]
         self.assertEquals(0, len(management_plugins_to_install_for_plan))
 
         # check the boolean flag is correct
-        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        is_management_plugins_to_install = \
+            result["is_management_plugins_to_install"]
         self.assertFalse(is_management_plugins_to_install)
 
     def test_two_identical_plugins_on_node(self):
@@ -2674,13 +2686,16 @@ plugins:
             url: "http://test_management_plugin1.zip"
             """
         result = parse(yaml)
-        management_plugins_to_install_for_node = result['nodes'][0]['management_plugins_to_install']
+        management_plugins_to_install_for_node = \
+            result['nodes'][0]['management_plugins_to_install']
         self.assertEquals(1, len(management_plugins_to_install_for_node))
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = result["management_plugins_to_install"]
+        management_plugins_to_install_for_plan = \
+            result["management_plugins_to_install"]
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
 
         # check the boolean flag is correct
-        is_management_plugins_to_install = result["is_management_plugins_to_install"]
+        is_management_plugins_to_install = \
+            result["is_management_plugins_to_install"]
         self.assertTrue(is_management_plugins_to_install)
