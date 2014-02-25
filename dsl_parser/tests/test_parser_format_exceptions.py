@@ -763,3 +763,15 @@ relationship_implementations:
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
+
+    def test_relationship_properties_non_single_default_value(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            - prop_with_bad_default: 1
+              prop2_with_bad_default: 2
+
+    """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)

@@ -98,6 +98,35 @@ WORKFLOWS_SCHEMA = {
     }
 }
 
+
+PROPERTIES_ARRAY_SCHEMA = {
+    'type': 'array',
+    'items': {
+        'oneOf': [
+            {
+                'type': 'object',
+                'patternProperties': {
+                    '^': {
+                        'oneOf': [
+                            {'type': 'object'},
+                            {'type': 'string'},
+                            {'type': 'number'},
+                            {'type': 'boolean'},
+                            {'type': 'array'}
+                        ]
+                    }
+                },
+                'maxProperties': 1,
+                'minProperties': 1
+            },
+            {
+                'type': 'string'
+            }
+        ]
+    }
+}
+
+
 # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
 # since no good YAML schema validator could be found (both for Python and at all).
 #
@@ -151,6 +180,10 @@ DSL_SCHEMA = {
                                         },
                                         'target': {
                                             'type': 'string'
+                                        },
+                                        #non-meta 'properties'
+                                        'properties': {
+                                            'type': 'object'
                                         },
                                         'source_interfaces': INTERFACES_SCHEMA,
                                         'target_interfaces': INTERFACES_SCHEMA,
@@ -273,32 +306,7 @@ DSL_SCHEMA = {
                         'interfaces': INTERFACES_SCHEMA,
                         'workflows': WORKFLOWS_SCHEMA,
                         #non-meta 'properties'
-                        'properties': {
-                            'type': 'array',
-                            'items': {
-                                'oneOf': [
-                                    {
-                                        'type': 'object',
-                                        'patternProperties': {
-                                            '^': {
-                                                'oneOf': [
-                                                    {'type': 'object'},
-                                                    {'type': 'string'},
-                                                    {'type': 'number'},
-                                                    {'type': 'boolean'},
-                                                    {'type': 'array'}
-                                                ]
-                                            }
-                                        },
-                                        'maxProperties': 1,
-                                        'minProperties': 1
-                                    },
-                                    {
-                                        'type': 'string'
-                                    }
-                                ]
-                            }
-                        },
+                        'properties': PROPERTIES_ARRAY_SCHEMA,
                         'derived_from': {
                             'type': 'string'
                         },
@@ -341,7 +349,9 @@ DSL_SCHEMA = {
                         },
                         'source_interfaces': INTERFACES_SCHEMA,
                         'target_interfaces': INTERFACES_SCHEMA,
-                        'workflows': WORKFLOWS_SCHEMA
+                        'workflows': WORKFLOWS_SCHEMA,
+                        #non-meta 'properties'
+                        'properties': PROPERTIES_ARRAY_SCHEMA
                     },
                     'additionalProperties': False
                 }
@@ -361,6 +371,10 @@ DSL_SCHEMA = {
                         },
                         'target_node_ref': {
                             'type': 'string'
+                        },
+                        #non-meta 'properties'
+                        'properties': {
+                            'type': 'object'
                         },
                     },
                     'required': ['source_node_ref', 'target_node_ref',

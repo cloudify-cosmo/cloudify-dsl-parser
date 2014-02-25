@@ -2417,6 +2417,29 @@ types:
         self.assertEquals(op_struct('test_plugin', 'install', expected_props),
                           operations['test_interface1.install'])
 
+    def test_relationship_properties(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            - without_default_value
+            - with_simple_default_value: 1
+            - with_object_default_value:
+                comp1: 1
+                comp2: 2
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result)
+        relationships = result['relationships']
+        self.assertEquals(1, len(relationships))
+        test_relationship = relationships['test_relationship']
+        properties = test_relationship['properties']
+        self.assertIn('without_default_value', properties)
+        self.assertIn({'with_simple_default_value': 1}, properties)
+        self.assertIn({'with_object_default_value': {
+            'comp1': 1, 'comp2': 2
+        }}, properties)
+
 
 class ManagementPluginsToInstallTest(AbstractTestParser):
     def test_one_manager_one_agent_plugin_on_same_node(self):
