@@ -1454,30 +1454,51 @@ plugins:
             properties:
                 key: "val"
             relationships:
-                -   type: test_relationship
+                -   type: empty_relationship
                     target: test_node
                     properties:
                         prop1: prop1_value_new
                         prop2: prop2_value_new
+                        prop7: prop7_value_new_instance
 relationships:
+    empty_relationship:
+        properties:
+            - prop1
+            - prop2
+            - prop7
     test_relationship:
+        derived_from: empty_relationship
         properties:
             - prop1
             - prop2: prop2_value
             - prop3: prop3_value
+            - prop4
+            - prop5: prop5_value
+            - prop6: prop6_value
+relationship_implementations:
+    impl1:
+        type: test_relationship
+        source_node_ref: test_node2
+        target_node_ref: test_node
+        properties:
+            prop4: prop4_value_new
+            prop5: prop5_value_new
+            prop7: prop7_value_new_impl
 """
         result = parse(yaml)
         relationships = result['relationships']
-        self.assertEquals(1, len(relationships))
+        self.assertEquals(2, len(relationships))
         r_properties = relationships['test_relationship']['properties']
-        self.assertEquals(3, len(r_properties))
-        self.assertIn('prop1', r_properties)
-        self.assertIn({'prop2': 'prop2_value'}, r_properties)
-        self.assertIn({'prop3': 'prop3_value'}, r_properties)
+        self.assertEquals(7, len(r_properties))
         i_properties = result['nodes'][1]['relationships'][0]['properties']
+        self.assertEquals(7, len(i_properties))
         self.assertEquals('prop1_value_new', i_properties['prop1'])
         self.assertEquals('prop2_value_new', i_properties['prop2'])
         self.assertEquals('prop3_value', i_properties['prop3'])
+        self.assertEquals('prop4_value_new', i_properties['prop4'])
+        self.assertEquals('prop5_value_new', i_properties['prop5'])
+        self.assertEquals('prop6_value', i_properties['prop6'])
+        self.assertEquals('prop7_value_new_impl', i_properties['prop7'])
 
     def test_relationships_and_node_recursive_inheritance(self):
         #testing for a complete inheritance path for relationships
