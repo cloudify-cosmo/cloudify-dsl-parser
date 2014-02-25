@@ -30,6 +30,7 @@ PROPERTIES = 'properties'
 
 HOST_TYPE = 'cloudify.types.host'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
+CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
 PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
 AGENT_INSTALLER_PLUGIN = "worker_installer"
 KV_STORE_PLUGIN = 'kv_store'
@@ -196,13 +197,19 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         type_impls, relationship_impls, node_names):
     node_name_to_node = {node['id']: node for node in processed_nodes}
 
+    contained_in_rel_types = _build_family_descendants_set(
+        relationships, CONTAINED_IN_REL_TYPE)
+    connected_to_rel_types = _build_family_descendants_set(
+        relationships, CONNECTED_TO_REL_TYPE)
     for node in processed_nodes:
-        _post_process_node_relationships(node, node_name_to_node, plugins)
+        _post_process_node_relationships(node,
+                                         node_name_to_node,
+                                         plugins,
+                                         contained_in_rel_types,
+                                         connected_to_rel_types)
 
     #set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
-    contained_in_rel_types = _build_family_descendants_set(
-        relationships, CONTAINED_IN_REL_TYPE)
     for node in processed_nodes:
         host_id = _extract_node_host_id(node, node_name_to_node, host_types,
                                         contained_in_rel_types)
@@ -244,7 +251,11 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     _validate_relationship_impls(relationship_impls)
 
 
-def _post_process_node_relationships(node, node_name_to_node, plugins):
+def _post_process_node_relationships(node,
+                                     node_name_to_node,
+                                     plugins,
+                                     contained_in_rel_types,
+                                     connected_to_rel_types):
     if RELATIONSHIPS in node:
         for relationship in node[RELATIONSHIPS]:
             target_node = node_name_to_node[relationship['target_id']]
@@ -255,6 +266,22 @@ def _post_process_node_relationships(node, node_name_to_node, plugins):
             _process_node_relationships_operations(
                 relationship, 'target_interfaces', 'target_operations',
                 target_node, plugins)
+            _add_base_type_to_relationship(relationship,
+                                           contained_in_rel_types,
+                                           connected_to_rel_types)
+
+
+# used in multi_instance
+def _add_base_type_to_relationship(relationship,
+                                   contained_in_rel_types,
+                                   connected_to_rel_types):
+    base = 'depends'
+    rel_type = relationship['type']
+    if rel_type in contained_in_rel_types:
+        base = 'contained'
+    elif rel_type in connected_to_rel_types:
+        base = 'connected'
+    relationship['base'] = base
 
 
 pattern = re.compile("(.+)\[(\d+)\]")
