@@ -17,12 +17,12 @@ __author__ = 'idanmo'
 
 import unittest
 
-import dsl_parser.tasks as tasks
 import random
-import json
+
+from dsl_parser import multi_instance
 
 
-class TestDSLParser(unittest.TestCase):
+class TestMultiInstance(unittest.TestCase):
 
     maxDiff = None
 
@@ -48,7 +48,7 @@ class TestDSLParser(unittest.TestCase):
         ]
 
         suffix_map = {'simple_web_server.host': ['_d82c0', '_c2094']}
-        instances = tasks._create_node_instances(node, suffix_map)
+        instances = multi_instance._create_node_instances(node, suffix_map)
         self.assertEqual(instances, expected_instances)
 
     def test_create_multiple_node_suffix_map(self):
@@ -67,7 +67,7 @@ class TestDSLParser(unittest.TestCase):
             "multi_instance.db": ["_6baa9", "_42485"]}
 
         random.seed(0)
-        suffix_map = tasks._create_node_suffixes_map(nodes)
+        suffix_map = multi_instance._create_node_suffixes_map(nodes)
         self.assertEqual(suffix_map, expected_suffix_map)
 
     def test_create_single_node_suffix_map(self):
@@ -91,7 +91,7 @@ class TestDSLParser(unittest.TestCase):
             "multi_instance.db": ["_c2094"]}
 
         random.seed(0)
-        suffix_map = tasks._create_node_suffixes_map(nodes)
+        suffix_map = multi_instance._create_node_suffixes_map(nodes)
         self.assertEqual(suffix_map, expected_suffix_map)
 
     def test_prepare_multi_instance_plan(self):
@@ -169,7 +169,7 @@ class TestDSLParser(unittest.TestCase):
         }
 
         random.seed(0)
-        new_plan = json.loads(tasks.prepare_deployment_plan(plan))
+        new_plan = multi_instance.create_multi_instance_plan(plan)
         self.assertDictContainsSubset(expected_plan, new_plan)
 
     def test_prepare_single_instance_plan(self):
@@ -225,7 +225,7 @@ class TestDSLParser(unittest.TestCase):
         }
 
         random.seed(0)
-        new_plan = json.loads(tasks.prepare_deployment_plan(plan))
+        new_plan = multi_instance.create_multi_instance_plan(plan)
         self.assertDictContainsSubset(expected_plan, new_plan)
 
     def test_prepare_single_instance_plan_with_connected_to(self):
@@ -357,7 +357,7 @@ class TestDSLParser(unittest.TestCase):
         }
 
         random.seed(0)
-        new_plan = json.loads(tasks.prepare_deployment_plan(plan))
+        new_plan = multi_instance.create_multi_instance_plan(plan)
 
         self.assertDictContainsSubset(expected_plan, new_plan)
 
@@ -389,5 +389,5 @@ class TestDSLParser(unittest.TestCase):
         }
 
         random.seed(0)
-        new_plan = json.loads(tasks.prepare_deployment_plan(plan))
+        new_plan = multi_instance.create_multi_instance_plan(plan)
         self.assertDictContainsSubset(expected_plan, new_plan)
