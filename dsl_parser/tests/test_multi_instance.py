@@ -105,6 +105,7 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.contained_in",
                             "target_id": "multi_instance.host",
+                            "base": "contained"
                         }
                     ],
                 },
@@ -132,6 +133,7 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.contained_in",
                             "target_id": "multi_instance.host_d82c0",
+                            "base": "contained"
                         }
                     ],
                 },
@@ -142,6 +144,7 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.contained_in",
                             "target_id": "multi_instance.host_c2094",
+                            "base": "contained"
                         }
                     ],
                 },
@@ -183,6 +186,7 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.contained_in",
                             "target_id": "multi_instance.host",
+                            "base": "contained"
                         }
                     ],
                 },
@@ -208,6 +212,7 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.contained_in",
                             "target_id": "multi_instance.host_d82c0",
+                            "base": "contained"
                         }
                     ],
                 },
@@ -259,6 +264,7 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.contained_in",
                             "target_id": "multi_instance.host1",
+                            "base": "contained"
                         }
                     ],
                     "dependents": [
@@ -273,10 +279,12 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.contained_in",
                             "target_id": "multi_instance.host2",
+                            "base": "contained"
                         },
                         {
                             "type": "cloudify.relationships.connected_to",
                             "target_id": "multi_instance.db",
+                            "base": "connected"
                         }
                     ],
                 },
@@ -287,6 +295,7 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.depends_on",
                             "target_id": "multi_instance.db",
+                            "base": "depends"
                         }
                     ],
                 },
@@ -302,6 +311,7 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.contained_in",
                             "target_id": "multi_instance.host1_d82c0",
+                            "base": "contained"
                         }
                     ],
                     "dependents": [
@@ -336,10 +346,12 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.contained_in",
                             "target_id": "multi_instance.host2_c2094",
+                            "base": "contained"
                         },
                         {
                             "type": "cloudify.relationships.connected_to",
                             "target_id": "multi_instance.db_6baa9",
+                            "base": "connected"
                         }
                     ],
                 },
@@ -350,6 +362,7 @@ class TestMultiInstance(unittest.TestCase):
                         {
                             "type": "cloudify.relationships.depends_on",
                             "target_id": "multi_instance.db_6baa9",
+                            "base": "depends"
                         }
                     ],
                 },

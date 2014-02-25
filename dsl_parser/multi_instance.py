@@ -116,16 +116,12 @@ def _create_node_instances(node, suffixes_map):
         if 'relationships' in node_copy:
             new_relationships = []
             for relationship in node_copy['relationships']:
-                new_relationship = relationship
                 target_id = relationship['target_id']
-                if relationship['type'].endswith('relationships.contained_in'):
+                if relationship['base'] == 'contained':
                     new_relationship = relationship.copy()
                     new_relationship['target_id'] = _build_node_instance_id(
                         target_id, suffixes_map[target_id][i])
-                elif (relationship['type'].endswith(
-                        'relationships.connected_to') or
-                        relationship['type'].endswith(
-                            'relationships.depends_on')):
+                else:
                     new_relationship = relationship.copy()
                     # TODO support connected_to with tiers
                     # currently only 1 instance for connected_to
