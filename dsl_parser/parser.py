@@ -256,6 +256,7 @@ def _post_process_node_relationships(node,
                                      plugins,
                                      contained_in_rel_types,
                                      connected_to_rel_types):
+    contained_in_relationships = []
     if RELATIONSHIPS in node:
         for relationship in node[RELATIONSHIPS]:
             target_node = node_name_to_node[relationship['target_id']]
@@ -268,17 +269,29 @@ def _post_process_node_relationships(node,
                 target_node, plugins)
             _add_base_type_to_relationship(relationship,
                                            contained_in_rel_types,
-                                           connected_to_rel_types)
+                                           connected_to_rel_types,
+                                           contained_in_relationships)
+    if len(contained_in_relationships) > 1:
+        ex = DSLParsingLogicException(
+            112, 'Node {0} has more than one relationship that is derived'
+                 ' from {1} relationship. Found: {2}'
+                 .format(node['name'],
+                         CONTAINED_IN_REL_TYPE,
+                         contained_in_relationships))
+        ex.relationship_types = contained_in_relationships
+        raise ex
 
 
 # used in multi_instance
 def _add_base_type_to_relationship(relationship,
                                    contained_in_rel_types,
-                                   connected_to_rel_types):
+                                   connected_to_rel_types,
+                                   contained_in_relationships):
     base = 'depends'
     rel_type = relationship['type']
     if rel_type in contained_in_rel_types:
         base = 'contained'
+        contained_in_relationships.append(rel_type)
     elif rel_type in connected_to_rel_types:
         base = 'connected'
     relationship['base'] = base
