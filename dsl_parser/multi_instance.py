@@ -104,14 +104,13 @@ def _create_node_instances(node, suffixes_map):
         host_suffixes = suffixes_map[host_id]
     number_of_instances = len(node_suffixes)
 
-    #TODO: rewrite in parser properly (and make sure to change _build_node_
-    # instance_id method)
+    #TODO: rewrite in parser properly (and make sure to change _instance_id
+    # method)
     for i in range(number_of_instances):
         node_copy = node.copy()
-        node_copy['id'] = _build_node_instance_id(node_id, node_suffixes[i])
+        node_copy['id'] = _instance_id(node_id, node_suffixes[i])
         if host_id and host_suffixes:
-            node_copy['host_id'] = _build_node_instance_id(host_id,
-                                                           host_suffixes[i])
+            node_copy['host_id'] = _instance_id(host_id, host_suffixes[i])
 
         if 'relationships' in node_copy:
             new_relationships = []
@@ -119,21 +118,21 @@ def _create_node_instances(node, suffixes_map):
                 target_id = relationship['target_id']
                 if relationship['base'] == 'contained':
                     new_relationship = relationship.copy()
-                    new_relationship['target_id'] = _build_node_instance_id(
+                    new_relationship['target_id'] = _instance_id(
                         target_id, suffixes_map[target_id][i])
                 else:
                     new_relationship = relationship.copy()
                     # TODO support connected_to with tiers
                     # currently only 1 instance for connected_to
                     # (and depends_on) is supported
-                    new_relationship['target_id'] = _build_node_instance_id(
+                    new_relationship['target_id'] = _instance_id(
                         target_id, suffixes_map[target_id][0])
                 new_relationships.append(new_relationship)
             node_copy['relationships'] = new_relationships
         if 'dependents' in node_copy:
             new_dependents = []
             for dependent in node_copy['dependents']:
-                new_dependents.append(_build_node_instance_id(
+                new_dependents.append(_instance_id(
                     dependent, suffixes_map[dependent][i]))
             node_copy['dependents'] = new_dependents
 
@@ -142,7 +141,7 @@ def _create_node_instances(node, suffixes_map):
     return instances
 
 
-def _build_node_instance_id(node_id, node_suffix):
+def _instance_id(node_id, node_suffix):
     return node_id + node_suffix if node_id != node_suffix else node_id
 
 
