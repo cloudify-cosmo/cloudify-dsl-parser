@@ -1219,6 +1219,86 @@ imports:
             2, len(test_relationship3['target_interfaces']['test_interface2']))
         self.assertEquals(3, len(test_relationship3))
 
+    def test_top_level_relationship_properties(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            - without_default_value
+            - with_simple_default_value: 1
+            - with_object_default_value:
+                comp1: 1
+                comp2: 2
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result)
+        relationships = result['relationships']
+        self.assertEquals(1, len(relationships))
+        test_relationship = relationships['test_relationship']
+        properties = test_relationship['properties']
+        self.assertIn('without_default_value', properties)
+        self.assertIn({'with_simple_default_value': 1}, properties)
+        self.assertIn({'with_object_default_value': {
+            'comp1': 1, 'comp2': 2
+        }}, properties)
+
+    def test_top_level_relationship_properties_inheritance(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship1:
+        properties:
+            - prop1
+            - prop2
+            - prop3: prop3_value_1
+            - derived1: derived1_value
+    test_relationship2:
+        derived_from: test_relationship1
+        properties:
+            - prop2: prop2_value_2
+            - prop3: prop3_value_2
+            - prop4
+            - prop5
+            - prop6: prop6_value_2
+            - derived2: derived2_value
+    test_relationship3:
+        derived_from: test_relationship2
+        properties:
+            - prop5: prop5_value_3
+            - prop6: prop6_value_3
+            - prop7
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result)
+        relationships = result['relationships']
+        self.assertEquals(3, len(relationships))
+        r1_properties = relationships['test_relationship1']['properties']
+        r2_properties = relationships['test_relationship2']['properties']
+        r3_properties = relationships['test_relationship3']['properties']
+        self.assertEquals(4, len(r1_properties))
+        self.assertIn('prop1', r1_properties)
+        self.assertIn('prop2', r1_properties)
+        self.assertIn({'prop3': 'prop3_value_1'}, r1_properties)
+        self.assertIn({'derived1': 'derived1_value'}, r1_properties)
+        self.assertEquals(8, len(r2_properties))
+        self.assertIn('prop1', r2_properties)
+        self.assertIn({'prop2': 'prop2_value_2'}, r2_properties)
+        self.assertIn({'prop3': 'prop3_value_2'}, r2_properties)
+        self.assertIn('prop4', r2_properties)
+        self.assertIn('prop5', r2_properties)
+        self.assertIn({'prop6': 'prop6_value_2'}, r2_properties)
+        self.assertIn({'derived1': 'derived1_value'}, r2_properties)
+        self.assertIn({'derived2': 'derived2_value'}, r2_properties)
+        self.assertEquals(9, len(r3_properties))
+        self.assertIn('prop1', r3_properties)
+        self.assertIn({'prop2': 'prop2_value_2'}, r3_properties)
+        self.assertIn({'prop3': 'prop3_value_2'}, r3_properties)
+        self.assertIn('prop4', r3_properties)
+        self.assertIn({'prop5': 'prop5_value_3'}, r3_properties)
+        self.assertIn({'prop6': 'prop6_value_3'}, r3_properties)
+        self.assertIn('prop7', r3_properties)
+        self.assertIn({'derived1': 'derived1_value'}, r3_properties)
+        self.assertIn({'derived2': 'derived2_value'}, r3_properties)
+
     def test_instance_relationships_empty_relationships_section(self):
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships: []
@@ -2416,29 +2496,6 @@ types:
                           operations['install'])
         self.assertEquals(op_struct('test_plugin', 'install', expected_props),
                           operations['test_interface1.install'])
-
-    def test_relationship_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        properties:
-            - without_default_value
-            - with_simple_default_value: 1
-            - with_object_default_value:
-                comp1: 1
-                comp2: 2
-"""
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        relationships = result['relationships']
-        self.assertEquals(1, len(relationships))
-        test_relationship = relationships['test_relationship']
-        properties = test_relationship['properties']
-        self.assertIn('without_default_value', properties)
-        self.assertIn({'with_simple_default_value': 1}, properties)
-        self.assertIn({'with_object_default_value': {
-            'comp1': 1, 'comp2': 2
-        }}, properties)
 
 
 class ManagementPluginsToInstallTest(AbstractTestParser):

@@ -532,6 +532,16 @@ def _rel_inheritance_merging_func(complete_super_type, current_level_type):
     #derive workflows
     merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
                                               merged_type, WORKFLOWS)
+
+    # TODO change docs
+    #derive properties, need special handling as node properties and type
+    #properties are not of the same format
+    merged_props_array = _merge_properties_arrays(complete_super_type,
+                                                  merged_type,
+                                                  PROPERTIES)
+    if len(merged_props_array) > 0:
+        merged_type[PROPERTIES] = merged_props_array
+
     # derived source and target interfaces
     for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
         merged_interfaces = _merge_interface_dicts(complete_super_type,

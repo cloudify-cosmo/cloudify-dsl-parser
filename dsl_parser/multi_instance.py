@@ -124,8 +124,8 @@ def _create_node_instances(node, suffixes_map):
                         target_id, suffixes_map[target_id][i])
                 elif (relationship['type'].endswith(
                         'relationships.connected_to') or
-                          relationship['type'].endswith(
-                                  'relationships.depends_on')):
+                        relationship['type'].endswith(
+                            'relationships.depends_on')):
                     new_relationship = relationship.copy()
                     # TODO support connected_to with tiers
                     # currently only 1 instance for connected_to

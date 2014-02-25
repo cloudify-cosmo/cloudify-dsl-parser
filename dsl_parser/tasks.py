@@ -36,5 +36,3 @@ def prepare_deployment_plan(plan, **kwargs):
     """
     plan = multi_instance.create_multi_instance_plan(plan)
     return json.dumps(plan)
-
-
