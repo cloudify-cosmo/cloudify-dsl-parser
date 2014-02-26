@@ -246,13 +246,25 @@ plugins:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_plugin_with_extra_properties(self):
+    def test_plugin_with_url_and_extra_properties(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 plugins:
     test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
             url: "http://test_url.zip"
+            extra_prop: "some_val"
+            """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_plugin_with_folder_and_extra_properties(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            folder: "http://test_url.zip"
             extra_prop: "some_val"
             """
         self._assert_dsl_parsing_exception_error_code(

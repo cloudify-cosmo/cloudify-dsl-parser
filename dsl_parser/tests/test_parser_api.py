@@ -1916,6 +1916,26 @@ plugins:
         self.assertEquals('http://test_plugin.zip', plugin['url'])
         self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
 
+    def test_plugin_with_folder_as_only_property(self):
+        yaml = """
+blueprint:
+    name: test_app
+    nodes:
+        -   name: test_node1
+            type: cloudify.types.host
+types:
+    cloudify.types.host:
+        interfaces:
+            test_interface:
+                - start: test_plugin.start
+plugins:
+    test_plugin:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            folder: "test-folder"
+            """
+        parse(yaml)
+
     def test_node_plugins_to_install_field_installer_plugin(self):
         #testing to ensure the installer plugin is treated differently and
         # is not
