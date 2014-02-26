@@ -218,3 +218,37 @@ blueprint:
         self.assertEquals(1, len(nodes))
         self.assertEquals('node1_id_d82c0', nodes[0]['id'])
         self.assertTrue('host_id' not in nodes[0])
+
+    def test_temp(self):
+        yaml = self.BASE_BLUEPRINT + """
+        -   name: host1
+            type: cloudify.types.host
+            instances:
+                deploy: 2
+        -   name: host2
+            type: cloudify.types.host
+            instances:
+                deploy: 2
+        -   name: db
+            type: db
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: host1
+        -   name: webserver
+            type: webserver
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: host2
+                -   type: cloudify.relationships.connected_to
+                    target: db
+        -   name: db_dependent
+            type: db_dependent
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: db
+"""
+        from dsl_parser import rel_graph
+
+        plan = parse(yaml)
+        graph = rel_graph.build_initial_node_graph(plan)
+        rel_graph.build_multi_instance_node_graph(graph)
