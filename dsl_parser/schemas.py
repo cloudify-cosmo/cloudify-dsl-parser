@@ -191,13 +191,26 @@ DSL_SCHEMA = {
                         #non-meta 'properties'
                         'properties': {
                             'type': 'object',
-                            'properties': {
-                                'url': {
-                                    'type': 'string'
+                            'oneOf': [
+                                {
+                                    'properties': {
+                                        'url': {
+                                            'type': 'string'
+                                        }
+                                    },
+                                    'required': ['url'],
+                                    'additionalProperties': False
+                                },
+                                {
+                                    'properties': {
+                                        'folder': {
+                                            'type': 'string'
+                                        }
+                                    },
+                                    'required': ['folder'],
+                                    'additionalProperties': False
                                 }
-                            },
-                            'required': ['url'],
-                            'additionalProperties': False
+                            ]
                         }
                     },
                     'required': ['derived_from'],
