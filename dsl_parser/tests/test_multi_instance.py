@@ -231,6 +231,8 @@ blueprint:
                 deploy: 2
         -   name: db
             type: db
+            instances:
+                deploy: 2
             relationships:
                 -   type: cloudify.relationships.contained_in
                     target: host1
