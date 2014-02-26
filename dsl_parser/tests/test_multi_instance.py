@@ -13,392 +13,232 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
-
-import unittest
+__author__ = 'dank'
 
 import random
 
-from dsl_parser import multi_instance
+from dsl_parser.tests.abstract_test_parser import AbstractTestParser
+from dsl_parser.multi_instance import create_multi_instance_plan
+from dsl_parser.parser import parse
 
 
-class TestMultiInstance(unittest.TestCase):
+def parse_multi(yaml):
+    plan = parse(yaml)
+    return create_multi_instance_plan(plan)
 
-    def test_create_node_instances(self):
 
-        node = {
-            "id": "simple_web_server.host",
-            "properties": {"x": "y"},
-            "host_id": "simple_web_server.host"
-        }
+class TestMultiInstance(AbstractTestParser):
 
-        expected_instances = [
-            {
-                "id": "simple_web_server.host_d82c0",
-                "properties": {"x": "y"},
-                "host_id": "simple_web_server.host_d82c0"
-            },
-            {
-                "id": "simple_web_server.host_c2094",
-                "properties": {"x": "y"},
-                "host_id": "simple_web_server.host_c2094"
-            }
-        ]
-
-        suffix_map = {'simple_web_server.host': ['_d82c0', '_c2094']}
-        instances = multi_instance._create_node_instances(node, suffix_map)
-        self.assertEqual(instances, expected_instances)
-
-    def test_create_multiple_node_suffix_map(self):
-        nodes = [
-            {"id": "multi_instance.db",
-             "host_id": "multi_instance.host"}, {
-                "id": "multi_instance.host",
-                "host_id": "multi_instance.host",
-                "instances": {
-                    "deploy": 2
-                }}
-        ]
-
-        expected_suffix_map = {
-            "multi_instance.host": ["_d82c0", "_c2094"],
-            "multi_instance.db": ["_6baa9", "_42485"]}
-
+    def setUp(self):
         random.seed(0)
-        suffix_map = multi_instance._create_node_suffixes_map(nodes)
-        self.assertEqual(suffix_map, expected_suffix_map)
+        AbstractTestParser.setUp(self)
 
-    def test_create_single_node_suffix_map(self):
+    def tearDown(self):
+        AbstractTestParser.tearDown(self)
 
-        nodes = [
-            {
-                "id": "multi_instance.db",
-                "host_id": "multi_instance.host"
-            },
-            {
-                "id": "multi_instance.host",
-                "host_id": "multi_instance.host",
-                "instances": {
-                    "deploy": 1
-                }
-            }
-        ]
+    def test_single_node_multi_instance(self):
 
-        expected_suffix_map = {
-            "multi_instance.host": ["_d82c0"],
-            "multi_instance.db": ["_c2094"]}
+        yaml = """
+types:
+    cloudify.types.host:
+        properties:
+            -   x: y
+blueprint:
+    name: blueprint
+    nodes:
+        -   name: host
+            type: cloudify.types.host
+            instances:
+                deploy: 2
+"""
 
-        random.seed(0)
-        suffix_map = multi_instance._create_node_suffixes_map(nodes)
-        self.assertEqual(suffix_map, expected_suffix_map)
+        multi_plan = parse_multi(yaml)
+        nodes = multi_plan['nodes']
+        self.assertEquals(2, len(nodes))
+        self.assertEquals('host_d82c0', nodes[0]['id'])
+        self.assertEquals('host_c2094', nodes[1]['id'])
+        self.assertEquals('host_d82c0', nodes[0]['host_id'])
+        self.assertEquals('host_c2094', nodes[1]['host_id'])
+        self.assertEquals('y', nodes[0]['properties']['x'])
+        self.assertEquals('y', nodes[1]['properties']['x'])
 
-    def test_prepare_multi_instance_plan(self):
+    def test_two_nodes_multi_instance_one_contained_in_other(self):
 
-        plan = {
-            "nodes": [
-                {
-                    "id": "multi_instance.db",
-                    "host_id": "multi_instance.host",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host",
-                            "base": "contained"
-                        }
-                    ],
-                },
-                {
-                    "id": "multi_instance.host",
-                    "host_id": "multi_instance.host",
-                    "instances": {
-                        "deploy": 2
-                    },
-                    "dependents": [
-                        "multi_instance.db"
-                    ]
-                }
-            ]
-        }
+        yaml = """
+types:
+    cloudify.types.host: {}
+    db: {}
+relationships:
+    cloudify.relationships.contained_in: {}
+blueprint:
+    name: blueprint
+    nodes:
+        -   name: host
+            type: cloudify.types.host
+            instances:
+                deploy: 1
+        -   name: db
+            type: db
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: host
+"""
+        multi_plan = parse_multi(yaml)
+        nodes = multi_plan['nodes']
+        self.assertEquals(2, len(nodes))
+        self.assertEquals('host_d82c0', nodes[0]['id'])
+        self.assertEquals('db_c2094', nodes[1]['id'])
+        self.assertEquals('host_d82c0', nodes[0]['host_id'])
+        self.assertEquals('host_d82c0', nodes[1]['host_id'])
 
-        # everything in the new plan stays the same except for nodes that
-        # belonged to a tier.
-        expected_plan = {
-            "nodes": [
-                {
-                    "id": "multi_instance.db_6baa9",
-                    "host_id": "multi_instance.host_d82c0",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host_d82c0",
-                            "base": "contained"
-                        }
-                    ],
-                },
-                {
-                    "id": "multi_instance.db_42485",
-                    "host_id": "multi_instance.host_c2094",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host_c2094",
-                            "base": "contained"
-                        }
-                    ],
-                },
-                {
-                    "id": "multi_instance.host_d82c0",
-                    "host_id": "multi_instance.host_d82c0",
-                    "instances": {
-                        "deploy": 2
-                    },
-                    "dependents": [
-                        "multi_instance.db_6baa9"
-                    ]
-                },
-                {
-                    "id": "multi_instance.host_c2094",
-                    "host_id": "multi_instance.host_c2094",
-                    "instances": {
-                        "deploy": 2
-                    },
-                    "dependents": [
-                        "multi_instance.db_42485"
-                    ]
-                }
-            ]
-        }
+        host_dependents = nodes[0]['dependents']
+        self.assertEquals(1, len(host_dependents))
+        self.assertEquals('db_c2094', host_dependents[0])
 
-        random.seed(0)
-        new_plan = multi_instance.create_multi_instance_plan(plan)
-        self.assertDictContainsSubset(expected_plan, new_plan)
+        db_relationships = nodes[1]['relationships']
+        self.assertEquals(1, len(db_relationships))
+        self.assertEquals('host_d82c0', db_relationships[0]['target_id'])
 
-    def test_prepare_single_instance_plan(self):
+    def test_two_nodes_multi_instance_one_contained_in_other_two_instances(self):  # NOQA
 
-        plan = {
-            "nodes": [
-                {
-                    "id": "multi_instance.db",
-                    "host_id": "multi_instance.host",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host",
-                            "base": "contained"
-                        }
-                    ],
-                },
-                {
-                    "id": "multi_instance.host",
-                    "host_id": "multi_instance.host",
-                    "instances": {
-                        "deploy": 1
-                    },
-                    "dependents": [
-                        "multi_instance.db"
-                    ]
-                }
-            ]
-        }
+        yaml = """
+types:
+    cloudify.types.host: {}
+    db: {}
+relationships:
+    cloudify.relationships.contained_in: {}
+blueprint:
+    name: blueprint
+    nodes:
+        -   name: host
+            type: cloudify.types.host
+            instances:
+                deploy: 2
+        -   name: db
+            type: db
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: host
+"""
+        multi_plan = parse_multi(yaml)
+        nodes = multi_plan['nodes']
+        self.assertEquals(4, len(nodes))
+        self.assertEquals('host_d82c0', nodes[0]['id'])
+        self.assertEquals('host_c2094', nodes[1]['id'])
+        self.assertEquals('db_6baa9', nodes[2]['id'])
+        self.assertEquals('db_42485', nodes[3]['id'])
+        self.assertEquals('host_d82c0', nodes[0]['host_id'])
+        self.assertEquals('host_c2094', nodes[1]['host_id'])
+        self.assertEquals('host_d82c0', nodes[2]['host_id'])
+        self.assertEquals('host_c2094', nodes[3]['host_id'])
 
-        expected_plan = {
-            "nodes": [
-                {
-                    "id": "multi_instance.db_c2094",
-                    "host_id": "multi_instance.host_d82c0",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host_d82c0",
-                            "base": "contained"
-                        }
-                    ],
-                },
-                {
-                    "id": "multi_instance.host_d82c0",
-                    "host_id": "multi_instance.host_d82c0",
-                    "instances": {
-                        "deploy": 1
-                    },
-                    "dependents": [
-                        "multi_instance.db_c2094"
-                    ]
-                }
-            ]
-        }
+        host1_dependents = nodes[0]['dependents']
+        self.assertEquals(1, len(host1_dependents))
+        self.assertEquals('db_6baa9', host1_dependents[0])
+        host2_dependents = nodes[1]['dependents']
+        self.assertEquals(1, len(host2_dependents))
+        self.assertEquals('db_42485', host2_dependents[0])
 
-        random.seed(0)
-        new_plan = multi_instance.create_multi_instance_plan(plan)
-        self.assertDictContainsSubset(expected_plan, new_plan)
+        db1_relationships = nodes[2]['relationships']
+        self.assertEquals(1, len(db1_relationships))
+        self.assertEquals('host_d82c0', db1_relationships[0]['target_id'])
+        db2_relationships = nodes[3]['relationships']
+        self.assertEquals(1, len(db2_relationships))
+        self.assertEquals('host_c2094', db2_relationships[0]['target_id'])
 
-    def test_prepare_single_instance_plan_with_connected_to(self):
+    def test_multi_instance_single_connected_to(self):
+        yaml = """
+types:
+    cloudify.types.host: {}
+    db: {}
+    webserver: {}
+    db_dependent: {}
+relationships:
+    cloudify.relationships.depends_on: {}
+    cloudify.relationships.contained_in: {}
+    cloudify.relationships.connected_to: {}
+blueprint:
+    name: blueprint
+    nodes:
+        -   name: host1
+            type: cloudify.types.host
+        -   name: host2
+            type: cloudify.types.host
+        -   name: db
+            type: db
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: host1
+        -   name: webserver
+            type: webserver
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: host2
+                -   type: cloudify.relationships.connected_to
+                    target: db
+        -   name: db_dependent
+            type: db_dependent
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: host1
+                -   type: cloudify.relationships.depends_on
+                    target: db
+"""
 
-        plan = {
-            "nodes": [
-                {
-                    "id": "multi_instance.host1",
-                    "host_id": "multi_instance.host1",
-                    "instances": {
-                        "deploy": 1
-                    },
-                    "dependents": [
-                        "multi_instance.db"
-                    ]
-                },
-                {
-                    "id": "multi_instance.host2",
-                    "host_id": "multi_instance.host2",
-                    "instances": {
-                        "deploy": 1
-                    },
-                    "dependents": [
-                        "multi_instance.webserver"
-                    ]
-                },
-                {
-                    "id": "multi_instance.db",
-                    "host_id": "multi_instance.host1",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host1",
-                            "base": "contained"
-                        }
-                    ],
-                    "dependents": [
-                        "multi_instance.webserver",
-                        "multi_instance.db_dependent"
-                    ]
-                },
-                {
-                    "id": "multi_instance.webserver",
-                    "host_id": "multi_instance.host2",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host2",
-                            "base": "contained"
-                        },
-                        {
-                            "type": "cloudify.relationships.connected_to",
-                            "target_id": "multi_instance.db",
-                            "base": "connected"
-                        }
-                    ],
-                },
-                {
-                    "id": "multi_instance.db_dependent",
-                    "host_id": "multi_instance.host1",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.depends_on",
-                            "target_id": "multi_instance.db",
-                            "base": "depends"
-                        }
-                    ],
-                },
-            ]
-        }
+        multi_plan = parse_multi(yaml)
+        nodes = multi_plan['nodes']
+        self.assertEquals(5, len(nodes))
 
-        expected_plan = {
-            "nodes": [
-                {
-                    "id": "multi_instance.db_6baa9",
-                    "host_id": "multi_instance.host1_d82c0",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host1_d82c0",
-                            "base": "contained"
-                        }
-                    ],
-                    "dependents": [
-                        "multi_instance.webserver_42485",
-                        "multi_instance.db_dependent_82e2e"
-                    ]
-                },
-                {
-                    "id": "multi_instance.host2_c2094",
-                    "host_id": "multi_instance.host2_c2094",
-                    "instances": {
-                        "deploy": 1
-                    },
-                    "dependents": [
-                        "multi_instance.webserver_42485"
-                    ]
-                },
-                {
-                    "id": "multi_instance.host1_d82c0",
-                    "host_id": "multi_instance.host1_d82c0",
-                    "instances": {
-                        "deploy": 1
-                    },
-                    "dependents": [
-                        "multi_instance.db_6baa9",
-                    ]
-                },
-                {
-                    "id": "multi_instance.webserver_42485",
-                    "host_id": "multi_instance.host2_c2094",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.contained_in",
-                            "target_id": "multi_instance.host2_c2094",
-                            "base": "contained"
-                        },
-                        {
-                            "type": "cloudify.relationships.connected_to",
-                            "target_id": "multi_instance.db_6baa9",
-                            "base": "connected"
-                        }
-                    ],
-                },
-                {
-                    "id": "multi_instance.db_dependent_82e2e",
-                    "host_id": "multi_instance.host1_d82c0",
-                    "relationships": [
-                        {
-                            "type": "cloudify.relationships.depends_on",
-                            "target_id": "multi_instance.db_6baa9",
-                            "base": "depends"
-                        }
-                    ],
-                },
-            ]
-        }
+        self.assertEquals('db_dependent_42485', nodes[0]['id'])
+        self.assertEquals('webserver_82e2e', nodes[1]['id'])
+        self.assertEquals('db_6baa9', nodes[2]['id'])
+        self.assertEquals('host2_c2094', nodes[3]['id'])
+        self.assertEquals('host1_d82c0', nodes[4]['id'])
 
-        random.seed(0)
-        new_plan = multi_instance.create_multi_instance_plan(plan)
+        self.assertEquals('host1_d82c0', nodes[0]['host_id'])
+        self.assertEquals('host2_c2094', nodes[1]['host_id'])
+        self.assertEquals('host1_d82c0', nodes[2]['host_id'])
+        self.assertEquals('host2_c2094', nodes[3]['host_id'])
+        self.assertEquals('host1_d82c0', nodes[4]['host_id'])
 
-        self.assertDictContainsSubset(expected_plan, new_plan)
+        host1_dependents = nodes[4]['dependents']
+        self.assertEquals(2, len(host1_dependents))
+        self.assertEquals('db_6baa9', host1_dependents[0])
+        self.assertEquals('db_dependent_42485', host1_dependents[1])
+        host2_dependents = nodes[3]['dependents']
+        self.assertEquals(1, len(host2_dependents))
+        self.assertEquals('webserver_82e2e', host2_dependents[0])
+
+        db_relationships = nodes[2]['relationships']
+        self.assertEquals(1, len(db_relationships))
+        self.assertEquals('host1_d82c0', db_relationships[0]['target_id'])
+        webserver_relationships = nodes[1]['relationships']
+        self.assertEquals(2, len(webserver_relationships))
+        self.assertEquals('host2_c2094',
+                          webserver_relationships[0]['target_id'])
+        self.assertEquals('db_6baa9',
+                          webserver_relationships[1]['target_id'])
+        db_dependent_relationships = nodes[0]['relationships']
+        self.assertEquals(2, len(db_dependent_relationships))
+        self.assertEquals('host1_d82c0',
+                          db_dependent_relationships[0]['target_id'])
+        self.assertEquals('db_6baa9',
+                          db_dependent_relationships[1]['target_id'])
 
     def test_prepare_deployment_plan_single_none_host_node(self):
 
-        plan = {
-            "nodes": [
-                {
-                    "id": "node1_id",
-                    "instances":
-                    {
-                        "deploy": 1
-                    }
-                }
-            ]
-        }
+        yaml = """
+types:
+    type: {}
+blueprint:
+    name: blueprint
+    nodes:
+        -   name: node1_id
+            type: type
+"""
 
-        # everything in the new plan stays the same except for nodes that
-        # belonged to a tier.
-        expected_plan = {
-            "nodes": [
-                {
-                    "id": "node1_id_d82c0",
-                    "instances": {
-                        "deploy": 1
-                    }
-                }
-            ]
-        }
-
-        random.seed(0)
-        new_plan = multi_instance.create_multi_instance_plan(plan)
-        self.assertDictContainsSubset(expected_plan, new_plan)
+        multi_plan = parse_multi(yaml)
+        nodes = multi_plan['nodes']
+        self.assertEquals(1, len(nodes))
+        self.assertEquals('node1_id_d82c0', nodes[0]['id'])
+        self.assertTrue('host_id' not in nodes[0])
