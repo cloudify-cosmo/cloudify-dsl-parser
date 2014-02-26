@@ -24,8 +24,6 @@ from dsl_parser import multi_instance
 
 class TestMultiInstance(unittest.TestCase):
 
-    maxDiff = None
-
     def test_create_node_instances(self):
 
         node = {
