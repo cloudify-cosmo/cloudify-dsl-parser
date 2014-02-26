@@ -29,6 +29,24 @@ def parse_multi(yaml):
 
 class TestMultiInstance(AbstractTestParser):
 
+    BASE_BLUEPRINT = """
+types:
+    cloudify.types.host:
+        properties:
+            -   x: y
+    db: {}
+    webserver: {}
+    db_dependent: {}
+    type: {}
+relationships:
+    cloudify.relationships.depends_on: {}
+    cloudify.relationships.contained_in: {}
+    cloudify.relationships.connected_to: {}
+blueprint:
+    name: multi_instance
+    nodes:
+        """
+
     def setUp(self):
         random.seed(0)
         AbstractTestParser.setUp(self)
@@ -38,14 +56,7 @@ class TestMultiInstance(AbstractTestParser):
 
     def test_single_node_multi_instance(self):
 
-        yaml = """
-types:
-    cloudify.types.host:
-        properties:
-            -   x: y
-blueprint:
-    name: blueprint
-    nodes:
+        yaml = self.BASE_BLUEPRINT + """
         -   name: host
             type: cloudify.types.host
             instances:
@@ -64,19 +75,9 @@ blueprint:
 
     def test_two_nodes_multi_instance_one_contained_in_other(self):
 
-        yaml = """
-types:
-    cloudify.types.host: {}
-    db: {}
-relationships:
-    cloudify.relationships.contained_in: {}
-blueprint:
-    name: blueprint
-    nodes:
+        yaml = self.BASE_BLUEPRINT + """
         -   name: host
             type: cloudify.types.host
-            instances:
-                deploy: 1
         -   name: db
             type: db
             relationships:
@@ -101,15 +102,7 @@ blueprint:
 
     def test_two_nodes_multi_instance_one_contained_in_other_two_instances(self):  # NOQA
 
-        yaml = """
-types:
-    cloudify.types.host: {}
-    db: {}
-relationships:
-    cloudify.relationships.contained_in: {}
-blueprint:
-    name: blueprint
-    nodes:
+        yaml = self.BASE_BLUEPRINT + """
         -   name: host
             type: cloudify.types.host
             instances:
@@ -147,19 +140,7 @@ blueprint:
         self.assertEquals('host_c2094', db2_relationships[0]['target_id'])
 
     def test_multi_instance_single_connected_to(self):
-        yaml = """
-types:
-    cloudify.types.host: {}
-    db: {}
-    webserver: {}
-    db_dependent: {}
-relationships:
-    cloudify.relationships.depends_on: {}
-    cloudify.relationships.contained_in: {}
-    cloudify.relationships.connected_to: {}
-blueprint:
-    name: blueprint
-    nodes:
+        yaml = self.BASE_BLUEPRINT + """
         -   name: host1
             type: cloudify.types.host
         -   name: host2
@@ -227,12 +208,7 @@ blueprint:
 
     def test_prepare_deployment_plan_single_none_host_node(self):
 
-        yaml = """
-types:
-    type: {}
-blueprint:
-    name: blueprint
-    nodes:
+        yaml = self.BASE_BLUEPRINT + """
         -   name: node1_id
             type: type
 """
