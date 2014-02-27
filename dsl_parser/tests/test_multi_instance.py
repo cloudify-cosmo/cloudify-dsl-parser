@@ -43,7 +43,7 @@ relationships:
     cloudify.relationships.contained_in: {}
     cloudify.relationships.connected_to:
         properties:
-            -   connection_type: 'all_to_one'
+            -   connection_type: 'all_to_all'
 blueprint:
     name: multi_instance
     nodes:
@@ -88,17 +88,19 @@ blueprint:
 """
         multi_plan = parse_multi(yaml)
         nodes = multi_plan['nodes']
+        db = nodes[0]
+        host = nodes[1]
         self.assertEquals(2, len(nodes))
-        self.assertEquals('host_d82c0', nodes[0]['id'])
-        self.assertEquals('db_c2094', nodes[1]['id'])
-        self.assertEquals('host_d82c0', nodes[0]['host_id'])
-        self.assertEquals('host_d82c0', nodes[1]['host_id'])
+        self.assertEquals('host_d82c0', host['id'])
+        self.assertEquals('db_c2094', db['id'])
+        self.assertEquals('host_d82c0', host['host_id'])
+        self.assertEquals('host_d82c0', db['host_id'])
 
-        host_dependents = nodes[0]['dependents']
+        host_dependents = host['dependents']
         self.assertEquals(1, len(host_dependents))
         self.assertEquals('db_c2094', host_dependents[0])
 
-        db_relationships = nodes[1]['relationships']
+        db_relationships = db['relationships']
         self.assertEquals(1, len(db_relationships))
         self.assertEquals('host_d82c0', db_relationships[0]['target_id'])
 
@@ -118,28 +120,34 @@ blueprint:
         multi_plan = parse_multi(yaml)
         nodes = multi_plan['nodes']
         self.assertEquals(4, len(nodes))
-        self.assertEquals('host_d82c0', nodes[0]['id'])
-        self.assertEquals('host_c2094', nodes[1]['id'])
-        self.assertEquals('db_6baa9', nodes[2]['id'])
-        self.assertEquals('db_42485', nodes[3]['id'])
-        self.assertEquals('host_d82c0', nodes[0]['host_id'])
-        self.assertEquals('host_c2094', nodes[1]['host_id'])
-        self.assertEquals('host_d82c0', nodes[2]['host_id'])
-        self.assertEquals('host_c2094', nodes[3]['host_id'])
 
-        host1_dependents = nodes[0]['dependents']
+        db_1 = nodes[1]
+        db_2 = nodes[0]
+        host_1 = nodes[2]
+        host_2 = nodes[3]
+
+        self.assertEquals('host_d82c0', host_1['id'])
+        self.assertEquals('host_6baa9', host_2['id'])
+        self.assertEquals('db_c2094', db_1['id'])
+        self.assertEquals('db_42485', db_2['id'])
+        self.assertEquals('host_d82c0', host_1['host_id'])
+        self.assertEquals('host_6baa9', host_2['host_id'])
+        self.assertEquals('host_d82c0', db_1['host_id'])
+        self.assertEquals('host_6baa9', db_2['host_id'])
+
+        host1_dependents = host_1['dependents']
         self.assertEquals(1, len(host1_dependents))
-        self.assertEquals('db_6baa9', host1_dependents[0])
-        host2_dependents = nodes[1]['dependents']
+        self.assertEquals('db_c2094', host1_dependents[0])
+        host2_dependents = host_2['dependents']
         self.assertEquals(1, len(host2_dependents))
         self.assertEquals('db_42485', host2_dependents[0])
 
-        db1_relationships = nodes[2]['relationships']
+        db1_relationships = db_1['relationships']
         self.assertEquals(1, len(db1_relationships))
         self.assertEquals('host_d82c0', db1_relationships[0]['target_id'])
-        db2_relationships = nodes[3]['relationships']
+        db2_relationships = db_2['relationships']
         self.assertEquals(1, len(db2_relationships))
-        self.assertEquals('host_c2094', db2_relationships[0]['target_id'])
+        self.assertEquals('host_6baa9', db2_relationships[0]['target_id'])
 
     def test_multi_instance_single_connected_to(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -164,7 +172,7 @@ blueprint:
             relationships:
                 -   type: cloudify.relationships.contained_in
                     target: host1
-                -   type: cloudify.relationships.depends_on
+                -   type: cloudify.relationships.connected_to
                     target: db
 """
 
@@ -172,40 +180,46 @@ blueprint:
         nodes = multi_plan['nodes']
         self.assertEquals(5, len(nodes))
 
-        self.assertEquals('db_dependent_42485', nodes[0]['id'])
-        self.assertEquals('webserver_82e2e', nodes[1]['id'])
-        self.assertEquals('db_6baa9', nodes[2]['id'])
-        self.assertEquals('host2_c2094', nodes[3]['id'])
-        self.assertEquals('host1_d82c0', nodes[4]['id'])
+        db = nodes[0]
+        webserver = nodes[2]
+        db_dependent = nodes[1]
+        host2 = nodes[4]
+        host1 = nodes[3]
 
-        self.assertEquals('host1_d82c0', nodes[0]['host_id'])
-        self.assertEquals('host2_c2094', nodes[1]['host_id'])
-        self.assertEquals('host1_d82c0', nodes[2]['host_id'])
-        self.assertEquals('host2_c2094', nodes[3]['host_id'])
-        self.assertEquals('host1_d82c0', nodes[4]['host_id'])
+        self.assertEquals('db_dependent_6baa9', db_dependent['id'])
+        self.assertEquals('webserver_82e2e', webserver['id'])
+        self.assertEquals('db_c2094', db['id'])
+        self.assertEquals('host2_42485', host2['id'])
+        self.assertEquals('host1_d82c0', host1['id'])
 
-        host1_dependents = nodes[4]['dependents']
+        self.assertEquals('host1_d82c0', db_dependent['host_id'])
+        self.assertEquals('host2_42485', webserver['host_id'])
+        self.assertEquals('host1_d82c0', db['host_id'])
+        self.assertEquals('host2_42485', host2['host_id'])
+        self.assertEquals('host1_d82c0', host1['host_id'])
+
+        host1_dependents = host1['dependents']
         self.assertEquals(2, len(host1_dependents))
-        self.assertEquals('db_6baa9', host1_dependents[0])
-        self.assertEquals('db_dependent_42485', host1_dependents[1])
-        host2_dependents = nodes[3]['dependents']
+        self.assertEquals('db_c2094', host1_dependents[0])
+        self.assertEquals('db_dependent_6baa9', host1_dependents[1])
+        host2_dependents = host2['dependents']
         self.assertEquals(1, len(host2_dependents))
         self.assertEquals('webserver_82e2e', host2_dependents[0])
 
-        db_relationships = nodes[2]['relationships']
+        db_relationships = db['relationships']
         self.assertEquals(1, len(db_relationships))
         self.assertEquals('host1_d82c0', db_relationships[0]['target_id'])
-        webserver_relationships = nodes[1]['relationships']
+        webserver_relationships = webserver['relationships']
         self.assertEquals(2, len(webserver_relationships))
-        self.assertEquals('host2_c2094',
+        self.assertEquals('host2_42485',
                           webserver_relationships[0]['target_id'])
-        self.assertEquals('db_6baa9',
+        self.assertEquals('db_c2094',
                           webserver_relationships[1]['target_id'])
-        db_dependent_relationships = nodes[0]['relationships']
+        db_dependent_relationships = db_dependent['relationships']
         self.assertEquals(2, len(db_dependent_relationships))
-        self.assertEquals('host1_d82c0',
+        self.assertEquals('db_c2094',
                           db_dependent_relationships[0]['target_id'])
-        self.assertEquals('db_6baa9',
+        self.assertEquals('host1_d82c0',
                           db_dependent_relationships[1]['target_id'])
 
     def test_prepare_deployment_plan_single_none_host_node(self):
@@ -221,7 +235,7 @@ blueprint:
         self.assertEquals('node1_id_d82c0', nodes[0]['id'])
         self.assertTrue('host_id' not in nodes[0])
 
-    def test_temp(self):
+    def _test_temp(self):
         yaml = self.BASE_BLUEPRINT + """
         -   name: host1
             type: cloudify.types.host
@@ -257,4 +271,8 @@ blueprint:
 
         plan = parse(yaml)
         graph = rel_graph.build_initial_node_graph(plan)
-        rel_graph.build_multi_instance_node_graph(graph)
+        m_graph = rel_graph.build_multi_instance_node_graph(graph)
+        m_plan = rel_graph.create_multi_instance_plan_from_multi_instance_graph(
+            plan, m_graph)
+        import pprint
+        pprint.pprint(m_plan)

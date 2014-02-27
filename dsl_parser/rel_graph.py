@@ -4,6 +4,9 @@ import copy
 import networkx as nx
 import random
 
+NODES = 'nodes'
+RELATIONSHIPS = 'relationships'
+DEPENDENTS = 'dependents'
 CONNECTION_TYPE = 'connection_type'
 ALL_TO_ALL = 'all_to_all'
 ALL_TO_ONE = 'all_to_one'
@@ -18,6 +21,9 @@ class GraphContext(object):
             self.name_to_ids[name] = set()
         self.name_to_ids[name].add(node_id)
 
+    def get_ids_by_name(self, name):
+        return self.name_to_ids.get(name, [])
+
 
 def build_initial_node_graph(plan):
     graph = nx.DiGraph()
@@ -25,7 +31,7 @@ def build_initial_node_graph(plan):
         node_id = node['id']
         graph.add_node(node_id,
                        node=node)
-        for relationship in node.get('relationships', []):
+        for relationship in node.get(RELATIONSHIPS, []):
             target_id = relationship['target_id']
             graph.add_edge(node_id, target_id,
                            relationship=relationship)
@@ -39,8 +45,35 @@ def build_multi_instance_node_graph(initial_graph):
     new_graph = nx.DiGraph()
     ctx = GraphContext()
 
-    connected_graph = _build_connected_to_graph(initial_graph)
+    _handle_contained_in(initial_graph, new_graph, ctx)
+    _handle_connected_to(initial_graph, new_graph, ctx)
 
+    return new_graph
+
+
+def create_multi_instance_plan_from_multi_instance_graph(
+        plan,
+        multi_instance_graph):
+    plan = copy.deepcopy(plan)
+    new_nodes = []
+    for g_node, node_data in multi_instance_graph.nodes(data=True):
+        node = node_data['node']
+        new_relationships = []
+        for neighbor in multi_instance_graph.neighbors(g_node):
+            relationship = \
+                multi_instance_graph[g_node][neighbor]['relationship']
+            new_relationships.append(relationship)
+        node[RELATIONSHIPS] = new_relationships
+        node[DEPENDENTS] = \
+            multi_instance_graph.reverse(copy=True).neighbors(g_node)
+        new_nodes.append(node)
+    plan[NODES] = new_nodes
+    return plan
+
+
+def _handle_contained_in(initial_graph,
+                         new_graph,
+                         ctx):
     # build graph based only on connected_to relationships
     contained_graph = _build_contained_in_graph(initial_graph)
 
@@ -62,14 +95,6 @@ def build_multi_instance_node_graph(initial_graph):
                                             initial_graph,
                                             ctx)
 
-    for node, neighbor, e_data in connected_graph.edges(data=True):
-        relationship = e_data['relationship']
-        connection_type = _verify_and_get_connection_type(relationship)
-        print node, neighbor, relationship, connection_type
-
-    # print new_graph.nodes()
-    # print new_graph.edges()
-
 
 def _build_multi_instance_node_tree_rec(root,
                                         contained_tree,
@@ -77,12 +102,19 @@ def _build_multi_instance_node_tree_rec(root,
                                         initial_graph,
                                         ctx,
                                         target_relationship=None,
-                                        parent_id=None):
+                                        parent_id=None,
+                                        current_host_id=None):
     instances_num = contained_tree.node[root]['node']['instances']['deploy']
     instances_copy = _n_copies(contained_tree.node[root], instances_num)
     for instance_copy in instances_copy:
+
         node_id = _instance_id(root, _generate_suffix())
-        instance_copy['node']['id'] = node_id
+        node = instance_copy['node']
+        node['id'] = node_id
+
+        new_current_host_id = _handle_host_id(current_host_id,
+                                              root, node_id, node)
+
         ctx.add_name_to_id_mapping(root, node_id)
         master_graph.add_node(node_id, instance_copy)
         if parent_id is not None:
@@ -94,13 +126,43 @@ def _build_multi_instance_node_tree_rec(root,
             descendants = nx.descendants(contained_tree, neighbor)
             descendants.add(neighbor)
             sub_tree = contained_tree.subgraph(descendants)
-            _build_multi_instance_node_tree_rec(neighbor,
-                                                sub_tree,
-                                                master_graph,
-                                                initial_graph,
-                                                ctx,
-                                                initial_graph[neighbor][root],
-                                                node_id)
+            _build_multi_instance_node_tree_rec(
+                neighbor,
+                sub_tree,
+                master_graph,
+                initial_graph,
+                ctx,
+                initial_graph[neighbor][root]['relationship'],
+                node_id,
+                current_host_id=new_current_host_id)
+
+
+def _handle_host_id(current_host_id, node_name, node_id, node):
+    # If this condition applies, we assume current root is a host node
+    if current_host_id is None and \
+       'host_id' in node and node['host_id'] == node_name:
+        current_host_id = node_id
+    if current_host_id is not None:
+        node['host_id'] = current_host_id
+    return current_host_id
+
+
+def _handle_connected_to(initial_graph,
+                         new_graph,
+                         ctx):
+    connected_graph = _build_connected_to_graph(initial_graph)
+    for node, neighbor, e_data in connected_graph.edges(data=True):
+        relationship = e_data['relationship']
+        connection_type = _verify_and_get_connection_type(relationship)
+        for multi_instance_node in ctx.get_ids_by_name(node):
+            targets = list(ctx.get_ids_by_name(neighbor))
+            if connection_type == ALL_TO_ONE:
+                targets = targets[:1]
+            for target_node in targets:
+                relationship_copy = copy.deepcopy(relationship)
+                relationship_copy['target_id'] = target_node
+                new_graph.add_edge(multi_instance_node, target_node,
+                                   relationship=relationship_copy)
 
 
 def _build_connected_to_graph(graph):
