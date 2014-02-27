@@ -477,6 +477,62 @@ types:
             yaml, 107, DSLParsingLogicException)
         self.assertEquals('mandatory', ex.property)
 
+    def test_relationship_instance_set_non_existing_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            properties:
+                key: "val"
+            relationships:
+                -   type: test_relationship
+                    target: test_node
+                    properties:
+                        do_not_exist: some_value
+relationships:
+    test_relationship: {}
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 106, DSLParsingLogicException)
+        self.assertEquals('do_not_exist', ex.property)
+
+    def test_relationship_instance_doesnt_implement_schema_mandatory_property(self):  # NOQA
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            properties:
+                key: "val"
+            relationships:
+                -   type: test_relationship
+                    target: test_node
+relationships:
+    test_relationship:
+        properties:
+            - should_implement
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 107, DSLParsingLogicException)
+        self.assertEquals('should_implement', ex.property)
+
+    def test_instance_relationship_more_than_one_contained_in(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                - type: cloudify.relationships.contained_in
+                  target: test_node
+                - type: derived_from_contained_in
+                  target: test_node
+relationships:
+    cloudify.relationships.contained_in: {}
+    derived_from_contained_in:
+        derived_from: cloudify.relationships.contained_in
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 112, DSLParsingLogicException)
+        self.assertSetEqual({'cloudify.relationships.contained_in',
+                             'derived_from_contained_in'},
+                            set(ex.relationship_types))
+
     def test_relationship_implementation_ambiguous(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
         -   name: test_node2

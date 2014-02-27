@@ -30,6 +30,7 @@ PROPERTIES = 'properties'
 
 HOST_TYPE = 'cloudify.types.host'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
+CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
 PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
 AGENT_INSTALLER_PLUGIN = "worker_installer"
 KV_STORE_PLUGIN = 'kv_store'
@@ -196,13 +197,19 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         type_impls, relationship_impls, node_names):
     node_name_to_node = {node['id']: node for node in processed_nodes}
 
+    contained_in_rel_types = _build_family_descendants_set(
+        relationships, CONTAINED_IN_REL_TYPE)
+    connected_to_rel_types = _build_family_descendants_set(
+        relationships, CONNECTED_TO_REL_TYPE)
     for node in processed_nodes:
-        _post_process_node_relationships(node, node_name_to_node, plugins)
+        _post_process_node_relationships(node,
+                                         node_name_to_node,
+                                         plugins,
+                                         contained_in_rel_types,
+                                         connected_to_rel_types)
 
     #set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
-    contained_in_rel_types = _build_family_descendants_set(
-        relationships, CONTAINED_IN_REL_TYPE)
     for node in processed_nodes:
         host_id = _extract_node_host_id(node, node_name_to_node, host_types,
                                         contained_in_rel_types)
@@ -244,7 +251,12 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     _validate_relationship_impls(relationship_impls)
 
 
-def _post_process_node_relationships(node, node_name_to_node, plugins):
+def _post_process_node_relationships(node,
+                                     node_name_to_node,
+                                     plugins,
+                                     contained_in_rel_types,
+                                     connected_to_rel_types):
+    contained_in_relationships = []
     if RELATIONSHIPS in node:
         for relationship in node[RELATIONSHIPS]:
             target_node = node_name_to_node[relationship['target_id']]
@@ -255,6 +267,34 @@ def _post_process_node_relationships(node, node_name_to_node, plugins):
             _process_node_relationships_operations(
                 relationship, 'target_interfaces', 'target_operations',
                 target_node, plugins)
+            _add_base_type_to_relationship(relationship,
+                                           contained_in_rel_types,
+                                           connected_to_rel_types,
+                                           contained_in_relationships)
+    if len(contained_in_relationships) > 1:
+        ex = DSLParsingLogicException(
+            112, 'Node {0} has more than one relationship that is derived'
+                 ' from {1} relationship. Found: {2}'
+                 .format(node['name'],
+                         CONTAINED_IN_REL_TYPE,
+                         contained_in_relationships))
+        ex.relationship_types = contained_in_relationships
+        raise ex
+
+
+# used in multi_instance
+def _add_base_type_to_relationship(relationship,
+                                   contained_in_rel_types,
+                                   connected_to_rel_types,
+                                   contained_in_relationships):
+    base = 'depends'
+    rel_type = relationship['type']
+    if rel_type in contained_in_rel_types:
+        base = 'contained'
+        contained_in_relationships.append(rel_type)
+    elif rel_type in connected_to_rel_types:
+        base = 'connected'
+    relationship['base'] = base
 
 
 pattern = re.compile("(.+)\[(\d+)\]")
@@ -526,12 +566,22 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name):
                     relationship_name=rel_name)
 
 
-def _rel_inheritance_merging_func(complete_super_type, current_level_type):
+def _rel_inheritance_merging_func(complete_super_type,
+                                  current_level_type,
+                                  merge_properties=True):
     merged_type = current_level_type
 
     #derive workflows
     merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
                                               merged_type, WORKFLOWS)
+
+    if merge_properties:
+        merged_props_array = _merge_properties_arrays(complete_super_type,
+                                                      merged_type,
+                                                      PROPERTIES)
+        if len(merged_props_array) > 0:
+            merged_type[PROPERTIES] = merged_props_array
+
     # derived source and target interfaces
     for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
         merged_interfaces = _merge_interface_dicts(complete_super_type,
@@ -676,7 +726,7 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
         relationships = []
         for relationship in node[RELATIONSHIPS]:
             relationship_type = relationship['type']
-            relationship_type = \
+            relationship_type, impl_properties = \
                 _get_relationship_implementation_if_exists(
                     node_name, relationship['target'], relationship_impls,
                     relationship_type, top_level_relationships)
@@ -705,10 +755,27 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
                         'undefined relationship type {1}'
                         .format(node_name, relationship_type))
 
+            relationship_complete_type = \
+                top_level_relationships[relationship_type]
             complete_relationship = _rel_inheritance_merging_func(
-                top_level_relationships[relationship_type], relationship)
+                relationship_complete_type,
+                relationship,
+                merge_properties=False)
             complete_relationship[WORKFLOWS] = _process_workflows(
                 _get_dict_prop(complete_relationship, WORKFLOWS))
+            complete_relationship[PROPERTIES] = \
+                _merge_schema_and_instance_properties(
+                    _get_dict_prop(relationship, PROPERTIES),
+                    impl_properties,
+                    _get_list_prop(relationship_complete_type, PROPERTIES),
+                    '{0} node relationship \'{1}\' property is not part of '
+                    'the derived relationship type properties schema',
+                    '{0} node relationship does not provide a '
+                    'value for mandatory  '
+                    '\'{1}\' property which is '
+                    'part of its relationship type schema',
+                    node_name=node_name
+                )
             complete_relationship['target_id'] = \
                 complete_relationship['target']
             del (complete_relationship['target'])
@@ -802,9 +869,9 @@ def _get_relationship_implementation_if_exists(source_node_name,
                                candidate_function)
 
     if impl is None:
-        return relationship_type
+        return relationship_type, dict()
 
-    return impl['type']
+    return impl['type'], _get_dict_prop(impl, PROPERTIES)
 
 
 def _validate_no_duplicate_operations(interface_operation_mappings,
@@ -838,7 +905,6 @@ def _operation_struct(plugin_name, operation_mapping, operation_properties):
 def _process_node(node, parsed_dsl,
                   top_level_relationships, node_names_set, type_impls,
                   relationship_impls):
-    declared_node_type_name = node['type']
     declared_node_type_name = node['type']
     node_name = node['name']
     app_name = parsed_dsl[BLUEPRINT]['name']
@@ -1013,44 +1079,62 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
         complete_type,
         copy.deepcopy(node))
 
-    node_properties = dict(_get_dict_prop(node, PROPERTIES).items() +
-                           impl_properties.items())
-    #Convert type schema props to prop dictionary
-    complete_type_properties_schema = _get_list_prop(complete_type,
-                                                     PROPERTIES)
-    complete_type_properties = {}
-    for property_element in complete_type_properties_schema:
-        if type(property_element) == str:
-            complete_type_properties[property_element] = None
-        else:
-            complete_type_properties[property_element.keys()[0]] = \
-                property_element.values()[0]
-
-    for key in node_properties.iterkeys():
-        if key not in complete_type_properties:
-            ex = \
-                DSLParsingLogicException(
-                    106, '{0} node \'{1}\' property is not part of the derived'
-                    ' type properties schema'.format(node['name'], key))
-            ex.property = key
-            raise ex
-
-    merged_node_properties = dict(complete_type_properties.items() +
-                                  node_properties.items())
-
-    for key, value in merged_node_properties.iteritems():
-        if value is None:
-            ex = DSLParsingLogicException(107, '{0} node does not provide a '
-                                               'value for mandatory  '
-                                               '\'{1}\' property which is '
-                                               'part of its type schema'
-                                          .format(node['name'], key))
-            ex.property = key
-            raise ex
-
-    complete_node[PROPERTIES] = merged_node_properties
+    complete_node[PROPERTIES] = _merge_schema_and_instance_properties(
+        _get_dict_prop(node, PROPERTIES),
+        impl_properties,
+        _get_list_prop(complete_type, PROPERTIES),
+        '{0} node \'{1}\' property is not part of the derived'
+        ' type properties schema',
+        '{0} node does not provide a '
+        'value for mandatory  '
+        '\'{1}\' property which is '
+        'part of its type schema',
+        node_name=node['name']
+    )
 
     return complete_node
+
+
+def _merge_schema_and_instance_properties(
+        instance_properties,
+        impl_properties,
+        schema_properties,
+        undefined_property_error_message,
+        missing_property_error_message,
+        node_name):
+
+    instance_properties = dict(instance_properties.items() +
+                               impl_properties.items())
+    #Convert type schema props to prop dictionary
+    complete_properties_schema = schema_properties
+    complete_properties = {}
+    for property_element in complete_properties_schema:
+        if type(property_element) == str:
+            complete_properties[property_element] = None
+        else:
+            complete_properties[property_element.keys()[0]] = \
+                property_element.values()[0]
+
+    for key in instance_properties.iterkeys():
+        if key not in complete_properties:
+            ex = DSLParsingLogicException(
+                106,
+                undefined_property_error_message.format(node_name, key))
+            ex.property = key
+            raise ex
+
+    merged_properties = dict(complete_properties.items() +
+                             instance_properties.items())
+
+    for key, value in merged_properties.iteritems():
+        if value is None:
+            ex = DSLParsingLogicException(
+                107,
+                missing_property_error_message.format(node_name, key))
+            ex.property = key
+            raise ex
+
+    return merged_properties
 
 
 def _apply_ref(filename, path_context, alias_mapping, resources_base_url):

@@ -504,6 +504,54 @@ relationships:
         self.assertEquals('custom ref',
                           node_relationship['workflows']['establish'])
 
+    def test_instance_relationship_base_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                - type: test_relationship
+                  target: test_node
+        -   name: test_node3
+            type: test_type
+            relationships:
+                - type: cloudify.relationships.connected_to
+                  target: test_node
+        -   name: test_node4
+            type: test_type
+            relationships:
+                - type: derived_from_connected_to
+                  target: test_node
+        -   name: test_node5
+            type: test_type
+            relationships:
+                - type: cloudify.relationships.contained_in
+                  target: test_node
+        -   name: test_node6
+            type: test_type
+            relationships:
+                - type: derived_from_contained_in
+                  target: test_node
+relationships:
+    test_relationship: {}
+    cloudify.relationships.connected_to: {}
+    cloudify.relationships.contained_in: {}
+    derived_from_connected_to:
+        derived_from: cloudify.relationships.connected_to
+    derived_from_contained_in:
+        derived_from: cloudify.relationships.contained_in
+"""
+        result = parse(yaml)
+        n2_relationship = result['nodes'][1]['relationships'][0]
+        n3_relationship = result['nodes'][2]['relationships'][0]
+        n4_relationship = result['nodes'][3]['relationships'][0]
+        n5_relationship = result['nodes'][4]['relationships'][0]
+        n6_relationship = result['nodes'][5]['relationships'][0]
+        self.assertEquals('depends', n2_relationship['base'])
+        self.assertEquals('connected', n3_relationship['base'])
+        self.assertEquals('connected', n4_relationship['base'])
+        self.assertEquals('contained', n5_relationship['base'])
+        self.assertEquals('contained', n6_relationship['base'])
+
     def test_type_workflows_recursive_inheritance(self):
         #tests for multiple-hierarchy workflows inheritance between types,
         #including back and forth switches between radial and ref overrides,
@@ -1219,6 +1267,86 @@ imports:
             2, len(test_relationship3['target_interfaces']['test_interface2']))
         self.assertEquals(3, len(test_relationship3))
 
+    def test_top_level_relationship_properties(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            - without_default_value
+            - with_simple_default_value: 1
+            - with_object_default_value:
+                comp1: 1
+                comp2: 2
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result)
+        relationships = result['relationships']
+        self.assertEquals(1, len(relationships))
+        test_relationship = relationships['test_relationship']
+        properties = test_relationship['properties']
+        self.assertIn('without_default_value', properties)
+        self.assertIn({'with_simple_default_value': 1}, properties)
+        self.assertIn({'with_object_default_value': {
+            'comp1': 1, 'comp2': 2
+        }}, properties)
+
+    def test_top_level_relationship_properties_inheritance(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship1:
+        properties:
+            - prop1
+            - prop2
+            - prop3: prop3_value_1
+            - derived1: derived1_value
+    test_relationship2:
+        derived_from: test_relationship1
+        properties:
+            - prop2: prop2_value_2
+            - prop3: prop3_value_2
+            - prop4
+            - prop5
+            - prop6: prop6_value_2
+            - derived2: derived2_value
+    test_relationship3:
+        derived_from: test_relationship2
+        properties:
+            - prop5: prop5_value_3
+            - prop6: prop6_value_3
+            - prop7
+"""
+        result = parse(yaml)
+        self._assert_minimal_blueprint(result)
+        relationships = result['relationships']
+        self.assertEquals(3, len(relationships))
+        r1_properties = relationships['test_relationship1']['properties']
+        r2_properties = relationships['test_relationship2']['properties']
+        r3_properties = relationships['test_relationship3']['properties']
+        self.assertEquals(4, len(r1_properties))
+        self.assertIn('prop1', r1_properties)
+        self.assertIn('prop2', r1_properties)
+        self.assertIn({'prop3': 'prop3_value_1'}, r1_properties)
+        self.assertIn({'derived1': 'derived1_value'}, r1_properties)
+        self.assertEquals(8, len(r2_properties))
+        self.assertIn('prop1', r2_properties)
+        self.assertIn({'prop2': 'prop2_value_2'}, r2_properties)
+        self.assertIn({'prop3': 'prop3_value_2'}, r2_properties)
+        self.assertIn('prop4', r2_properties)
+        self.assertIn('prop5', r2_properties)
+        self.assertIn({'prop6': 'prop6_value_2'}, r2_properties)
+        self.assertIn({'derived1': 'derived1_value'}, r2_properties)
+        self.assertIn({'derived2': 'derived2_value'}, r2_properties)
+        self.assertEquals(9, len(r3_properties))
+        self.assertIn('prop1', r3_properties)
+        self.assertIn({'prop2': 'prop2_value_2'}, r3_properties)
+        self.assertIn({'prop3': 'prop3_value_2'}, r3_properties)
+        self.assertIn('prop4', r3_properties)
+        self.assertIn({'prop5': 'prop5_value_3'}, r3_properties)
+        self.assertIn({'prop6': 'prop6_value_3'}, r3_properties)
+        self.assertIn('prop7', r3_properties)
+        self.assertIn({'derived1': 'derived1_value'}, r3_properties)
+        self.assertIn({'derived2': 'derived2_value'}, r3_properties)
+
     def test_instance_relationships_empty_relationships_section(self):
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships: []
@@ -1264,7 +1392,7 @@ plugins:
             relationship_source_operations['test_interface1.install'])
         self.assertEqual(2, len(relationship_source_operations))
 
-        self.assertEquals(6, len(relationship))
+        self.assertEquals(8, len(relationship))
         plugin_def = result['nodes'][1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
         self.assertEquals('false', plugin_def['agent_plugin'])
@@ -1302,8 +1430,8 @@ relationships:
                           result['nodes'][1]['relationships'][0]['state'])
         self.assertEquals('reachable',
                           result['nodes'][1]['relationships'][1]['state'])
-        self.assertEquals(4, len(result['nodes'][1]['relationships'][0]))
-        self.assertEquals(4, len(result['nodes'][1]['relationships'][1]))
+        self.assertEquals(6, len(result['nodes'][1]['relationships'][0]))
+        self.assertEquals(6, len(result['nodes'][1]['relationships'][1]))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_node2'], dependents)
 
@@ -1363,9 +1491,62 @@ plugins:
                              rel_target_ops['interface2.op2'])
         self.assertEquals(2, len(rel_target_ops))
 
-        self.assertEquals(8, len(relationship))
+        self.assertEquals(10, len(relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_node2'], dependents)
+
+    def test_instance_relationship_properties_inheritance(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            properties:
+                key: "val"
+            relationships:
+                -   type: empty_relationship
+                    target: test_node
+                    properties:
+                        prop1: prop1_value_new
+                        prop2: prop2_value_new
+                        prop7: prop7_value_new_instance
+relationships:
+    empty_relationship:
+        properties:
+            - prop1
+            - prop2
+            - prop7
+    test_relationship:
+        derived_from: empty_relationship
+        properties:
+            - prop1
+            - prop2: prop2_value
+            - prop3: prop3_value
+            - prop4
+            - prop5: prop5_value
+            - prop6: prop6_value
+relationship_implementations:
+    impl1:
+        type: test_relationship
+        source_node_ref: test_node2
+        target_node_ref: test_node
+        properties:
+            prop4: prop4_value_new
+            prop5: prop5_value_new
+            prop7: prop7_value_new_impl
+"""
+        result = parse(yaml)
+        relationships = result['relationships']
+        self.assertEquals(2, len(relationships))
+        r_properties = relationships['test_relationship']['properties']
+        self.assertEquals(7, len(r_properties))
+        i_properties = result['nodes'][1]['relationships'][0]['properties']
+        self.assertEquals(7, len(i_properties))
+        self.assertEquals('prop1_value_new', i_properties['prop1'])
+        self.assertEquals('prop2_value_new', i_properties['prop2'])
+        self.assertEquals('prop3_value', i_properties['prop3'])
+        self.assertEquals('prop4_value_new', i_properties['prop4'])
+        self.assertEquals('prop5_value_new', i_properties['prop5'])
+        self.assertEquals('prop6_value', i_properties['prop6'])
+        self.assertEquals('prop7_value_new_impl', i_properties['prop7'])
 
     def test_relationships_and_node_recursive_inheritance(self):
         #testing for a complete inheritance path for relationships
@@ -1407,7 +1588,7 @@ plugins:
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(3, len(parent_relationship))
         self.assertEquals(5, len(relationship))
-        self.assertEquals(8, len(node_relationship))
+        self.assertEquals(10, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_node2'], dependents)
 
@@ -1530,7 +1711,7 @@ plugins:
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(4, len(parent_relationship))
         self.assertEquals(5, len(relationship))
-        self.assertEquals(8, len(node_relationship))
+        self.assertEquals(10, len(node_relationship))
         dependents = result['nodes'][0]['dependents']
         self.assertListEqual(['test_node2'], dependents)
 
@@ -2046,7 +2227,7 @@ plugins:
         self.assertDictEqual(op_struct('test_plugin1', 'install'),
                              rel1_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel1_source_ops))
-        self.assertEquals(6, len(relationship1))
+        self.assertEquals(8, len(relationship1))
         plugin1_def = result['nodes'][1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
         self.assertEquals('false', plugin1_def['agent_plugin'])
@@ -2062,7 +2243,7 @@ plugins:
         self.assertDictEqual(op_struct('test_plugin2', 'install'),
                              rel2_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel2_source_ops))
-        self.assertEquals(6, len(relationship2))
+        self.assertEquals(8, len(relationship2))
 
         #expecting the other plugin to be under test_node rather than
         # test_node2:
