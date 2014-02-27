@@ -272,7 +272,8 @@ blueprint:
         plan = parse(yaml)
         graph = rel_graph.build_initial_node_graph(plan)
         m_graph = rel_graph.build_multi_instance_node_graph(graph)
-        m_plan = rel_graph.create_multi_instance_plan_from_multi_instance_graph(
-            plan, m_graph)
+        m_plan = \
+            rel_graph.create_multi_instance_plan_from_multi_instance_graph(
+                plan, m_graph)
         import pprint
         pprint.pprint(m_plan)
