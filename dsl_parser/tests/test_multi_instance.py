@@ -366,4 +366,131 @@ blueprint:
         self.assertEquals(host1_1_id, db_dependent_2['host_id'])
         self.assertEquals(host1_2_id, db_dependent_3['host_id'])
         self.assertEquals(host1_1_id, db_dependent_4['host_id'])
-        
+
+        network_1_dependents = network_1['dependents']
+        host1_1_dependents = host1_1['dependents']
+        host1_2_dependents = host1_2['dependents']
+        host2_1_dependents = host2_1['dependents']
+        host2_2_dependents = host2_2['dependents']
+        host3_1_dependents = host3_1['dependents']
+        host3_2_dependents = host3_2['dependents']
+        webserver1_1_dependents = webserver1_1['dependents']
+        webserver1_2_dependents = webserver1_2['dependents']
+        webserver2_1_dependents = webserver2_1['dependents']
+        webserver2_2_dependents = webserver2_2['dependents']
+        db_1_dependents = db_1['dependents']
+        db_2_dependents = db_2['dependents']
+        db_3_dependents = db_3['dependents']
+        db_4_dependents = db_4['dependents']
+        db_dependent_1_dependents = db_dependent_1['dependents']
+        db_dependent_2_dependents = db_dependent_2['dependents']
+        db_dependent_3_dependents = db_dependent_3['dependents']
+        db_dependent_4_dependents = db_dependent_4['dependents']
+
+        self.assertEquals(set(network_1_dependents), set())
+        self.assertEquals(set(host1_1_dependents), {db_3_id, db_4_id})
+        self.assertEquals(set(host1_2_dependents), {db_1_id, db_2_id})
+        self.assertEquals(set(host2_1_dependents), {webserver1_2_id,
+                                                    webserver2_1_id})
+        self.assertEquals(set(host2_2_dependents), {webserver1_1_id,
+                                                    webserver2_2_id})
+        self.assertEquals(set(host3_1_dependents), set())
+        self.assertEquals(set(host3_2_dependents), set())
+        self.assertEquals(set(webserver1_1_dependents), set())
+        self.assertEquals(set(webserver1_2_dependents), set())
+        self.assertEquals(set(webserver2_1_dependents), set())
+        self.assertEquals(set(webserver2_2_dependents), set())
+        self.assertEquals(set(db_1_dependents), {webserver1_1_id,
+                                                 webserver1_2_id,
+                                                 webserver2_1_id,
+                                                 webserver2_2_id,
+                                                 db_dependent_3_id})
+        self.assertEquals(set(db_2_dependents), {webserver2_1_id,
+                                                 webserver2_2_id,
+                                                 db_dependent_1_id})
+        self.assertEquals(set(db_3_dependents), {webserver2_1_id,
+                                                 webserver2_2_id,
+                                                 db_dependent_2_id})
+        self.assertEquals(set(db_4_dependents), {webserver2_1_id,
+                                                 webserver2_2_id,
+                                                 db_dependent_4_id})
+        self.assertEquals(set(db_dependent_1_dependents), set())
+        self.assertEquals(set(db_dependent_2_dependents), set())
+        self.assertEquals(set(db_dependent_3_dependents), set())
+        self.assertEquals(set(db_dependent_4_dependents), set())
+
+        network_1_relationships = network_1['relationships']
+        host1_1_relationships = host1_1['relationships']
+        host1_2_relationships = host1_2['relationships']
+        host2_1_relationships = host2_1['relationships']
+        host2_2_relationships = host2_2['relationships']
+        host3_1_relationships = host3_1['relationships']
+        host3_2_relationships = host2_2['relationships']
+        webserver1_1_relationships = webserver1_1['relationships']
+        webserver1_2_relationships = webserver1_2['relationships']
+        webserver2_1_relationships = webserver2_1['relationships']
+        webserver2_2_relationships = webserver2_2['relationships']
+        db_1_relationships = db_1['relationships']
+        db_2_relationships = db_2['relationships']
+        db_3_relationships = db_3['relationships']
+        db_4_relationships = db_4['relationships']
+        db_dependent_1_relationships = db_dependent_1['relationships']
+        db_dependent_2_relationships = db_dependent_2['relationships']
+        db_dependent_3_relationships = db_dependent_3['relationships']
+        db_dependent_4_relationships = db_dependent_4['relationships']
+
+        self.assertEquals(0, len(network_1_relationships))
+        self.assertEquals(0, len(host1_1_relationships))
+        self.assertEquals(0, len(host1_2_relationships))
+        self.assertEquals(0, len(host2_1_relationships))
+        self.assertEquals(0, len(host2_2_relationships))
+        self.assertEquals(0, len(host3_1_relationships))
+        self.assertEquals(0, len(host3_2_relationships))
+
+        self.assertEquals(2, len(webserver1_1_relationships))
+        self.assertEquals(db_1_id, webserver1_1_relationships[0]['target_id'])
+        self.assertEquals(host2_2_id,
+                          webserver1_1_relationships[1]['target_id'])
+
+        self.assertEquals(2, len(webserver1_2_relationships))
+        self.assertEquals(db_1_id, webserver1_2_relationships[0]['target_id'])
+        self.assertEquals(host2_1_id,
+                          webserver1_2_relationships[1]['target_id'])
+
+        self.assertEquals(5, len(webserver2_1_relationships))
+        self.assertEquals(db_1_id, webserver2_1_relationships[0]['target_id'])
+        self.assertEquals(db_2_id, webserver2_1_relationships[1]['target_id'])
+        self.assertEquals(db_3_id, webserver2_1_relationships[2]['target_id'])
+        self.assertEquals(db_4_id, webserver2_1_relationships[3]['target_id'])
+        self.assertEquals(host2_1_id,
+                          webserver2_1_relationships[4]['target_id'])
+
+        self.assertEquals(5, len(webserver2_2_relationships))
+        self.assertEquals(db_1_id, webserver2_2_relationships[0]['target_id'])
+        self.assertEquals(db_2_id, webserver2_2_relationships[1]['target_id'])
+        self.assertEquals(db_3_id, webserver2_2_relationships[2]['target_id'])
+        self.assertEquals(db_4_id, webserver2_2_relationships[3]['target_id'])
+        self.assertEquals(host2_2_id,
+                          webserver2_2_relationships[4]['target_id'])
+
+        self.assertEquals(1, len(db_1_relationships))
+        self.assertEquals(host1_2_id, db_1_relationships[0]['target_id'])
+        self.assertEquals(1, len(db_2_relationships))
+        self.assertEquals(host1_2_id, db_2_relationships[0]['target_id'])
+        self.assertEquals(1, len(db_3_relationships))
+        self.assertEquals(host1_1_id, db_3_relationships[0]['target_id'])
+        self.assertEquals(1, len(db_4_relationships))
+        self.assertEquals(host1_1_id, db_4_relationships[0]['target_id'])
+
+        self.assertEquals(1, len(db_dependent_1_relationships))
+        self.assertEquals(db_2_id,
+                          db_dependent_1_relationships[0]['target_id'])
+        self.assertEquals(1, len(db_dependent_2_relationships))
+        self.assertEquals(db_3_id,
+                          db_dependent_2_relationships[0]['target_id'])
+        self.assertEquals(1, len(db_dependent_3_relationships))
+        self.assertEquals(db_1_id,
+                          db_dependent_3_relationships[0]['target_id'])
+        self.assertEquals(1, len(db_dependent_4_relationships))
+        self.assertEquals(db_4_id,
+                          db_dependent_4_relationships[0]['target_id'])
