@@ -4,6 +4,10 @@ import copy
 import networkx as nx
 import random
 
+CONNECTION_TYPE = 'connection_type'
+ALL_TO_ALL = 'all_to_all'
+ALL_TO_ONE = 'all_to_one'
+
 
 class GraphContext(object):
     def __init__(self):
@@ -58,13 +62,13 @@ def build_multi_instance_node_graph(initial_graph):
                                             initial_graph,
                                             ctx)
 
-    for node in connected_graph:
-        pass
+    for node, neighbor, e_data in connected_graph.edges(data=True):
+        relationship = e_data['relationship']
+        connection_type = _verify_and_get_connection_type(relationship)
+        print node, neighbor, relationship, connection_type
 
-    print new_graph.nodes()
-    print new_graph.edges()
-
-
+    # print new_graph.nodes()
+    # print new_graph.edges()
 
 
 def _build_multi_instance_node_tree_rec(root,
@@ -147,6 +151,14 @@ def _verify_no_depends_relationships(graph):
         raise UnsupportedRelationship
 
 
+def _verify_and_get_connection_type(relationship):
+    if CONNECTION_TYPE not in relationship['properties'] or \
+       relationship['properties'][CONNECTION_TYPE] not in [ALL_TO_ALL,
+                                                           ALL_TO_ONE]:
+        raise IllegalConnectedToConnectionType
+    return relationship['properties'][CONNECTION_TYPE]
+
+
 def _is_tree(graph):
     # we are not testing 'nx.is_weakly_connected(graph)' because we have
     # called this method after breaking the initial graph into weakly connected
@@ -155,6 +167,10 @@ def _is_tree(graph):
 
 
 class IllegalContainedInState(Exception):
+    pass
+
+
+class IllegalConnectedToConnectionType(Exception):
     pass
 
 

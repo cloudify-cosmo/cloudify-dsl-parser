@@ -41,7 +41,9 @@ types:
 relationships:
     cloudify.relationships.depends_on: {}
     cloudify.relationships.contained_in: {}
-    cloudify.relationships.connected_to: {}
+    cloudify.relationships.connected_to:
+        properties:
+            -   connection_type: 'all_to_one'
 blueprint:
     name: multi_instance
     nodes:
