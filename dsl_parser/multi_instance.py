@@ -16,8 +16,6 @@ __author__ = 'dan'
 
 import rel_graph
 
-NODES = "nodes"
-
 
 def create_multi_instance_plan(plan):
     """
