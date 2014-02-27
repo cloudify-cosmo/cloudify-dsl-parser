@@ -229,6 +229,8 @@ blueprint:
             type: cloudify.types.host
             instances:
                 deploy: 2
+        -   name: host3
+            type: cloudify.types.host
         -   name: db
             type: db
             instances:

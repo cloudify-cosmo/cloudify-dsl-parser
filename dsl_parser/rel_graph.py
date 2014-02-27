@@ -5,6 +5,16 @@ import networkx as nx
 import random
 
 
+class GraphContext(object):
+    def __init__(self):
+        self.name_to_ids = {}
+
+    def add_name_to_id_mapping(self, name, node_id):
+        if name not in self.name_to_ids:
+            self.name_to_ids[name] = set()
+        self.name_to_ids[name].add(node_id)
+
+
 def build_initial_node_graph(plan):
     graph = nx.DiGraph()
     for node in plan['nodes']:
@@ -18,24 +28,50 @@ def build_initial_node_graph(plan):
     return graph
 
 
-def build_multi_instance_node_graph(graph):
+def build_multi_instance_node_graph(initial_graph):
+
+    _verify_no_depends_relationships(initial_graph)
+
     new_graph = nx.DiGraph()
-    contained_graph = _build_contained_in_graph(graph)
+    ctx = GraphContext()
+
+    connected_graph = _build_connected_to_graph(initial_graph)
+
+    # build graph based only on connected_to relationships
+    contained_graph = _build_contained_in_graph(initial_graph)
+
+    # don't forget to include nodes in this graph than no one is contained
+    # in them (these will be considered 1 node trees)
+    no_containment_graph = initial_graph.copy()
+    no_containment_graph.remove_nodes_from(contained_graph.nodes_iter())
+    contained_graph.add_nodes_from(no_containment_graph.nodes_iter(data=True))
+
+    # for each 'contained' tree, recursively build new tree based on
+    # instances.deploy value with generated ids
     for contained_tree in nx.weakly_connected_component_subgraphs(
             contained_graph.reverse(copy=True)):
+        _verify_tree(contained_tree)
         root = nx.topological_sort(contained_tree)[0]
         _build_multi_instance_node_tree_rec(root,
                                             contained_tree,
                                             new_graph,
-                                            graph)
+                                            initial_graph,
+                                            ctx)
+
+    for node in connected_graph:
+        pass
+
     print new_graph.nodes()
     print new_graph.edges()
+
+
 
 
 def _build_multi_instance_node_tree_rec(root,
                                         contained_tree,
                                         master_graph,
                                         initial_graph,
+                                        ctx,
                                         target_relationship=None,
                                         parent_id=None):
     instances_num = contained_tree.node[root]['node']['instances']['deploy']
@@ -43,6 +79,7 @@ def _build_multi_instance_node_tree_rec(root,
     for instance_copy in instances_copy:
         node_id = _instance_id(root, _generate_suffix())
         instance_copy['node']['id'] = node_id
+        ctx.add_name_to_id_mapping(root, node_id)
         master_graph.add_node(node_id, instance_copy)
         if parent_id is not None:
             relationship = copy.deepcopy(target_relationship)
@@ -57,6 +94,7 @@ def _build_multi_instance_node_tree_rec(root,
                                                 sub_tree,
                                                 master_graph,
                                                 initial_graph,
+                                                ctx,
                                                 initial_graph[neighbor][root],
                                                 node_id)
 
@@ -91,5 +129,34 @@ def _n_copies(obj, n):
     return [copy.deepcopy(obj) for _ in range(n)]
 
 
-def is_valid_acyclic_plan(graph):
+def _is_valid_acyclic_plan(graph):
     return nx.is_directed_acyclic_graph(graph)
+
+
+def _verify_tree(graph):
+    if not _is_tree(graph):
+        raise IllegalContainedInState
+
+
+# currently we have decided not to support such relationships
+# until we better understand what semantics are required for such
+# relationships
+def _verify_no_depends_relationships(graph):
+    g = _build_graph_from_by_relationship_base(graph, 'depends')
+    if len(g.nodes()) > 0:
+        raise UnsupportedRelationship
+
+
+def _is_tree(graph):
+    # we are not testing 'nx.is_weakly_connected(graph)' because we have
+    # called this method after breaking the initial graph into weakly connected
+    # components
+    return nx.number_of_nodes(graph) == nx.number_of_edges(graph) + 1
+
+
+class IllegalContainedInState(Exception):
+    pass
+
+
+class UnsupportedRelationship(Exception):
+    pass
