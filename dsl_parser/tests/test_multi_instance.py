@@ -23,8 +23,7 @@ from dsl_parser.parser import parse
 
 
 def parse_multi(yaml):
-    plan = parse(yaml)
-    return create_multi_instance_plan(plan)
+    return create_multi_instance_plan(parse(yaml))
 
 
 class TestMultiInstance(AbstractTestParser):
@@ -38,6 +37,7 @@ types:
     webserver: {}
     db_dependent: {}
     type: {}
+    network: {}
 relationships:
     cloudify.relationships.depends_on: {}
     cloudify.relationships.contained_in: {}
@@ -56,7 +56,7 @@ blueprint:
     def tearDown(self):
         AbstractTestParser.tearDown(self)
 
-    def test_single_node_multi_instance(self):
+    def test_single_node(self):
 
         yaml = self.BASE_BLUEPRINT + """
         -   name: host
@@ -75,7 +75,7 @@ blueprint:
         self.assertEquals('y', nodes[0]['properties']['x'])
         self.assertEquals('y', nodes[1]['properties']['x'])
 
-    def test_two_nodes_multi_instance_one_contained_in_other(self):
+    def test_two_nodes_one_contained_in_other(self):
 
         yaml = self.BASE_BLUEPRINT + """
         -   name: host
@@ -104,7 +104,7 @@ blueprint:
         self.assertEquals(1, len(db_relationships))
         self.assertEquals('host_d82c0', db_relationships[0]['target_id'])
 
-    def test_two_nodes_multi_instance_one_contained_in_other_two_instances(self):  # NOQA
+    def test_two_nodes_one_contained_in_other_two_instances(self):
 
         yaml = self.BASE_BLUEPRINT + """
         -   name: host
@@ -149,7 +149,7 @@ blueprint:
         self.assertEquals(1, len(db2_relationships))
         self.assertEquals('host_6baa9', db2_relationships[0]['target_id'])
 
-    def test_multi_instance_single_connected_to(self):
+    def test_single_connected_to(self):
         yaml = self.BASE_BLUEPRINT + """
         -   name: host1
             type: cloudify.types.host
@@ -235,7 +235,7 @@ blueprint:
         self.assertEquals('node1_id_d82c0', nodes[0]['id'])
         self.assertTrue('host_id' not in nodes[0])
 
-    def _test_temp(self):
+    def test_connected_to_and_contained_in_with_and_without_host_id(self):
         yaml = self.BASE_BLUEPRINT + """
         -   name: host1
             type: cloudify.types.host
@@ -247,6 +247,10 @@ blueprint:
                 deploy: 2
         -   name: host3
             type: cloudify.types.host
+            instances:
+                deploy: 2
+        -   name: network
+            type: network
         -   name: db
             type: db
             instances:
@@ -254,26 +258,112 @@ blueprint:
             relationships:
                 -   type: cloudify.relationships.contained_in
                     target: host1
-        -   name: webserver
+        -   name: webserver1
             type: webserver
             relationships:
                 -   type: cloudify.relationships.contained_in
                     target: host2
                 -   type: cloudify.relationships.connected_to
                     target: db
+                    properties:
+                        connection_type: all_to_one
+        -   name: webserver2
+            type: webserver
+            relationships:
+                -   type: cloudify.relationships.contained_in
+                    target: host2
+                -   type: cloudify.relationships.connected_to
+                    target: db
+                    properties:
+                        connection_type: all_to_all
         -   name: db_dependent
             type: db_dependent
             relationships:
                 -   type: cloudify.relationships.contained_in
                     target: db
 """
-        from dsl_parser import rel_graph
+        multi_plan = parse_multi(yaml)
+        nodes = multi_plan['nodes']
+        print len(nodes)
+        self.assertEquals(19, len(nodes))
 
-        plan = parse(yaml)
-        graph = rel_graph.build_initial_node_graph(plan)
-        m_graph = rel_graph.build_multi_instance_node_graph(graph)
-        m_plan = \
-            rel_graph.create_multi_instance_plan_from_multi_instance_graph(
-                plan, m_graph)
-        import pprint
-        pprint.pprint(m_plan)
+        network_1 = nodes[15]
+        host1_1 = nodes[9]
+        host1_2 = nodes[17]
+        host2_1 = nodes[3]
+        host2_2 = nodes[14]
+        host3_1 = nodes[12]
+        host3_2 = nodes[13]
+        webserver1_1 = nodes[4]
+        webserver1_2 = nodes[16]
+        webserver2_1 = nodes[5]
+        webserver2_2 = nodes[8]
+        db_1 = nodes[0]
+        db_2 = nodes[1]
+        db_3 = nodes[7]
+        db_4 = nodes[18]
+        db_dependent_1 = nodes[2]
+        db_dependent_2 = nodes[6]
+        db_dependent_3 = nodes[10]
+        db_dependent_4 = nodes[11]
+
+        network_1_id = 'network_e8e52'
+        host1_1_id = 'host1_67a9c'
+        host1_2_id = 'host1_d82c0'
+        host2_1_id = 'host2_e87a1'
+        host2_2_id = 'host2_c17c6'
+        host3_1_id = 'host3_fb97d'
+        host3_2_id = 'host3_cf6a6'
+        webserver1_1_id = 'webserver1_40212'
+        webserver1_2_id = 'webserver1_48268'
+        webserver2_1_id = 'webserver2_81332'
+        webserver2_2_id = 'webserver2_9e4d6'
+        db_1_id = 'db_42485'
+        db_2_id = 'db_c2094'
+        db_3_id = 'db_c8a70'
+        db_4_id = 'db_7a024'
+        db_dependent_1_id = 'db_dependent_6baa9'
+        db_dependent_2_id = 'db_dependent_4da5e'
+        db_dependent_3_id = 'db_dependent_82e2e'
+        db_dependent_4_id = 'db_dependent_95588'
+
+        self.assertEquals(network_1_id, network_1['id'])
+        self.assertEquals(host1_1_id, host1_1['id'])
+        self.assertEquals(host1_2_id, host1_2['id'])
+        self.assertEquals(host2_1_id, host2_1['id'])
+        self.assertEquals(host2_2_id, host2_2['id'])
+        self.assertEquals(host3_1_id, host3_1['id'])
+        self.assertEquals(host3_2_id, host3_2['id'])
+        self.assertEquals(webserver1_1_id, webserver1_1['id'])
+        self.assertEquals(webserver1_2_id, webserver1_2['id'])
+        self.assertEquals(webserver2_1_id, webserver2_1['id'])
+        self.assertEquals(webserver2_2_id, webserver2_2['id'])
+        self.assertEquals(db_1_id, db_1['id'])
+        self.assertEquals(db_2_id, db_2['id'])
+        self.assertEquals(db_3_id, db_3['id'])
+        self.assertEquals(db_4_id, db_4['id'])
+        self.assertEquals(db_dependent_1_id, db_dependent_1['id'])
+        self.assertEquals(db_dependent_2_id, db_dependent_2['id'])
+        self.assertEquals(db_dependent_3_id, db_dependent_3['id'])
+        self.assertEquals(db_dependent_4_id, db_dependent_4['id'])
+
+        self.assertTrue('host_id' not in network_1)
+        self.assertEquals(host1_1_id, host1_1['host_id'])
+        self.assertEquals(host1_2_id, host1_2['host_id'])
+        self.assertEquals(host2_1_id, host2_1['host_id'])
+        self.assertEquals(host2_2_id, host2_2['host_id'])
+        self.assertEquals(host3_1_id, host3_1['host_id'])
+        self.assertEquals(host3_2_id, host3_2['host_id'])
+        self.assertEquals(host2_2_id, webserver1_1['host_id'])
+        self.assertEquals(host2_1_id, webserver1_2['host_id'])
+        self.assertEquals(host2_1_id, webserver2_1['host_id'])
+        self.assertEquals(host2_2_id, webserver2_2['host_id'])
+        self.assertEquals(host1_2_id, db_1['host_id'])
+        self.assertEquals(host1_2_id, db_2['host_id'])
+        self.assertEquals(host1_1_id, db_3['host_id'])
+        self.assertEquals(host1_1_id, db_4['host_id'])
+        self.assertEquals(host1_2_id, db_dependent_1['host_id'])
+        self.assertEquals(host1_1_id, db_dependent_2['host_id'])
+        self.assertEquals(host1_2_id, db_dependent_3['host_id'])
+        self.assertEquals(host1_1_id, db_dependent_4['host_id'])
+        
