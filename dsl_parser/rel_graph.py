@@ -54,13 +54,13 @@ def build_initial_node_graph(plan):
 
 def build_multi_instance_node_graph(initial_graph):
 
-    _verify_no_depends_relationships(initial_graph)
+    _verify_no_undefined_relationships(initial_graph)
 
     new_graph = nx.DiGraph()
     ctx = GraphContext()
 
     _handle_contained_in(initial_graph, new_graph, ctx)
-    _handle_connected_to(initial_graph, new_graph, ctx)
+    _handle_connected_to_and_depends_on(initial_graph, new_graph, ctx)
 
     return new_graph
 
@@ -161,11 +161,13 @@ def _handle_host_id(current_host_id, node_name, node_id, node):
     return current_host_id
 
 
-def _handle_connected_to(initial_graph,
+def _handle_connected_to_and_depends_on(initial_graph,
                          new_graph,
                          ctx):
-    connected_graph = _build_connected_to_graph(initial_graph)
-    for node, neighbor, e_data in connected_graph.edges(data=True):
+    connected_and_depends_graph = \
+        _build_connected_to_and_depends_on_graph(initial_graph)
+    for node, neighbor, e_data in \
+            connected_and_depends_graph.edges(data=True):
         relationship = e_data['relationship']
         connection_type = _verify_and_get_connection_type(relationship)
         for multi_instance_node in ctx.get_ids_by_name(node):
@@ -179,18 +181,19 @@ def _handle_connected_to(initial_graph,
                                    relationship=relationship_copy)
 
 
-def _build_connected_to_graph(graph):
-    return _build_graph_from_by_relationship_base(graph, 'connected')
+def _build_connected_to_and_depends_on_graph(graph):
+    return _build_graph_from_by_relationship_base(graph, ['connected',
+                                                          'depends'])
 
 
 def _build_contained_in_graph(graph):
-    return _build_graph_from_by_relationship_base(graph, 'contained')
+    return _build_graph_from_by_relationship_base(graph, ['contained'])
 
 
-def _build_graph_from_by_relationship_base(graph, base):
+def _build_graph_from_by_relationship_base(graph, bases):
     new_graph = nx.DiGraph()
     for node, neighbor, e_data in graph.edges_iter(data=True):
-        if e_data['relationship']['base'] == base:
+        if e_data['relationship']['base'] in bases:
             new_graph.add_node(node, graph.node[node])
             new_graph.add_node(neighbor, graph.node[neighbor])
             new_graph.add_edge(node, neighbor, e_data)
@@ -221,8 +224,8 @@ def _verify_tree(graph):
 # currently we have decided not to support such relationships
 # until we better understand what semantics are required for such
 # relationships
-def _verify_no_depends_relationships(graph):
-    g = _build_graph_from_by_relationship_base(graph, 'depends')
+def _verify_no_undefined_relationships(graph):
+    g = _build_graph_from_by_relationship_base(graph, 'undefined')
     if len(g.nodes()) > 0:
         raise UnsupportedRelationship
 
