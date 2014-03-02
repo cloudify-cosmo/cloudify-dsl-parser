@@ -509,7 +509,7 @@ relationships:
         -   name: test_node2
             type: test_type
             relationships:
-                - type: test_relationship
+                - type: cloudify.relationships.depends_on
                   target: test_node
         -   name: test_node3
             type: test_type
@@ -531,8 +531,14 @@ relationships:
             relationships:
                 - type: derived_from_contained_in
                   target: test_node
+        -   name: test_node7
+            type: test_type
+            relationships:
+                - type: test_relationship
+                  target: test_node
 relationships:
     test_relationship: {}
+    cloudify.relationships.depends_on: {}
     cloudify.relationships.connected_to: {}
     cloudify.relationships.contained_in: {}
     derived_from_connected_to:
@@ -546,11 +552,13 @@ relationships:
         n4_relationship = result['nodes'][3]['relationships'][0]
         n5_relationship = result['nodes'][4]['relationships'][0]
         n6_relationship = result['nodes'][5]['relationships'][0]
+        n7_relationship = result['nodes'][6]['relationships'][0]
         self.assertEquals('depends', n2_relationship['base'])
         self.assertEquals('connected', n3_relationship['base'])
         self.assertEquals('connected', n4_relationship['base'])
         self.assertEquals('contained', n5_relationship['base'])
         self.assertEquals('contained', n6_relationship['base'])
+        self.assertEquals('undefined', n7_relationship['base'])
 
     def test_type_workflows_recursive_inheritance(self):
         #tests for multiple-hierarchy workflows inheritance between types,

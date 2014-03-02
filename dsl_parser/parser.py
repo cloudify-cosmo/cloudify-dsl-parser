@@ -29,6 +29,7 @@ RELATIONSHIP_IMPLEMENTATIONS = 'relationship_implementations'
 PROPERTIES = 'properties'
 
 HOST_TYPE = 'cloudify.types.host'
+DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
 PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
@@ -197,6 +198,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         type_impls, relationship_impls, node_names):
     node_name_to_node = {node['id']: node for node in processed_nodes}
 
+    depends_on_rel_types = _build_family_descendants_set(
+        relationships, DEPENDS_ON_REL_TYPE)
     contained_in_rel_types = _build_family_descendants_set(
         relationships, CONTAINED_IN_REL_TYPE)
     connected_to_rel_types = _build_family_descendants_set(
@@ -206,7 +209,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                                          node_name_to_node,
                                          plugins,
                                          contained_in_rel_types,
-                                         connected_to_rel_types)
+                                         connected_to_rel_types,
+                                         depends_on_rel_types)
 
     #set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
@@ -255,7 +259,8 @@ def _post_process_node_relationships(node,
                                      node_name_to_node,
                                      plugins,
                                      contained_in_rel_types,
-                                     connected_to_rel_types):
+                                     connected_to_rel_types,
+                                     depends_on_rel_type):
     contained_in_relationships = []
     if RELATIONSHIPS in node:
         for relationship in node[RELATIONSHIPS]:
@@ -270,6 +275,7 @@ def _post_process_node_relationships(node,
             _add_base_type_to_relationship(relationship,
                                            contained_in_rel_types,
                                            connected_to_rel_types,
+                                           depends_on_rel_type,
                                            contained_in_relationships)
     if len(contained_in_relationships) > 1:
         ex = DSLParsingLogicException(
@@ -286,14 +292,17 @@ def _post_process_node_relationships(node,
 def _add_base_type_to_relationship(relationship,
                                    contained_in_rel_types,
                                    connected_to_rel_types,
+                                   depends_on_rel_types,
                                    contained_in_relationships):
-    base = 'depends'
+    base = 'undefined'
     rel_type = relationship['type']
     if rel_type in contained_in_rel_types:
         base = 'contained'
         contained_in_relationships.append(rel_type)
     elif rel_type in connected_to_rel_types:
         base = 'connected'
+    elif rel_type in depends_on_rel_types:
+        base = 'depends'
     relationship['base'] = base
 
 

@@ -39,11 +39,14 @@ types:
     type: {}
     network: {}
 relationships:
-    cloudify.relationships.depends_on: {}
-    cloudify.relationships.contained_in: {}
-    cloudify.relationships.connected_to:
+    cloudify.relationships.depends_on:
         properties:
             -   connection_type: 'all_to_all'
+    cloudify.relationships.contained_in:
+        derived_from: cloudify.relationships.depends_on
+    cloudify.relationships.connected_to:
+        derived_from: cloudify.relationships.depends_on
+
 blueprint:
     name: multi_instance
     nodes:
@@ -272,7 +275,7 @@ blueprint:
             relationships:
                 -   type: cloudify.relationships.contained_in
                     target: host2
-                -   type: cloudify.relationships.connected_to
+                -   type: cloudify.relationships.depends_on
                     target: db
                     properties:
                         connection_type: all_to_all
