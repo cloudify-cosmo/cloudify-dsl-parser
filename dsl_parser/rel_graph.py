@@ -162,8 +162,8 @@ def _handle_host_id(current_host_id, node_name, node_id, node):
 
 
 def _handle_connected_to_and_depends_on(initial_graph,
-                         new_graph,
-                         ctx):
+                                        new_graph,
+                                        ctx):
     connected_and_depends_graph = \
         _build_connected_to_and_depends_on_graph(initial_graph)
     for node, neighbor, e_data in \
