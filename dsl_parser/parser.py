@@ -211,7 +211,7 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                                          connected_to_rel_types,
                                          depends_on_rel_types)
 
-    #set host_id property to all relevant nodes
+    # set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
     for node in processed_nodes:
         host_id = _extract_node_host_id(node, node_name_to_node, host_types,
@@ -219,22 +219,22 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
         if host_id:
             node['host_id'] = host_id
 
-    #set plugins_to_install property for nodes
-    #set management_plugins_to_install property nodes
+    # set plugins_to_install property for nodes
+    # set management_plugins_to_install property nodes
     for node in processed_nodes:
         if node['type'] in host_types:
             plugins_to_install = {}
             management_plugins_to_install = {}
             for another_node in processed_nodes:
-                #going over all other nodes, to accumulate plugins
+                # going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
                 if 'host_id' in another_node and \
                         another_node['host_id'] == node['id'] and \
                         PLUGINS in another_node:
-                    #ok to override here since we assume it is the same plugin
+                    # ok to override here since we assume it is the same plugin
                     for plugin_name, plugin_obj in \
                             another_node[PLUGINS].iteritems():
-                        #only wish to add agent plugins, and only if they're
+                        # only wish to add agent plugins, and only if they're
                         # not in the excluded plugins list
                         if plugin_obj['agent_plugin'] == 'true' and \
                                 plugin_obj['name'] not in \
@@ -438,7 +438,7 @@ def _extract_plugin_names_and_operation_mapping_from_interface(
 
 def _add_dependent(node, dependent_node):
     dependents = node.get('dependents', [])
-    #There can be two relation ships defined between same couple of nodes,
+    # There can be two relation ships defined between same couple of nodes,
     # avoid duplicate dependent
     if dependent_node['id'] in dependents:
         return
@@ -500,9 +500,9 @@ def _is_derived_from(type_name, types, derived_from):
     return False
 
 
-#This method is applicable to both types and relationships.
+# This method is applicable to both types and relationships.
 # it's concerned with extracting the super types
-#recursively, where the merging_func parameter is used to merge them with the
+# recursively, where the merging_func parameter is used to merge them with the
 # current type
 def _extract_complete_type_recursive(type_obj, type_name, dsl_container,
                                      merging_func, visited_type_names,
@@ -517,7 +517,7 @@ def _extract_complete_type_recursive(type_obj, type_name, dsl_container,
         raise ex
     visited_type_names.append(type_name)
     current_level_type = copy.deepcopy(type_obj)
-    #halt condition
+    # halt condition
     if 'derived_from' not in current_level_type:
         return current_level_type
 
@@ -579,7 +579,7 @@ def _rel_inheritance_merging_func(complete_super_type,
                                   merge_properties=True):
     merged_type = current_level_type
 
-    #derive workflows
+    # derive workflows
     merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
                                               merged_type, WORKFLOWS)
 
@@ -739,11 +739,11 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
                     node_name, relationship['target'], relationship_impls,
                     relationship_type, top_level_relationships)
             relationship['type'] = relationship_type
-            #validating only the instance relationship values - the inherited
+            # validating only the instance relationship values - the inherited
             # relationship values if any
-            #should have been validated when the top level relationships were
+            # should have been validated when the top level relationships were
             # processed.
-            #validate target field (done separately since it's only available
+            # validate target field (done separately since it's only available
             # in instance relationships)
             if relationship['target'] not in node_names_set:
                 raise DSLParsingLogicException(
@@ -756,7 +756,7 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
                     23, 'a relationship instance under node {0} of type {1} '
                         'illegally declares the source node as the target node'
                         .format(node_name, relationship_type))
-                #merge relationship instance with relationship type
+                # merge relationship instance with relationship type
             if relationship_type not in top_level_relationships:
                 raise DSLParsingLogicException(
                     26, 'a relationship instance under node {0} declares an '
@@ -920,7 +920,7 @@ def _process_node(node, parsed_dsl,
                       'id': node_name,
                       'declared_type': declared_node_type_name}
 
-    #handle types
+    # handle types
     if TYPES not in parsed_dsl or declared_node_type_name not in \
             parsed_dsl[TYPES]:
         err_message = 'Could not locate node type: {0}; existing types: {1}'\
@@ -943,7 +943,7 @@ def _process_node(node, parsed_dsl,
     processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
     processed_node[WORKFLOWS] = complete_node_type[WORKFLOWS]
     processed_node[PLUGINS] = {}
-    #handle plugins and operations
+    # handle plugins and operations
     if INTERFACES in complete_node_type:
         partial_error_message = 'in node {0} of type {1}'\
             .format(processed_node['id'], processed_node['type'])
@@ -955,7 +955,7 @@ def _process_node(node, parsed_dsl,
 
         processed_node['operations'] = operations
 
-    #handle relationships
+    # handle relationships
     _process_node_relationships(app_name, node, node_name, node_names_set,
                                 processed_node, top_level_relationships,
                                 relationship_impls)
@@ -985,12 +985,12 @@ def _extract_node_host_id(processed_node, node_name_to_node, host_types,
 
 
 def _process_plugin(plugin, plugin_name):
-    #'cloudify.plugins.plugin'
+    # 'cloudify.plugins.plugin'
     if plugin['derived_from'] not in \
             ('cloudify.plugins.agent_plugin',
              'cloudify.plugins.remote_plugin',
              'cloudify.plugins.manager_plugin'):
-        #TODO: consider changing the below exception to type
+        # TODO: consider changing the below exception to type
         # DSLParsingFormatException..?
         raise DSLParsingLogicException(
             18, 'plugin {0} has an illegal "derived_from" value {1}; value '
@@ -1054,10 +1054,10 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
                                 impl_properties):
     def types_and_node_inheritance_common_merging_func(complete_super_type,
                                                        merged_type):
-        #derive workflows
+        # derive workflows
         merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
                                                   merged_type, WORKFLOWS)
-        #derive interfaces
+        # derive interfaces
         merged_type[INTERFACES] = _merge_interface_dicts(complete_super_type,
                                                          merged_type,
                                                          INTERFACES)
@@ -1067,8 +1067,8 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
     def types_inheritance_merging_func(complete_super_type,
                                        current_level_type):
         merged_type = current_level_type
-        #derive properties, need special handling as node properties and type
-        #properties are not of the same format
+        # derive properties, need special handling as node properties and type
+        # properties are not of the same format
         merged_type[PROPERTIES] = _merge_properties_arrays(complete_super_type,
                                                            merged_type,
                                                            PROPERTIES)
@@ -1113,7 +1113,7 @@ def _merge_schema_and_instance_properties(
 
     instance_properties = dict(instance_properties.items() +
                                impl_properties.items())
-    #Convert type schema props to prop dictionary
+    # Convert type schema props to prop dictionary
     complete_properties_schema = schema_properties
     complete_properties = {}
     for property_element in complete_properties_schema:
@@ -1162,14 +1162,14 @@ def _apply_ref(filename, path_context, alias_mapping, resources_base_url):
 
 
 def _replace_or_add_interface(merged_interfaces, interface_element):
-    #locate if this interface exists in the list
+    # locate if this interface exists in the list
     matching_interface = next((x for x in merged_interfaces if
                                _get_interface_name(x) ==
                                _get_interface_name(interface_element)), None)
-    #add if not
+    # add if not
     if matching_interface is None:
         merged_interfaces.append(interface_element)
-    #replace with current interface element
+    # replace with current interface element
     else:
         index_of_interface = merged_interfaces.index(matching_interface)
         merged_interfaces[index_of_interface] = interface_element
@@ -1201,7 +1201,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
                     4, 'Failed on import: Could not merge {0} due to conflict '
                        'on path {1}'.format(top_level_key, ' --> '.join(path)))
 
-    #TODO: Find a solution for top level workflows, which should be probably
+    # TODO: Find a solution for top level workflows, which should be probably
     # somewhat merged with override
     merge_no_override = {INTERFACES, TYPES, PLUGINS, WORKFLOWS,
                          TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
@@ -1226,7 +1226,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
 
     for single_import in ordered_imports_list:
         try:
-            #(note that this check is only to verify nothing went wrong in
+            # (note that this check is only to verify nothing went wrong in
             # the meanwhile, as we've already read
             # from all imported files earlier)
             with contextlib.closing(urlopen(single_import)) as f:
@@ -1242,21 +1242,22 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
         _replace_ref_with_inline_paths(parsed_imported_dsl, single_import,
                                        alias_mapping, resources_base_url)
 
-        #combine the current file with the combined parsed dsl we have thus far
+        # combine the current file with the combined parsed dsl
+        # we have thus far
         for key, value in parsed_imported_dsl.iteritems():
             if key == IMPORTS:  # no need to merge those..
                 continue
             if key not in combined_parsed_dsl:
-                #simply add this first level property to the dsl
+                # simply add this first level property to the dsl
                 combined_parsed_dsl[key] = value
             else:
                 if key in merge_no_override:
-                    #this section will combine dictionary entries of the top
+                    # this section will combine dictionary entries of the top
                     # level only, with no overrides
                     _merge_into_dict_or_throw_on_duplicate(
                         value, combined_parsed_dsl[key], key, [])
                 elif key in merge_one_nested_level_no_override:
-                    #this section will combine dictionary entries on up to one
+                    # this section will combine dictionary entries on up to one
                     # nested level, yet without overrides
                     for nested_key, nested_value in value.iteritems():
                         if nested_key not in combined_parsed_dsl[key]:
@@ -1267,13 +1268,13 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
                                 combined_parsed_dsl[key][nested_key],
                                 key, [nested_key])
                 else:
-                    #first level property is not white-listed for merge -
+                    # first level property is not white-listed for merge -
                     # throw an exception
                     raise DSLParsingLogicException(
                         3, 'Failed on import: non-mergeable field {0}'
                            .format(key))
 
-    #clean the now unnecessary 'imports' section from the combined dsl
+    # clean the now unnecessary 'imports' section from the combined dsl
     if IMPORTS in combined_parsed_dsl:
         del combined_parsed_dsl[IMPORTS]
     return combined_parsed_dsl
@@ -1301,12 +1302,12 @@ def _replace_ref_with_inline_paths(dsl, path_context, alias_mapping,
 
 def _get_resource_location(resource_name, resources_base_url,
                            current_resource_context=None):
-    #Already url format
+    # Already url format
     if resource_name.startswith('http:') or resource_name.startswith('ftp:') \
             or resource_name.startswith('file:'):
         return resource_name
 
-    #Points to an existing file
+    # Points to an existing file
     if os.path.exists(resource_name):
         return 'file:{0}'.format(pathname2url(resource_name))
 
@@ -1378,9 +1379,9 @@ def _validate_dsl_schema(parsed_dsl):
 
 
 def _validate_imports_section(imports_section, dsl_location):
-    #imports section is validated separately from the main schema since it is
+    # imports section is validated separately from the main schema since it is
     # validated for each file separately,
-    #while the standard validation runs only after combining all imports
+    # while the standard validation runs only after combining all imports
     # together
     try:
         validate(imports_section, IMPORTS_SCHEMA)

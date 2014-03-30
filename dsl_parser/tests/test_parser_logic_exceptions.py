@@ -165,7 +165,7 @@ relationships:
             yaml, 100, DSLParsingLogicException)
 
     def test_instance_relationships_bad_target_value(self):
-        #target value is a non-existent node
+        # target value is a non-existent node
         yaml = self.MINIMAL_BLUEPRINT + """
         -   name: test_node2
             type: test_type
@@ -179,7 +179,7 @@ relationships:
             yaml, 25, DSLParsingLogicException)
 
     def test_instance_relationships_bad_type_value(self):
-        #type value is a non-existent relationship
+        # type value is a non-existent relationship
         yaml = self.MINIMAL_BLUEPRINT + """
         -   name: test_node2
             type: test_type
@@ -193,7 +193,7 @@ relationships:
             yaml, 26, DSLParsingLogicException)
 
     def test_instance_relationships_same_source_and_target(self):
-        #A relationship from a node to itself is not valid
+        # A relationship from a node to itself is not valid
         yaml = self.MINIMAL_BLUEPRINT + """
         -   name: test_node2
             type: test_type
