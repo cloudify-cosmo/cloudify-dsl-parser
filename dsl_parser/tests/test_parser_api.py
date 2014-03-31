@@ -561,9 +561,9 @@ relationships:
         self.assertEquals('undefined', n7_relationship['base'])
 
     def test_type_workflows_recursive_inheritance(self):
-        #tests for multiple-hierarchy workflows inheritance between types,
-        #including back and forth switches between radial and ref overrides,
-        #as well as overridden non-existent ref values
+        # tests for multiple-hierarchy workflows inheritance between types,
+        # including back and forth switches between radial and ref overrides,
+        # as well as overridden non-existent ref values
         ref_alias1 = 'ref_alias1'
         radial_file1_path = self.make_file_with_name('ref install2',
                                                      'radial_file1.radial')
@@ -624,10 +624,10 @@ types:
         self.assertEquals(5, len(node['workflows']))
 
     def test_type_and_node_workflows_recursive_inheritance(self):
-        #tests for multiple-hierarchy workflows inheritance between types and
+        # tests for multiple-hierarchy workflows inheritance between types and
         #  an instance,
-        #including back and forth switches between radial and ref overrides,
-        #as well as overridden non-existent ref values
+        # including back and forth switches between radial and ref overrides,
+        # as well as overridden non-existent ref values
         ref_alias1 = 'ref_alias1'
         radial_file1_path = self.make_file_with_name('node ref install2',
                                                      'radial_file1.radial')
@@ -691,7 +691,7 @@ types:
         self.assertEquals(5, len(node['workflows']))
 
     def test_relationship_workflows_recursive_inheritance(self):
-        #tests for multiple-hierarchy workflows inheritance between
+        # tests for multiple-hierarchy workflows inheritance between
         # relationships, including back and forth switches between radial and
         # ref overrides, as well as overridden non-existent ref values
         ref_alias1 = 'ref_alias1'
@@ -765,7 +765,7 @@ relationships:
         self.assertEquals(5, len(relationship['workflows']))
 
     def test_relationship_and_instance_workflows_recursive_inheritance(self):
-        #tests for multiple-hierarchy workflows inheritance between
+        # tests for multiple-hierarchy workflows inheritance between
         # relationships, including back and forth switches between radial and
         # ref overrides, as well as overridden non-existent ref values
         ref_alias1 = 'ref_alias1'
@@ -861,7 +861,7 @@ types:
             - key3: "val3_parent"
     """
         result = parse(yaml)
-        #this will also check property "key" = "val"
+        # this will also check property "key" = "val"
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         self.assertEquals('val2', node['properties']['key2'])
@@ -893,7 +893,7 @@ types:
     test_type_grandgrandparent: {}
     """
         result = parse(yaml)
-        #this will also check property "key" = "val"
+        # this will also check property "key" = "val"
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
         self.assertEquals('val2', node['properties']['key2'])
@@ -1409,7 +1409,7 @@ plugins:
         self.assertListEqual(['test_node2'], dependents)
 
     def test_instance_relationships_duplicate_relationship(self):
-        #right now, having two relationships with the same (type,target)
+        # right now, having two relationships with the same (type,target)
         # under one node is valid
         yaml = self.MINIMAL_BLUEPRINT + """
         -   name: test_node2
@@ -1444,11 +1444,11 @@ relationships:
         self.assertListEqual(['test_node2'], dependents)
 
     def test_instance_relationships_relationship_inheritance(self):
-        #possibly 'inheritance' is the wrong term to use here,
-        #the meaning is for checking that the relationship properties from the
+        # possibly 'inheritance' is the wrong term to use here,
+        # the meaning is for checking that the relationship properties from the
         # top-level relationships
-        #section are used for instance-relationships which declare their types
-        #note there are no overrides in this case; these are tested in the
+        # section are used for instance-relationships which declare their types
+        # note there are no overrides in this case; these are tested in the
         # next, more thorough test
         yaml = self.MINIMAL_BLUEPRINT + """
         -   name: test_node2
@@ -1557,8 +1557,8 @@ relationship_implementations:
         self.assertEquals('prop7_value_new_impl', i_properties['prop7'])
 
     def test_relationships_and_node_recursive_inheritance(self):
-        #testing for a complete inheritance path for relationships
-        #from top-level relationships to a relationship instance
+        # testing for a complete inheritance path for relationships
+        # from top-level relationships to a relationship instance
         yaml = self.MINIMAL_BLUEPRINT + """
         -   name: test_node2
             type: test_type
@@ -1672,8 +1672,8 @@ plugins:
                              rel_target_ops['test_interface1.install'])
 
     def test_relationship_interfaces_inheritance_merge(self):
-        #testing for a complete inheritance path for relationships
-        #from top-level relationships to a relationship instance
+        # testing for a complete inheritance path for relationships
+        # from top-level relationships to a relationship instance
         yaml = self.MINIMAL_BLUEPRINT + """
         -   name: test_node2
             type: test_type
@@ -1945,9 +1945,9 @@ plugins:
         parse(yaml)
 
     def test_node_plugins_to_install_field_installer_plugin(self):
-        #testing to ensure the installer plugin is treated differently and
+        # testing to ensure the installer plugin is treated differently and
         # is not
-        #put on the plugins_to_install dict like the rest of the plugins
+        # put on the plugins_to_install dict like the rest of the plugins
         yaml = """
 blueprint:
     name: test_app
@@ -1965,13 +1965,13 @@ plugins:
         properties:
             url: "http://test_plugin.zip"
         """
-        #note that we're expecting an empty dict since every node which
+        # note that we're expecting an empty dict since every node which
         # is a host should have one
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]['plugins_to_install'])
 
     def test_node_plugins_to_install_field_remote_plugin(self):
-        #testing to ensure that only plugins of type agent_plugin are put
+        # testing to ensure that only plugins of type agent_plugin are put
         # on the plugins_to_install field
         yaml = """
 blueprint:
@@ -1995,12 +1995,12 @@ plugins:
         self.assertEquals([], result['nodes'][0]['plugins_to_install'])
 
     def test_node_plugins_to_install_field_plugins_from_contained_nodes(self):
-        #testing to ensure plugins from nodes with contained_in relationships
+        # testing to ensure plugins from nodes with contained_in relationships
         #  to a host node (whether direct
-        #or recursive) also get added to the plugins_to_install field.
-        #this test also ensures there's no problem with a "duplicate" plugin
+        # or recursive) also get added to the plugins_to_install field.
+        # this test also ensures there's no problem with a "duplicate" plugin
         # on the plugins_to_install field,
-        #as test_plugin should be added from both test_node2 and test_node4
+        # as test_plugin should be added from both test_node2 and test_node4
         # [only one should remain in the end]
         yaml = """
 blueprint:
@@ -2047,7 +2047,7 @@ plugins:
         """
 
         result = parse(yaml)
-        #ensuring non-host nodes don't have this field
+        # ensuring non-host nodes don't have this field
         self.assertTrue('plugins_to_install' not in result['nodes'][1])
 
         node = result['nodes'][0]
@@ -2190,9 +2190,9 @@ types:
         self.assertEquals('test_node2', result['nodes'][1]['host_id'])
 
     def test_instance_relationships_target_node_plugins(self):
-        #tests that plugins defined on instance relationships as
+        # tests that plugins defined on instance relationships as
         # "run_on_node"="target" will
-        #indeed appear in the output on the target node's plugins section
+        # indeed appear in the output on the target node's plugins section
         yaml = self.MINIMAL_BLUEPRINT + """
         -   name: test_node2
             type: test_type
@@ -2253,7 +2253,7 @@ plugins:
         self.assertEquals(2, len(rel2_source_ops))
         self.assertEquals(8, len(relationship2))
 
-        #expecting the other plugin to be under test_node rather than
+        # expecting the other plugin to be under test_node rather than
         # test_node2:
         plugin2_def = result['nodes'][0]['plugins']['test_plugin2']
         self.assertEquals('test_plugin2', plugin2_def['name'])
@@ -2296,9 +2296,9 @@ types:
         self.assertEquals('test_type2', node2['type'])
         self.assertEquals(1, node2['instances']['deploy'])
 
-    def test_node_plugins_to_install_field_kv_store_plugin(self):
-        #testing to ensure the kv store is treated differently and is not
-        #put on the plugins_to_install dict like the rest of the plugins
+    def test_node_plugins_to_install_field_plugin_installer_plugin(self):
+        # testing to ensure plugin installer is treated differently and is not
+        # put on the plugins_to_install dict like the rest of the plugins
         yaml = """
 blueprint:
     name: test_app
@@ -2309,14 +2309,14 @@ types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: kv_store.start
+                - start: plugin_installer.start
 plugins:
-    kv_store:
+    plugin_installer:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
             url: "http://test_plugin.zip"
         """
-        #note that we're expecting an empty dict since every node which
+        # note that we're expecting an empty dict since every node which
         # is a host should have one
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]['plugins_to_install'])
@@ -2707,28 +2707,6 @@ types:
                 - start: plugin_installer.start
 plugins:
     plugin_installer:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://worker_installer.zip"
-            """
-        result = parse(yaml)
-        self.assertEquals([], result['nodes'][0]
-                          ['management_plugins_to_install'])
-
-    def test_kv_store_plugin_is_ignored(self):
-        yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
-    cloudify.types.host:
-        interfaces:
-            test_management_interface:
-                - start: kv_store.start
-plugins:
-    kv_store:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
             url: "http://worker_installer.zip"

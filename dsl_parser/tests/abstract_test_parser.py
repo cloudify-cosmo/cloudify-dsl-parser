@@ -56,7 +56,7 @@ types:
             - key
             """
 
-    #note that some tests extend the BASIC_BLUEPRINT 'inline',
+    # note that some tests extend the BASIC_BLUEPRINT 'inline',
     # which is why it's appended in the end
     MINIMAL_BLUEPRINT = """
 types:

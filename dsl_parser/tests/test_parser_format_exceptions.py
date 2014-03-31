@@ -164,7 +164,7 @@ types:
             yaml, 1, DSLParsingFormatException)
 
     def test_node_extra_properties(self):
-        #testing for additional properties directly under node
+        # testing for additional properties directly under node
         # (i.e. not within the node's 'properties' section)
         yaml = self.BASIC_BLUEPRINT_SECTION + """
             extra_property: "val"
@@ -514,7 +514,7 @@ relationships:
             yaml, 1, DSLParsingFormatException)
 
     def test_type_relationship(self):
-        #relationships are not valid under types whatsoever.
+        # relationships are not valid under types whatsoever.
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 types:
     test_type:
@@ -550,7 +550,7 @@ types:
             yaml, 1, DSLParsingFormatException)
 
     def test_instance_relationships_relationship_with_derived_from_field(self):
-        #derived_from field is not valid under an instance relationship
+        # derived_from field is not valid under an instance relationship
         # definition
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships:
@@ -562,7 +562,7 @@ types:
             yaml, 1, DSLParsingFormatException)
 
     def test_instance_relationships_relationship_object(self):
-        #trying to use a dictionary instead of an array
+        # trying to use a dictionary instead of an array
         yaml = self.MINIMAL_BLUEPRINT + """
             relationships:
                 test_relationship:
