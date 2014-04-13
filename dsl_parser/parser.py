@@ -1309,7 +1309,7 @@ def _get_resource_location(resource_name, resources_base_url,
 
     # Points to an existing file
     if os.path.exists(resource_name):
-        return 'file:{0}'.format(pathname2url(resource_name))
+        return 'file:{0}'.format(pathname2url(os.path.abspath(resource_name)))
 
     if current_resource_context:
         candidate_url = current_resource_context[
