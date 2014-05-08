@@ -1,3 +1,4 @@
+# flake8: NOQA
 ########
 # Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 #
@@ -40,6 +41,56 @@ SINGLE_WORKFLOW_SCHEMA = {
     ]
 }
 
+INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'array',
+            'items': {
+                'oneOf': [
+                    {
+                        'type': 'object',
+                        'patternProperties': {
+                            '^': {
+                                'type': 'string'
+                            }
+                        },
+                        'maxProperties': 1,
+                        'minProperties': 1
+                    },
+                    {
+                        'type': 'string'
+                    },
+                    {
+                        'type': 'object',
+                        'patternProperties': {
+                            '^': {
+                                'type': 'object',
+                                'properties': {
+                                    'mapping': {
+                                        'type': 'string'
+                                    },
+                                    'properties': {
+                                        'type': 'object',
+                                        'minProperties': 1
+                                    }
+                                },
+                                'required': ['mapping', 'properties'],
+                                'additionalProperties': False
+                            }
+                        },
+                        'maxProperties': 1,
+                        'minProperties': 1
+                    }
+                ]
+            },
+            'uniqueItems': True,
+            'minItems': 1
+        }
+    },
+    'minProperties': 1
+}
+
 WORKFLOWS_SCHEMA = {
     'type': 'object',
     'patternProperties': {
@@ -47,16 +98,22 @@ WORKFLOWS_SCHEMA = {
     }
 }
 
-INSTANCE_OR_TYPE_INTERFACES_SCHEMA = {
+
+PROPERTIES_ARRAY_SCHEMA = {
     'type': 'array',
-    'minItems': 1,
     'items': {
         'oneOf': [
             {
                 'type': 'object',
                 'patternProperties': {
                     '^': {
-                        'type': 'string'
+                        'oneOf': [
+                            {'type': 'object'},
+                            {'type': 'string'},
+                            {'type': 'number'},
+                            {'type': 'boolean'},
+                            {'type': 'array'}
+                        ]
                     }
                 },
                 'maxProperties': 1,
@@ -69,49 +126,6 @@ INSTANCE_OR_TYPE_INTERFACES_SCHEMA = {
     }
 }
 
-INSTANCE_OR_TYPE_POLICIES_SCHEMA = {
-    'type': 'array',
-    'items': {
-        'type': 'object',
-        'properties': {
-            'name': {
-                'type': 'string'
-            },
-            'rules': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        #non-meta 'type'
-                        'type': {
-                            'type': 'string'
-                        },
-                        #non-meta 'properties'
-                        'properties': {
-                            'type': 'object',
-                            'properties': {
-                                'service': {
-                                    'type': 'string'
-                                },
-                                'state': {
-                                    'type': 'string'
-                                }
-                            },
-                            'required': ['service', 'state'],
-                            'additionalProperties': False
-                        }
-                    },
-                    'required': ['type', 'properties'],
-                    'additionalProperties': False
-                },
-                'minItems': 1
-            }
-        },
-        'required': ['name', 'rules'],
-        'additionalProperties': False
-    }
-
-}
 
 # Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
 # since no good YAML schema validator could be found (both for Python and at all).
@@ -130,7 +144,7 @@ DSL_SCHEMA = {
                 'name': {
                     'type': 'string'
                 },
-                'topology': {
+                'nodes': {
                     'type': 'array',
                     'minItems': 1,
                     'items': {
@@ -153,9 +167,8 @@ DSL_SCHEMA = {
                                 'required': ['deploy'],
                                 'additionalProperties': False
                             },
-                            'interfaces': INSTANCE_OR_TYPE_INTERFACES_SCHEMA,
+                            'interfaces': INTERFACES_SCHEMA,
                             'workflows': WORKFLOWS_SCHEMA,
-                            'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
                             'relationships': {
                                 'type': 'array',
                                 'items': {
@@ -168,34 +181,13 @@ DSL_SCHEMA = {
                                         'target': {
                                             'type': 'string'
                                         },
-                                        'plugin': {
-                                            'type': 'string'
+                                        #non-meta 'properties'
+                                        'properties': {
+                                            'type': 'object'
                                         },
-                                        'bind_at': {
-                                            'type': 'string'
-                                        },
-                                        'run_on_node': {
-                                            'type': 'string'
-                                        },
-                                        'workflow': SINGLE_WORKFLOW_SCHEMA,
-                                        'interface': {
-                                            'type': 'object',
-                                            'properties': {
-                                                'name': {
-                                                    'type': 'string'
-                                                },
-                                                'operations': {
-                                                    'type': 'array',
-                                                    'items': {
-                                                        'type': 'string'
-                                                    },
-                                                    'uniqueItems': True,
-                                                    'minItems': 1
-                                                }
-                                            },
-                                            'required': ['name', 'operations'],
-                                            'additionalProperties': False
-                                        }
+                                        'source_interfaces': INTERFACES_SCHEMA,
+                                        'target_interfaces': INTERFACES_SCHEMA,
+                                        'workflows': WORKFLOWS_SCHEMA
                                     },
                                     'required': ['type', 'target'],
                                     'additionalProperties': False
@@ -211,28 +203,8 @@ DSL_SCHEMA = {
                     }
                 }
             },
-            'required': ['name', 'topology'],
+            'required': ['name', 'nodes'],
             'additionalProperties': False
-        },
-        'interfaces': {
-            'type': 'object',
-            'patternProperties': {
-                '^': {
-                    'type': 'object',
-                    'properties': {
-                        'operations': {
-                            'type': 'array',
-                            'items': {
-                                'type': 'string'
-                            },
-                            'uniqueItems': True,
-                            'minItems': 1
-                        }
-                    },
-                    'required': ['operations'],
-                    'additionalProperties': False
-                }
-            }
         },
         'plugins': {
             'type': 'object',
@@ -252,16 +224,26 @@ DSL_SCHEMA = {
                         #non-meta 'properties'
                         'properties': {
                             'type': 'object',
-                            'properties': {
-                                'interface': {
-                                    'type': 'string'
+                            'oneOf': [
+                                {
+                                    'properties': {
+                                        'url': {
+                                            'type': 'string'
+                                        }
+                                    },
+                                    'required': ['url'],
+                                    'additionalProperties': False
                                 },
-                                'url': {
-                                    'type': 'string'
+                                {
+                                    'properties': {
+                                        'folder': {
+                                            'type': 'string'
+                                        }
+                                    },
+                                    'required': ['folder'],
+                                    'additionalProperties': False
                                 }
-                            },
-                            'required': ['interface', 'url'],
-                            'additionalProperties': False
+                            ]
                         }
                     },
                     'required': ['derived_from'],
@@ -334,17 +316,36 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        'interfaces': INSTANCE_OR_TYPE_INTERFACES_SCHEMA,
+                        'interfaces': INTERFACES_SCHEMA,
                         'workflows': WORKFLOWS_SCHEMA,
-                        'policies': INSTANCE_OR_TYPE_POLICIES_SCHEMA,
+                        #non-meta 'properties'
+                        'properties': PROPERTIES_ARRAY_SCHEMA,
+                        'derived_from': {
+                            'type': 'string'
+                        },
+                    },
+                    'additionalProperties': False
+                }
+            }
+        },
+        'type_implementations': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'type': 'object',
+                    'properties': {
                         #non-meta 'properties'
                         'properties': {
                             'type': 'object'
                         },
-                        'derived_from': {
+                        'type': {
                             'type': 'string'
-                        }
+                        },
+                        'node_ref': {
+                            'type': 'string'
+                        },
                     },
+                    'required': ['node_ref', 'type'],
                     'additionalProperties': False
                 }
             }
@@ -356,42 +357,45 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        'plugin': {
-                            'type': 'string'
-                        },
-                        'bind_at': {
-                            'type': 'string'
-                        },
-                        'run_on_node': {
-                            'type': 'string'
-                        },
                         'derived_from': {
                             'type': 'string'
                         },
-                        'workflow': SINGLE_WORKFLOW_SCHEMA,
-                        'interface': {
-                            'type': 'object',
-                            'properties': {
-                                'name': {
-                                    'type': 'string'
-                                },
-                                'operations': {
-                                    'type': 'array',
-                                    'items': {
-                                        'type': 'string'
-                                    },
-                                    'uniqueItems': True,
-                                    'minItems': 1
-                                }
-                            },
-                            'required': ['name', 'operations'],
-                            'additionalProperties': False
-                        }
+                        'source_interfaces': INTERFACES_SCHEMA,
+                        'target_interfaces': INTERFACES_SCHEMA,
+                        'workflows': WORKFLOWS_SCHEMA,
+                        #non-meta 'properties'
+                        'properties': PROPERTIES_ARRAY_SCHEMA
                     },
                     'additionalProperties': False
                 }
             }
-        }
+        },
+        'relationship_implementations': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'type': 'object',
+                    'properties': {
+                        'type': {
+                            'type': 'string'
+                        },
+                        'source_node_ref': {
+                            'type': 'string'
+                        },
+                        'target_node_ref': {
+                            'type': 'string'
+                        },
+                        #non-meta 'properties'
+                        'properties': {
+                            'type': 'object'
+                        },
+                    },
+                    'required': ['source_node_ref', 'target_node_ref',
+                                 'type'],
+                    'additionalProperties': False
+                }
+            }
+        },
     },
     'required': ['blueprint'],
     'additionalProperties': False

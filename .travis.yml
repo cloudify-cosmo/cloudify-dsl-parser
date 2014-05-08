@@ -3,11 +3,9 @@ python:
   - "2.7"
 
 install:
-
-    # command to install dependencies
     - python setup.py install
+    - sudo pip install flake8
 
 script:
-
-    # command to run tests
+    - flake8 .
     - nosetests dsl_parser/tests

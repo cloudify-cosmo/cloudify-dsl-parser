@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,23 +12,18 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+__author__ = 'dan'
 
-__author__ = 'elip'
+import rel_graph
 
-from setuptools import setup
 
-setup(
-    name='cloudify-dsl-parser',
-    version='3.0',
-    author='elip',
-    author_email='elip@gigaspaces.com',
-    packages=['dsl_parser'],
-    license='LICENSE',
-    description='Cloudify DSL parser',
-    zip_safe=False,
-    install_requires=[
-        "PyYAML==3.10",
-        'jsonschema==2.3.0',
-        'networkx==1.8.1'
-    ]
-)
+def create_multi_instance_plan(plan):
+    """
+    Expand node instances based on number of instances to deploy and
+    defined relationships
+    """
+    graph = rel_graph.build_initial_node_graph(plan)
+    m_graph = rel_graph.build_multi_instance_node_graph(graph)
+    m_plan = rel_graph.create_multi_instance_plan_from_multi_instance_graph(
+        plan, m_graph)
+    return m_plan
