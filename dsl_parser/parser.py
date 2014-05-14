@@ -27,6 +27,7 @@ WORKFLOWS = 'workflows'
 RELATIONSHIPS = 'relationships'
 RELATIONSHIP_IMPLEMENTATIONS = 'relationship_implementations'
 PROPERTIES = 'properties'
+TYPE_HIERARCHY = 'type_hierarchy'
 
 HOST_TYPE = 'cloudify.types.host'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
@@ -210,7 +211,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                                          contained_in_rel_types,
                                          connected_to_rel_types,
                                          depends_on_rel_types)
-
+        node[TYPE_HIERARCHY] = _create_node_types_hierarchy(node['type'],
+                                                            types)
     # set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
     for node in processed_nodes:
@@ -252,6 +254,20 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
     _validate_relationship_impls(relationship_impls)
+
+
+def _create_node_types_hierarchy(type_name, types):
+    """
+    Creates node types hierarchy as list where the last type in the list is
+    the actual node type.
+    """
+    current_type = types[type_name]
+    if 'derived_from' in current_type:
+        parent_type_name = current_type['derived_from']
+        types_hierarchy = _create_node_types_hierarchy(parent_type_name, types)
+        types_hierarchy.append(type_name)
+        return types_hierarchy
+    return [type_name]
 
 
 def _post_process_node_relationships(node,
@@ -1061,7 +1077,6 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
         merged_type[INTERFACES] = _merge_interface_dicts(complete_super_type,
                                                          merged_type,
                                                          INTERFACES)
-
         return merged_type
 
     def types_inheritance_merging_func(complete_super_type,

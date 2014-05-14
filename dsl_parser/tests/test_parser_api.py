@@ -20,6 +20,7 @@ import os
 
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.parser import parse, parse_from_path, parse_from_url
+from dsl_parser.parser import TYPE_HIERARCHY
 
 
 def op_struct(plugin_name, operation_mapping, properties=None):
@@ -866,6 +867,72 @@ types:
         node = result['nodes'][0]
         self.assertEquals('val2', node['properties']['key2'])
         self.assertEquals('val3_parent', node['properties']['key3'])
+
+    def test_empty_types_hierarchy_in_node(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + """
+types:
+    test_type:
+        properties:
+            - key: "not_val"
+            - key2: "val2"
+    """
+        result = parse(yaml)
+        node = result['nodes'][0]
+        self.assertEqual(1, len(node[TYPE_HIERARCHY]))
+        self.assertEqual('test_type', node[TYPE_HIERARCHY][0])
+
+    def test_types_hierarchy_in_node(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + """
+types:
+    test_type:
+        derived_from: "test_type_parent"
+        properties:
+            - key: "not_val"
+            - key2: "val2"
+    test_type_parent: {}
+    """
+        result = parse(yaml)
+        node = result['nodes'][0]
+        self.assertEqual(2, len(node[TYPE_HIERARCHY]))
+        self.assertEqual('test_type_parent', node[TYPE_HIERARCHY][0])
+        self.assertEqual('test_type', node[TYPE_HIERARCHY][1])
+
+    def test_types_hierarchy_order_in_node(self):
+        yaml = self.BASIC_BLUEPRINT_SECTION + """
+types:
+    test_type:
+        derived_from: "test_type_parent"
+        properties:
+            - key: "not_val"
+            - key2: "val2"
+    test_type_parent:
+        derived_from: "parent_type"
+
+    parent_type: {}
+    """
+        result = parse(yaml)
+        node = result['nodes'][0]
+        self.assertEqual(3, len(node[TYPE_HIERARCHY]))
+        self.assertEqual('parent_type', node[TYPE_HIERARCHY][0])
+        self.assertEqual('test_type_parent', node[TYPE_HIERARCHY][1])
+        self.assertEqual('test_type', node[TYPE_HIERARCHY][2])
+
+    def test_types_hierarchy_with_node_type_impl(self):
+        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+types:
+    specific_test_type:
+        derived_from: test_type
+
+type_implementations:
+    implementation_of_specific_test_type:
+        type: specific_test_type
+        node_ref: test_node
+"""
+        result = parse(yaml)
+        node = result['nodes'][0]
+        self.assertEqual(2, len(node[TYPE_HIERARCHY]))
+        self.assertEqual('test_type', node[TYPE_HIERARCHY][0])
+        self.assertEqual('specific_test_type', node[TYPE_HIERARCHY][1])
 
     def test_type_properties_recursive_derivation(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
