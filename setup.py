@@ -16,6 +16,11 @@
 __author__ = 'elip'
 
 from setuptools import setup
+from pip.req import parse_requirements
+
+install_requires = [
+    str(ir.req) for ir in parse_requirements('requirements.txt')]
+
 
 setup(
     name='cloudify-dsl-parser',
@@ -26,9 +31,5 @@ setup(
     license='LICENSE',
     description='Cloudify DSL parser',
     zip_safe=False,
-    install_requires=[
-        "PyYAML==3.10",
-        'jsonschema==2.3.0',
-        'networkx==1.8.1'
-    ]
+    install_requires=install_requires
 )
