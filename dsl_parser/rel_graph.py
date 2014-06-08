@@ -19,8 +19,8 @@ import networkx as nx
 import random
 
 NODES = 'nodes'
+NODE_INSTANCES = 'node_instances'
 RELATIONSHIPS = 'relationships'
-DEPENDENTS = 'dependents'
 CONNECTION_TYPE = 'connection_type'
 ALL_TO_ALL = 'all_to_all'
 ALL_TO_ONE = 'all_to_one'
@@ -43,8 +43,7 @@ def build_initial_node_graph(plan):
     graph = nx.DiGraph()
     for node in plan['nodes']:
         node_id = node['id']
-        graph.add_node(node_id,
-                       node=node)
+        graph.add_node(node_id, node=node)
         for relationship in node.get(RELATIONSHIPS, []):
             target_id = relationship['target_id']
             graph.add_edge(node_id, target_id,
@@ -69,19 +68,17 @@ def create_multi_instance_plan_from_multi_instance_graph(
         plan,
         multi_instance_graph):
     plan = copy.deepcopy(plan)
-    new_nodes = []
+    nodes_instances = []
     for g_node, node_data in multi_instance_graph.nodes(data=True):
-        node = node_data['node']
-        new_relationships = []
+        node_instance = node_data['node']
+        relationship_instances = []
         for neighbor in multi_instance_graph.neighbors(g_node):
-            relationship = \
+            relationship_instance = \
                 multi_instance_graph[g_node][neighbor]['relationship']
-            new_relationships.append(relationship)
-        node[RELATIONSHIPS] = new_relationships
-        node[DEPENDENTS] = \
-            multi_instance_graph.reverse(copy=True).neighbors(g_node)
-        new_nodes.append(node)
-    plan[NODES] = new_nodes
+            relationship_instances.append(relationship_instance)
+        node_instance[RELATIONSHIPS] = relationship_instances
+        nodes_instances.append(node_instance)
+    plan[NODE_INSTANCES] = nodes_instances
     return plan
 
 
@@ -119,21 +116,19 @@ def _build_multi_instance_node_tree_rec(root,
                                         parent_id=None,
                                         current_host_id=None):
     instances_num = contained_tree.node[root]['node']['instances']['deploy']
-    instances_copy = _n_copies(contained_tree.node[root], instances_num)
-    for instance_copy in instances_copy:
-
+    root_node = contained_tree.node[root]['node']
+    for _ in range(instances_num):
         node_id = _instance_id(root, _generate_suffix())
-        node = instance_copy['node']
-        node['id'] = node_id
+        node = _node_instance_copy(root_node, node_id)
 
         new_current_host_id = _handle_host_id(current_host_id,
                                               root, node_id, node)
 
         ctx.add_name_to_id_mapping(root, node_id)
-        master_graph.add_node(node_id, instance_copy)
+        master_graph.add_node(node_id, node=node)
         if parent_id is not None:
-            relationship = copy.deepcopy(target_relationship)
-            relationship['target_id'] = parent_id
+            relationship = _relationship_instance_copy(target_relationship,
+                                                       target_id=parent_id)
             master_graph.add_edge(node_id, parent_id,
                                   relationship=relationship)
         for neighbor in contained_tree.neighbors(root):
@@ -175,8 +170,8 @@ def _handle_connected_to_and_depends_on(initial_graph,
             if connection_type == ALL_TO_ONE:
                 targets = targets[:1]
             for target_node in targets:
-                relationship_copy = copy.deepcopy(relationship)
-                relationship_copy['target_id'] = target_node
+                relationship_copy = _relationship_instance_copy(
+                    relationship, target_id=target_node)
                 new_graph.add_edge(multi_instance_node, target_node,
                                    relationship=relationship_copy)
 
@@ -208,8 +203,21 @@ def _generate_suffix():
     return '_%05x' % random.randrange(16 ** 5)
 
 
-def _n_copies(obj, n):
-    return [copy.deepcopy(obj) for _ in range(n)]
+def _node_instance_copy(node, node_instance_id):
+    result = {
+        'name': node['name'],
+        'id': node_instance_id
+    }
+    if 'host_id' in node:
+        result['host_id'] = node['host_id']
+    return result
+
+
+def _relationship_instance_copy(relationship, target_id):
+    return {
+        'type': relationship['type'],
+        'target_id': target_id
+    }
 
 
 def _is_valid_acyclic_plan(graph):

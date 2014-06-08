@@ -280,7 +280,6 @@ def _post_process_node_relationships(node,
     if RELATIONSHIPS in node:
         for relationship in node[RELATIONSHIPS]:
             target_node = node_name_to_node[relationship['target_id']]
-            _add_dependent(target_node, node)
             _process_node_relationships_operations(
                 relationship, 'source_interfaces', 'source_operations', node,
                 plugins)
@@ -450,16 +449,6 @@ def _extract_plugin_names_and_operation_mapping_from_interface(
         result.append((operation_name, plugin_name,
                        operation_mapping, operation_properties))
     return result
-
-
-def _add_dependent(node, dependent_node):
-    dependents = node.get('dependents', [])
-    # There can be two relation ships defined between same couple of nodes,
-    # avoid duplicate dependent
-    if dependent_node['id'] in dependents:
-        return
-    dependents.append(dependent_node['id'])
-    node['dependents'] = dependents
 
 
 def _validate_type_impls(type_impls):
