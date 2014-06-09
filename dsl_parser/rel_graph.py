@@ -216,6 +216,7 @@ def _node_instance_copy(node, node_instance_id):
 def _relationship_instance_copy(relationship, target_id):
     return {
         'type': relationship['type'],
+        'target_name': relationship['target_id'],
         'target_id': target_id
     }
 
