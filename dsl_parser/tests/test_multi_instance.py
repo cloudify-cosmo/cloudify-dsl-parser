@@ -69,14 +69,12 @@ blueprint:
 """
 
         multi_plan = parse_multi(yaml)
-        nodes = multi_plan['nodes']
+        nodes = multi_plan['node_instances']
         self.assertEquals(2, len(nodes))
         self.assertEquals('host_d82c0', nodes[0]['id'])
         self.assertEquals('host_c2094', nodes[1]['id'])
         self.assertEquals('host_d82c0', nodes[0]['host_id'])
         self.assertEquals('host_c2094', nodes[1]['host_id'])
-        self.assertEquals('y', nodes[0]['properties']['x'])
-        self.assertEquals('y', nodes[1]['properties']['x'])
 
     def test_two_nodes_one_contained_in_other(self):
 
@@ -90,7 +88,7 @@ blueprint:
                     target: host
 """
         multi_plan = parse_multi(yaml)
-        nodes = multi_plan['nodes']
+        nodes = multi_plan['node_instances']
         db = nodes[0]
         host = nodes[1]
         self.assertEquals(2, len(nodes))
@@ -98,10 +96,6 @@ blueprint:
         self.assertEquals('db_c2094', db['id'])
         self.assertEquals('host_d82c0', host['host_id'])
         self.assertEquals('host_d82c0', db['host_id'])
-
-        host_dependents = host['dependents']
-        self.assertEquals(1, len(host_dependents))
-        self.assertEquals('db_c2094', host_dependents[0])
 
         db_relationships = db['relationships']
         self.assertEquals(1, len(db_relationships))
@@ -121,7 +115,7 @@ blueprint:
                     target: host
 """
         multi_plan = parse_multi(yaml)
-        nodes = multi_plan['nodes']
+        nodes = multi_plan['node_instances']
         self.assertEquals(4, len(nodes))
 
         db_1 = nodes[1]
@@ -137,13 +131,6 @@ blueprint:
         self.assertEquals('host_6baa9', host_2['host_id'])
         self.assertEquals('host_d82c0', db_1['host_id'])
         self.assertEquals('host_6baa9', db_2['host_id'])
-
-        host1_dependents = host_1['dependents']
-        self.assertEquals(1, len(host1_dependents))
-        self.assertEquals('db_c2094', host1_dependents[0])
-        host2_dependents = host_2['dependents']
-        self.assertEquals(1, len(host2_dependents))
-        self.assertEquals('db_42485', host2_dependents[0])
 
         db1_relationships = db_1['relationships']
         self.assertEquals(1, len(db1_relationships))
@@ -180,7 +167,7 @@ blueprint:
 """
 
         multi_plan = parse_multi(yaml)
-        nodes = multi_plan['nodes']
+        nodes = multi_plan['node_instances']
         self.assertEquals(5, len(nodes))
 
         db = nodes[0]
@@ -200,14 +187,6 @@ blueprint:
         self.assertEquals('host1_d82c0', db['host_id'])
         self.assertEquals('host2_42485', host2['host_id'])
         self.assertEquals('host1_d82c0', host1['host_id'])
-
-        host1_dependents = host1['dependents']
-        self.assertEquals(2, len(host1_dependents))
-        self.assertEquals('db_c2094', host1_dependents[0])
-        self.assertEquals('db_dependent_6baa9', host1_dependents[1])
-        host2_dependents = host2['dependents']
-        self.assertEquals(1, len(host2_dependents))
-        self.assertEquals('webserver_82e2e', host2_dependents[0])
 
         db_relationships = db['relationships']
         self.assertEquals(1, len(db_relationships))
@@ -233,7 +212,7 @@ blueprint:
 """
 
         multi_plan = parse_multi(yaml)
-        nodes = multi_plan['nodes']
+        nodes = multi_plan['node_instances']
         self.assertEquals(1, len(nodes))
         self.assertEquals('node1_id_d82c0', nodes[0]['id'])
         self.assertTrue('host_id' not in nodes[0])
@@ -286,7 +265,7 @@ blueprint:
                     target: db
 """
         multi_plan = parse_multi(yaml)
-        nodes = multi_plan['nodes']
+        nodes = multi_plan['node_instances']
         print len(nodes)
         self.assertEquals(19, len(nodes))
 
@@ -369,58 +348,6 @@ blueprint:
         self.assertEquals(host1_1_id, db_dependent_2['host_id'])
         self.assertEquals(host1_2_id, db_dependent_3['host_id'])
         self.assertEquals(host1_1_id, db_dependent_4['host_id'])
-
-        network_1_dependents = network_1['dependents']
-        host1_1_dependents = host1_1['dependents']
-        host1_2_dependents = host1_2['dependents']
-        host2_1_dependents = host2_1['dependents']
-        host2_2_dependents = host2_2['dependents']
-        host3_1_dependents = host3_1['dependents']
-        host3_2_dependents = host3_2['dependents']
-        webserver1_1_dependents = webserver1_1['dependents']
-        webserver1_2_dependents = webserver1_2['dependents']
-        webserver2_1_dependents = webserver2_1['dependents']
-        webserver2_2_dependents = webserver2_2['dependents']
-        db_1_dependents = db_1['dependents']
-        db_2_dependents = db_2['dependents']
-        db_3_dependents = db_3['dependents']
-        db_4_dependents = db_4['dependents']
-        db_dependent_1_dependents = db_dependent_1['dependents']
-        db_dependent_2_dependents = db_dependent_2['dependents']
-        db_dependent_3_dependents = db_dependent_3['dependents']
-        db_dependent_4_dependents = db_dependent_4['dependents']
-
-        self.assertEquals(set(network_1_dependents), set())
-        self.assertEquals(set(host1_1_dependents), {db_3_id, db_4_id})
-        self.assertEquals(set(host1_2_dependents), {db_1_id, db_2_id})
-        self.assertEquals(set(host2_1_dependents), {webserver1_2_id,
-                                                    webserver2_1_id})
-        self.assertEquals(set(host2_2_dependents), {webserver1_1_id,
-                                                    webserver2_2_id})
-        self.assertEquals(set(host3_1_dependents), set())
-        self.assertEquals(set(host3_2_dependents), set())
-        self.assertEquals(set(webserver1_1_dependents), set())
-        self.assertEquals(set(webserver1_2_dependents), set())
-        self.assertEquals(set(webserver2_1_dependents), set())
-        self.assertEquals(set(webserver2_2_dependents), set())
-        self.assertEquals(set(db_1_dependents), {webserver1_1_id,
-                                                 webserver1_2_id,
-                                                 webserver2_1_id,
-                                                 webserver2_2_id,
-                                                 db_dependent_3_id})
-        self.assertEquals(set(db_2_dependents), {webserver2_1_id,
-                                                 webserver2_2_id,
-                                                 db_dependent_1_id})
-        self.assertEquals(set(db_3_dependents), {webserver2_1_id,
-                                                 webserver2_2_id,
-                                                 db_dependent_2_id})
-        self.assertEquals(set(db_4_dependents), {webserver2_1_id,
-                                                 webserver2_2_id,
-                                                 db_dependent_4_id})
-        self.assertEquals(set(db_dependent_1_dependents), set())
-        self.assertEquals(set(db_dependent_2_dependents), set())
-        self.assertEquals(set(db_dependent_3_dependents), set())
-        self.assertEquals(set(db_dependent_4_dependents), set())
 
         network_1_relationships = network_1['relationships']
         host1_1_relationships = host1_1['relationships']

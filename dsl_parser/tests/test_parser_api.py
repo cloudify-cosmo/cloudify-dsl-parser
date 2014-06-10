@@ -1472,8 +1472,6 @@ plugins:
         self.assertEquals('test_plugin', plugin_def['name'])
         self.assertEquals('false', plugin_def['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_def['url'])
-        dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_node2'], dependents)
 
     def test_instance_relationships_duplicate_relationship(self):
         # right now, having two relationships with the same (type,target)
@@ -1507,8 +1505,6 @@ relationships:
                           result['nodes'][1]['relationships'][1]['state'])
         self.assertEquals(6, len(result['nodes'][1]['relationships'][0]))
         self.assertEquals(6, len(result['nodes'][1]['relationships'][1]))
-        dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_node2'], dependents)
 
     def test_instance_relationships_relationship_inheritance(self):
         # possibly 'inheritance' is the wrong term to use here,
@@ -1567,8 +1563,6 @@ plugins:
         self.assertEquals(2, len(rel_target_ops))
 
         self.assertEquals(10, len(relationship))
-        dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_node2'], dependents)
 
     def test_instance_relationship_properties_inheritance(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -1664,8 +1658,6 @@ plugins:
         self.assertEquals(3, len(parent_relationship))
         self.assertEquals(5, len(relationship))
         self.assertEquals(10, len(node_relationship))
-        dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_node2'], dependents)
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
@@ -1787,8 +1779,6 @@ plugins:
         self.assertEquals(4, len(parent_relationship))
         self.assertEquals(5, len(relationship))
         self.assertEquals(10, len(node_relationship))
-        dependents = result['nodes'][0]['dependents']
-        self.assertListEqual(['test_node2'], dependents)
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
