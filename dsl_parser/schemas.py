@@ -316,7 +316,7 @@ DSL_SCHEMA = {
                 }
             }
         },
-        #'workflows': WORKFLOWS_SCHEMA,
+        'workflows': {},
         'relationships': {
             'type': 'object',
             'patternProperties': {

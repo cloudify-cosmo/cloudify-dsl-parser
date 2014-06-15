@@ -2137,6 +2137,29 @@ types:
         self.assertEquals(op_struct('test_plugin', 'install', expected_props),
                           operations['test_interface1.install'])
 
+    def test_no_workflows(self):
+        result = parse(self.MINIMAL_BLUEPRINT)
+        self.assertEquals(result['workflows'], {})
+
+    def test_empty_workflows(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+workflows: {}
+"""
+        result = parse(yaml)
+        self.assertEqual(result['workflows'], {})
+
+    def test_workflow_basic_mapping(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1: test_plugin.workflow1
+"""
+        result = parse(yaml)
+        workflows = result['workflows']
+        self.assertEqual(1, len(workflows))
+        self.assertEqual(op_struct('test_plugin', 'workflow1'),
+                         workflows['workflow1'])
+
+
 
 class ManagementPluginsToInstallTest(AbstractTestParser):
     def test_one_manager_one_agent_plugin_on_same_node(self):
