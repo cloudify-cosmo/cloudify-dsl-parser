@@ -174,9 +174,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                         relationship_impls,
                         node_names_set)
 
-    top_level_workflows = _process_workflows(
-        combined_parsed_dsl[WORKFLOWS]) if WORKFLOWS in \
-        combined_parsed_dsl else {}
+    workflows = _process_workflows(combined_parsed_dsl.get(WORKFLOWS, {}))
 
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
@@ -186,7 +184,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         'name': app_name,
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
-        WORKFLOWS: top_level_workflows,
+        WORKFLOWS: workflows,
         'management_plugins_to_install': plan_management_plugins,
         'is_management_plugins_to_install': is_plan_management_plugins
     }
@@ -557,8 +555,6 @@ def _process_relationships(combined_parsed_dsl):
         plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
         _validate_relationship_fields(complete_rel_obj, plugins, rel_name)
         complete_rel_obj_copy = copy.deepcopy(complete_rel_obj)
-        complete_rel_obj_copy[WORKFLOWS] = _process_workflows(
-            _get_dict_prop(complete_rel_obj_copy, WORKFLOWS))
         processed_relationships[rel_name] = complete_rel_obj_copy
         processed_relationships[rel_name]['name'] = rel_name
     return processed_relationships
@@ -583,10 +579,6 @@ def _rel_inheritance_merging_func(complete_super_type,
                                   current_level_type,
                                   merge_properties=True):
     merged_type = current_level_type
-
-    # derive workflows
-    merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
-                                              merged_type, WORKFLOWS)
 
     if merge_properties:
         merged_props_array = _merge_properties_arrays(complete_super_type,
@@ -690,23 +682,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
 
 
 def _process_workflows(workflows):
-    processed_workflows = {}
-
-    for name, flow_obj in workflows.iteritems():
-        processed_workflows[name] = _process_ref_or_inline_value(
-            flow_obj, 'radial')
-
-    return processed_workflows
-
-
-def _process_ref_or_inline_value(ref_or_inline_obj, inline_key_name):
-    if isinstance(ref_or_inline_obj, str):
-        # already processed previously (inheritance)
-        return ref_or_inline_obj
-    elif 'ref' in ref_or_inline_obj:
-        return ref_or_inline_obj['ref']
-    else:  # inline
-        return ref_or_inline_obj[inline_key_name]
+    return {}
 
 
 def _validate_no_duplicate_nodes(nodes):
@@ -774,8 +750,6 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
                 relationship_complete_type,
                 relationship,
                 merge_properties=False)
-            complete_relationship[WORKFLOWS] = _process_workflows(
-                _get_dict_prop(complete_relationship, WORKFLOWS))
             complete_relationship[PROPERTIES] = \
                 _merge_schema_and_instance_properties(
                     _get_dict_prop(relationship, PROPERTIES),
@@ -946,7 +920,6 @@ def _process_node(node, parsed_dsl,
                                                      parsed_dsl, node,
                                                      impl_properties)
     processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
-    processed_node[WORKFLOWS] = complete_node_type[WORKFLOWS]
     processed_node[PLUGINS] = {}
     # handle plugins and operations
     if INTERFACES in complete_node_type:
@@ -966,7 +939,6 @@ def _process_node(node, parsed_dsl,
                                 relationship_impls)
 
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
-    processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS])
 
     processed_node['instances'] = node['instances'] \
         if 'instances' in node else {'deploy': 1}
@@ -1059,9 +1031,6 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
                                 impl_properties):
     def types_and_node_inheritance_common_merging_func(complete_super_type,
                                                        merged_type):
-        # derive workflows
-        merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
-                                                  merged_type, WORKFLOWS)
         # derive interfaces
         merged_type[INTERFACES] = _merge_interface_dicts(complete_super_type,
                                                          merged_type,

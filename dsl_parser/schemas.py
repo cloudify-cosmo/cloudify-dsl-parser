@@ -17,30 +17,6 @@
 __author__ = 'ran'
 
 
-SINGLE_WORKFLOW_SCHEMA = {
-    'type': 'object',
-    'oneOf': [
-        {
-            'properties': {
-                'radial': {
-                    'type': 'string'
-                }
-            },
-            'required': ['radial'],
-            'additionalProperties': False
-        },
-        {
-            'properties': {
-                'ref': {
-                    'type': 'string'
-                }
-            },
-            'required': ['ref'],
-            'additionalProperties': False
-        }
-    ]
-}
-
 INTERFACES_SCHEMA = {
     'type': 'object',
     'patternProperties': {
@@ -89,13 +65,6 @@ INTERFACES_SCHEMA = {
         }
     },
     'minProperties': 1
-}
-
-WORKFLOWS_SCHEMA = {
-    'type': 'object',
-    'patternProperties': {
-        '^': SINGLE_WORKFLOW_SCHEMA
-    }
 }
 
 
@@ -168,7 +137,6 @@ DSL_SCHEMA = {
                                 'additionalProperties': False
                             },
                             'interfaces': INTERFACES_SCHEMA,
-                            'workflows': WORKFLOWS_SCHEMA,
                             'relationships': {
                                 'type': 'array',
                                 'items': {
@@ -187,7 +155,6 @@ DSL_SCHEMA = {
                                         },
                                         'source_interfaces': INTERFACES_SCHEMA,
                                         'target_interfaces': INTERFACES_SCHEMA,
-                                        'workflows': WORKFLOWS_SCHEMA
                                     },
                                     'required': ['type', 'target'],
                                     'additionalProperties': False
@@ -317,7 +284,6 @@ DSL_SCHEMA = {
                     'type': 'object',
                     'properties': {
                         'interfaces': INTERFACES_SCHEMA,
-                        'workflows': WORKFLOWS_SCHEMA,
                         #non-meta 'properties'
                         'properties': PROPERTIES_ARRAY_SCHEMA,
                         'derived_from': {
@@ -350,7 +316,7 @@ DSL_SCHEMA = {
                 }
             }
         },
-        'workflows': WORKFLOWS_SCHEMA,
+        #'workflows': WORKFLOWS_SCHEMA,
         'relationships': {
             'type': 'object',
             'patternProperties': {
@@ -362,7 +328,6 @@ DSL_SCHEMA = {
                         },
                         'source_interfaces': INTERFACES_SCHEMA,
                         'target_interfaces': INTERFACES_SCHEMA,
-                        'workflows': WORKFLOWS_SCHEMA,
                         #non-meta 'properties'
                         'properties': PROPERTIES_ARRAY_SCHEMA
                     },

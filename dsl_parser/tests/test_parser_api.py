@@ -185,38 +185,6 @@ types:
         self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
                           operations['test_interface2.shutdown'])
 
-    def test_workflows_recursive_imports(self):
-        bottom_level_yaml = self.MINIMAL_BLUEPRINT + """
-workflows:
-    install1:
-        radial: "bottom radial install1"
-        """
-
-        bottom_file_name = self.make_yaml_file(bottom_level_yaml)
-        mid_level_yaml = """
-workflows:
-    install2:
-        radial: "mid radial install2"
-imports:
-    -   {0}""".format(bottom_file_name)
-        mid_file_name = self.make_yaml_file(mid_level_yaml)
-        top_level_yaml = """
-workflows:
-    install3:
-        radial: "top radial install3"
-imports:
-    -   {0}""".format(mid_file_name)
-
-        result = parse(top_level_yaml)
-        self._assert_minimal_blueprint(result)
-        self.assertEquals(3, len(result['workflows']))
-        self.assertEquals('bottom radial install1',
-                          result['workflows']['install1'])
-        self.assertEquals('mid radial install2',
-                          result['workflows']['install2'])
-        self.assertEquals('top radial install3',
-                          result['workflows']['install3'])
-
     def test_recursive_imports(self):
         bottom_level_yaml = self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
@@ -309,202 +277,6 @@ imports:
         result = parse(yaml, alias_mapping_url=alias_path)
         self._assert_minimal_blueprint(result)
 
-    def test_empty_first_level_workflows(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-workflows: {}
-        """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-
-    def test_first_level_workflows_radial(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-workflows:
-        install:
-            radial: "my custom radial"
-        """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        self.assertEquals('my custom radial', result['workflows']['install'])
-
-    def test_first_level_workflows_ref(self):
-        ref_alias = 'ref_alias'
-        radial_file_path = self.make_file_with_name('my custom radial',
-                                                    'radial_file.radial')
-
-        yaml = self.MINIMAL_BLUEPRINT + """
-workflows:
-        install:
-            ref: {0}
-        """.format(ref_alias)
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_minimal_blueprint(result)
-        self.assertEquals('my custom radial', result['workflows']['install'])
-
-    def test_first_level_workflows_both_radial_and_ref(self):
-        ref_alias = 'ref_alias'
-        radial_file_path = self.make_file_with_name('custom ref',
-                                                    'radial_file.radial')
-
-        yaml = self.MINIMAL_BLUEPRINT + """
-workflows:
-        install:
-            radial: "my custom radial"
-        uninstall:
-            ref: {0}
-        """.format(ref_alias)
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_minimal_blueprint(result)
-        self.assertEquals('my custom radial', result['workflows']['install'])
-        self.assertEquals('custom ref', result['workflows']['uninstall'])
-
-    def test_type_empty_workflows(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        properties:
-            - key
-        workflows: {}
-    """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-
-    def test_type_workflows_both_radial_and_ref(self):
-        ref_alias = 'ref_alias'
-        radial_file_path = self.make_file_with_name('custom ref',
-                                                    'radial_file.radial')
-
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        properties:
-            - key
-        workflows:
-            install:
-                radial: "my custom radial"
-            uninstall:
-                ref: {0}
-            """.format(ref_alias)
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_minimal_blueprint(result)
-        node = result['nodes'][0]
-        self.assertEquals('my custom radial', node['workflows']['install'])
-        self.assertEquals('custom ref', node['workflows']['uninstall'])
-        self.assertEquals(2, len(node['workflows']))
-
-    def test_instance_empty_workflows(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-            workflows: {}
-    """
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-
-    def test_instance_workflows_both_radial_and_ref(self):
-        ref_alias = 'ref_alias'
-        radial_file_path = self.make_file_with_name('custom ref',
-                                                    'radial_file.radial')
-
-        yaml = self.MINIMAL_BLUEPRINT + """
-            workflows:
-                install:
-                    radial: "my custom radial"
-                uninstall:
-                    ref: {0}""".format(ref_alias)
-
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_minimal_blueprint(result)
-        node = result['nodes'][0]
-        self.assertEquals('my custom radial', node['workflows']['install'])
-        self.assertEquals('custom ref', node['workflows']['uninstall'])
-        self.assertEquals(2, len(node['workflows']))
-
-    def test_relationship_empty_workflows(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        workflows: {}
-"""
-        result = parse(yaml)
-        self._assert_minimal_blueprint(result)
-        relationships = result['relationships']
-        self.assertEquals(1, len(relationships))
-        test_relationship = relationships['test_relationship']
-        self.assertEquals(0, len(test_relationship['workflows']))
-
-    def test_relationship_workflows_both_radial_and_ref(self):
-        ref_alias = 'ref_alias'
-        radial_file_path = self.make_file_with_name('custom ref',
-                                                    'radial_file.radial')
-
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        workflows:
-            unlink:
-                radial: "my custom radial"
-            establish:
-                ref: {0}""".format(ref_alias)
-
-        result = parse(yaml, alias_mapping_dict={ref_alias: radial_file_path})
-        self._assert_minimal_blueprint(result)
-        test_relationship = result['relationships']['test_relationship']
-        self.assertEquals('my custom radial',
-                          test_relationship['workflows']['unlink'])
-        self.assertEquals('custom ref',
-                          test_relationship['workflows']['establish'])
-        self.assertEquals(2, len(test_relationship['workflows']))
-
-    def test_instance_relationship_empty_workflows(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - type: test_relationship
-                  target: test_node
-                  workflows: {}
-relationships:
-    test_relationship: {}
-"""
-        result = parse(yaml)
-        source_node = result['nodes'][1]
-        self.assertEquals(1, len(source_node['relationships']))
-        node_relationship = source_node['relationships'][0]
-        self.assertEquals(0, len(node_relationship['workflows']))
-
-    def test_instance_relationship_workflows_both_radial_and_ref(self):
-        ref_alias = 'ref_alias'
-        radial_file_path = self.make_file_with_name('custom ref',
-                                                    'radial_file.radial')
-
-        yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - type: test_relationship
-                  target: test_node
-                  workflows:
-                      unlink:
-                          radial: "my custom radial"
-                      establish:
-                          ref: ref_alias
-relationships:
-    test_relationship: {}
-
-"""
-
-        result = parse(yaml, alias_mapping_dict={ref_alias: radial_file_path})
-        source_node = result['nodes'][1]
-        self.assertEquals(1, len(source_node['relationships']))
-        node_relationship = source_node['relationships'][0]
-        self.assertEquals(2, len(node_relationship['workflows']))
-        self.assertEquals('my custom radial',
-                          node_relationship['workflows']['unlink'])
-        self.assertEquals('custom ref',
-                          node_relationship['workflows']['establish'])
-
     def test_instance_relationship_base_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
         -   name: test_node2
@@ -560,291 +332,6 @@ relationships:
         self.assertEquals('contained', n5_relationship['base'])
         self.assertEquals('contained', n6_relationship['base'])
         self.assertEquals('undefined', n7_relationship['base'])
-
-    def test_type_workflows_recursive_inheritance(self):
-        # tests for multiple-hierarchy workflows inheritance between types,
-        # including back and forth switches between radial and ref overrides,
-        # as well as overridden non-existent ref values
-        ref_alias1 = 'ref_alias1'
-        radial_file1_path = self.make_file_with_name('ref install2',
-                                                     'radial_file1.radial')
-        ref_alias2 = 'ref_alias2'
-        radial_file2_path = self.make_file_with_name('parent ref install5',
-                                                     'radial_file2.radial')
-        ref_file_3 = self.make_file_with_name('some radial code',
-                                              'ref_3.radial')
-
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        properties:
-            - key
-        derived_from: "test_type_parent"
-        workflows:
-            install1:
-                radial: "radial install1"
-            install2:
-                ref: {0}""".format(ref_alias1) + """
-            install4:
-                radial: "radial install4"
-
-    test_type_parent:
-        derived_from: "test_type_grandparent"
-        workflows:
-            install1:
-                ref: "{0}"
-            install2:
-                radial: "parent radial install2"
-            install5:
-                ref: {1}""".format(ref_file_3, ref_alias2) + """
-    test_type_grandparent:
-        workflows:
-            install1:
-                radial: "grandparent radial install1"
-            install2:
-                ref: "{0}"
-            install3:
-                radial: "grandparent radial install3"
-            install4:
-                ref: "{1}"
-            """.format(ref_file_3, ref_file_3)
-
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
-            '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
-        })
-
-        self._assert_minimal_blueprint(result)
-        node = result['nodes'][0]
-        self.assertEquals('radial install1', node['workflows']['install1'])
-        self.assertEquals('ref install2', node['workflows']['install2'])
-        self.assertEquals('grandparent radial install3',
-                          node['workflows']['install3'])
-        self.assertEquals('radial install4', node['workflows']['install4'])
-        self.assertEquals('parent ref install5', node['workflows']['install5'])
-        self.assertEquals(5, len(node['workflows']))
-
-    def test_type_and_node_workflows_recursive_inheritance(self):
-        # tests for multiple-hierarchy workflows inheritance between types and
-        #  an instance,
-        # including back and forth switches between radial and ref overrides,
-        # as well as overridden non-existent ref values
-        ref_alias1 = 'ref_alias1'
-        radial_file1_path = self.make_file_with_name('node ref install2',
-                                                     'radial_file1.radial')
-        ref_alias2 = 'ref_alias2'
-        radial_file2_path = self.make_file_with_name('ref install5',
-                                                     'radial_file2.radial')
-        ref_file_3 = self.make_file_with_name('some radial code',
-                                              'ref_3.radial')
-        ref_file_4 = self.make_file_with_name('some radial code',
-                                              'ref_4.radial')
-
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-            workflows:
-                install1:
-                    radial: "node radial install1"
-                install2:
-                    ref: {0}""".format(ref_alias1) + """
-                install4:
-                    radial: "node radial install4"
-types:
-    test_type:
-        properties:
-            - key
-        derived_from: "test_type_parent"
-        workflows:
-            install1:
-                ref: "{0}"
-            install2:
-                radial: "radial install2"
-            install5:
-                ref: {1}""".format(ref_file_3, ref_alias2) + """
-
-    test_type_parent:
-        workflows:
-            install1:
-                radial: "parent radial install1"
-            install2:
-                ref: "{0}"
-            install3:
-                radial: "parent radial install3"
-            install4:
-                ref: "{1}"
-            """.format(ref_file_4, ref_file_4)
-
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
-            '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
-        })
-
-        self._assert_minimal_blueprint(result)
-        node = result['nodes'][0]
-        self.assertEquals('node radial install1',
-                          node['workflows']['install1'])
-        self.assertEquals('node ref install2',
-                          node['workflows']['install2'])
-        self.assertEquals('parent radial install3',
-                          node['workflows']['install3'])
-        self.assertEquals('node radial install4',
-                          node['workflows']['install4'])
-        self.assertEquals('ref install5', node['workflows']['install5'])
-        self.assertEquals(5, len(node['workflows']))
-
-    def test_relationship_workflows_recursive_inheritance(self):
-        # tests for multiple-hierarchy workflows inheritance between
-        # relationships, including back and forth switches between radial and
-        # ref overrides, as well as overridden non-existent ref values
-        ref_alias1 = 'ref_alias1'
-        radial_file1_path = self.make_file_with_name('ref install2',
-                                                     'radial_file1.radial')
-        ref_alias2 = 'ref_alias2'
-        radial_file2_path = self.make_file_with_name('parent ref install5',
-                                                     'radial_file2.radial')
-        ref_file_3 = self.make_file_with_name('some radial code',
-                                              'ref_3.radial')
-
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - target: test_node
-                  type: test_relationship
-types:
-    test_type:
-        properties:
-            - key: default
-
-relationships:
-    test_relationship:
-        derived_from: "test_parent_relationships"
-        workflows:
-            install1:
-                radial: "radial install1"
-            install2:
-                ref: {0}""".format(ref_alias1) + """
-            install4:
-                radial: "radial install4"
-
-    test_parent_relationships:
-        derived_from: "test_grandparent_relationships"
-        workflows:
-            install1:
-                ref: "{0}"
-            install2:
-                radial: "parent radial install2"
-            install5:
-                ref: {1}""".format(ref_file_3, ref_alias2) + """
-    test_grandparent_relationships:
-        workflows:
-            install1:
-                radial: "grandparent radial install1"
-            install2:
-                ref: "{0}"
-            install3:
-                radial: "grandparent radial install3"
-            install4:
-                ref: "{1}"
-            """.format(ref_file_3, ref_file_3)
-
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
-            '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
-        })
-
-        relationship = result['nodes'][1]['relationships'][0]
-        self.assertEquals('radial install1',
-                          relationship['workflows']['install1'])
-        self.assertEquals('ref install2',
-                          relationship['workflows']['install2'])
-        self.assertEquals('grandparent radial install3',
-                          relationship['workflows']['install3'])
-        self.assertEquals('radial install4',
-                          relationship['workflows']['install4'])
-        self.assertEquals('parent ref install5',
-                          relationship['workflows']['install5'])
-        self.assertEquals(5, len(relationship['workflows']))
-
-    def test_relationship_and_instance_workflows_recursive_inheritance(self):
-        # tests for multiple-hierarchy workflows inheritance between
-        # relationships, including back and forth switches between radial and
-        # ref overrides, as well as overridden non-existent ref values
-        ref_alias1 = 'ref_alias1'
-        radial_file1_path = self.make_file_with_name('ref install2',
-                                                     'radial_file1.radial')
-        ref_alias2 = 'ref_alias2'
-        radial_file2_path = self.make_file_with_name('parent ref install5',
-                                                     'radial_file2.radial')
-        ref_file_3 = self.make_file_with_name('some radial code',
-                                              'ref_3.radial')
-
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - target: test_node
-                  type: test_relationship
-                  workflows:
-                      install1:
-                          radial: "node radial install1"
-                      install2:
-                          ref: {0}""".format(ref_alias1) + """
-                      install4:
-                          radial: "node radial install4"
-types:
-    test_type:
-        properties:
-            - key: default
-
-relationships:
-    test_relationship:
-        derived_from: "test_parent_relationships"
-        workflows:
-            install1:
-                radial: "radial install1"
-            install2:
-                ref: {0}""".format(ref_alias1) + """
-            install4:
-                radial: "radial install4"
-
-    test_parent_relationships:
-        derived_from: "test_grandparent_relationships"
-        workflows:
-            install1:
-                ref: "{0}"
-            install2:
-                radial: "parent radial install2"
-            install5:
-                ref: {1}""".format(ref_file_3, ref_alias2) + """
-    test_grandparent_relationships:
-        workflows:
-            install1:
-                radial: "grandparent radial install1"
-            install2:
-                ref: "{0}"
-            install3:
-                radial: "grandparent radial install3"
-            install4:
-                ref: "{1}"
-            """.format(ref_file_3, ref_file_3)
-
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias1): '{0}'.format(radial_file1_path),
-            '{0}'.format(ref_alias2): '{0}'.format(radial_file2_path)
-        })
-
-        relationship = result['nodes'][1]['relationships'][0]
-        self.assertEquals('node radial install1',
-                          relationship['workflows']['install1'])
-        self.assertEquals('ref install2',
-                          relationship['workflows']['install2'])
-        self.assertEquals('grandparent radial install3',
-                          relationship['workflows']['install3'])
-        self.assertEquals('node radial install4',
-                          relationship['workflows']['install4'])
-        self.assertEquals('parent ref install5',
-                          relationship['workflows']['install5'])
-        self.assertEquals(5, len(relationship['workflows']))
 
     def test_type_properties_derivation(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
@@ -1220,8 +707,7 @@ relationships:
                         """
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
-        self.assertDictEqual({'name': 'test_relationship',
-                              'workflows': {}},
+        self.assertDictEqual({'name': 'test_relationship'},
                              result['relationships']['test_relationship'])
 
     def test_top_level_relationships_single_complete_relationship(self):
@@ -1239,8 +725,7 @@ relationships:
         """
         result = parse(yaml)
         self._assert_blueprint(result)
-        self.assertDictEqual({'name': 'empty_rel',
-                              'workflows': {}},
+        self.assertDictEqual({'name': 'empty_rel'},
                              result['relationships']['empty_rel'])
         test_relationship = result['relationships']['test_relationship']
         self.assertEquals('test_relationship', test_relationship['name'])
@@ -1252,22 +737,6 @@ relationships:
             test_relationship['target_interfaces']['test_interface4']
         self.assertEquals({'test_interface4_op1': 'test_plugin.task_name'},
                           result_test_interface_4[0])
-
-    def _test_top_level_relationships_relationship_with_ref_workflow(self):
-        ref_alias = 'ref_alias'
-        radial_file_path = self.make_file_with_name('ref custom radial',
-                                                    'radial_file.radial')
-
-        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
-relationships:
-    test_relationship:
-        workflow:
-            ref: "{0}\"""".format(ref_alias)
-        result = parse(yaml, alias_mapping_dict={
-            '{0}'.format(ref_alias): '{0}'.format(radial_file_path)})
-        self._assert_blueprint(result)
-        test_relationship = result['relationships']['test_relationship']
-        self.assertEquals('ref custom radial', test_relationship['workflow'])
 
     def test_top_level_relationships_recursive_imports(self):
         bottom_level_yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
@@ -1302,8 +771,7 @@ imports:
 
         result = parse(top_level_yaml)
         self._assert_blueprint(result)
-        self.assertDictEqual({'name': 'empty_rel',
-                              'workflows': {}},
+        self.assertDictEqual({'name': 'empty_rel'},
                              result['relationships']['empty_rel'])
         test_relationship = result['relationships']['test_relationship']
         self.assertEquals('test_relationship',
@@ -1316,7 +784,7 @@ imports:
                              ['test_interface2'][1])
         self.assertEquals(
             2, len(test_relationship['source_interfaces']['test_interface2']))
-        self.assertEquals(4, len(test_relationship))
+        self.assertEquals(3, len(test_relationship))
 
         test_relationship2 = result['relationships']['test_relationship2']
         self.assertEquals('test_relationship2', test_relationship2['name'])
@@ -1328,7 +796,7 @@ imports:
                              ['test_interface2'][1])
         self.assertEquals(
             2, len(test_relationship2['target_interfaces']['test_interface2']))
-        self.assertEquals(4, len(test_relationship2))
+        self.assertEquals(3, len(test_relationship2))
 
         test_relationship3 = result['relationships']['test_relationship3']
         self.assertEquals('test_relationship3', test_relationship3['name'])
@@ -1340,7 +808,7 @@ imports:
                              ['test_interface2'][1])
         self.assertEquals(
             2, len(test_relationship3['target_interfaces']['test_interface2']))
-        self.assertEquals(3, len(test_relationship3))
+        self.assertEquals(2, len(test_relationship3))
 
     def test_top_level_relationship_properties(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -1467,7 +935,7 @@ plugins:
             relationship_source_operations['test_interface1.install'])
         self.assertEqual(2, len(relationship_source_operations))
 
-        self.assertEquals(8, len(relationship))
+        self.assertEquals(7, len(relationship))
         plugin_def = result['nodes'][1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
         self.assertEquals('false', plugin_def['agent_plugin'])
@@ -1503,8 +971,8 @@ relationships:
                           result['nodes'][1]['relationships'][0]['state'])
         self.assertEquals('reachable',
                           result['nodes'][1]['relationships'][1]['state'])
-        self.assertEquals(6, len(result['nodes'][1]['relationships'][0]))
-        self.assertEquals(6, len(result['nodes'][1]['relationships'][1]))
+        self.assertEquals(5, len(result['nodes'][1]['relationships'][0]))
+        self.assertEquals(5, len(result['nodes'][1]['relationships'][1]))
 
     def test_instance_relationships_relationship_inheritance(self):
         # possibly 'inheritance' is the wrong term to use here,
@@ -1562,7 +1030,7 @@ plugins:
                              rel_target_ops['interface2.op2'])
         self.assertEquals(2, len(rel_target_ops))
 
-        self.assertEquals(10, len(relationship))
+        self.assertEquals(9, len(relationship))
 
     def test_instance_relationship_properties_inheritance(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -1655,9 +1123,9 @@ plugins:
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
-        self.assertEquals(3, len(parent_relationship))
-        self.assertEquals(5, len(relationship))
-        self.assertEquals(10, len(node_relationship))
+        self.assertEquals(2, len(parent_relationship))
+        self.assertEquals(4, len(relationship))
+        self.assertEquals(9, len(node_relationship))
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
@@ -1776,9 +1244,9 @@ plugins:
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
-        self.assertEquals(4, len(parent_relationship))
-        self.assertEquals(5, len(relationship))
-        self.assertEquals(10, len(node_relationship))
+        self.assertEquals(3, len(parent_relationship))
+        self.assertEquals(4, len(relationship))
+        self.assertEquals(9, len(node_relationship))
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
@@ -2205,19 +1673,6 @@ imports:
         result = parse(yaml)
         self._assert_blueprint(result)
 
-    def test_relative_ref(self):
-        self.make_file_with_name('my custom radial', 'radial_file.radial')
-
-        yaml = self.MINIMAL_BLUEPRINT + """
-workflows:
-        install:
-            ref: {0}
-        """.format('radial_file.radial')
-        file_path = self.make_yaml_file(yaml)
-        result = parse_from_path(file_path)
-        self._assert_minimal_blueprint(result)
-        self.assertEquals('my custom radial', result['workflows']['install'])
-
     def test_node_interfaces_operation_mapping(self):
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
             interfaces:
@@ -2292,7 +1747,7 @@ plugins:
         self.assertDictEqual(op_struct('test_plugin1', 'install'),
                              rel1_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel1_source_ops))
-        self.assertEquals(8, len(relationship1))
+        self.assertEquals(7, len(relationship1))
         plugin1_def = result['nodes'][1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
         self.assertEquals('false', plugin1_def['agent_plugin'])
@@ -2308,7 +1763,7 @@ plugins:
         self.assertDictEqual(op_struct('test_plugin2', 'install'),
                              rel2_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel2_source_ops))
-        self.assertEquals(8, len(relationship2))
+        self.assertEquals(7, len(relationship2))
 
         # expecting the other plugin to be under test_node rather than
         # test_node2:
@@ -2560,7 +2015,6 @@ type_implementations:
             relationships:
                 - type: test_relationship
                   target: test_node
-                  workflows: {}
 relationships:
     test_relationship: {} """]) + """
 
