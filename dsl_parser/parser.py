@@ -183,7 +183,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                         relationship_impls,
                         node_names_set)
 
-    workflows = _process_workflows(combined_parsed_dsl.get(WORKFLOWS, {}))
+    workflows = _process_workflows(combined_parsed_dsl.get(WORKFLOWS, {}),
+                                   processed_plugins)
 
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
@@ -705,8 +706,20 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         raise DSLParsingLogicException(error_code, error_message)
 
 
-def _process_workflows(workflows):
-    return {}
+def _process_workflows(workflows, plugins):
+    processed_workflows = {}
+    error_code = 1000  # TODO
+    plugin_names = plugins.keys()
+    for name, mapping in workflows.items():
+        op_descriptor = \
+            _extract_plugin_name_and_operation_mapping_from_operation(
+                plugins=plugins,
+                plugin_names=plugin_names,
+                operation={name: mapping},
+                error_code=error_code,
+                partial_error_message='Workflow: {0}'.format(name))
+        processed_workflows[name] = op_descriptor.op_struct
+    return processed_workflows
 
 
 def _validate_no_duplicate_nodes(nodes):
