@@ -56,6 +56,11 @@ from yaml.parser import ParserError
 from schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 
 
+from collections import namedtuple
+OpDescriptor = namedtuple('OpDescriptor', [
+    'plugin', 'op_struct', 'name'])
+
+
 def parse_from_path(dsl_file_path, alias_mapping_dict=None,
                     alias_mapping_url=None, resources_base_url=None):
     with open(dsl_file_path, 'r') as f:
@@ -161,15 +166,19 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     relationship_impls = _get_dict_prop(combined_parsed_dsl,
                                         RELATIONSHIP_IMPLEMENTATIONS).copy()
 
+    plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
+    processed_plugins = {name: _process_plugin(plugin, name)
+                         for (name, plugin) in plugins.items()}
+
     processed_nodes = map(lambda node: _process_node(
         node, combined_parsed_dsl,
         top_level_relationships, node_names_set, type_impls,
-        relationship_impls), nodes)
+        relationship_impls, processed_plugins), nodes)
 
     _post_process_nodes(processed_nodes,
                         _get_dict_prop(combined_parsed_dsl, TYPES),
                         _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS),
-                        _get_dict_prop(combined_parsed_dsl, PLUGINS),
+                        processed_plugins,
                         type_impls,
                         relationship_impls,
                         node_names_set)
@@ -388,18 +397,22 @@ def _process_context_operations(partial_error_message, interfaces, plugins,
         _validate_no_duplicate_operations(operation_mapping_context,
                                           interface_name, node['id'],
                                           node['type'])
-        for operation_name, plugin_name, operation_mapping, \
-                operation_properties in operation_mapping_context:
-            if plugin_name is not None:
-                plugin = plugins[plugin_name]
-                node[PLUGINS][plugin_name] = _process_plugin(plugin,
-                                                             plugin_name)
-                op_struct = _operation_struct(
-                    plugin_name, operation_mapping,
-                    _expand(operation_properties,
-                            _get_dict_prop(node, 'properties'),
-                            node['id'],
-                            operation_name))
+        # for operation_name, plugin_name, operation_mapping, \
+        #         operation_properties in operation_mapping_context:
+        for op_descriptor in operation_mapping_context:
+            if op_descriptor.plugin is not None:
+                op_struct = op_descriptor.op_struct
+                plugin_name = op_descriptor.op_struct['plugin']
+                operation_name = op_descriptor.name
+                operation_properties = _expand(
+                    op_descriptor.op_struct.get('properties'),
+                    _get_dict_prop(node, 'properties'),
+                    node['id'],
+                    operation_name)
+                node[PLUGINS][plugin_name] = op_descriptor.plugin
+                op_struct = op_struct.copy()
+                if operation_properties is not None:
+                    op_struct['properties'] = operation_properties
                 if operation_name in operations:
                     # Indicate this implicit operation name needs to be
                     # removed as we can only
@@ -440,12 +453,11 @@ def _extract_plugin_names_and_operation_mapping_from_interface(
     plugin_names = plugins.keys()
     result = []
     for operation in interface:
-        (operation_name, plugin_name, operation_mapping,
-         operation_properties) = \
+        op_descriptor = \
             _extract_plugin_name_and_operation_mapping_from_operation(
-                plugin_names, operation, error_code, partial_error_message)
-        result.append((operation_name, plugin_name,
-                       operation_mapping, operation_properties))
+                plugins, plugin_names, operation, error_code,
+                partial_error_message)
+        result.append(op_descriptor)
     return result
 
 
@@ -644,12 +656,18 @@ def _merge_interface_list(overridden_interface, overriding_interface):
 
 
 def _extract_plugin_name_and_operation_mapping_from_operation(
+        plugins,
         plugin_names,
         operation,
         error_code,
         partial_error_message):
     if type(operation) == str:
-        return operation, None, None, None
+        return OpDescriptor(name=operation,
+                            plugin=None,
+                            op_struct=_operation_struct(
+                                operation_mapping=None,
+                                plugin_name=None,
+                                operation_properties=None))
     operation_name = operation.keys()[0]
     operation_content = operation.values()[0]
     operation_properties = None
@@ -668,8 +686,14 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 longest_prefix = plugin_name_length
                 longest_prefix_plugin_name = plugin_name
     if longest_prefix_plugin_name is not None:
-        return operation_name, longest_prefix_plugin_name, \
-            operation_mapping[longest_prefix + 1:], operation_properties
+        return OpDescriptor(
+            name=operation_name,
+            plugin=plugins[longest_prefix_plugin_name],
+            op_struct=_operation_struct(
+                plugin_name=longest_prefix_plugin_name,
+                operation_mapping=operation_mapping[longest_prefix + 1:],
+                operation_properties=operation_properties
+            ))
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
@@ -867,7 +891,8 @@ def _validate_no_duplicate_operations(interface_operation_mappings,
                                       node_type=None,
                                       relationship_name=None):
     operation_names = set()
-    for operation_name, _, _, _ in interface_operation_mappings:
+    for op_descriptor in interface_operation_mappings:
+        operation_name = op_descriptor.name
         if operation_name in operation_names:
             error_message = 'Duplicate operation {0} found in interface {1} '\
                             .format(operation_name, interface_name)
@@ -891,7 +916,7 @@ def _operation_struct(plugin_name, operation_mapping, operation_properties):
 
 def _process_node(node, parsed_dsl,
                   top_level_relationships, node_names_set, type_impls,
-                  relationship_impls):
+                  relationship_impls, plugins):
     declared_node_type_name = node['type']
     node_name = node['name']
     app_name = parsed_dsl[BLUEPRINT]['name']
@@ -928,7 +953,7 @@ def _process_node(node, parsed_dsl,
         operations = _process_context_operations(
             partial_error_message,
             complete_node_type[INTERFACES],
-            _get_dict_prop(parsed_dsl, PLUGINS),
+            plugins,
             processed_node, 10)
 
         processed_node['operations'] = operations

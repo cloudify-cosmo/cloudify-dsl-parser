@@ -1662,17 +1662,6 @@ imports:
         result = parse_from_path(top_file_name)
         self._assert_blueprint(result)
 
-    def test_plugins_with_root_plugin(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_TYPE + \
-            self.BASIC_PLUGIN + """
-    cloudify.plugins.plugin: {}
-    cloudify.plugins.remote_plugin:
-        derived_from: "cloudify.plugins.plugin"
-
-        """
-        result = parse(yaml)
-        self._assert_blueprint(result)
-
     def test_node_interfaces_operation_mapping(self):
         yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
             interfaces:
