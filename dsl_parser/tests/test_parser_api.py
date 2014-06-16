@@ -2151,6 +2151,59 @@ workflows:
         self.assertEqual(1, len(workflow_plugins_to_install))
         self.assertEqual('test_plugin', workflow_plugins_to_install[0]['name'])
 
+    def test_workflow_advanced_mapping(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        properties:
+            prop1: value1
+            prop2: value2
+
+"""
+        result = parse(yaml)
+        workflows = result['workflows']
+        self.assertEqual(1, len(workflows))
+        self.assertEqual(op_struct('test_plugin', 'workflow1',
+                                   properties={'prop1': 'value1',
+                                               'prop2': 'value2'}),
+                         workflows['workflow1'])
+        workflow_plugins_to_install = result['workflow_plugins_to_install']
+        self.assertEqual(1, len(workflow_plugins_to_install))
+        self.assertEqual('test_plugin', workflow_plugins_to_install[0]['name'])
+
+    def test_workflow_imports(self):
+        workflows1 = """
+workflows:
+    workflow1: test_plugin.workflow1
+"""
+        workflows2 = """
+plugins:
+    test_plugin2:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            url: "http://test_url.zip"
+workflows:
+    workflow2: test_plugin2.workflow2
+"""
+        yaml = self.create_yaml_with_imports([
+            self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS,
+            workflows1,
+            workflows2
+        ])
+        result = parse(yaml)
+        workflows = result['workflows']
+        self.assertEqual(2, len(workflows))
+        self.assertEqual(op_struct('test_plugin', 'workflow1'),
+                         workflows['workflow1'])
+        self.assertEqual(op_struct('test_plugin2', 'workflow2'),
+                         workflows['workflow2'])
+        workflow_plugins_to_install = result['workflow_plugins_to_install']
+        self.assertEqual(2, len(workflow_plugins_to_install))
+        self.assertEqual('test_plugin', workflow_plugins_to_install[0]['name'])
+        self.assertEqual('test_plugin2',
+                         workflow_plugins_to_install[1]['name'])
+
 
 class ManagementPluginsToInstallTest(AbstractTestParser):
     def test_one_manager_one_agent_plugin_on_same_node(self):
