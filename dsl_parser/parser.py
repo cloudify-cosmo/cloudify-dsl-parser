@@ -724,7 +724,6 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
 
 def _process_workflows(workflows, plugins):
     processed_workflows = {}
-    error_code = 1000  # TODO
     plugin_names = plugins.keys()
     for name, mapping in workflows.items():
         op_descriptor = \
@@ -732,8 +731,8 @@ def _process_workflows(workflows, plugins):
                 plugins=plugins,
                 plugin_names=plugin_names,
                 operation={name: mapping},
-                error_code=error_code,
-                partial_error_message='Workflow: {0}'.format(name))
+                error_code=21,
+                partial_error_message='')
         processed_workflows[name] = op_descriptor.op_struct
     return processed_workflows
 

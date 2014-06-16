@@ -2140,7 +2140,7 @@ workflows: {}
     def test_workflow_basic_mapping(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
 workflows:
-    workflow1: test_plugin.workflow1
+    workflow1: test_plugin2.workflow1
 """
         result = parse(yaml)
         workflows = result['workflows']
