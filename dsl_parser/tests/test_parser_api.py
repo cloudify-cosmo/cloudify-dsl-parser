@@ -1123,9 +1123,9 @@ plugins:
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
-        self.assertEquals(3, len(parent_relationship))
-        self.assertEquals(5, len(relationship))
-        self.assertEquals(11, len(node_relationship))
+        self.assertEquals(2, len(parent_relationship))
+        self.assertEquals(4, len(relationship))
+        self.assertEquals(10, len(node_relationship))
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
@@ -1244,9 +1244,9 @@ plugins:
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
-        self.assertEquals(4, len(parent_relationship))
-        self.assertEquals(5, len(relationship))
-        self.assertEquals(11, len(node_relationship))
+        self.assertEquals(3, len(parent_relationship))
+        self.assertEquals(4, len(relationship))
+        self.assertEquals(10, len(node_relationship))
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
@@ -2200,7 +2200,7 @@ workflows: {}
     def test_workflow_basic_mapping(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
 workflows:
-    workflow1: test_plugin2.workflow1
+    workflow1: test_plugin.workflow1
 """
         result = parse(yaml)
         workflows = result['workflows']
