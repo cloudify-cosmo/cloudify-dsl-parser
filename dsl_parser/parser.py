@@ -234,9 +234,10 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                                          plugins,
                                          contained_in_rel_types,
                                          connected_to_rel_types,
-                                         depends_on_rel_types)
-        node[TYPE_HIERARCHY] = _create_node_types_hierarchy(node['type'],
-                                                            types)
+                                         depends_on_rel_types,
+                                         relationships)
+        node[TYPE_HIERARCHY] = _create_type_hierarchy(node['type'], types)
+
     # set host_id property to all relevant nodes
     host_types = _build_family_descendants_set(types, HOST_TYPE)
     for node in processed_nodes:
@@ -280,7 +281,7 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     _validate_relationship_impls(relationship_impls)
 
 
-def _create_node_types_hierarchy(type_name, types):
+def _create_type_hierarchy(type_name, types):
     """
     Creates node types hierarchy as list where the last type in the list is
     the actual node type.
@@ -288,7 +289,7 @@ def _create_node_types_hierarchy(type_name, types):
     current_type = types[type_name]
     if 'derived_from' in current_type:
         parent_type_name = current_type['derived_from']
-        types_hierarchy = _create_node_types_hierarchy(parent_type_name, types)
+        types_hierarchy = _create_type_hierarchy(parent_type_name, types)
         types_hierarchy.append(type_name)
         return types_hierarchy
     return [type_name]
@@ -299,7 +300,8 @@ def _post_process_node_relationships(node,
                                      plugins,
                                      contained_in_rel_types,
                                      connected_to_rel_types,
-                                     depends_on_rel_type):
+                                     depends_on_rel_type,
+                                     relationships):
     contained_in_relationships = []
     if RELATIONSHIPS in node:
         for relationship in node[RELATIONSHIPS]:
@@ -315,6 +317,9 @@ def _post_process_node_relationships(node,
                                            connected_to_rel_types,
                                            depends_on_rel_type,
                                            contained_in_relationships)
+            relationship[TYPE_HIERARCHY] = _create_type_hierarchy(
+                relationship['type'], relationships)
+
     if len(contained_in_relationships) > 1:
         ex = DSLParsingLogicException(
             112, 'Node {0} has more than one relationship that is derived'
