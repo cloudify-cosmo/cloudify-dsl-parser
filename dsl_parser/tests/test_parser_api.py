@@ -1467,7 +1467,7 @@ plugins:
             relationship_source_operations['test_interface1.install'])
         self.assertEqual(2, len(relationship_source_operations))
 
-        self.assertEquals(8, len(relationship))
+        self.assertEquals(9, len(relationship))
         plugin_def = result['nodes'][1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
         self.assertEquals('false', plugin_def['agent_plugin'])
@@ -1503,8 +1503,8 @@ relationships:
                           result['nodes'][1]['relationships'][0]['state'])
         self.assertEquals('reachable',
                           result['nodes'][1]['relationships'][1]['state'])
-        self.assertEquals(6, len(result['nodes'][1]['relationships'][0]))
-        self.assertEquals(6, len(result['nodes'][1]['relationships'][1]))
+        self.assertEquals(7, len(result['nodes'][1]['relationships'][0]))
+        self.assertEquals(7, len(result['nodes'][1]['relationships'][1]))
 
     def test_instance_relationships_relationship_inheritance(self):
         # possibly 'inheritance' is the wrong term to use here,
@@ -1562,7 +1562,7 @@ plugins:
                              rel_target_ops['interface2.op2'])
         self.assertEquals(2, len(rel_target_ops))
 
-        self.assertEquals(10, len(relationship))
+        self.assertEquals(11, len(relationship))
 
     def test_instance_relationship_properties_inheritance(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -1657,7 +1657,7 @@ plugins:
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(3, len(parent_relationship))
         self.assertEquals(5, len(relationship))
-        self.assertEquals(10, len(node_relationship))
+        self.assertEquals(11, len(node_relationship))
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
@@ -1778,7 +1778,7 @@ plugins:
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(4, len(parent_relationship))
         self.assertEquals(5, len(relationship))
-        self.assertEquals(10, len(node_relationship))
+        self.assertEquals(11, len(node_relationship))
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
@@ -1871,6 +1871,66 @@ plugins:
         self.assertDictEqual(op_struct('test_plugin', 'destroy1'),
                              rel_target_ops['test_interface.destroy'])
         self.assertEquals(6, len(rel_source_ops))
+
+    def test_relationship_no_type_hierarchy(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: relationship
+                    target: test_node
+relationships:
+    relationship: {}
+"""
+        result = parse(yaml)
+        relationship = result['nodes'][1]['relationships'][0]
+        self.assertTrue('type_hierarchy' in relationship)
+        type_hierarchy = relationship['type_hierarchy']
+        self.assertEqual(1, len(type_hierarchy))
+        self.assertEqual('relationship', type_hierarchy[0])
+
+    def test_relationship_type_hierarchy(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: rel2
+                    target: test_node
+relationships:
+    relationship: {}
+    rel2:
+        derived_from: relationship
+"""
+        result = parse(yaml)
+        relationship = result['nodes'][1]['relationships'][0]
+        self.assertTrue('type_hierarchy' in relationship)
+        type_hierarchy = relationship['type_hierarchy']
+        self.assertEqual(2, len(type_hierarchy))
+        self.assertEqual('relationship', type_hierarchy[0])
+        self.assertEqual('rel2', type_hierarchy[1])
+
+    def test_relationship_3_types_hierarchy(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+        -   name: test_node2
+            type: test_type
+            relationships:
+                -   type: rel3
+                    target: test_node
+relationships:
+    relationship: {}
+    rel2:
+        derived_from: relationship
+    rel3:
+        derived_from: rel2
+"""
+        result = parse(yaml)
+        relationship = result['nodes'][1]['relationships'][0]
+        self.assertTrue('type_hierarchy' in relationship)
+        type_hierarchy = relationship['type_hierarchy']
+        self.assertEqual(3, len(type_hierarchy))
+        self.assertEqual('relationship', type_hierarchy[0])
+        self.assertEqual('rel2', type_hierarchy[1])
+        self.assertEqual('rel3', type_hierarchy[2])
 
     def test_node_host_id_field(self):
         yaml = """
@@ -2292,7 +2352,7 @@ plugins:
         self.assertDictEqual(op_struct('test_plugin1', 'install'),
                              rel1_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel1_source_ops))
-        self.assertEquals(8, len(relationship1))
+        self.assertEquals(9, len(relationship1))
         plugin1_def = result['nodes'][1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
         self.assertEquals('false', plugin1_def['agent_plugin'])
@@ -2308,7 +2368,7 @@ plugins:
         self.assertDictEqual(op_struct('test_plugin2', 'install'),
                              rel2_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel2_source_ops))
-        self.assertEquals(8, len(relationship2))
+        self.assertEquals(9, len(relationship2))
 
         # expecting the other plugin to be under test_node rather than
         # test_node2:
