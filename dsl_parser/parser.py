@@ -138,6 +138,17 @@ def _create_plan_management_plugins(processed_nodes):
     return management_plugins
 
 
+def _create_plan_workflow_plugins(workflows, plugins):
+    workflow_plugins = []
+    workflow_plugin_names = set()
+    for workflow, op_struct in workflows.items():
+        if op_struct['plugin'] not in workflow_plugin_names:
+            plugin_name = op_struct['plugin']
+            workflow_plugins.append(plugins[plugin_name])
+            workflow_plugin_names.add(plugin_name)
+    return workflow_plugins
+
+
 def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
            resources_base_url, dsl_location=None):
     alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
@@ -183,8 +194,12 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                         relationship_impls,
                         node_names_set)
 
-    workflows = _process_workflows(combined_parsed_dsl.get(WORKFLOWS, {}),
-                                   processed_plugins)
+    processed_workflows = _process_workflows(
+        combined_parsed_dsl.get(WORKFLOWS, {}),
+        processed_plugins)
+    workflow_plugins_to_install = _create_plan_workflow_plugins(
+        processed_workflows,
+        processed_plugins)
 
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
@@ -194,9 +209,10 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         'name': app_name,
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
-        WORKFLOWS: workflows,
+        WORKFLOWS: processed_workflows,
         'management_plugins_to_install': plan_management_plugins,
-        'is_management_plugins_to_install': is_plan_management_plugins
+        'is_management_plugins_to_install': is_plan_management_plugins,
+        'workflow_plugins_to_install': workflow_plugins_to_install
     }
 
     return plan

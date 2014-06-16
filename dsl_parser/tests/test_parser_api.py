@@ -2147,7 +2147,9 @@ workflows:
         self.assertEqual(1, len(workflows))
         self.assertEqual(op_struct('test_plugin', 'workflow1'),
                          workflows['workflow1'])
-
+        workflow_plugins_to_install = result['workflow_plugins_to_install']
+        self.assertEqual(1, len(workflow_plugins_to_install))
+        self.assertEqual('test_plugin', workflow_plugins_to_install[0]['name'])
 
 
 class ManagementPluginsToInstallTest(AbstractTestParser):
