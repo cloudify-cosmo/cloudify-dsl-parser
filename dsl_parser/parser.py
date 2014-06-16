@@ -295,7 +295,7 @@ def _post_process_node_relationships(node,
                                            contained_in_relationships)
             relationship[TYPE_HIERARCHY] = _create_type_hierarchy(
                 relationship['type'], relationships)
-            #_add_relationship_type_hierarchy(relationship, relationships)
+            
     if len(contained_in_relationships) > 1:
         ex = DSLParsingLogicException(
             112, 'Node {0} has more than one relationship that is derived'
