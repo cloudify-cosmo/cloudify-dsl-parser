@@ -1020,11 +1020,15 @@ def _extract_node_host_id(processed_node, node_name_to_node, host_types,
 
 
 def _process_plugin(plugin, plugin_name):
+    cloudify_plugins = (
+        'cloudify.plugins.agent_plugin',
+        'cloudify.plugins.remote_plugin',
+        'cloudify.plugins.manager_plugin')
+    if plugin_name in cloudify_plugins or \
+            plugin_name == 'cloudify.plugins.plugin':
+        return plugin
     # 'cloudify.plugins.plugin'
-    if plugin['derived_from'] not in \
-            ('cloudify.plugins.agent_plugin',
-             'cloudify.plugins.remote_plugin',
-             'cloudify.plugins.manager_plugin'):
+    if plugin['derived_from'] not in cloudify_plugins:
         # TODO: consider changing the below exception to type
         # DSLParsingFormatException..?
         raise DSLParsingLogicException(
@@ -1035,7 +1039,7 @@ def _process_plugin(plugin, plugin_name):
                     'cloudify.plugins.agent_plugin',
                     'cloudify.plugins.remote_plugin',
                     'cloudify.plugins.manager_plugin'))
-    processed_plugin = copy.deepcopy(plugin[PROPERTIES])
+    processed_plugin = copy.deepcopy(plugin.get(PROPERTIES, {}))
     processed_plugin['name'] = plugin_name
     processed_plugin['agent_plugin'] = \
         str(plugin['derived_from'] == 'cloudify.plugins.agent_plugin').lower()
