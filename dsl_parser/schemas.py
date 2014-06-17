@@ -16,29 +16,19 @@
 
 __author__ = 'ran'
 
-
-SINGLE_WORKFLOW_SCHEMA = {
+ADVANCED_OPERATION_MAPPING_SCHEMA = {
     'type': 'object',
-    'oneOf': [
-        {
-            'properties': {
-                'radial': {
-                    'type': 'string'
-                }
-            },
-            'required': ['radial'],
-            'additionalProperties': False
+    'properties': {
+        'mapping': {
+            'type': 'string'
         },
-        {
-            'properties': {
-                'ref': {
-                    'type': 'string'
-                }
-            },
-            'required': ['ref'],
-            'additionalProperties': False
+        'properties': {
+            'type': 'object',
+            'minProperties': 1
         }
-    ]
+    },
+    'required': ['mapping', 'properties'],
+    'additionalProperties': False
 }
 
 INTERFACES_SCHEMA = {
@@ -49,34 +39,16 @@ INTERFACES_SCHEMA = {
             'items': {
                 'oneOf': [
                     {
-                        'type': 'object',
-                        'patternProperties': {
-                            '^': {
-                                'type': 'string'
-                            }
-                        },
-                        'maxProperties': 1,
-                        'minProperties': 1
-                    },
-                    {
                         'type': 'string'
                     },
                     {
                         'type': 'object',
                         'patternProperties': {
                             '^': {
-                                'type': 'object',
-                                'properties': {
-                                    'mapping': {
-                                        'type': 'string'
-                                    },
-                                    'properties': {
-                                        'type': 'object',
-                                        'minProperties': 1
-                                    }
-                                },
-                                'required': ['mapping', 'properties'],
-                                'additionalProperties': False
+                                'oneOf': [
+                                    {'type': 'string'},
+                                    ADVANCED_OPERATION_MAPPING_SCHEMA,
+                                ]
                             }
                         },
                         'maxProperties': 1,
@@ -94,10 +66,14 @@ INTERFACES_SCHEMA = {
 WORKFLOWS_SCHEMA = {
     'type': 'object',
     'patternProperties': {
-        '^': SINGLE_WORKFLOW_SCHEMA
+        '^': {
+            'oneOf': [
+                {'type': 'string'},
+                ADVANCED_OPERATION_MAPPING_SCHEMA,
+            ]
+        },
     }
 }
-
 
 PROPERTIES_ARRAY_SCHEMA = {
     'type': 'array',
@@ -127,14 +103,19 @@ PROPERTIES_ARRAY_SCHEMA = {
 }
 
 
-# Schema validation is currently done using a json schema validator ( see http://json-schema.org/ ),
-# since no good YAML schema validator could be found (both for Python and at all).
+# Schema validation is currently done using a json schema validator
+# ( see http://json-schema.org/ ), since no good YAML schema validator could
+# be found (both for Python and at all).
 #
-# Python implementation documentation: http://python-jsonschema.readthedocs.org/en/latest/
-# A one-stop-shop for easy API explanation: http://jsonary.com/documentation/json-schema/?
-# A website which can create a schema from a given JSON automatically: http://www.jsonschema.net/#
-#   (Note: the website was not used for creating the schema below, as among other things, its syntax seems a bit
-#   different than the one used here, and should only be used as a reference)
+# Python implementation documentation:
+# http://python-jsonschema.readthedocs.org/en/latest/
+# A one-stop-shop for easy API explanation:
+# http://jsonary.com/documentation/json-schema/?
+# A website which can create a schema from a given JSON automatically:
+# http://www.jsonschema.net/#
+# (Note: the website was not used for creating the schema below, as among
+# other things, its syntax seems a bit different than the one used here,
+# and should only be used as a reference)
 DSL_SCHEMA = {
     'type': 'object',
     'properties': {
@@ -168,7 +149,6 @@ DSL_SCHEMA = {
                                 'additionalProperties': False
                             },
                             'interfaces': INTERFACES_SCHEMA,
-                            'workflows': WORKFLOWS_SCHEMA,
                             'relationships': {
                                 'type': 'array',
                                 'items': {
@@ -187,7 +167,6 @@ DSL_SCHEMA = {
                                         },
                                         'source_interfaces': INTERFACES_SCHEMA,
                                         'target_interfaces': INTERFACES_SCHEMA,
-                                        'workflows': WORKFLOWS_SCHEMA
                                     },
                                     'required': ['type', 'target'],
                                     'additionalProperties': False
@@ -317,7 +296,6 @@ DSL_SCHEMA = {
                     'type': 'object',
                     'properties': {
                         'interfaces': INTERFACES_SCHEMA,
-                        'workflows': WORKFLOWS_SCHEMA,
                         #non-meta 'properties'
                         'properties': PROPERTIES_ARRAY_SCHEMA,
                         'derived_from': {
@@ -362,7 +340,6 @@ DSL_SCHEMA = {
                         },
                         'source_interfaces': INTERFACES_SCHEMA,
                         'target_interfaces': INTERFACES_SCHEMA,
-                        'workflows': WORKFLOWS_SCHEMA,
                         #non-meta 'properties'
                         'properties': PROPERTIES_ARRAY_SCHEMA
                     },

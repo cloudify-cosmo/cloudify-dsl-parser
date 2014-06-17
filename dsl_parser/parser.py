@@ -56,6 +56,11 @@ from yaml.parser import ParserError
 from schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 
 
+from collections import namedtuple
+OpDescriptor = namedtuple('OpDescriptor', [
+    'plugin', 'op_struct', 'name'])
+
+
 def parse_from_path(dsl_file_path, alias_mapping_dict=None,
                     alias_mapping_url=None, resources_base_url=None):
     with open(dsl_file_path, 'r') as f:
@@ -133,6 +138,17 @@ def _create_plan_management_plugins(processed_nodes):
     return management_plugins
 
 
+def _create_plan_workflow_plugins(workflows, plugins):
+    workflow_plugins = []
+    workflow_plugin_names = set()
+    for workflow, op_struct in workflows.items():
+        if op_struct['plugin'] not in workflow_plugin_names:
+            plugin_name = op_struct['plugin']
+            workflow_plugins.append(plugins[plugin_name])
+            workflow_plugin_names.add(plugin_name)
+    return workflow_plugins
+
+
 def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
            resources_base_url, dsl_location=None):
     alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
@@ -161,34 +177,39 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     relationship_impls = _get_dict_prop(combined_parsed_dsl,
                                         RELATIONSHIP_IMPLEMENTATIONS).copy()
 
+    plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
+    processed_plugins = {name: _process_plugin(plugin, name)
+                         for (name, plugin) in plugins.items()}
+
     processed_nodes = map(lambda node: _process_node(
         node, combined_parsed_dsl,
         top_level_relationships, node_names_set, type_impls,
-        relationship_impls), nodes)
+        relationship_impls, processed_plugins), nodes)
 
     _post_process_nodes(processed_nodes,
                         _get_dict_prop(combined_parsed_dsl, TYPES),
                         _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS),
-                        _get_dict_prop(combined_parsed_dsl, PLUGINS),
+                        processed_plugins,
                         type_impls,
                         relationship_impls,
                         node_names_set)
 
-    top_level_workflows = _process_workflows(
-        combined_parsed_dsl[WORKFLOWS]) if WORKFLOWS in \
-        combined_parsed_dsl else {}
+    processed_workflows = _process_workflows(
+        combined_parsed_dsl.get(WORKFLOWS, {}),
+        processed_plugins)
+    workflow_plugins_to_install = _create_plan_workflow_plugins(
+        processed_workflows,
+        processed_plugins)
 
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
-
-    is_plan_management_plugins = True if plan_management_plugins else False
 
     plan = {
         'name': app_name,
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
-        WORKFLOWS: top_level_workflows,
+        WORKFLOWS: processed_workflows,
         'management_plugins_to_install': plan_management_plugins,
-        'is_management_plugins_to_install': is_plan_management_plugins
+        'workflow_plugins_to_install': workflow_plugins_to_install
     }
 
     return plan
@@ -395,18 +416,22 @@ def _process_context_operations(partial_error_message, interfaces, plugins,
         _validate_no_duplicate_operations(operation_mapping_context,
                                           interface_name, node['id'],
                                           node['type'])
-        for operation_name, plugin_name, operation_mapping, \
-                operation_properties in operation_mapping_context:
-            if plugin_name is not None:
-                plugin = plugins[plugin_name]
-                node[PLUGINS][plugin_name] = _process_plugin(plugin,
-                                                             plugin_name)
-                op_struct = _operation_struct(
-                    plugin_name, operation_mapping,
-                    _expand(operation_properties,
-                            _get_dict_prop(node, 'properties'),
-                            node['id'],
-                            operation_name))
+        # for operation_name, plugin_name, operation_mapping, \
+        #         operation_properties in operation_mapping_context:
+        for op_descriptor in operation_mapping_context:
+            if op_descriptor.plugin is not None:
+                op_struct = op_descriptor.op_struct
+                plugin_name = op_descriptor.op_struct['plugin']
+                operation_name = op_descriptor.name
+                operation_properties = _expand(
+                    op_descriptor.op_struct.get('properties'),
+                    _get_dict_prop(node, 'properties'),
+                    node['id'],
+                    operation_name)
+                node[PLUGINS][plugin_name] = op_descriptor.plugin
+                op_struct = op_struct.copy()
+                if operation_properties is not None:
+                    op_struct['properties'] = operation_properties
                 if operation_name in operations:
                     # Indicate this implicit operation name needs to be
                     # removed as we can only
@@ -447,12 +472,11 @@ def _extract_plugin_names_and_operation_mapping_from_interface(
     plugin_names = plugins.keys()
     result = []
     for operation in interface:
-        (operation_name, plugin_name, operation_mapping,
-         operation_properties) = \
+        op_descriptor = \
             _extract_plugin_name_and_operation_mapping_from_operation(
-                plugin_names, operation, error_code, partial_error_message)
-        result.append((operation_name, plugin_name,
-                       operation_mapping, operation_properties))
+                plugins, plugin_names, operation, error_code,
+                partial_error_message)
+        result.append(op_descriptor)
     return result
 
 
@@ -562,8 +586,6 @@ def _process_relationships(combined_parsed_dsl):
         plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
         _validate_relationship_fields(complete_rel_obj, plugins, rel_name)
         complete_rel_obj_copy = copy.deepcopy(complete_rel_obj)
-        complete_rel_obj_copy[WORKFLOWS] = _process_workflows(
-            _get_dict_prop(complete_rel_obj_copy, WORKFLOWS))
         processed_relationships[rel_name] = complete_rel_obj_copy
         processed_relationships[rel_name]['name'] = rel_name
     return processed_relationships
@@ -588,10 +610,6 @@ def _rel_inheritance_merging_func(complete_super_type,
                                   current_level_type,
                                   merge_properties=True):
     merged_type = current_level_type
-
-    # derive workflows
-    merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
-                                              merged_type, WORKFLOWS)
 
     if merge_properties:
         merged_props_array = _merge_properties_arrays(complete_super_type,
@@ -657,12 +675,18 @@ def _merge_interface_list(overridden_interface, overriding_interface):
 
 
 def _extract_plugin_name_and_operation_mapping_from_operation(
+        plugins,
         plugin_names,
         operation,
         error_code,
         partial_error_message):
     if type(operation) == str:
-        return operation, None, None, None
+        return OpDescriptor(name=operation,
+                            plugin=None,
+                            op_struct=_operation_struct(
+                                operation_mapping=None,
+                                plugin_name=None,
+                                operation_properties=None))
     operation_name = operation.keys()[0]
     operation_content = operation.values()[0]
     operation_properties = None
@@ -681,8 +705,14 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 longest_prefix = plugin_name_length
                 longest_prefix_plugin_name = plugin_name
     if longest_prefix_plugin_name is not None:
-        return operation_name, longest_prefix_plugin_name, \
-            operation_mapping[longest_prefix + 1:], operation_properties
+        return OpDescriptor(
+            name=operation_name,
+            plugin=plugins[longest_prefix_plugin_name],
+            op_struct=_operation_struct(
+                plugin_name=longest_prefix_plugin_name,
+                operation_mapping=operation_mapping[longest_prefix + 1:],
+                operation_properties=operation_properties
+            ))
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
@@ -694,24 +724,19 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         raise DSLParsingLogicException(error_code, error_message)
 
 
-def _process_workflows(workflows):
+def _process_workflows(workflows, plugins):
     processed_workflows = {}
-
-    for name, flow_obj in workflows.iteritems():
-        processed_workflows[name] = _process_ref_or_inline_value(
-            flow_obj, 'radial')
-
+    plugin_names = plugins.keys()
+    for name, mapping in workflows.items():
+        op_descriptor = \
+            _extract_plugin_name_and_operation_mapping_from_operation(
+                plugins=plugins,
+                plugin_names=plugin_names,
+                operation={name: mapping},
+                error_code=21,
+                partial_error_message='')
+        processed_workflows[name] = op_descriptor.op_struct
     return processed_workflows
-
-
-def _process_ref_or_inline_value(ref_or_inline_obj, inline_key_name):
-    if isinstance(ref_or_inline_obj, str):
-        # already processed previously (inheritance)
-        return ref_or_inline_obj
-    elif 'ref' in ref_or_inline_obj:
-        return ref_or_inline_obj['ref']
-    else:  # inline
-        return ref_or_inline_obj[inline_key_name]
 
 
 def _validate_no_duplicate_nodes(nodes):
@@ -779,8 +804,6 @@ def _process_node_relationships(app_name, node, node_name, node_names_set,
                 relationship_complete_type,
                 relationship,
                 merge_properties=False)
-            complete_relationship[WORKFLOWS] = _process_workflows(
-                _get_dict_prop(complete_relationship, WORKFLOWS))
             complete_relationship[PROPERTIES] = \
                 _merge_schema_and_instance_properties(
                     _get_dict_prop(relationship, PROPERTIES),
@@ -898,7 +921,8 @@ def _validate_no_duplicate_operations(interface_operation_mappings,
                                       node_type=None,
                                       relationship_name=None):
     operation_names = set()
-    for operation_name, _, _, _ in interface_operation_mappings:
+    for op_descriptor in interface_operation_mappings:
+        operation_name = op_descriptor.name
         if operation_name in operation_names:
             error_message = 'Duplicate operation {0} found in interface {1} '\
                             .format(operation_name, interface_name)
@@ -922,7 +946,7 @@ def _operation_struct(plugin_name, operation_mapping, operation_properties):
 
 def _process_node(node, parsed_dsl,
                   top_level_relationships, node_names_set, type_impls,
-                  relationship_impls):
+                  relationship_impls, plugins):
     declared_node_type_name = node['type']
     node_name = node['name']
     app_name = parsed_dsl[BLUEPRINT]['name']
@@ -951,7 +975,6 @@ def _process_node(node, parsed_dsl,
                                                      parsed_dsl, node,
                                                      impl_properties)
     processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
-    processed_node[WORKFLOWS] = complete_node_type[WORKFLOWS]
     processed_node[PLUGINS] = {}
     # handle plugins and operations
     if INTERFACES in complete_node_type:
@@ -960,7 +983,7 @@ def _process_node(node, parsed_dsl,
         operations = _process_context_operations(
             partial_error_message,
             complete_node_type[INTERFACES],
-            _get_dict_prop(parsed_dsl, PLUGINS),
+            plugins,
             processed_node, 10)
 
         processed_node['operations'] = operations
@@ -971,7 +994,6 @@ def _process_node(node, parsed_dsl,
                                 relationship_impls)
 
     processed_node[PROPERTIES]['cloudify_runtime'] = {}
-    processed_node[WORKFLOWS] = _process_workflows(processed_node[WORKFLOWS])
 
     processed_node['instances'] = node['instances'] \
         if 'instances' in node else {'deploy': 1}
@@ -995,11 +1017,15 @@ def _extract_node_host_id(processed_node, node_name_to_node, host_types,
 
 
 def _process_plugin(plugin, plugin_name):
+    cloudify_plugins = (
+        'cloudify.plugins.agent_plugin',
+        'cloudify.plugins.remote_plugin',
+        'cloudify.plugins.manager_plugin')
+    if plugin_name in cloudify_plugins or \
+            plugin_name == 'cloudify.plugins.plugin':
+        return plugin
     # 'cloudify.plugins.plugin'
-    if plugin['derived_from'] not in \
-            ('cloudify.plugins.agent_plugin',
-             'cloudify.plugins.remote_plugin',
-             'cloudify.plugins.manager_plugin'):
+    if plugin['derived_from'] not in cloudify_plugins:
         # TODO: consider changing the below exception to type
         # DSLParsingFormatException..?
         raise DSLParsingLogicException(
@@ -1010,7 +1036,7 @@ def _process_plugin(plugin, plugin_name):
                     'cloudify.plugins.agent_plugin',
                     'cloudify.plugins.remote_plugin',
                     'cloudify.plugins.manager_plugin'))
-    processed_plugin = copy.deepcopy(plugin[PROPERTIES])
+    processed_plugin = copy.deepcopy(plugin.get(PROPERTIES, {}))
     processed_plugin['name'] = plugin_name
     processed_plugin['agent_plugin'] = \
         str(plugin['derived_from'] == 'cloudify.plugins.agent_plugin').lower()
@@ -1064,9 +1090,6 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
                                 impl_properties):
     def types_and_node_inheritance_common_merging_func(complete_super_type,
                                                        merged_type):
-        # derive workflows
-        merged_type[WORKFLOWS] = _merge_sub_dicts(complete_super_type,
-                                                  merged_type, WORKFLOWS)
         # derive interfaces
         merged_type[INTERFACES] = _merge_interface_dicts(complete_super_type,
                                                          merged_type,

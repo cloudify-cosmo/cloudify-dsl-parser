@@ -99,15 +99,6 @@ types:
             yaml, 101, DSLParsingLogicException)
         self.assertEquals('test_node', ex.duplicate_node_name)
 
-    def test_first_level_workflows_unavailable_ref(self):
-        ref_alias = 'custom_ref_alias'
-        yaml = self.MINIMAL_BLUEPRINT + """
-workflows:
-    install:
-        ref: {0}
-        """.format(ref_alias)
-        self._assert_dsl_parsing_exception_error_code(yaml, 31)
-
     def test_plugin_with_wrongful_derived_from_field(self):
         yaml = self.BASIC_BLUEPRINT_SECTION + """
 plugins:
@@ -138,6 +129,14 @@ relationships:
                         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 19, DSLParsingLogicException)
+
+    def test_workflow_mapping_no_plugin(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1: test_plugin2.workflow1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 21, DSLParsingLogicException)
 
     def test_top_level_relationships_import_same_name_relationship(self):
         imported_yaml = self.MINIMAL_BLUEPRINT + """
