@@ -2304,11 +2304,6 @@ plugins:
             result["management_plugins_to_install"]
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
 
-        # check the boolean flag is correct
-        is_management_plugins_to_install = \
-            result["is_management_plugins_to_install"]
-        self.assertTrue(is_management_plugins_to_install)
-
     def test_agent_installer_plugin_is_ignored(self):
         yaml = """
 blueprint:
@@ -2402,11 +2397,6 @@ plugins:
             result["management_plugins_to_install"]
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
 
-        # check the boolean flag is correct
-        is_management_plugins_to_install = \
-            result["is_management_plugins_to_install"]
-        self.assertTrue(is_management_plugins_to_install)
-
     def test_two_plugins_on_one_node(self):
         yaml = """
 blueprint:
@@ -2445,11 +2435,6 @@ plugins:
             result["management_plugins_to_install"]
         self.assertEquals(2, len(management_plugins_to_install_for_plan))
 
-        # check the boolean flag is correct
-        is_management_plugins_to_install = \
-            result["is_management_plugins_to_install"]
-        self.assertTrue(is_management_plugins_to_install)
-
     def test_no_operation_mapping_no_plugin(self):
         yaml = """
 blueprint:
@@ -2484,11 +2469,6 @@ plugins:
             result["management_plugins_to_install"]
         self.assertEquals(0, len(management_plugins_to_install_for_plan))
 
-        # check the boolean flag is correct
-        is_management_plugins_to_install = \
-            result["is_management_plugins_to_install"]
-        self.assertFalse(is_management_plugins_to_install)
-
     def test_two_identical_plugins_on_node(self):
         yaml = """
 blueprint:
@@ -2519,8 +2499,3 @@ plugins:
         management_plugins_to_install_for_plan = \
             result["management_plugins_to_install"]
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
-
-        # check the boolean flag is correct
-        is_management_plugins_to_install = \
-            result["is_management_plugins_to_install"]
-        self.assertTrue(is_management_plugins_to_install)
