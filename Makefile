@@ -24,7 +24,7 @@ files:
 	git log --oneline --decorate --color > CHANGELOG
 
 test:
-	pip install tox
+	pip install tox==1.6.1
 	tox
 
 docs:
