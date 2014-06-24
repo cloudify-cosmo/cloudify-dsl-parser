@@ -685,9 +685,10 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         return OpDescriptor(name=operation,
                             plugin=None,
                             op_struct=_operation_struct(
-                                operation_mapping=None,
-                                plugin_name=None,
-                                operation_properties=None))
+                                None,
+                                None,
+                                None,
+                                properties_field_name))
     operation_name = operation.keys()[0]
     operation_content = operation.values()[0]
     operation_properties = None
@@ -710,9 +711,10 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             name=operation_name,
             plugin=plugins[longest_prefix_plugin_name],
             op_struct=_operation_struct(
-                plugin_name=longest_prefix_plugin_name,
-                operation_mapping=operation_mapping[longest_prefix + 1:],
-                operation_properties=operation_properties
+                longest_prefix_plugin_name,
+                operation_mapping[longest_prefix + 1:],
+                operation_properties,
+                properties_field_name
             ))
     else:
         # This is an error for validation done somewhere down the
@@ -939,10 +941,11 @@ def _validate_no_duplicate_operations(interface_operation_mappings,
         operation_names.add(operation_name)
 
 
-def _operation_struct(plugin_name, operation_mapping, operation_properties):
+def _operation_struct(plugin_name, operation_mapping, operation_properties,
+                      properties_field_name):
     result = {'plugin': plugin_name, 'operation': operation_mapping}
     if operation_properties:
-        result['properties'] = operation_properties
+        result[properties_field_name] = operation_properties
     return result
 
 
