@@ -679,7 +679,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         plugin_names,
         operation,
         error_code,
-        partial_error_message):
+        partial_error_message,
+        properties_field_name='properties'):
     if type(operation) == str:
         return OpDescriptor(name=operation,
                             plugin=None,
@@ -694,7 +695,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         operation_mapping = operation_content
     else:
         operation_mapping = operation_content['mapping']
-        operation_properties = operation_content['properties']
+        operation_properties = operation_content[properties_field_name]
 
     longest_prefix = 0
     longest_prefix_plugin_name = None
@@ -734,7 +735,8 @@ def _process_workflows(workflows, plugins):
                 plugin_names=plugin_names,
                 operation={name: mapping},
                 error_code=21,
-                partial_error_message='')
+                partial_error_message='',
+                properties_field_name='parameters')
         processed_workflows[name] = op_descriptor.op_struct
     return processed_workflows
 
