@@ -23,10 +23,11 @@ from dsl_parser.parser import parse, parse_from_path, parse_from_url
 from dsl_parser.parser import TYPE_HIERARCHY
 
 
-def op_struct(plugin_name, operation_mapping, properties=None):
+def op_struct(plugin_name, operation_mapping, properties=None,
+              properties_field_name='properties'):
     result = {'plugin': plugin_name, 'operation': operation_mapping}
     if properties:
-        result['properties'] = properties
+        result[properties_field_name] = properties
     return result
 
 
@@ -2216,17 +2217,34 @@ workflows:
 workflows:
     workflow1:
         mapping: test_plugin.workflow1
-        properties:
-            prop1: value1
-            prop2: value2
+        parameters:
+            - prop1: value1
+            - mandatory_prop
+            - nested_prop:
+                nested_key: nested_value
+                nested_list:
+                    - val1
+                    - val2
 
 """
         result = parse(yaml)
         workflows = result['workflows']
         self.assertEqual(1, len(workflows))
+        parameters = [
+            {'prop1': 'value1'},
+            'mandatory_prop',
+            {
+                'nested_prop': {
+                    'nested_key': 'nested_value',
+                    'nested_list': [
+                        'val1',
+                        'val2'
+                    ]
+                }
+            }
+        ]
         self.assertEqual(op_struct('test_plugin', 'workflow1',
-                                   properties={'prop1': 'value1',
-                                               'prop2': 'value2'}),
+                                   parameters, 'parameters'),
                          workflows['workflow1'])
         workflow_plugins_to_install = result['workflow_plugins_to_install']
         self.assertEqual(1, len(workflow_plugins_to_install))

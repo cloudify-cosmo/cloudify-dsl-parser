@@ -488,7 +488,17 @@ workflows:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_workflow_mapping_no_properties(self):
+    def test_workflow_mapping_no_mapping_field(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        parameters:
+            - param
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_mapping_no_parameters(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
 workflows:
     workflow1:
@@ -497,11 +507,47 @@ workflows:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_workflow_mapping_empty_properties(self):
+    def test_workflow_mapping_empty_parameters(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
 workflows:
     workflow1:
         mapping: test_plugin.workflow1
+        parameters: []
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_parameters_as_dictionary(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        parameters:
+            key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_bad_type_parameters(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        parameters:
+            - key: value
+            - param
+            - 353
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_properties_instead_of_parameters(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        properties:
+            - key: value
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
