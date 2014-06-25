@@ -680,7 +680,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         operation,
         error_code,
         partial_error_message,
-        properties_field_name='properties'):
+        is_workflows=False):
+    properties_field_name = 'parameters' if is_workflows else 'properties'
     if type(operation) == str:
         return OpDescriptor(name=operation,
                             plugin=None,
@@ -719,10 +720,12 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
-        base_error_message = 'Could not extract plugin from operation ' + \
-                             'mapping {0}, which is declared for operation ' \
-                             '{1}.'.format(operation_mapping,
-                                           operation_name)
+        base_error_message = 'Could not extract plugin from {2} ' + \
+                             'mapping {0}, which is declared for {2} ' \
+                             '{1}.'.format(
+                                 operation_mapping,
+                                 operation_name,
+                                 'workflow' if is_workflows else 'operation')
         error_message = base_error_message + partial_error_message
         raise DSLParsingLogicException(error_code, error_message)
 
@@ -738,7 +741,7 @@ def _process_workflows(workflows, plugins):
                 operation={name: mapping},
                 error_code=21,
                 partial_error_message='',
-                properties_field_name='parameters')
+                is_workflows=True)
         processed_workflows[name] = op_descriptor.op_struct
     return processed_workflows
 
