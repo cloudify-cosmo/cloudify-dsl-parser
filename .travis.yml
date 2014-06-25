@@ -1,11 +1,17 @@
 language: python
 python:
   - "2.7"
-
+env:
+    - TOX_ENV=docs
+    - TOX_ENV=flake8
+    - TOX_ENV=py27
+# TODO: add coveralls support
 install:
-    - pip install .
-    - pip install flake8
-
+    - pip install tox==1.6.1
+    # - pip install coveralls
 script:
-    - flake8 .
-    - nosetests dsl_parser/tests
+    - tox -e $TOX_ENV
+# after_success:
+#     coveralls
+notifications:
+    flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
