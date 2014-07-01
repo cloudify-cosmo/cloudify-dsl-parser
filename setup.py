@@ -16,13 +16,21 @@
 __author__ = 'elip'
 
 from setuptools import setup
+import json
+
+
+def find_version():
+    with open('VERSION', 'rb') as ver_file:
+        return json.load(ver_file)['version']
+
 
 setup(
     name='cloudify-dsl-parser',
-    version='3.0',
-    author='elip',
-    author_email='elip@gigaspaces.com',
+    version=find_version(),
+    author='Gigaspaces',
+    author_email='cosmo-admin@gigaspaces.com',
     packages=['dsl_parser'],
+    include_package_data=True,
     license='LICENSE',
     description='Cloudify DSL parser',
     zip_safe=False,
