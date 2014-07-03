@@ -1343,8 +1343,10 @@ def _replace_ref_with_inline_paths(dsl, path_context, alias_mapping,
 def _get_resource_location(resource_name, resources_base_url,
                            current_resource_context=None):
     # Already url format
-    if resource_name.startswith('http:') or resource_name.startswith('ftp:') \
-            or resource_name.startswith('file:'):
+    if resource_name.startswith('http:')\
+            or resource_name.startswith('https:')\
+            or resource_name.startswith('file:')\
+            or resource_name.startswith('ftp:'):
         return resource_name
 
     # Points to an existing file
