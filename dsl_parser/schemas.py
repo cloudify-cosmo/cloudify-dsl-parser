@@ -63,20 +63,9 @@ INTERFACES_SCHEMA = {
     'minProperties': 1
 }
 
-WORKFLOWS_SCHEMA = {
-    'type': 'object',
-    'patternProperties': {
-        '^': {
-            'oneOf': [
-                {'type': 'string'},
-                ADVANCED_OPERATION_MAPPING_SCHEMA,
-            ]
-        },
-    }
-}
-
 PROPERTIES_ARRAY_SCHEMA = {
     'type': 'array',
+    'minItems': 1,
     'items': {
         'oneOf': [
             {
@@ -99,6 +88,30 @@ PROPERTIES_ARRAY_SCHEMA = {
                 'type': 'string'
             }
         ]
+    }
+}
+
+WORKFLOW_MAPPING_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'mapping': {
+            'type': 'string'
+        },
+        'parameters': PROPERTIES_ARRAY_SCHEMA,
+    },
+    'required': ['mapping', 'parameters'],
+    'additionalProperties': False
+}
+
+WORKFLOWS_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'oneOf': [
+                {'type': 'string'},
+                WORKFLOW_MAPPING_SCHEMA,
+            ]
+        },
     }
 }
 

@@ -684,14 +684,17 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         plugin_names,
         operation,
         error_code,
-        partial_error_message):
+        partial_error_message,
+        is_workflows=False):
+    properties_field_name = 'parameters' if is_workflows else 'properties'
     if type(operation) == str:
         return OpDescriptor(name=operation,
                             plugin=None,
                             op_struct=_operation_struct(
-                                operation_mapping=None,
-                                plugin_name=None,
-                                operation_properties=None))
+                                None,
+                                None,
+                                None,
+                                properties_field_name))
     operation_name = operation.keys()[0]
     operation_content = operation.values()[0]
     operation_properties = None
@@ -699,7 +702,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         operation_mapping = operation_content
     else:
         operation_mapping = operation_content['mapping']
-        operation_properties = operation_content['properties']
+        operation_properties = operation_content[properties_field_name]
 
     longest_prefix = 0
     longest_prefix_plugin_name = None
@@ -714,17 +717,20 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             name=operation_name,
             plugin=plugins[longest_prefix_plugin_name],
             op_struct=_operation_struct(
-                plugin_name=longest_prefix_plugin_name,
-                operation_mapping=operation_mapping[longest_prefix + 1:],
-                operation_properties=operation_properties
+                longest_prefix_plugin_name,
+                operation_mapping[longest_prefix + 1:],
+                operation_properties,
+                properties_field_name
             ))
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
-        base_error_message = 'Could not extract plugin from operation ' + \
-                             'mapping {0}, which is declared for operation ' \
-                             '{1}.'.format(operation_mapping,
-                                           operation_name)
+        base_error_message = 'Could not extract plugin from {2} ' + \
+                             'mapping {0}, which is declared for {2} ' \
+                             '{1}.'.format(
+                                 operation_mapping,
+                                 operation_name,
+                                 'workflow' if is_workflows else 'operation')
         error_message = base_error_message + partial_error_message
         raise DSLParsingLogicException(error_code, error_message)
 
@@ -739,7 +745,8 @@ def _process_workflows(workflows, plugins):
                 plugin_names=plugin_names,
                 operation={name: mapping},
                 error_code=21,
-                partial_error_message='')
+                partial_error_message='',
+                is_workflows=True)
         processed_workflows[name] = op_descriptor.op_struct
     return processed_workflows
 
@@ -942,10 +949,11 @@ def _validate_no_duplicate_operations(interface_operation_mappings,
         operation_names.add(operation_name)
 
 
-def _operation_struct(plugin_name, operation_mapping, operation_properties):
+def _operation_struct(plugin_name, operation_mapping, operation_properties,
+                      properties_field_name):
     result = {'plugin': plugin_name, 'operation': operation_mapping}
     if operation_properties:
-        result['properties'] = operation_properties
+        result[properties_field_name] = operation_properties
     return result
 
 
@@ -1340,8 +1348,10 @@ def _replace_ref_with_inline_paths(dsl, path_context, alias_mapping,
 def _get_resource_location(resource_name, resources_base_url,
                            current_resource_context=None):
     # Already url format
-    if resource_name.startswith('http:') or resource_name.startswith('ftp:') \
-            or resource_name.startswith('file:'):
+    if resource_name.startswith('http:')\
+            or resource_name.startswith('https:')\
+            or resource_name.startswith('file:')\
+            or resource_name.startswith('ftp:'):
         return resource_name
 
     # Points to an existing file
