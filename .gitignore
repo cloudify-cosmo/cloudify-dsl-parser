@@ -59,4 +59,4 @@ docs/_build/
 *.noseids
 
 # QuickBuild
-.qbcache
+.qbcache/
