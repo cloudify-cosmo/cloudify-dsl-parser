@@ -270,190 +270,6 @@ plugins:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_first_level_workflows_no_ref_or_radial(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-workflows:
-    install: {}
-        """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_first_level_workflows_extra_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-workflows:
-    install:
-        radial: "custom radial"
-        some_other_prop: "val"
-        """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_first_level_workflows_both_ref_and_radial(self):
-        file_name = self.make_file_with_name('some radial code',
-                                             'custom_ref.radial')
-        yaml = self.MINIMAL_BLUEPRINT + """
-workflows:
-    install:
-        radial: "custom radial"
-        ref: "{0}"
-        """.format(file_name)
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_type_workflows_no_ref_or_radial(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        workflows:
-            install: {}
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_type_workflows_extra_properties(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        workflows:
-            install:
-                radial: "custom radial"
-                some_other_prop: "val"
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_type_workflows_both_ref_and_radial(self):
-        file_name = self.make_file_with_name('some radial code',
-                                             'custom_ref.radial')
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
-    test_type:
-        workflows:
-            install:
-                radial: "custom radial"
-                ref: "{0}"
-                """.format(file_name)
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_instance_workflows_no_ref_or_radial(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-            workflows:
-                install:
-                    some_other_prop: "val"
-                    """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_instance_workflows_extra_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-            workflows:
-                install:
-                    radial: "custom radial"
-                    some_other_prop: "val"
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_instance_workflows_both_ref_and_radial(self):
-        file_name = self.make_file_with_name('some radial code',
-                                             'custom_ref.radial')
-        yaml = self.MINIMAL_BLUEPRINT + """
-            workflows:
-                install:
-                    radial: "custom radial"
-                    ref: "{0}"
-                """.format(file_name)
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_relationship_workflows_no_ref_or_radial(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        workflows:
-            install: {}
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_relationship_workflows_extra_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        workflows:
-            install:
-                radial: radial
-                some_other_prop: "val"
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_relationship_workflows_both_ref_and_radial(self):
-        file_name = self.make_file_with_name('some radial code',
-                                             'custom_ref.radial')
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        workflows:
-            install:
-                radial: radial
-                ref: {0}
-                """.format(file_name)
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationship_workflows_no_ref_or_radial(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   target: test_node
-                    type: test_relationship
-                    workflows:
-                        install: {}
-relationships:
-    test_relationship: {}
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationship_workflows_extra_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   target: test_node
-                    type: test_relationship
-                    workflows:
-                        install:
-                            radial: radial
-                            some_extra_prop: value
-relationships:
-    test_relationship: {}
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationship_workflows_both_ref_and_radial(self):
-        file_name = self.make_file_with_name('some radial code',
-                                             'custom_ref.radial')
-        yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   target: test_node
-                    type: test_relationship
-                    workflows:
-                        install:
-                            radial: radial
-                            ref: {0}""".format(file_name) + """
-relationships:
-    test_relationship: {}
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
     def test_top_level_relationships_bad_format(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
@@ -660,6 +476,78 @@ types:
             test_interface1:
                 - install:
                     mapping: test_plugin.install
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_mapping_invalid_value(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1: 123
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_mapping_no_mapping_field(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        parameters:
+            - param
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_mapping_no_parameters(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_mapping_empty_parameters(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        parameters: []
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_parameters_as_dictionary(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        parameters:
+            key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_bad_type_parameters(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        parameters:
+            - key: value
+            - param
+            - 353
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_properties_instead_of_parameters(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        properties:
+            - key: value
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)

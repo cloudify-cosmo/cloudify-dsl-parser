@@ -27,8 +27,8 @@ setup(
     description='Cloudify DSL parser',
     zip_safe=False,
     install_requires=[
-        "PyYAML==3.10",
+        'PyYAML==3.10',
         'jsonschema==2.3.0',
-        'networkx==1.8.1'
+        'networkx==1.8.1',
     ]
 )
