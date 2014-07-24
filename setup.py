@@ -17,16 +17,13 @@ __author__ = 'elip'
 
 from setuptools import setup
 
-from dsl_parser import get_version
-
 
 setup(
     name='cloudify-dsl-parser',
-    version=get_version(),
+    version='3.1',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['dsl_parser'],
-    package_data={'dsl_parser': ['VERSION']},
     license='LICENSE',
     description='Cloudify DSL parser',
     zip_safe=False,

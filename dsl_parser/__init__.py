@@ -14,12 +14,3 @@
 #  * limitations under the License.
 
 __author__ = 'idanmo'
-
-
-import json
-import pkgutil
-
-
-def get_version():
-    data = pkgutil.get_data('dsl_parser', 'VERSION')
-    return json.loads(data)['version']
