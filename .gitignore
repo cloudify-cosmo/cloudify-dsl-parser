@@ -57,3 +57,6 @@ docs/_build/
 *COMMIT_MSG
 
 *.noseids
+
+# QuickBuild
+.qbcache/

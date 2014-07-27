@@ -17,9 +17,10 @@ __author__ = 'elip'
 
 from setuptools import setup
 
+
 setup(
     name='cloudify-dsl-parser',
-    version='3.0',
+    version='3.1',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['dsl_parser'],
