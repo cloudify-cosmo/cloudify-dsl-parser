@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-dsl-parser',
-    version='1.1a1',
+    version='3.1a1',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['dsl_parser'],
