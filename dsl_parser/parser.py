@@ -745,6 +745,7 @@ def _process_workflows(workflows, plugins):
         processed_workflows[name] = op_descriptor.op_struct
     return processed_workflows
 
+
 def _process_node_relationships(node, node_name, node_names_set,
                                 processed_node, top_level_relationships,
                                 relationship_impls):

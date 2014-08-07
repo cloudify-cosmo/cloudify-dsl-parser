@@ -119,8 +119,8 @@ types:
         self._assert_blueprint(result)
 
     def test_dsl_with_type_with_operation_mappings(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_NODE_TEMPLATES_SECTION,
-                                              self.BASIC_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         properties:
@@ -159,8 +159,8 @@ plugins:
                           operations['test_interface2.shutdown'])
 
     def test_merge_plugins_and_interfaces_imports(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_NODE_TEMPLATES_SECTION,
-                                              self.BASIC_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
 plugins:
     other_test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
@@ -472,8 +472,8 @@ types:
         self.assertEquals('val4_parent', node['properties']['key4'])
 
     def test_type_interface_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_NODE_TEMPLATES_SECTION,
-                                              self.BASIC_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         properties:
@@ -546,8 +546,8 @@ plugins:
         self.assertEquals(4, len(node['plugins']))
 
     def test_type_interface_recursive_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_NODE_TEMPLATES_SECTION,
-                                              self.BASIC_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         properties:
@@ -598,8 +598,8 @@ plugins:
         self.assertEquals(2, len(node['plugins']))
 
     def test_two_explicit_interfaces_with_same_operation_name(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_NODE_TEMPLATES_SECTION,
-                                              self.BASIC_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
 types:
     test_type:
         properties:
