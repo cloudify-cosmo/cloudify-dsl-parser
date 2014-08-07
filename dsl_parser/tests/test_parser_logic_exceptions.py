@@ -26,10 +26,10 @@ class TestParserLogicExceptions(AbstractTestParser):
 
     def test_no_type_definition(self):
         self._assert_dsl_parsing_exception_error_code(
-            self.BASIC_BLUEPRINT_SECTION, 7, DSLParsingLogicException)
+            self.BASIC_NODE_TEMPLATES_SECTION, 7, DSLParsingLogicException)
 
     def test_explicit_interface_with_missing_plugin(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         interfaces:
@@ -44,7 +44,7 @@ types:
             yaml, 10, DSLParsingLogicException)
 
     def test_type_derive_non_from_none_existing(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 types:
     test_type:
         derived_from: "non_existing_type_parent"
@@ -61,7 +61,7 @@ imports:
             yaml, 13, DSLParsingLogicException)
 
     def test_cyclic_dependency(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 types:
     test_type:
         derived_from: "test_type_parent"
@@ -78,29 +78,8 @@ types:
                                         'test_type_grandparent', 'test_type']
         self.assertEquals(expected_circular_dependency, ex.circular_dependency)
 
-    def test_node_duplicate_name(self):
-        yaml = """
-blueprint:
-    name: test_app
-    nodes:
-    -   name: test_node
-        type: test_type
-        properties:
-            key: "val"
-    -   name: test_node
-        type: test_type
-        properties:
-            key: "val"
-
-types:
-    test_type: {}
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 101, DSLParsingLogicException)
-        self.assertEquals('test_node', ex.duplicate_node_name)
-
     def test_plugin_with_wrongful_derived_from_field(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 plugins:
     test_plugin:
         derived_from: "bad value"
@@ -166,11 +145,11 @@ relationships:
     def test_instance_relationships_bad_target_value(self):
         # target value is a non-existent node
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: test_relationship
-                    target: fake_node
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: test_relationship
+                target: fake_node
 relationships:
     test_relationship: {}
             """
@@ -180,11 +159,11 @@ relationships:
     def test_instance_relationships_bad_type_value(self):
         # type value is a non-existent relationship
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: fake_relationship
-                    target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: fake_relationship
+                target: test_node
 relationships:
     test_relationship: {}
             """
@@ -194,11 +173,11 @@ relationships:
     def test_instance_relationships_same_source_and_target(self):
         # A relationship from a node to itself is not valid
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: test_relationship
-                    target: test_node2
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: test_relationship
+                target: test_node2
 relationships:
     test_relationship: {}
             """
@@ -207,14 +186,14 @@ relationships:
 
     def test_instance_relationship_with_undefined_plugin(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: "test_relationship"
-                    target: "test_node"
-                    source_interfaces:
-                        an_interface:
-                            - op: no_plugin.op
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: "test_relationship"
+                target: "test_node"
+                source_interfaces:
+                    an_interface:
+                        - op: no_plugin.op
 relationships:
     test_relationship: {}
                         """
@@ -223,11 +202,9 @@ relationships:
 
     def test_validate_agent_plugin_on_non_host_node(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: test_type
+node_templates:
+    test_node1:
+        type: test_type
 types:
     test_type:
         interfaces:
@@ -279,11 +256,11 @@ type_implementations:
         self.assertEquals('impl', ex.implementation)
 
     def test_node_interface_duplicate_operation_with_mapping(self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
-            interfaces:
-                test_interface1:
-                    - install
-                    - install: test_plugin.install
+        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
+        interfaces:
+            test_interface1:
+                - install
+                - install: test_plugin.install
 types:
     test_type:
         properties:
@@ -293,7 +270,7 @@ types:
             yaml, 20, DSLParsingLogicException)
 
     def test_type_interface_duplicate_operation_with_mapping(self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
 types:
     test_type:
         properties:
@@ -308,7 +285,7 @@ types:
 
     def test_relationship_source_interface_duplicate_operation_with_mapping(
             self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
 types:
     test_type: {}
 relationships:
@@ -323,7 +300,7 @@ relationships:
 
     def test_relationship_target_interface_duplicate_operation_with_mapping(
             self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
+        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
 types:
     test_type: {}
 relationships:
@@ -337,16 +314,16 @@ relationships:
             yaml, 20, DSLParsingLogicException)
 
     def test_instance_relationship_source_interface_duplicate_operation_with_mapping(self):  # NOQA
-        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: empty_relationship
-                    target: test_node
-                    source_interfaces:
-                        test_interface1:
-                            - install
-                            - install: test_plugin.install
+        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: empty_relationship
+                target: test_node
+                source_interfaces:
+                    test_interface1:
+                        - install
+                        - install: test_plugin.install
 types:
     test_type:
         properties:
@@ -358,16 +335,16 @@ relationships:
             yaml, 20, DSLParsingLogicException)
 
     def test_instance_relationship_target_interface_duplicate_operation_with_mapping(self):  # NOQA
-        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: empty_relationship
-                    target: test_node
-                    target_interfaces:
-                        test_interface1:
-                            - install
-                            - install: test_plugin.install
+        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: empty_relationship
+                target: test_node
+                target_interfaces:
+                    test_interface1:
+                        - install
+                        - install: test_plugin.install
 types:
     test_type:
         properties:
@@ -380,7 +357,7 @@ relationships:
 
     def test_operation_properties_injection_get_property_non_existing_prop(
             self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         properties:
@@ -398,7 +375,7 @@ types:
         self.assertEqual('non_existing_prop', ex.property_name)
 
     def test_operation_properties_injection_get_property_with_other_key(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         properties:
@@ -419,7 +396,7 @@ types:
 
     def test_operation_properties_injection_get_property_path_no_dict(
             self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         properties:
@@ -438,7 +415,7 @@ types:
 
     def test_operation_properties_injection_get_property_path_no_array(
             self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         properties:
@@ -456,7 +433,7 @@ types:
         self.assertEqual('key[0]', ex.property_name)
 
     def test_node_set_non_existing_property(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type: {}
 """
@@ -465,7 +442,7 @@ types:
         self.assertEquals('key', ex.property)
 
     def test_node_doesnt_implement_schema_mandatory_property(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
 types:
     test_type:
         properties:
@@ -478,15 +455,15 @@ types:
 
     def test_relationship_instance_set_non_existing_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            properties:
-                key: "val"
-            relationships:
-                -   type: test_relationship
-                    target: test_node
-                    properties:
-                        do_not_exist: some_value
+    test_node2:
+        type: test_type
+        properties:
+            key: "val"
+        relationships:
+            -   type: test_relationship
+                target: test_node
+                properties:
+                    do_not_exist: some_value
 relationships:
     test_relationship: {}
 """
@@ -496,13 +473,13 @@ relationships:
 
     def test_relationship_instance_doesnt_implement_schema_mandatory_property(self):  # NOQA
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            properties:
-                key: "val"
-            relationships:
-                -   type: test_relationship
-                    target: test_node
+    test_node2:
+        type: test_type
+        properties:
+            key: "val"
+        relationships:
+            -   type: test_relationship
+                target: test_node
 relationships:
     test_relationship:
         properties:
@@ -514,13 +491,13 @@ relationships:
 
     def test_instance_relationship_more_than_one_contained_in(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - type: cloudify.relationships.contained_in
-                  target: test_node
-                - type: derived_from_contained_in
-                  target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: test_node
+            - type: derived_from_contained_in
+              target: test_node
 relationships:
     cloudify.relationships.contained_in: {}
     derived_from_contained_in:
@@ -534,11 +511,11 @@ relationships:
 
     def test_relationship_implementation_ambiguous(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - type: test_relationship
-                  target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            - type: test_relationship
+              target: test_node
 
 relationships:
     test_relationship: {} """]) + """
@@ -566,11 +543,11 @@ relationship_implementations:
 
     def test_relationship_implementation_not_derived_type(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - type: test_relationship
-                  target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            - type: test_relationship
+              target: test_node
 relationships:
     test_relationship: {} """]) + """
 
@@ -636,8 +613,8 @@ relationship_implementations:
     def test_relationship_impl_for_no_relationship_specified(self):
 
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type """]) + """
+    test_node2:
+        type: test_type """]) + """
 
 relationships:
     test_relationship: {}

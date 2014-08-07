@@ -132,71 +132,59 @@ WORKFLOWS_SCHEMA = {
 DSL_SCHEMA = {
     'type': 'object',
     'properties': {
-        'blueprint': {
+        'node_templates': {
             'type': 'object',
-            'properties': {
-                'name': {
-                    'type': 'string'
-                },
-                'nodes': {
-                    'type': 'array',
-                    'minItems': 1,
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'name': {
-                                'type': 'string'
-                            },
-                            #non-meta 'type'
-                            'type': {
-                                'type': 'string'
-                            },
-                            'instances': {
-                                'type': 'object',
-                                'properties': {
-                                    'deploy': {
-                                        'type': 'number'
-                                    }
-                                },
-                                'required': ['deploy'],
-                                'additionalProperties': False
-                            },
-                            'interfaces': INTERFACES_SCHEMA,
-                            'relationships': {
-                                'type': 'array',
-                                'items': {
-                                    'type': 'object',
-                                    'properties': {
-                                        #non-meta 'type'
-                                        'type': {
-                                            'type': 'string'
-                                        },
-                                        'target': {
-                                            'type': 'string'
-                                        },
-                                        #non-meta 'properties'
-                                        'properties': {
-                                            'type': 'object'
-                                        },
-                                        'source_interfaces': INTERFACES_SCHEMA,
-                                        'target_interfaces': INTERFACES_SCHEMA,
-                                    },
-                                    'required': ['type', 'target'],
-                                    'additionalProperties': False
+            'patternProperties': {
+                '^': {
+                    'type': 'object',
+                    'properties': {
+                        #non-meta 'type'
+                        'type': {
+                            'type': 'string'
+                        },
+                        'instances': {
+                            'type': 'object',
+                            'properties': {
+                                'deploy': {
+                                    'type': 'number'
                                 }
                             },
-                            #non-meta 'properties'
-                            'properties': {
-                                'type': 'object'
+                            'required': ['deploy'],
+                            'additionalProperties': False
+                        },
+                        'interfaces': INTERFACES_SCHEMA,
+                        'relationships': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    #non-meta 'type'
+                                    'type': {
+                                        'type': 'string'
+                                    },
+                                    'target': {
+                                        'type': 'string'
+                                    },
+                                    #non-meta 'properties'
+                                    'properties': {
+                                        'type': 'object'
+                                    },
+                                    'source_interfaces': INTERFACES_SCHEMA,
+                                    'target_interfaces': INTERFACES_SCHEMA,
+                                    },
+                                'required': ['type', 'target'],
+                                'additionalProperties': False
                             }
                         },
-                        'required': ['name', 'type'],
-                        'additionalProperties': False
-                    }
+                        #non-meta 'properties'
+                        'properties': {
+                            'type': 'object'
+                        }
+                    },
+                    'required': ['type'],
+                    'additionalProperties': False
                 }
-            },
-            'required': ['name', 'nodes'],
-            'additionalProperties': False
+            }
         },
         'plugins': {
             'type': 'object',
@@ -387,7 +375,7 @@ DSL_SCHEMA = {
             }
         },
     },
-    'required': ['blueprint'],
+    'required': ['node_templates'],
     'additionalProperties': False
 }
 

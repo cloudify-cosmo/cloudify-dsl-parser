@@ -15,7 +15,7 @@
 
 __author__ = 'ran'
 
-BLUEPRINT = 'blueprint'
+NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
 TYPES = 'types'
 TYPE_IMPLEMENTATIONS = 'type_implementations'
@@ -168,15 +168,11 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
     _validate_dsl_schema(combined_parsed_dsl)
 
-    blueprint = combined_parsed_dsl[BLUEPRINT]
-    app_name = blueprint['name']
-
-    nodes = blueprint['nodes']
-    _validate_no_duplicate_nodes(nodes)
+    nodes = combined_parsed_dsl[NODE_TEMPLATES]
+    node_names_set = {node_name for node_name in nodes.keys()}
 
     top_level_relationships = _process_relationships(combined_parsed_dsl)
 
-    node_names_set = {node['name'] for node in nodes}
     type_impls = _get_dict_prop(combined_parsed_dsl, TYPE_IMPLEMENTATIONS)\
         .copy()
     relationship_impls = _get_dict_prop(combined_parsed_dsl,
@@ -186,10 +182,10 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     processed_plugins = {name: _process_plugin(plugin, name)
                          for (name, plugin) in plugins.items()}
 
-    processed_nodes = map(lambda node: _process_node(
-        node, combined_parsed_dsl,
+    processed_nodes = map(lambda node_name_and_node: _process_node(
+        node_name_and_node[0], node_name_and_node[1], combined_parsed_dsl,
         top_level_relationships, node_names_set, type_impls,
-        relationship_impls, processed_plugins), nodes)
+        relationship_impls, processed_plugins), nodes.iteritems())
 
     _post_process_nodes(processed_nodes,
                         _get_dict_prop(combined_parsed_dsl, TYPES),
@@ -209,7 +205,6 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
     plan = {
-        'name': app_name,
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
         WORKFLOWS: processed_workflows,
@@ -297,7 +292,7 @@ def _create_type_hierarchy(type_name, types):
     return [type_name]
 
 
-def _post_process_node_relationships(node,
+def _post_process_node_relationships(processed_node,
                                      node_name_to_node,
                                      plugins,
                                      contained_in_rel_types,
@@ -305,12 +300,12 @@ def _post_process_node_relationships(node,
                                      depends_on_rel_type,
                                      relationships):
     contained_in_relationships = []
-    if RELATIONSHIPS in node:
-        for relationship in node[RELATIONSHIPS]:
+    if RELATIONSHIPS in processed_node:
+        for relationship in processed_node[RELATIONSHIPS]:
             target_node = node_name_to_node[relationship['target_id']]
             _process_node_relationships_operations(
-                relationship, 'source_interfaces', 'source_operations', node,
-                plugins)
+                relationship, 'source_interfaces', 'source_operations',
+                processed_node, plugins)
             _process_node_relationships_operations(
                 relationship, 'target_interfaces', 'target_operations',
                 target_node, plugins)
@@ -326,7 +321,7 @@ def _post_process_node_relationships(node,
         ex = DSLParsingLogicException(
             112, 'Node {0} has more than one relationship that is derived'
                  ' from {1} relationship. Found: {2}'
-                 .format(node['name'],
+                 .format(processed_node['name'],
                          CONTAINED_IN_REL_TYPE,
                          contained_in_relationships))
         ex.relationship_types = contained_in_relationships
@@ -750,31 +745,7 @@ def _process_workflows(workflows, plugins):
         processed_workflows[name] = op_descriptor.op_struct
     return processed_workflows
 
-
-def _validate_no_duplicate_nodes(nodes):
-    duplicate = _validate_no_duplicate_element(nodes,
-                                               lambda node: node['name'])
-    if duplicate is not None:
-        ex = DSLParsingLogicException(
-            101, 'Duplicate node definition detected, there are {0} nodes '
-                 'with name {1} defined'.format(duplicate[1], duplicate[0]))
-        ex.duplicate_node_name = duplicate[0]
-        raise ex
-
-
-def _validate_no_duplicate_element(elements, keyfunc):
-    elements.sort(key=keyfunc)
-    groups = []
-    from itertools import groupby
-
-    for key, group in groupby(elements, key=keyfunc):
-        groups.append(list(group))
-    for group in groups:
-        if len(group) > 1:
-            return keyfunc(group[0]), len(group)
-
-
-def _process_node_relationships(app_name, node, node_name, node_names_set,
+def _process_node_relationships(node, node_name, node_names_set,
                                 processed_node, top_level_relationships,
                                 relationship_impls):
     if RELATIONSHIPS in node:
@@ -957,12 +928,10 @@ def _operation_struct(plugin_name, operation_mapping, operation_properties,
     return result
 
 
-def _process_node(node, parsed_dsl,
+def _process_node(node_name, node, parsed_dsl,
                   top_level_relationships, node_names_set, type_impls,
                   relationship_impls, plugins):
     declared_node_type_name = node['type']
-    node_name = node['name']
-    app_name = parsed_dsl[BLUEPRINT]['name']
     processed_node = {'name': node_name,
                       'id': node_name,
                       'declared_type': declared_node_type_name}
@@ -985,8 +954,8 @@ def _process_node(node, parsed_dsl,
 
     node_type = parsed_dsl[TYPES][node_type_name]
     complete_node_type = _extract_complete_node_type(node_type, node_type_name,
-                                                     parsed_dsl, node,
-                                                     impl_properties)
+                                                     parsed_dsl, node_name,
+                                                     node, impl_properties)
     processed_node[PROPERTIES] = complete_node_type[PROPERTIES]
     processed_node[PLUGINS] = {}
     # handle plugins and operations
@@ -1002,7 +971,7 @@ def _process_node(node, parsed_dsl,
         processed_node['operations'] = operations
 
     # handle relationships
-    _process_node_relationships(app_name, node, node_name, node_names_set,
+    _process_node_relationships(node, node_name, node_names_set,
                                 processed_node, top_level_relationships,
                                 relationship_impls)
 
@@ -1099,8 +1068,8 @@ def _merge_properties_arrays(overridden, overriding,
     return merged_properties_dict.values()
 
 
-def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
-                                impl_properties):
+def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl,
+                                node_name, node, impl_properties):
     def types_and_node_inheritance_common_merging_func(complete_super_type,
                                                        merged_type):
         # derive interfaces
@@ -1142,7 +1111,7 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl, node,
         'value for mandatory  '
         '\'{1}\' property which is '
         'part of its type schema',
-        node_name=node['name']
+        node_name=node_name
     )
 
     return complete_node
