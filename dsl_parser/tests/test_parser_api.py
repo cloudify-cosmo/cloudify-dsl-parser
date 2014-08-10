@@ -388,7 +388,7 @@ node_types:
         self.assertEquals('test_type', node['type'])
         self.assertEquals('test_type', node['declared_type'])
         self.assertEquals('val', node['properties']['key'])
-        #TODO: assert type's default and description values once 'type' is
+        # TODO: assert type's default and description values once 'type' is
         # part of the parser's output
 
     def test_type_properties_property_with_description_only(self):
@@ -407,7 +407,7 @@ node_types:
         self.assertEquals('test_type', node['type'])
         self.assertEquals('test_type', node['declared_type'])
         self.assertEquals('val', node['properties']['key'])
-        #TODO: assert type's default and description values once 'type' is
+        # TODO: assert type's default and description values once 'type' is
         # part of the parser's output
 
     def test_type_properties_standard_property(self):
@@ -427,7 +427,7 @@ node_types:
         self.assertEquals('test_type', node['type'])
         self.assertEquals('test_type', node['declared_type'])
         self.assertEquals('val', node['properties']['key'])
-        #TODO: assert type's default and description values once 'type' is
+        # TODO: assert type's default and description values once 'type' is
         # part of the parser's output
 
     def test_type_properties_derivation(self):
