@@ -29,10 +29,11 @@ def parse_multi(yaml):
 class TestMultiInstance(AbstractTestParser):
 
     BASE_BLUEPRINT = """
-types:
+node_types:
     cloudify.types.host:
         properties:
-            -   x: y
+            x:
+                default: y
     db: {}
     webserver: {}
     db_dependent: {}
@@ -41,7 +42,8 @@ types:
 relationships:
     cloudify.relationships.depends_on:
         properties:
-            -   connection_type: 'all_to_all'
+            connection_type:
+                default: 'all_to_all'
     cloudify.relationships.contained_in:
         derived_from: cloudify.relationships.depends_on
     cloudify.relationships.connected_to:

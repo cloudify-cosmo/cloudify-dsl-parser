@@ -43,24 +43,26 @@ plugins:
             """
 
     BASIC_TYPE = """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
                 - install: test_plugin.install
                 - terminate: test_plugin.terminate
         properties:
-            - install_agent: 'false'
-            - key
+            install_agent:
+                default: 'false'
+            key: {}
             """
 
     # note that some tests extend the BASIC_NODE_TEMPLATES 'inline',
     # which is why it's appended in the end
     MINIMAL_BLUEPRINT = """
-types:
+node_types:
     test_type:
         properties:
-            - key: default
+            key:
+                default: 'default'
     """ + BASIC_NODE_TEMPLATES_SECTION
 
     BLUEPRINT_WITH_INTERFACES_AND_PLUGINS = BASIC_NODE_TEMPLATES_SECTION + \

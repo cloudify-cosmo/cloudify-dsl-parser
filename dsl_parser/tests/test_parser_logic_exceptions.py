@@ -30,22 +30,23 @@ class TestParserLogicExceptions(AbstractTestParser):
 
     def test_explicit_interface_with_missing_plugin(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
                 - install: missing_plugin.install
                 - terminate: missing_plugin.terminate
         properties:
-            - install_agent: 'false'
-            - key
+            install_agent:
+                default: 'false'
+            key: {}
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 10, DSLParsingLogicException)
 
     def test_type_derive_non_from_none_existing(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-types:
+node_types:
     test_type:
         derived_from: "non_existing_type_parent"
         """
@@ -62,7 +63,7 @@ imports:
 
     def test_cyclic_dependency(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-types:
+node_types:
     test_type:
         derived_from: "test_type_parent"
 
@@ -86,10 +87,10 @@ plugins:
         properties:
             url: "http://test_url.zip"
 
-types:
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -205,7 +206,7 @@ relationships:
 node_templates:
     test_node1:
         type: test_type
-types:
+node_types:
     test_type:
         interfaces:
             test_interface:
@@ -221,7 +222,7 @@ plugins:
 
     def test_type_implementation_ambiguous(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-types:
+node_types:
     specific1_test_type:
         derived_from: test_type
     specific2_test_type:
@@ -243,7 +244,7 @@ type_implementations:
 
     def test_type_implementation_not_derived_type(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-types:
+node_types:
     specific1_test_type: {}
 
 type_implementations:
@@ -261,20 +262,20 @@ type_implementations:
             test_interface1:
                 - install
                 - install: test_plugin.install
-types:
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 20, DSLParsingLogicException)
 
     def test_type_interface_duplicate_operation_with_mapping(self):
         yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-types:
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install
@@ -286,7 +287,7 @@ types:
     def test_relationship_source_interface_duplicate_operation_with_mapping(
             self):
         yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-types:
+node_types:
     test_type: {}
 relationships:
     empty_relationship:
@@ -301,7 +302,7 @@ relationships:
     def test_relationship_target_interface_duplicate_operation_with_mapping(
             self):
         yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-types:
+node_types:
     test_type: {}
 relationships:
     empty_relationship:
@@ -324,10 +325,11 @@ relationships:
                     test_interface1:
                         - install
                         - install: test_plugin.install
-types:
+node_types:
     test_type:
         properties:
-            - key: default
+            key:
+                default: 'default'
 relationships:
     empty_relationship: {}
             """
@@ -345,10 +347,11 @@ relationships:
                     test_interface1:
                         - install
                         - install: test_plugin.install
-types:
+node_types:
     test_type:
         properties:
-            - key: default
+            key:
+                default: 'default'
 relationships:
     empty_relationship: {}
             """
@@ -358,10 +361,10 @@ relationships:
     def test_operation_properties_injection_get_property_non_existing_prop(
             self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install:
@@ -376,11 +379,12 @@ types:
 
     def test_operation_properties_injection_get_property_with_other_key(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         properties:
-            - some_key: 'val'
-            - key
+            some_key:
+                default: 'val'
+            key: {}
         interfaces:
             test_interface1:
                 - install:
@@ -389,7 +393,6 @@ types:
                         key:
                             get_property: 'some_key'
                             some_prop: 'some_value'
-
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 105, DSLParsingLogicException)
@@ -397,17 +400,16 @@ types:
     def test_operation_properties_injection_get_property_path_no_dict(
             self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install:
                     mapping: test_plugin.install
                     properties:
                         key: { get_property: 'key.nested' }
-
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 104, DSLParsingLogicException)
@@ -416,17 +418,16 @@ types:
     def test_operation_properties_injection_get_property_path_no_array(
             self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install:
                     mapping: test_plugin.install
                     properties:
                         key: { get_property: 'key[0]' }
-
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 104, DSLParsingLogicException)
@@ -434,7 +435,7 @@ types:
 
     def test_node_set_non_existing_property(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type: {}
 """
         ex = self._assert_dsl_parsing_exception_error_code(
@@ -443,11 +444,11 @@ types:
 
     def test_node_doesnt_implement_schema_mandatory_property(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         properties:
-            - key
-            - mandatory
+            key: {}
+            mandatory: {}
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 107, DSLParsingLogicException)
@@ -483,7 +484,7 @@ relationships:
 relationships:
     test_relationship:
         properties:
-            - should_implement
+            should_implement: {}
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 107, DSLParsingLogicException)

@@ -118,7 +118,7 @@ node_templates:
 
     def test_interface_with_no_operations(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-types:
+node_types:
     my_type:
         interfaces:
             my_interface: []
@@ -128,7 +128,7 @@ types:
 
     def test_interface_with_duplicate_operations(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-types:
+node_types:
     my_type:
         interfaces:
             test_interface1:
@@ -141,7 +141,7 @@ types:
 
     def test_type_with_illegal_interface_declaration(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
@@ -153,7 +153,7 @@ types:
 
     def test_type_with_illegal_interface_declaration_2(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
@@ -164,7 +164,7 @@ types:
 
     def test_type_with_illegal_interface_declaration_3(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
@@ -175,7 +175,7 @@ types:
 
     def test_type_with_empty_interfaces_declaration(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         interfaces: {}
             """
@@ -237,20 +237,23 @@ imports:
 
     def test_type_multiple_derivation(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-types:
+node_types:
     test_type:
         properties:
-            - key: "not_val"
+            key:
+                default: "not_val"
         derived_from:
             -   "test_type_parent"
             -   "test_type_parent2"
 
     test_type_parent:
         properties:
-            - key: "val1_parent"
+            key:
+                default: "val1_parent"
     test_type_parent2:
         properties:
-            - key: "val1_parent2"
+            key:
+                default: "val1_parent2"
     """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -351,7 +354,7 @@ relationships:
     def test_type_relationship(self):
         # relationships are not valid under types whatsoever.
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-types:
+node_types:
     test_type:
         relationships: {}
         """
@@ -476,7 +479,7 @@ types:
 
     def test_interface_operation_mapping_no_mapping_prop(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
@@ -489,7 +492,7 @@ types:
 
     def test_interface_operation_mapping_no_properties(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
@@ -512,7 +515,7 @@ workflows:
 workflows:
     workflow1:
         parameters:
-            - param
+            param: {}
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -526,17 +529,7 @@ workflows:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_workflow_mapping_empty_parameters(self):
-        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
-workflows:
-    workflow1:
-        mapping: test_plugin.workflow1
-        parameters: []
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_workflow_parameters_as_dictionary(self):
+    def test_workflow_parameters_simple_dictionary_schema_format(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
 workflows:
     workflow1:
@@ -547,15 +540,39 @@ workflows:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_workflow_bad_type_parameters(self):
+    def test_workflow_parameters_array_dictionary_schema_format(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        parameters:
+            key:
+                - default: val1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_parameters_schema_array_format(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
 workflows:
     workflow1:
         mapping: test_plugin.workflow1
         parameters:
             - key: value
-            - param
-            - 353
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_workflow_parameters_extra_property(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    workflow1:
+        mapping: test_plugin.workflow1
+        parameters:
+            key:
+                default: val1
+                description: property_desc1
+                extra_property: this_is_not_allowed
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -566,14 +583,15 @@ workflows:
     workflow1:
         mapping: test_plugin.workflow1
         properties:
-            - key: value
+            key:
+                default: value
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
     def test_interface_operation_mapping_empty_properties(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
@@ -586,7 +604,7 @@ types:
 
     def test_interface_operation_mapping_unknown_extra_attributes(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
@@ -599,9 +617,9 @@ types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_type_properties_not_schema_array_format(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+    def test_type_properties_simple_dictionary_schema_format(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
     test_type:
         properties:
             key: value
@@ -609,13 +627,36 @@ types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_type_properties_dictionary_with_multiple_values(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-types:
+    def test_type_properties_array_dictionary_schema_format(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
     test_type:
         properties:
-            -   key1: value
-                key2: value
+            key:
+                - default: val1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_type_properties_schema_array_format(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
+    test_type:
+        properties:
+            - key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_type_properties_extra_property(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
+    test_type:
+        properties:
+            key:
+                default: val1
+                description: property_desc1
+                extra_property: this_is_not_allowed
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -683,14 +724,46 @@ relationship_implementations:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_relationship_properties_non_single_default_value(self):
+    def test_relationship_properties_simple_dictionary_schema_format(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
     test_relationship:
         properties:
-            - prop_with_bad_default: 1
-              prop2_with_bad_default: 2
+            key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
 
-    """
+    def test_relationship_properties_array_dictionary_schema_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            key:
+                - default: val1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_relationship_properties_schema_array_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            - key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_relationship_properties_extra_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            key:
+                default: val1
+                description: property_desc1
+                extra_property: this_is_not_allowed
+"""
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
