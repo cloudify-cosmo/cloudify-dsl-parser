@@ -788,6 +788,7 @@ def _process_groups(groups, policy_types, processed_nodes):
             policy[PROPERTIES] = merged_properties
     return processed_groups
 
+
 def _process_node_relationships(node, node_name, node_names_set,
                                 processed_node, top_level_relationships,
                                 relationship_impls):

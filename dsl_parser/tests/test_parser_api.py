@@ -2991,9 +2991,9 @@ plugins:
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
 
 ##############################################
-## NOTE!!!
-## This file has 2 test case, please notice
-## this when you are adding a new test a you
-## probably want the first test and not the one
-## right above this notice
+# NOTE!!!
+# This file has 2 test case, please notice
+# this when you are adding a new test a you
+# probably want the first test and not the one
+# right above this notice
 #############################################
