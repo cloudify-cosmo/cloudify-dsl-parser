@@ -28,6 +28,8 @@ RELATIONSHIPS = 'relationships'
 RELATIONSHIP_IMPLEMENTATIONS = 'relationship_implementations'
 PROPERTIES = 'properties'
 TYPE_HIERARCHY = 'type_hierarchy'
+POLICY_TYPES = 'policy_types'
+GROUPS = 'groups'
 
 HOST_TYPE = 'cloudify.types.host'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
@@ -204,10 +206,13 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
+    policy_types = combined_parsed_dsl.get(POLICY_TYPES, {})
+
     plan = {
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
         WORKFLOWS: processed_workflows,
+        POLICY_TYPES: policy_types,
         'management_plugins_to_install': plan_management_plugins,
         'workflow_plugins_to_install': workflow_plugins_to_install
     }
@@ -1184,7 +1189,8 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
     # somewhat merged with override
     merge_no_override = {INTERFACES, NODE_TYPES, PLUGINS, WORKFLOWS,
                          TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
-                         RELATIONSHIP_IMPLEMENTATIONS}
+                         RELATIONSHIP_IMPLEMENTATIONS,
+                         POLICY_TYPES, GROUPS}
     merge_one_nested_level_no_override = dict()
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)

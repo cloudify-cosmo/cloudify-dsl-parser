@@ -18,6 +18,8 @@ __author__ = 'ran'
 from urllib import pathname2url
 import os
 
+import yaml as yml
+
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.parser import parse, parse_from_path, parse_from_url
 from dsl_parser.parser import TYPE_HIERARCHY
@@ -2466,6 +2468,241 @@ workflows:
         self.assertEqual('test_plugin2',
                          workflow_plugins_to_install[1]['name'])
 
+    def test_relationship_type_properties_empty_properties(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_templates:
+    test_node:
+        type: test_type
+node_types:
+    test_type: {}
+relationships:
+    test_relationship:
+        properties: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        relationship = result['relationships']['test_relationship']
+        self.assertEquals({}, relationship['properties'])
+
+    def test_relationship_type_properties_empty_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            key: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        relationship = result['relationships']['test_relationship']
+        self.assertEquals({'key': {}}, relationship['properties'])
+
+    def test_relationship_type_properties_property_with_description_only(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            key:
+                description: property_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        relationship = result['relationships']['test_relationship']
+        self.assertEquals({'key': {'description': 'property_desc'}},
+                          relationship['properties'])
+
+    def test_relationship_type_properties_standard_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            key:
+                default: val
+                description: property_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        relationship = result['relationships']['test_relationship']
+        self.assertEquals(
+            {'key': {'default': 'val', 'description': 'property_desc'}},
+            relationship['properties'])
+
+    def test_workflow_parameters_empty_parameters(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    test_workflow:
+        mapping: test_plugin.workflow1
+        parameters: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        workflow = result['workflows']['test_workflow']
+        self.assertEquals({}, workflow['parameters'])
+
+    def test_workflow_parameters_empty_parameter(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    test_workflow:
+        mapping: test_plugin.workflow1
+        parameters:
+            key: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        workflow = result['workflows']['test_workflow']
+        self.assertEquals({'key': {}}, workflow['parameters'])
+
+    def test_workflow_parameters_parameter_with_description_only(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    test_workflow:
+        mapping: test_plugin.workflow1
+        parameters:
+            key:
+                description: parameter_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        workflow = result['workflows']['test_workflow']
+        self.assertEquals({'key': {'description': 'parameter_desc'}},
+                          workflow['parameters'])
+
+    def test_workflow_parameters_standard_parameter(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    test_workflow:
+        mapping: test_plugin.workflow1
+        parameters:
+            key:
+                default: val
+                description: parameter_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        workflow = result['workflows']['test_workflow']
+        self.assertEquals(
+            {'key': {'default': 'val', 'description': 'parameter_desc'}},
+            workflow['parameters'])
+
+    def test_policy_type_properties_empty_properties(self):
+        policy_types = dict(
+            policy_types=dict(
+                policy_type=dict(
+                    source='the_source',
+                    properties=dict())))
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
+            yml.safe_dump(policy_types)
+        result = parse(yaml)
+        self.assertDictEqual(result['policy_types'],
+                             policy_types['policy_types'])
+
+    def test_policy_type_properties_empty_property(self):
+        policy_types = dict(
+            policy_types=dict(
+                policy_type=dict(
+                    source='the_source',
+                    properties=dict(
+                        property=dict()))))
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
+            yml.safe_dump(policy_types)
+        result = parse(yaml)
+        self.assertDictEqual(result['policy_types'],
+                             policy_types['policy_types'])
+
+    def test_policy_type_properties_property_with_description_only(self):
+        policy_types = dict(
+            policy_types=dict(
+                policy_type=dict(
+                    source='the_source',
+                    properties=dict(
+                        property=dict(
+                            description='property description')))))
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
+               yml.safe_dump(policy_types)
+        result = parse(yaml)
+        self.assertDictEqual(result['policy_types'],
+                             policy_types['policy_types'])
+
+    def test_policy_type_properties_property_with_default_only(self):
+        policy_types = dict(
+            policy_types=dict(
+                policy_type=dict(
+                    source='the_source',
+                    properties=dict(
+                        property=dict(
+                            default='default_value')))))
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
+            yml.safe_dump(policy_types)
+        result = parse(yaml)
+        self.assertDictEqual(result['policy_types'],
+                             policy_types['policy_types'])
+
+    def test_policy_type_properties_standard_property(self):
+        policy_types = dict(
+            policy_types=dict(
+                policy_type=dict(
+                    source='the_source',
+                    properties=dict(
+                        property=dict(
+                            default='default_value',
+                            description='property description')))))
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
+            yml.safe_dump(policy_types)
+        result = parse(yaml)
+        self.assertDictEqual(result['policy_types'],
+                             policy_types['policy_types'])
+
+    def test_policy_type_imports(self):
+        policy_types = []
+        for i in range(2):
+            policy_types.append(dict(
+                policy_types={
+                    'policy_type{}'.format(i): dict(
+                        source='the_source',
+                        properties=dict(
+                            property=dict(
+                                default='default_value',
+                                description='property description')))}))
+
+            yml.safe_dump(policy_types)
+
+        yaml = self.create_yaml_with_imports([
+            self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS,
+            yml.safe_dump(policy_types[0]),
+            yml.safe_dump(policy_types[1]),
+        ])
+
+        expected_result = dict(
+            policy_types=policy_types[0]['policy_types'])
+        expected_result['policy_types'].update(policy_types[1]['policy_types'])
+
+        result = parse(yaml)
+        self.assertDictEqual(result['policy_types'],
+                             expected_result['policy_types'])
+
 
 class ManagementPluginsToInstallTest(AbstractTestParser):
     def test_one_manager_one_agent_plugin_on_same_node(self):
@@ -2688,141 +2925,10 @@ plugins:
             result["management_plugins_to_install"]
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
 
-    def test_relationship_type_properties_empty_properties(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-node_templates:
-    test_node:
-        type: test_type
-node_types:
-    test_type: {}
-relationships:
-    test_relationship:
-        properties: {}
-"""
-        result = parse(yaml)
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('test_node', node['id'])
-        self.assertEquals('test_type', node['type'])
-        relationship = result['relationships']['test_relationship']
-        self.assertEquals({}, relationship['properties'])
-
-    def test_relationship_type_properties_empty_property(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        properties:
-            key: {}
-"""
-        result = parse(yaml)
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('test_node', node['id'])
-        self.assertEquals('test_type', node['type'])
-        relationship = result['relationships']['test_relationship']
-        self.assertEquals({'key': {}}, relationship['properties'])
-
-    def test_relationship_type_properties_property_with_description_only(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        properties:
-            key:
-                description: property_desc
-"""
-        result = parse(yaml)
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('test_node', node['id'])
-        self.assertEquals('test_type', node['type'])
-        relationship = result['relationships']['test_relationship']
-        self.assertEquals({'key': {'description': 'property_desc'}},
-                          relationship['properties'])
-
-    def test_relationship_type_properties_standard_property(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        properties:
-            key:
-                default: val
-                description: property_desc
-"""
-        result = parse(yaml)
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('test_node', node['id'])
-        self.assertEquals('test_type', node['type'])
-        relationship = result['relationships']['test_relationship']
-        self.assertEquals(
-            {'key': {'default': 'val', 'description': 'property_desc'}},
-            relationship['properties'])
-
-    def test_workflow_parameters_empty_parameters(self):
-        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
-workflows:
-    test_workflow:
-        mapping: test_plugin.workflow1
-        parameters: {}
-"""
-        result = parse(yaml)
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('test_node', node['id'])
-        self.assertEquals('test_type', node['type'])
-        workflow = result['workflows']['test_workflow']
-        self.assertEquals({}, workflow['parameters'])
-
-    def test_workflow_parameters_empty_parameter(self):
-        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
-workflows:
-    test_workflow:
-        mapping: test_plugin.workflow1
-        parameters:
-            key: {}
-"""
-        result = parse(yaml)
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('test_node', node['id'])
-        self.assertEquals('test_type', node['type'])
-        workflow = result['workflows']['test_workflow']
-        self.assertEquals({'key': {}}, workflow['parameters'])
-
-    def test_workflow_parameters_parameter_with_description_only(self):
-        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
-workflows:
-    test_workflow:
-        mapping: test_plugin.workflow1
-        parameters:
-            key:
-                description: parameter_desc
-"""
-        result = parse(yaml)
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('test_node', node['id'])
-        self.assertEquals('test_type', node['type'])
-        workflow = result['workflows']['test_workflow']
-        self.assertEquals({'key': {'description': 'parameter_desc'}},
-                          workflow['parameters'])
-
-    def test_workflow_parameters_standard_parameter(self):
-        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
-workflows:
-    test_workflow:
-        mapping: test_plugin.workflow1
-        parameters:
-            key:
-                default: val
-                description: parameter_desc
-"""
-        result = parse(yaml)
-        self.assertEquals(1, len(result['nodes']))
-        node = result['nodes'][0]
-        self.assertEquals('test_node', node['id'])
-        self.assertEquals('test_type', node['type'])
-        workflow = result['workflows']['test_workflow']
-        self.assertEquals(
-            {'key': {'default': 'val', 'description': 'parameter_desc'}},
-            workflow['parameters'])
+##############################################
+## NOTE!!!
+## This file has 2 test case, please notice
+## this when you are adding a new test a you
+## probably want the first test and not the one
+## right above this notice
+#############################################

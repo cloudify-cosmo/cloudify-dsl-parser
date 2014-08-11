@@ -160,6 +160,15 @@ WORKFLOWS_SCHEMA = {
     }
 }
 
+UNIQUE_STRING_ARRAY_SCHEMA = {
+    'type': 'array',
+    'items': {
+        'type': 'string'
+    },
+    'uniqueItems': True
+}
+
+IMPORTS_SCHEMA = UNIQUE_STRING_ARRAY_SCHEMA
 
 # Schema validation is currently done using a json schema validator
 # ( see http://json-schema.org/ ), since no good YAML schema validator could
@@ -277,61 +286,54 @@ DSL_SCHEMA = {
             },
             'additionalProperties': False
         },
-        'policies': {
+        'policy_types': {
             'type': 'object',
-            'properties': {
-                'types': {
+            'patternProperties': {
+                '^': {
                     'type': 'object',
-                    'patternProperties': {
-                        '^': {
-                            'type': 'object',
-                            'oneOf': [
-                                {
-                                    'properties': {
-                                        'message': {
-                                            'type': 'string'
-                                        },
-                                        'policy': {
-                                            'type': 'string'
-                                        }
-                                    },
-                                    'required': ['message', 'policy'],
-                                    'additionalProperties': False
-                                },
-                                {
-                                    'properties': {
-                                        'message': {
-                                            'type': 'string'
-                                        },
-                                        'ref': {
-                                            'type': 'string'
-                                        }
-                                    },
-                                    'required': ['message', 'ref'],
-                                    'additionalProperties': False
-                                }
-                            ]
+                    'properties': {
+                        'properties': PROPERTIES_SCHEMA_SCHEMA,
+                        'source': {
+                            'type': 'string'
                         }
-                    }
+                    },
+                    'required': ['properties', 'source'],
+                    'additionalProperties': False
                 },
-                'rules': {
+            },
+            'additionalProperties': False
+        },
+        'groups': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
                     'type': 'object',
-                    'patternProperties': {
-                        '^': {
+                    'properties': {
+                        'members': UNIQUE_STRING_ARRAY_SCHEMA,
+                        'policies': {
                             'type': 'object',
-                            'properties': {
-                                'message': {
-                                    'type': 'string'
+                            'patternProperties': {
+                                '^': {
+                                    'type': 'object',
+                                    'properties': {
+                                        #non-meta 'properties'
+                                        'type': {
+                                            'type': 'string'
+                                        },
+                                        'properties': {
+                                            'type': 'object'
+                                        }
+                                    },
+                                    'required': ['type', 'properties'],
+                                    'additionalProperties': False
                                 },
-                                'rule': {
-                                    'type': 'string'
-                                }
                             },
-                            'required': ['message', 'rule'],
                             'additionalProperties': False
                         }
-                    }
-                }
+                    },
+                    'required': ['policies', 'members'],
+                    'additionalProperties': False
+                },
             },
             'additionalProperties': False
         },
@@ -422,13 +424,4 @@ DSL_SCHEMA = {
     },
     'required': ['node_templates'],
     'additionalProperties': False
-}
-
-
-IMPORTS_SCHEMA = {
-    'type': 'array',
-    'items': {
-        'type': 'string'
-    },
-    'uniqueItems': True
 }
