@@ -208,11 +208,17 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
     policy_types = combined_parsed_dsl.get(POLICY_TYPES, {})
 
+    groups = _process_groups(
+        combined_parsed_dsl.get(GROUPS, {}),
+        policy_types,
+        processed_nodes)
+
     plan = {
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
         WORKFLOWS: processed_workflows,
         POLICY_TYPES: policy_types,
+        GROUPS: groups,
         'management_plugins_to_install': plan_management_plugins,
         'workflow_plugins_to_install': workflow_plugins_to_install
     }
@@ -750,6 +756,37 @@ def _process_workflows(workflows, plugins):
         processed_workflows[name] = op_descriptor.op_struct
     return processed_workflows
 
+
+def _process_groups(groups, policy_types, processed_nodes):
+    node_names = {n['name'] for n in processed_nodes}
+    processed_groups = copy.deepcopy(groups)
+    for group_name, group in processed_groups.items():
+        for member in group['members']:
+            if member not in node_names:
+                raise DSLParsingLogicException(
+                    40,
+                    'member "{}" of group "{}" does not '
+                    'match any defined node'.format(member, groups))
+        for policy_name, policy in group['policies'].items():
+            if policy['type'] not in policy_types:
+                raise DSLParsingLogicException(
+                    41,
+                    'policy "{}" of group "{}" references a non existent '
+                    'policy type "{}"'
+                    .format(policy_name, group, policy['type']))
+            merged_properties = _merge_schema_and_instance_properties(
+                policy.get(PROPERTIES, {}),
+                {},
+                policy_types[policy['type']].get(PROPERTIES, {}),
+                '{0} \'{1}\' property is not part of '
+                'the policy type properties schema',
+                '{0} does not provide a value for mandatory '
+                '\'{1}\' property which is '
+                'part of its policy type schema',
+                node_name='group "{}", policy "{}"'.format(group_name,
+                                                           policy_name))
+            policy[PROPERTIES] = merged_properties
+    return processed_groups
 
 def _process_node_relationships(node, node_name, node_names_set,
                                 processed_node, top_level_relationships,
@@ -1385,7 +1422,7 @@ def _apply_alias_mapping_if_available(name, alias_mapping):
 
 class DSLParsingException(Exception):
     def __init__(self, err_code, *args):
-        Exception.__init__(self, args)
+        super(DSLParsingException, self).__init__(*args)
         self.err_code = err_code
 
 

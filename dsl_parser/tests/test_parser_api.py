@@ -2641,7 +2641,7 @@ workflows:
                         property=dict(
                             description='property description')))))
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
-               yml.safe_dump(policy_types)
+            yml.safe_dump(policy_types)
         result = parse(yaml)
         self.assertDictEqual(result['policy_types'],
                              policy_types['policy_types'])
@@ -2687,8 +2687,6 @@ workflows:
                                 default='default_value',
                                 description='property description')))}))
 
-            yml.safe_dump(policy_types)
-
         yaml = self.create_yaml_with_imports([
             self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS,
             yml.safe_dump(policy_types[0]),
@@ -2702,6 +2700,73 @@ workflows:
         result = parse(yaml)
         self.assertDictEqual(result['policy_types'],
                              expected_result['policy_types'])
+
+    def test_groups_schema_properties_merge(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+policy_types:
+    policy_type:
+        properties:
+            key1:
+                default: value1
+            key2:
+                description: key2 description
+            key3:
+                default: value3
+        source: source
+groups:
+    group:
+        members: [test_node]
+        policies:
+            policy:
+                type: policy_type
+                properties:
+                    key2: group_value2
+                    key3: group_value3
+"""
+        result = parse(yaml)
+        groups = result['groups']
+        self.assertEqual(1, len(groups))
+        group = groups['group']
+        self.assertEqual(['test_node'], group['members'])
+        self.assertEqual(1, len(group['policies']))
+        policy = group['policies']['policy']
+        self.assertEqual('policy_type', policy['type'])
+        self.assertDictEqual({
+            'key1': 'value1',
+            'key2': 'group_value2',
+            'key3': 'group_value3'
+        }, policy['properties'])
+
+    def test_groups_imports(self):
+        groups = []
+        for i in range(2):
+            groups.append(dict(
+                groups={
+                    'group{}'.format(i): dict(
+                        members=['test_node'],
+                        policies=dict(
+                            policy=dict(
+                                type='policy_type',
+                                properties={})))}))
+        policy_types = """
+policy_types:
+    policy_type:
+        properties: {}
+        source: source
+"""
+        yaml = self.create_yaml_with_imports([
+            self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS,
+            policy_types,
+            yml.safe_dump(groups[0]),
+            yml.safe_dump(groups[1])])
+
+        expected_result = dict(
+            groups=groups[0]['groups'])
+        expected_result['groups'].update(groups[1]['groups'])
+
+        result = parse(yaml)
+        self.assertDictEqual(result['groups'],
+                             expected_result['groups'])
 
 
 class ManagementPluginsToInstallTest(AbstractTestParser):
