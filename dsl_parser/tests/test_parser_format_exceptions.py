@@ -767,3 +767,302 @@ relationships:
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
+
+    def test_policy_type_properties_simple_dictionary_schema_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    test_policy:
+        source: source
+        properties:
+            key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_type_properties_array_dictionary_schema_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    test_policy:
+        source: source
+        properties:
+            key:
+                - default: val1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_type_properties_schema_array_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    test_policy:
+        source: source
+        properties:
+            - key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_type_properties_extra_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    test_policy:
+        source: source
+        properties:
+            key:
+                default: val1
+                description: property_desc1
+                extra_property: this_is_not_allowed
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_type_source_non_string(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    test_policy:
+        source: 1
+        properties:
+            key:
+                default: val1
+                description: property_desc1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_type_extra_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    test_policy:
+        extra_property: i_should_not_be_here
+        source: source
+        properties:
+            key:
+                default: val1
+                description: property_desc1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_type_missing_source(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    test_policy:
+        properties:
+            key:
+                default: val1
+                description: property_desc1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_type_missing_properties(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    test_policy:
+        source: source
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_groups_missing_member(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        policies:
+            policy:
+                type: type
+                properties:
+                    key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_groups_missing_policies(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: [member]
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_groups_extra_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: [member]
+        policies:
+            policy:
+                type: type
+                properties:
+                    key: value
+        extra_property: extra_property
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_groups_policy_missing_type(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: [member]
+        policies:
+            policy:
+                properties:
+                    key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_groups_policy_missing_properties(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: [member]
+        policies:
+            policy:
+                type: type
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_groups_policy_extra_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: [member]
+        policies:
+            policy:
+                type: type
+                properties:
+                    key: value
+                extra_property: extra_property
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_group_members_non_unique(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: [member, member]
+        policies:
+            policy:
+                type: type
+                properties:
+                    key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_group_members_bad_type1(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: [1]
+        policies:
+            policy:
+                type: type
+                properties:
+                    key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_group_members_bad_type2(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: 1
+        policies:
+            policy:
+                type: type
+                properties:
+                    key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_group_policy_type_bad_type(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+groups:
+    group:
+        members: [vm]
+        policies:
+            policy:
+                type: 1
+                properties:
+                    key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_group_policy_type_bad_properties(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: [vm]
+        policies:
+            policy:
+                type: type
+                properties: properties
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_group_no_members(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: []
+        policies:
+            policy:
+                type: type
+                properties: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)

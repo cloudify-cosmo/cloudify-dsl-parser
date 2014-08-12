@@ -28,6 +28,8 @@ RELATIONSHIPS = 'relationships'
 RELATIONSHIP_IMPLEMENTATIONS = 'relationship_implementations'
 PROPERTIES = 'properties'
 TYPE_HIERARCHY = 'type_hierarchy'
+POLICY_TYPES = 'policy_types'
+GROUPS = 'groups'
 
 HOST_TYPE = 'cloudify.types.host'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
@@ -204,10 +206,19 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
+    policy_types = combined_parsed_dsl.get(POLICY_TYPES, {})
+
+    groups = _process_groups(
+        combined_parsed_dsl.get(GROUPS, {}),
+        policy_types,
+        processed_nodes)
+
     plan = {
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
         WORKFLOWS: processed_workflows,
+        POLICY_TYPES: policy_types,
+        GROUPS: groups,
         'management_plugins_to_install': plan_management_plugins,
         'workflow_plugins_to_install': workflow_plugins_to_install
     }
@@ -746,6 +757,38 @@ def _process_workflows(workflows, plugins):
     return processed_workflows
 
 
+def _process_groups(groups, policy_types, processed_nodes):
+    node_names = {n['name'] for n in processed_nodes}
+    processed_groups = copy.deepcopy(groups)
+    for group_name, group in processed_groups.items():
+        for member in group['members']:
+            if member not in node_names:
+                raise DSLParsingLogicException(
+                    40,
+                    'member "{}" of group "{}" does not '
+                    'match any defined node'.format(member, groups))
+        for policy_name, policy in group['policies'].items():
+            if policy['type'] not in policy_types:
+                raise DSLParsingLogicException(
+                    41,
+                    'policy "{}" of group "{}" references a non existent '
+                    'policy type "{}"'
+                    .format(policy_name, group, policy['type']))
+            merged_properties = _merge_schema_and_instance_properties(
+                policy.get(PROPERTIES, {}),
+                {},
+                policy_types[policy['type']].get(PROPERTIES, {}),
+                '{0} \'{1}\' property is not part of '
+                'the policy type properties schema',
+                '{0} does not provide a value for mandatory '
+                '\'{1}\' property which is '
+                'part of its policy type schema',
+                node_name='group "{}", policy "{}"'.format(group_name,
+                                                           policy_name))
+            policy[PROPERTIES] = merged_properties
+    return processed_groups
+
+
 def _process_node_relationships(node, node_name, node_names_set,
                                 processed_node, top_level_relationships,
                                 relationship_impls):
@@ -1184,7 +1227,8 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
     # somewhat merged with override
     merge_no_override = {INTERFACES, NODE_TYPES, PLUGINS, WORKFLOWS,
                          TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
-                         RELATIONSHIP_IMPLEMENTATIONS}
+                         RELATIONSHIP_IMPLEMENTATIONS,
+                         POLICY_TYPES, GROUPS}
     merge_one_nested_level_no_override = dict()
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
@@ -1379,7 +1423,7 @@ def _apply_alias_mapping_if_available(name, alias_mapping):
 
 class DSLParsingException(Exception):
     def __init__(self, err_code, *args):
-        Exception.__init__(self, args)
+        super(DSLParsingException, self).__init__(*args)
         self.err_code = err_code
 
 

@@ -629,3 +629,78 @@ relationship_implementations:
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 111, DSLParsingLogicException)
         self.assertEquals('impl', ex.implementation)
+
+    def test_group_missing_member(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    policy_type:
+        properties:
+            metric:
+                default: 100
+        source: source
+groups:
+    group:
+        members: [vm]
+        policies:
+            policy:
+                type: policy_type
+                properties: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 40, DSLParsingLogicException)
+
+    def test_group_missing_policy_type(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    policy_type:
+        properties:
+            metric:
+                default: 100
+        source: source
+groups:
+    group:
+        members: [test_node]
+        policies:
+            policy:
+                type: non_existent_policy_type
+                properties: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 41, DSLParsingLogicException)
+
+    def test_group_policy_type_undefined_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    policy_type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: [test_node]
+        policies:
+            policy:
+                type: policy_type
+                properties:
+                    key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 106, DSLParsingLogicException)
+
+    def test_group_policy_type_missing_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    policy_type:
+        properties:
+            key:
+                description: a key
+        source: source
+groups:
+    group:
+        members: [test_node]
+        policies:
+            policy:
+                type: policy_type
+                properties: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 107, DSLParsingLogicException)
