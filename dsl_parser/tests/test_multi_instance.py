@@ -29,10 +29,11 @@ def parse_multi(yaml):
 class TestMultiInstance(AbstractTestParser):
 
     BASE_BLUEPRINT = """
-types:
+node_types:
     cloudify.types.host:
         properties:
-            -   x: y
+            x:
+                default: y
     db: {}
     webserver: {}
     db_dependent: {}
@@ -41,16 +42,15 @@ types:
 relationships:
     cloudify.relationships.depends_on:
         properties:
-            -   connection_type: 'all_to_all'
+            connection_type:
+                default: 'all_to_all'
     cloudify.relationships.contained_in:
         derived_from: cloudify.relationships.depends_on
     cloudify.relationships.connected_to:
         derived_from: cloudify.relationships.depends_on
 
-blueprint:
-    name: multi_instance
-    nodes:
-        """
+node_templates:
+    """
 
     def setUp(self):
         random.seed(0)
@@ -62,10 +62,11 @@ blueprint:
     def test_single_node(self):
 
         yaml = self.BASE_BLUEPRINT + """
-        -   name: host
-            type: cloudify.types.host
-            instances:
-                deploy: 2
+
+    host:
+        type: cloudify.types.host
+        instances:
+            deploy: 2
 """
 
         multi_plan = parse_multi(yaml)
@@ -79,13 +80,13 @@ blueprint:
     def test_two_nodes_one_contained_in_other(self):
 
         yaml = self.BASE_BLUEPRINT + """
-        -   name: host
-            type: cloudify.types.host
-        -   name: db
-            type: db
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host
+    host:
+        type: cloudify.types.host
+    db:
+        type: db
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host
 """
         multi_plan = parse_multi(yaml)
         nodes = multi_plan['node_instances']
@@ -104,15 +105,15 @@ blueprint:
     def test_two_nodes_one_contained_in_other_two_instances(self):
 
         yaml = self.BASE_BLUEPRINT + """
-        -   name: host
-            type: cloudify.types.host
-            instances:
-                deploy: 2
-        -   name: db
-            type: db
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host
+    host:
+        type: cloudify.types.host
+        instances:
+            deploy: 2
+    db:
+        type: db
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host
 """
         multi_plan = parse_multi(yaml)
         nodes = multi_plan['node_instances']
@@ -141,29 +142,29 @@ blueprint:
 
     def test_single_connected_to(self):
         yaml = self.BASE_BLUEPRINT + """
-        -   name: host1
-            type: cloudify.types.host
-        -   name: host2
-            type: cloudify.types.host
-        -   name: db
-            type: db
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host1
-        -   name: webserver
-            type: webserver
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host2
-                -   type: cloudify.relationships.connected_to
-                    target: db
-        -   name: db_dependent
-            type: db_dependent
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host1
-                -   type: cloudify.relationships.connected_to
-                    target: db
+    host1:
+        type: cloudify.types.host
+    host2:
+        type: cloudify.types.host
+    db:
+        type: db
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host1
+    webserver:
+        type: webserver
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host2
+            -   type: cloudify.relationships.connected_to
+                target: db
+    db_dependent:
+        type: db_dependent
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host1
+            -   type: cloudify.relationships.connected_to
+                target: db
 """
 
         multi_plan = parse_multi(yaml)
@@ -207,8 +208,8 @@ blueprint:
     def test_prepare_deployment_plan_single_none_host_node(self):
 
         yaml = self.BASE_BLUEPRINT + """
-        -   name: node1_id
-            type: type
+    node1_id:
+        type: type
 """
 
         multi_plan = parse_multi(yaml)
@@ -219,50 +220,50 @@ blueprint:
 
     def test_connected_to_and_contained_in_with_and_without_host_id(self):
         yaml = self.BASE_BLUEPRINT + """
-        -   name: host1
-            type: cloudify.types.host
-            instances:
-                deploy: 2
-        -   name: host2
-            type: cloudify.types.host
-            instances:
-                deploy: 2
-        -   name: host3
-            type: cloudify.types.host
-            instances:
-                deploy: 2
-        -   name: network
-            type: network
-        -   name: db
-            type: db
-            instances:
-                deploy: 2
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host1
-        -   name: webserver1
-            type: webserver
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host2
-                -   type: cloudify.relationships.connected_to
-                    target: db
-                    properties:
-                        connection_type: all_to_one
-        -   name: webserver2
-            type: webserver
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host2
-                -   type: cloudify.relationships.depends_on
-                    target: db
-                    properties:
-                        connection_type: all_to_all
-        -   name: db_dependent
-            type: db_dependent
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: db
+    host1:
+        type: cloudify.types.host
+        instances:
+            deploy: 2
+    host2:
+        type: cloudify.types.host
+        instances:
+            deploy: 2
+    host3:
+        type: cloudify.types.host
+        instances:
+            deploy: 2
+    network:
+        type: network
+    db:
+        type: db
+        instances:
+            deploy: 2
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host1
+    webserver1:
+        type: webserver
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host2
+            -   type: cloudify.relationships.connected_to
+                target: db
+                properties:
+                    connection_type: all_to_one
+    webserver2:
+        type: webserver
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host2
+            -   type: cloudify.relationships.depends_on
+                target: db
+                properties:
+                    connection_type: all_to_all
+    db_dependent:
+        type: db_dependent
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: db
 """
         multi_plan = parse_multi(yaml)
         nodes = multi_plan['node_instances']

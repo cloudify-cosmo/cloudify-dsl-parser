@@ -26,14 +26,12 @@ from dsl_parser.parser import parse
 
 
 class AbstractTestParser(unittest.TestCase):
-    BASIC_BLUEPRINT_SECTION = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node
-            type: test_type
-            properties:
-                key: "val"
+    BASIC_NODE_TEMPLATES_SECTION = """
+node_templates:
+    test_node:
+        type: test_type
+        properties:
+            key: "val"
         """
 
     BASIC_PLUGIN = """
@@ -45,27 +43,29 @@ plugins:
             """
 
     BASIC_TYPE = """
-types:
+node_types:
     test_type:
         interfaces:
             test_interface1:
                 - install: test_plugin.install
                 - terminate: test_plugin.terminate
         properties:
-            - install_agent: 'false'
-            - key
+            install_agent:
+                default: 'false'
+            key: {}
             """
 
-    # note that some tests extend the BASIC_BLUEPRINT 'inline',
+    # note that some tests extend the BASIC_NODE_TEMPLATES 'inline',
     # which is why it's appended in the end
     MINIMAL_BLUEPRINT = """
-types:
+node_types:
     test_type:
         properties:
-            - key: default
-    """ + BASIC_BLUEPRINT_SECTION
+            key:
+                default: 'default'
+    """ + BASIC_NODE_TEMPLATES_SECTION
 
-    BLUEPRINT_WITH_INTERFACES_AND_PLUGINS = BASIC_BLUEPRINT_SECTION + \
+    BLUEPRINT_WITH_INTERFACES_AND_PLUGINS = BASIC_NODE_TEMPLATES_SECTION + \
         BASIC_PLUGIN + BASIC_TYPE
 
     def setUp(self):

@@ -63,31 +63,76 @@ INTERFACES_SCHEMA = {
     'minProperties': 1
 }
 
-PROPERTIES_ARRAY_SCHEMA = {
-    'type': 'array',
-    'minItems': 1,
-    'items': {
-        'oneOf': [
-            {
-                'type': 'object',
-                'patternProperties': {
-                    '^': {
-                        'oneOf': [
-                            {'type': 'object'},
-                            {'type': 'string'},
-                            {'type': 'number'},
-                            {'type': 'boolean'},
-                            {'type': 'array'}
-                        ]
-                    }
+PROPERTIES_SCHEMA_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            # can't seem to be able to do the 'oneOf' inside the
+            # 'properties' object, so some duplication is required here in
+            # order to allow any type for the 'default' value.
+            'anyOf': [
+                {
+                    'type': 'object',
+                    'properties': {
+                        'default': {
+                            'type': 'object'
+                        },
+                        'description': {
+                            'type': 'string'
+                        }
+                    },
+                    'additionalProperties': False
                 },
-                'maxProperties': 1,
-                'minProperties': 1
-            },
-            {
-                'type': 'string'
-            }
-        ]
+                {
+                    'type': 'object',
+                    'properties': {
+                        'default': {
+                            'type': 'string'
+                        },
+                        'description': {
+                            'type': 'string'
+                        }
+                    },
+                    'additionalProperties': False
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'default': {
+                            'type': 'number'
+                        },
+                        'description': {
+                            'type': 'string'
+                        }
+                    },
+                    'additionalProperties': False
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'default': {
+                            'type': 'boolean'
+                        },
+                        'description': {
+                            'type': 'string'
+                        }
+                    },
+                    'additionalProperties': False
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'default': {
+                            'type': 'array'
+                        },
+                        'description': {
+                            'type': 'string'
+                        }
+                    },
+                    'additionalProperties': False
+                }
+            ]
+        }
     }
 }
 
@@ -97,7 +142,7 @@ WORKFLOW_MAPPING_SCHEMA = {
         'mapping': {
             'type': 'string'
         },
-        'parameters': PROPERTIES_ARRAY_SCHEMA,
+        'parameters': PROPERTIES_SCHEMA_SCHEMA,
     },
     'required': ['mapping', 'parameters'],
     'additionalProperties': False
@@ -132,71 +177,59 @@ WORKFLOWS_SCHEMA = {
 DSL_SCHEMA = {
     'type': 'object',
     'properties': {
-        'blueprint': {
+        'node_templates': {
             'type': 'object',
-            'properties': {
-                'name': {
-                    'type': 'string'
-                },
-                'nodes': {
-                    'type': 'array',
-                    'minItems': 1,
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'name': {
-                                'type': 'string'
-                            },
-                            #non-meta 'type'
-                            'type': {
-                                'type': 'string'
-                            },
-                            'instances': {
-                                'type': 'object',
-                                'properties': {
-                                    'deploy': {
-                                        'type': 'number'
-                                    }
-                                },
-                                'required': ['deploy'],
-                                'additionalProperties': False
-                            },
-                            'interfaces': INTERFACES_SCHEMA,
-                            'relationships': {
-                                'type': 'array',
-                                'items': {
-                                    'type': 'object',
-                                    'properties': {
-                                        #non-meta 'type'
-                                        'type': {
-                                            'type': 'string'
-                                        },
-                                        'target': {
-                                            'type': 'string'
-                                        },
-                                        #non-meta 'properties'
-                                        'properties': {
-                                            'type': 'object'
-                                        },
-                                        'source_interfaces': INTERFACES_SCHEMA,
-                                        'target_interfaces': INTERFACES_SCHEMA,
-                                    },
-                                    'required': ['type', 'target'],
-                                    'additionalProperties': False
+            'patternProperties': {
+                '^': {
+                    'type': 'object',
+                    'properties': {
+                        #non-meta 'type'
+                        'type': {
+                            'type': 'string'
+                        },
+                        'instances': {
+                            'type': 'object',
+                            'properties': {
+                                'deploy': {
+                                    'type': 'number'
                                 }
                             },
-                            #non-meta 'properties'
-                            'properties': {
-                                'type': 'object'
+                            'required': ['deploy'],
+                            'additionalProperties': False
+                        },
+                        'interfaces': INTERFACES_SCHEMA,
+                        'relationships': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    #non-meta 'type'
+                                    'type': {
+                                        'type': 'string'
+                                    },
+                                    'target': {
+                                        'type': 'string'
+                                    },
+                                    #non-meta 'properties'
+                                    'properties': {
+                                        'type': 'object'
+                                    },
+                                    'source_interfaces': INTERFACES_SCHEMA,
+                                    'target_interfaces': INTERFACES_SCHEMA,
+                                },
+                                'required': ['type', 'target'],
+                                'additionalProperties': False
                             }
                         },
-                        'required': ['name', 'type'],
-                        'additionalProperties': False
-                    }
+                        #non-meta 'properties'
+                        'properties': {
+                            'type': 'object'
+                        }
+                    },
+                    'required': ['type'],
+                    'additionalProperties': False
                 }
-            },
-            'required': ['name', 'nodes'],
-            'additionalProperties': False
+            }
         },
         'plugins': {
             'type': 'object',
@@ -302,7 +335,7 @@ DSL_SCHEMA = {
             },
             'additionalProperties': False
         },
-        'types': {
+        'node_types': {
             'type': 'object',
             'patternProperties': {
                 '^': {
@@ -310,7 +343,7 @@ DSL_SCHEMA = {
                     'properties': {
                         'interfaces': INTERFACES_SCHEMA,
                         #non-meta 'properties'
-                        'properties': PROPERTIES_ARRAY_SCHEMA,
+                        'properties': PROPERTIES_SCHEMA_SCHEMA,
                         'derived_from': {
                             'type': 'string'
                         },
@@ -354,7 +387,7 @@ DSL_SCHEMA = {
                         'source_interfaces': INTERFACES_SCHEMA,
                         'target_interfaces': INTERFACES_SCHEMA,
                         #non-meta 'properties'
-                        'properties': PROPERTIES_ARRAY_SCHEMA
+                        'properties': PROPERTIES_SCHEMA_SCHEMA
                     },
                     'additionalProperties': False
                 }
@@ -387,7 +420,7 @@ DSL_SCHEMA = {
             }
         },
     },
-    'required': ['blueprint'],
+    'required': ['node_templates'],
     'additionalProperties': False
 }
 

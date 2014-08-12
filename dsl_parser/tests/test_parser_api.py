@@ -34,7 +34,6 @@ def op_struct(plugin_name, operation_mapping, properties=None,
 class TestParserApi(AbstractTestParser):
     def _assert_minimal_blueprint(self, result, expected_type='test_type',
                                   expected_declared_type='test_type'):
-        self.assertEquals('test_app', result['name'])
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -43,6 +42,18 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals(expected_declared_type, node['declared_type'])
         self.assertEquals('val', node['properties']['key'])
         self.assertEquals(1, node['instances']['deploy'])
+
+    @staticmethod
+    def _sort_result_nodes(result_nodes, ordered_nodes_ids):
+        ordered_nodes = []
+
+        for node_id in ordered_nodes_ids:
+            for result_node in result_nodes:
+                if result_node['id'] == node_id:
+                    ordered_nodes.append(result_node)
+                    break
+
+        return ordered_nodes
 
     def _get_plugin_to_install_from_node(self, node, plugin_name):
         return next(plugin for plugin in node['plugins_to_install']
@@ -81,8 +92,8 @@ class TestParserApi(AbstractTestParser):
                           operations['test_interface1.terminate'])
 
     def test_type_with_single_explicit_interface_and_plugin(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
+node_types:
     test_type:
         interfaces:
             test_interface1:
@@ -90,13 +101,17 @@ types:
                 - terminate: test_plugin.terminate
                 - start: test_plugin.start
         properties:
-            - install_agent: 'false'
-            - key
-            - number: 80
-            - boolean: false
-            - complex:
-                key1: value1
-                key2: value2
+            install_agent:
+                default: 'false'
+            key: {}
+            number:
+                default: 80
+            boolean:
+                default: false
+            complex:
+                default:
+                    key1: value1
+                    key2: value2
             """
 
         result = parse(yaml)
@@ -108,12 +123,12 @@ types:
         self._assert_blueprint(result)
 
     def test_dsl_with_type_with_operation_mappings(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION,
-                                              self.BASIC_PLUGIN]) + """
-types:
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -148,17 +163,17 @@ plugins:
                           operations['test_interface2.shutdown'])
 
     def test_merge_plugins_and_interfaces_imports(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION,
-                                              self.BASIC_PLUGIN]) + """
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
 plugins:
     other_test_plugin:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
             url: "http://test_url2.zip"
-types:
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -195,7 +210,7 @@ imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
-        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
+        top_level_yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
 
@@ -233,7 +248,7 @@ imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name2 = self.make_yaml_file(mid_level_yaml2)
 
-        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
+        top_level_yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 imports:
     -   {0}
     -   {1}""".format(mid_file_name, mid_file_name2)
@@ -241,12 +256,14 @@ imports:
         self._assert_blueprint(result)
 
     def test_node_get_type_properties_including_overriding_properties(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
     test_type:
         properties:
-            - key: "not_val"
-            - key2: "val2"
+            key:
+                default: "not_val"
+            key2:
+                default: "val2"
     """
         result = parse(yaml)
         # this will also check property "key" = "val"
@@ -280,36 +297,36 @@ imports:
 
     def test_instance_relationship_base_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - type: cloudify.relationships.depends_on
-                  target: test_node
-        -   name: test_node3
-            type: test_type
-            relationships:
-                - type: cloudify.relationships.connected_to
-                  target: test_node
-        -   name: test_node4
-            type: test_type
-            relationships:
-                - type: derived_from_connected_to
-                  target: test_node
-        -   name: test_node5
-            type: test_type
-            relationships:
-                - type: cloudify.relationships.contained_in
-                  target: test_node
-        -   name: test_node6
-            type: test_type
-            relationships:
-                - type: derived_from_contained_in
-                  target: test_node
-        -   name: test_node7
-            type: test_type
-            relationships:
-                - type: test_relationship
-                  target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            - type: cloudify.relationships.depends_on
+              target: test_node
+    test_node3:
+        type: test_type
+        relationships:
+            - type: cloudify.relationships.connected_to
+              target: test_node
+    test_node4:
+        type: test_type
+        relationships:
+            - type: derived_from_connected_to
+              target: test_node
+    test_node5:
+        type: test_type
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: test_node
+    test_node6:
+        type: test_type
+        relationships:
+            - type: derived_from_contained_in
+              target: test_node
+    test_node7:
+        type: test_type
+        relationships:
+            - type: test_relationship
+              target: test_node
 relationships:
     test_relationship: {}
     cloudify.relationships.depends_on: {}
@@ -321,12 +338,17 @@ relationships:
         derived_from: cloudify.relationships.contained_in
 """
         result = parse(yaml)
-        n2_relationship = result['nodes'][1]['relationships'][0]
-        n3_relationship = result['nodes'][2]['relationships'][0]
-        n4_relationship = result['nodes'][3]['relationships'][0]
-        n5_relationship = result['nodes'][4]['relationships'][0]
-        n6_relationship = result['nodes'][5]['relationships'][0]
-        n7_relationship = result['nodes'][6]['relationships'][0]
+        self.assertEquals(7, len(result['nodes']))
+        nodes = self._sort_result_nodes(
+            result['nodes'],
+            ['test_node', 'test_node2', 'test_node3', 'test_node4',
+             'test_node5', 'test_node6', 'test_node7'])
+        n2_relationship = nodes[1]['relationships'][0]
+        n3_relationship = nodes[2]['relationships'][0]
+        n4_relationship = nodes[3]['relationships'][0]
+        n5_relationship = nodes[4]['relationships'][0]
+        n6_relationship = nodes[5]['relationships'][0]
+        n7_relationship = nodes[6]['relationships'][0]
         self.assertEquals('depends', n2_relationship['base'])
         self.assertEquals('connected', n3_relationship['base'])
         self.assertEquals('connected', n4_relationship['base'])
@@ -334,20 +356,99 @@ relationships:
         self.assertEquals('contained', n6_relationship['base'])
         self.assertEquals('undefined', n7_relationship['base'])
 
-    def test_type_properties_derivation(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
+    def test_type_properties_empty_properties(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_templates:
+    test_node:
+        type: test_type
+node_types:
+    test_type:
+        properties: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_node', node['name'])
+        self.assertEquals('test_type', node['type'])
+        self.assertEquals('test_type', node['declared_type'])
+
+    def test_type_properties_empty_property(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
     test_type:
         properties:
-            - key: "not_val"
-            - key2: "val2"
+            key: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_node', node['name'])
+        self.assertEquals('test_type', node['type'])
+        self.assertEquals('test_type', node['declared_type'])
+        self.assertEquals('val', node['properties']['key'])
+        # TODO: assert type's default and description values once 'type' is
+        # part of the parser's output
+
+    def test_type_properties_property_with_description_only(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
+    test_type:
+        properties:
+            key:
+                description: property_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_node', node['name'])
+        self.assertEquals('test_type', node['type'])
+        self.assertEquals('test_type', node['declared_type'])
+        self.assertEquals('val', node['properties']['key'])
+        # TODO: assert type's default and description values once 'type' is
+        # part of the parser's output
+
+    def test_type_properties_standard_property(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
+    test_type:
+        properties:
+            key:
+                default: val
+                description: property_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_node', node['name'])
+        self.assertEquals('test_type', node['type'])
+        self.assertEquals('test_type', node['declared_type'])
+        self.assertEquals('val', node['properties']['key'])
+        # TODO: assert type's default and description values once 'type' is
+        # part of the parser's output
+
+    def test_type_properties_derivation(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
+    test_type:
+        properties:
+            key:
+                default: "not_val"
+            key2:
+                default: "val2"
         derived_from: "test_type_parent"
 
     test_type_parent:
         properties:
-            - key: "val1_parent"
-            - key2: "val2_parent"
-            - key3: "val3_parent"
+            key:
+                default: "val1_parent"
+            key2:
+                default: "val2_parent"
+            key3:
+                default: "val3_parent"
     """
         result = parse(yaml)
         # this will also check property "key" = "val"
@@ -357,12 +458,14 @@ types:
         self.assertEquals('val3_parent', node['properties']['key3'])
 
     def test_empty_types_hierarchy_in_node(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
     test_type:
         properties:
-            - key: "not_val"
-            - key2: "val2"
+            key:
+                default: "not_val"
+            key2:
+                default: "val2"
     """
         result = parse(yaml)
         node = result['nodes'][0]
@@ -370,13 +473,15 @@ types:
         self.assertEqual('test_type', node[TYPE_HIERARCHY][0])
 
     def test_types_hierarchy_in_node(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
     test_type:
         derived_from: "test_type_parent"
         properties:
-            - key: "not_val"
-            - key2: "val2"
+            key:
+                default: "not_val"
+            key2:
+                default: "val2"
     test_type_parent: {}
     """
         result = parse(yaml)
@@ -386,13 +491,15 @@ types:
         self.assertEqual('test_type', node[TYPE_HIERARCHY][1])
 
     def test_types_hierarchy_order_in_node(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
     test_type:
         derived_from: "test_type_parent"
         properties:
-            - key: "not_val"
-            - key2: "val2"
+            key:
+                default: "not_val"
+            key2:
+                default: "val2"
     test_type_parent:
         derived_from: "parent_type"
 
@@ -407,7 +514,7 @@ types:
 
     def test_types_hierarchy_with_node_type_impl(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-types:
+node_types:
     specific_test_type:
         derived_from: test_type
 
@@ -423,26 +530,34 @@ type_implementations:
         self.assertEqual('specific_test_type', node[TYPE_HIERARCHY][1])
 
     def test_type_properties_recursive_derivation(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
     test_type:
         properties:
-            - key: "not_val"
-            - key2: "val2"
+            key:
+                default: "not_val"
+            key2:
+                default: "val2"
         derived_from: "test_type_parent"
 
     test_type_parent:
         properties:
-            - key: "val_parent"
-            - key2: "val2_parent"
-            - key4: "val4_parent"
+            key:
+                default: "val_parent"
+            key2:
+                default: "val2_parent"
+            key4:
+                default: "val4_parent"
         derived_from: "test_type_grandparent"
 
     test_type_grandparent:
         properties:
-            - key: "val1_grandparent"
-            - key2: "val2_grandparent"
-            - key3: "val3_grandparent"
+            key:
+                default: "val1_grandparent"
+            key2:
+                default: "val2_grandparent"
+            key3:
+                default: "val3_grandparent"
         derived_from: "test_type_grandgrandparent"
 
     test_type_grandgrandparent: {}
@@ -456,12 +571,12 @@ types:
         self.assertEquals('val4_parent', node['properties']['key4'])
 
     def test_type_interface_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION,
-                                              self.BASIC_PLUGIN]) + """
-types:
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -530,12 +645,12 @@ plugins:
         self.assertEquals(4, len(node['plugins']))
 
     def test_type_interface_recursive_derivation(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION,
-                                              self.BASIC_PLUGIN]) + """
-types:
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -582,12 +697,12 @@ plugins:
         self.assertEquals(2, len(node['plugins']))
 
     def test_two_explicit_interfaces_with_same_operation_name(self):
-        yaml = self.create_yaml_with_imports([self.BASIC_BLUEPRINT_SECTION,
-                                              self.BASIC_PLUGIN]) + """
-types:
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install: test_plugin.install
@@ -630,11 +745,11 @@ plugins:
         self.assertEquals(6, len(operations))
 
     def test_plugins_derived_from_field(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install: test_plugin1.install
@@ -667,7 +782,7 @@ imports:
     -   \"bottom_level.yaml\""""
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
-        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
+        top_level_yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
         result = parse(top_level_yaml)
@@ -687,7 +802,7 @@ imports:
     -   \"bottom_level.yaml\""""
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
-        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
+        top_level_yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 imports:
     -   {0}""".format('file:///' + pathname2url(mid_file_name))
         result = parse(top_level_yaml)
@@ -816,11 +931,13 @@ imports:
 relationships:
     test_relationship:
         properties:
-            - without_default_value
-            - with_simple_default_value: 1
-            - with_object_default_value:
-                comp1: 1
-                comp2: 2
+            without_default_value: {}
+            with_simple_default_value:
+                default: 1
+            with_object_default_value:
+                default:
+                    comp1: 1
+                    comp2: 2
 """
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
@@ -829,35 +946,44 @@ relationships:
         test_relationship = relationships['test_relationship']
         properties = test_relationship['properties']
         self.assertIn('without_default_value', properties)
-        self.assertIn({'with_simple_default_value': 1}, properties)
-        self.assertIn({'with_object_default_value': {
-            'comp1': 1, 'comp2': 2
-        }}, properties)
+        self.assertIn('with_simple_default_value', properties)
+        self.assertEquals({'default': 1}, properties[
+            'with_simple_default_value'])
+        self.assertEquals({'default': {'comp1': 1, 'comp2': 2}}, properties[
+            'with_object_default_value'])
 
     def test_top_level_relationship_properties_inheritance(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
     test_relationship1:
         properties:
-            - prop1
-            - prop2
-            - prop3: prop3_value_1
-            - derived1: derived1_value
+            prop1: {}
+            prop2: {}
+            prop3:
+                default: prop3_value_1
+            derived1:
+                default: derived1_value
     test_relationship2:
         derived_from: test_relationship1
         properties:
-            - prop2: prop2_value_2
-            - prop3: prop3_value_2
-            - prop4
-            - prop5
-            - prop6: prop6_value_2
-            - derived2: derived2_value
+            prop2:
+                default: prop2_value_2
+            prop3:
+                default: prop3_value_2
+            prop4: {}
+            prop5: {}
+            prop6:
+                default: prop6_value_2
+            derived2:
+                default: derived2_value
     test_relationship3:
         derived_from: test_relationship2
         properties:
-            - prop5: prop5_value_3
-            - prop6: prop6_value_3
-            - prop7
+            prop5:
+                default: prop5_value_3
+            prop6:
+                default: prop6_value_3
+            prop7: {}
 """
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
@@ -869,46 +995,71 @@ relationships:
         self.assertEquals(4, len(r1_properties))
         self.assertIn('prop1', r1_properties)
         self.assertIn('prop2', r1_properties)
-        self.assertIn({'prop3': 'prop3_value_1'}, r1_properties)
-        self.assertIn({'derived1': 'derived1_value'}, r1_properties)
+        self.assertIn('prop3', r1_properties)
+        self.assertIn('derived1', r1_properties)
+        self.assertEquals({'default': 'prop3_value_1'}, r1_properties['prop3'])
+        self.assertEquals({'default': 'derived1_value'}, r1_properties[
+            'derived1'])
         self.assertEquals(8, len(r2_properties))
         self.assertIn('prop1', r2_properties)
-        self.assertIn({'prop2': 'prop2_value_2'}, r2_properties)
-        self.assertIn({'prop3': 'prop3_value_2'}, r2_properties)
+        self.assertIn('prop2', r2_properties)
+        self.assertIn('prop3', r2_properties)
         self.assertIn('prop4', r2_properties)
         self.assertIn('prop5', r2_properties)
-        self.assertIn({'prop6': 'prop6_value_2'}, r2_properties)
-        self.assertIn({'derived1': 'derived1_value'}, r2_properties)
-        self.assertIn({'derived2': 'derived2_value'}, r2_properties)
+        self.assertIn('prop6', r2_properties)
+        self.assertIn('derived1', r2_properties)
+        self.assertIn('derived2', r2_properties)
+        self.assertEquals({'default': 'prop2_value_2'}, r2_properties[
+            'prop2'])
+        self.assertEquals({'default': 'prop3_value_2'}, r2_properties[
+            'prop3'])
+        self.assertEquals({'default': 'prop6_value_2'}, r2_properties[
+            'prop6'])
+        self.assertEquals({'default': 'derived1_value'}, r2_properties[
+            'derived1'])
+        self.assertEquals({'default': 'derived2_value'}, r2_properties[
+            'derived2'])
         self.assertEquals(9, len(r3_properties))
         self.assertIn('prop1', r3_properties)
-        self.assertIn({'prop2': 'prop2_value_2'}, r3_properties)
-        self.assertIn({'prop3': 'prop3_value_2'}, r3_properties)
+        self.assertIn('prop2', r3_properties)
+        self.assertIn('prop3', r3_properties)
         self.assertIn('prop4', r3_properties)
-        self.assertIn({'prop5': 'prop5_value_3'}, r3_properties)
-        self.assertIn({'prop6': 'prop6_value_3'}, r3_properties)
+        self.assertIn('prop5', r3_properties)
+        self.assertIn('prop6', r3_properties)
         self.assertIn('prop7', r3_properties)
-        self.assertIn({'derived1': 'derived1_value'}, r3_properties)
-        self.assertIn({'derived2': 'derived2_value'}, r3_properties)
+        self.assertIn('derived1', r3_properties)
+        self.assertIn('derived2', r3_properties)
+        self.assertEquals({'default': 'prop2_value_2'}, r3_properties[
+            'prop2'])
+        self.assertEquals({'default': 'prop3_value_2'}, r3_properties[
+            'prop3'])
+        self.assertEquals({'default': 'prop5_value_3'}, r3_properties[
+            'prop5'])
+        self.assertEquals({'default': 'prop6_value_3'}, r3_properties[
+            'prop6'])
+        self.assertEquals({'default': 'derived1_value'}, r3_properties[
+            'derived1'])
+        self.assertEquals({'default': 'derived2_value'}, r3_properties[
+            'derived2'])
 
     def test_instance_relationships_empty_relationships_section(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-            relationships: []
-                    """
+        relationships: []
+                """
         result = parse(yaml)
         self._assert_minimal_blueprint(result)
         self.assertListEqual([], result['nodes'][0]['relationships'])
 
     def test_instance_relationships_standard_relationship(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: "test_relationship"
-                    target: "test_node"
-                    source_interfaces:
-                        test_interface1:
-                            - install: test_plugin.install
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: "test_relationship"
+                target: "test_node"
+                source_interfaces:
+                    test_interface1:
+                        - install: test_plugin.install
 relationships:
     test_relationship: {}
 plugins:
@@ -919,9 +1070,11 @@ plugins:
                     """
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
-        self.assertEquals('test_node2', result['nodes'][1]['id'])
-        self.assertEquals(1, len(result['nodes'][1]['relationships']))
-        relationship = result['nodes'][1]['relationships'][0]
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        self.assertEquals('test_node2', nodes[1]['id'])
+        self.assertEquals(1, len(nodes[1]['relationships']))
+        relationship = nodes[1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_node', relationship['target_id'])
         self.assertDictEqual({'install': 'test_plugin.install'},
@@ -937,7 +1090,7 @@ plugins:
         self.assertEqual(2, len(relationship_source_operations))
 
         self.assertEquals(8, len(relationship))
-        plugin_def = result['nodes'][1]['plugins']['test_plugin']
+        plugin_def = nodes[1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
         self.assertEquals('false', plugin_def['agent_plugin'])
         self.assertEquals('http://test_url.zip', plugin_def['url'])
@@ -946,34 +1099,36 @@ plugins:
         # right now, having two relationships with the same (type,target)
         # under one node is valid
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: test_relationship
-                    target: test_node
-                -   type: test_relationship
-                    target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: test_relationship
+                target: test_node
+            -   type: test_relationship
+                target: test_node
 relationships:
     test_relationship: {}
                     """
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
-        self.assertEquals('test_node2', result['nodes'][1]['id'])
-        self.assertEquals(2, len(result['nodes'][1]['relationships']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        self.assertEquals('test_node2', nodes[1]['id'])
+        self.assertEquals(2, len(nodes[1]['relationships']))
         self.assertEquals('test_relationship',
-                          result['nodes'][1]['relationships'][0]['type'])
+                          nodes[1]['relationships'][0]['type'])
         self.assertEquals('test_relationship',
-                          result['nodes'][1]['relationships'][1]['type'])
+                          nodes[1]['relationships'][1]['type'])
         self.assertEquals('test_node',
-                          result['nodes'][1]['relationships'][0]['target_id'])
+                          nodes[1]['relationships'][0]['target_id'])
         self.assertEquals('test_node',
-                          result['nodes'][1]['relationships'][1]['target_id'])
+                          nodes[1]['relationships'][1]['target_id'])
         self.assertEquals('reachable',
-                          result['nodes'][1]['relationships'][0]['state'])
+                          nodes[1]['relationships'][0]['state'])
         self.assertEquals('reachable',
-                          result['nodes'][1]['relationships'][1]['state'])
-        self.assertEquals(6, len(result['nodes'][1]['relationships'][0]))
-        self.assertEquals(6, len(result['nodes'][1]['relationships'][1]))
+                          nodes[1]['relationships'][1]['state'])
+        self.assertEquals(6, len(nodes[1]['relationships'][0]))
+        self.assertEquals(6, len(nodes[1]['relationships'][1]))
 
     def test_instance_relationships_relationship_inheritance(self):
         # possibly 'inheritance' is the wrong term to use here,
@@ -983,14 +1138,14 @@ relationships:
         # note there are no overrides in this case; these are tested in the
         # next, more thorough test
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: test_relationship
-                    target: test_node
-                    source_interfaces:
-                        interface1:
-                            - op1: test_plugin.task_name1
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: test_relationship
+                target: test_node
+                source_interfaces:
+                    interface1:
+                        - op1: test_plugin.task_name1
 relationships:
     relationship: {}
     test_relationship:
@@ -1005,7 +1160,10 @@ plugins:
             url: some_url
                     """
         result = parse(yaml)
-        relationship = result['nodes'][1]['relationships'][0]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        relationship = nodes[1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_node', relationship['target_id'])
         self.assertEquals('reachable', relationship['state'])
@@ -1035,32 +1193,36 @@ plugins:
 
     def test_instance_relationship_properties_inheritance(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            properties:
-                key: "val"
-            relationships:
-                -   type: empty_relationship
-                    target: test_node
-                    properties:
-                        prop1: prop1_value_new
-                        prop2: prop2_value_new
-                        prop7: prop7_value_new_instance
+    test_node2:
+        type: test_type
+        properties:
+            key: "val"
+        relationships:
+            -   type: empty_relationship
+                target: test_node
+                properties:
+                    prop1: prop1_value_new
+                    prop2: prop2_value_new
+                    prop7: prop7_value_new_instance
 relationships:
     empty_relationship:
         properties:
-            - prop1
-            - prop2
-            - prop7
+            prop1: {}
+            prop2: {}
+            prop7: {}
     test_relationship:
         derived_from: empty_relationship
         properties:
-            - prop1
-            - prop2: prop2_value
-            - prop3: prop3_value
-            - prop4
-            - prop5: prop5_value
-            - prop6: prop6_value
+            prop1: {}
+            prop2:
+                default: prop2_value
+            prop3:
+                default: prop3_value
+            prop4: {}
+            prop5:
+                default: prop5_value
+            prop6:
+                default: prop6_value
 relationship_implementations:
     impl1:
         type: test_relationship
@@ -1072,11 +1234,14 @@ relationship_implementations:
             prop7: prop7_value_new_impl
 """
         result = parse(yaml)
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
         relationships = result['relationships']
         self.assertEquals(2, len(relationships))
         r_properties = relationships['test_relationship']['properties']
         self.assertEquals(7, len(r_properties))
-        i_properties = result['nodes'][1]['relationships'][0]['properties']
+        i_properties = nodes[1]['relationships'][0]['properties']
         self.assertEquals(7, len(i_properties))
         self.assertEquals('prop1_value_new', i_properties['prop1'])
         self.assertEquals('prop2_value_new', i_properties['prop2'])
@@ -1090,17 +1255,17 @@ relationship_implementations:
         # testing for a complete inheritance path for relationships
         # from top-level relationships to a relationship instance
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: relationship
-                    target: test_node
-                    source_interfaces:
-                        test_interface3:
-                            - install: test_plugin.install
-                    target_interfaces:
-                        test_interface1:
-                            - install: test_plugin.install
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: relationship
+                target: test_node
+                source_interfaces:
+                    test_interface3:
+                        - install: test_plugin.install
+                target_interfaces:
+                    test_interface1:
+                        - install: test_plugin.install
 relationships:
     relationship:
         derived_from: "parent_relationship"
@@ -1120,7 +1285,10 @@ plugins:
 
         """
         result = parse(yaml)
-        node_relationship = result['nodes'][1]['relationships'][0]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        node_relationship = nodes[1]['relationships'][0]
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
@@ -1203,18 +1371,18 @@ plugins:
         # testing for a complete inheritance path for relationships
         # from top-level relationships to a relationship instance
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: relationship
-                    target: test_node
-                    target_interfaces:
-                        test_interface:
-                            - destroy: test_plugin.destroy1
-                    source_interfaces:
-                        test_interface:
-                            - install2: test_plugin.install2
-                            - destroy2: test_plugin.destroy2
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: relationship
+                target: test_node
+                target_interfaces:
+                    test_interface:
+                        - destroy: test_plugin.destroy1
+                source_interfaces:
+                    test_interface:
+                        - install2: test_plugin.install2
+                        - destroy2: test_plugin.destroy2
 relationships:
     relationship:
         derived_from: "parent_relationship"
@@ -1241,7 +1409,10 @@ plugins:
 
         """
         result = parse(yaml)
-        node_relationship = result['nodes'][1]['relationships'][0]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        node_relationship = nodes[1]['relationships'][0]
         relationship = result['relationships']['relationship']
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
@@ -1343,16 +1514,19 @@ plugins:
 
     def test_relationship_no_type_hierarchy(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: relationship
-                    target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: relationship
+                target: test_node
 relationships:
     relationship: {}
 """
         result = parse(yaml)
-        relationship = result['nodes'][1]['relationships'][0]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        relationship = nodes[1]['relationships'][0]
         self.assertTrue('type_hierarchy' in relationship)
         type_hierarchy = relationship['type_hierarchy']
         self.assertEqual(1, len(type_hierarchy))
@@ -1360,18 +1534,21 @@ relationships:
 
     def test_relationship_type_hierarchy(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: rel2
-                    target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: rel2
+                target: test_node
 relationships:
     relationship: {}
     rel2:
         derived_from: relationship
 """
         result = parse(yaml)
-        relationship = result['nodes'][1]['relationships'][0]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        relationship = nodes[1]['relationships'][0]
         self.assertTrue('type_hierarchy' in relationship)
         type_hierarchy = relationship['type_hierarchy']
         self.assertEqual(2, len(type_hierarchy))
@@ -1380,11 +1557,11 @@ relationships:
 
     def test_relationship_3_types_hierarchy(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: rel3
-                    target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: rel3
+                target: test_node
 relationships:
     relationship: {}
     rel2:
@@ -1393,7 +1570,10 @@ relationships:
         derived_from: rel2
 """
         result = parse(yaml)
-        relationship = result['nodes'][1]['relationships'][0]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        relationship = nodes[1]['relationships'][0]
         self.assertTrue('type_hierarchy' in relationship)
         type_hierarchy = relationship['type_hierarchy']
         self.assertEqual(3, len(type_hierarchy))
@@ -1403,39 +1583,35 @@ relationships:
 
     def test_node_host_id_field(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node
-            type: cloudify.types.host
-            properties:
-                key: "val"
-types:
+node_templates:
+    test_node:
+        type: cloudify.types.host
+        properties:
+            key: "val"
+node_types:
     cloudify.types.host:
         properties:
-            - key
+            key: {}
             """
         result = parse(yaml)
         self.assertEquals('test_node', result['nodes'][0]['host_id'])
 
     def test_node_host_id_field_via_relationship(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-        -   name: test_node2
-            type: another_type
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: test_node1
-        -   name: test_node3
-            type: another_type
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: test_node2
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+    test_node2:
+        type: another_type
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: test_node1
+    test_node3:
+        type: another_type
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: test_node2
+node_types:
     cloudify.types.host: {}
     another_type: {}
 
@@ -1448,12 +1624,10 @@ relationships:
 
     def test_node_host_id_field_via_node_supertype(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: another_type
-types:
+node_templates:
+    test_node1:
+        type: another_type
+node_types:
     cloudify.types.host: {}
     another_type:
         derived_from: cloudify.types.host
@@ -1464,17 +1638,15 @@ types:
     def test_node_host_id_field_via_relationship_derived_from_inheritance(
             self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-        -   name: test_node2
-            type: another_type
-            relationships:
-                -   type: test_relationship
-                    target: test_node1
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+    test_node2:
+        type: another_type
+        relationships:
+            -   type: test_relationship
+                target: test_node1
+node_types:
     cloudify.types.host: {}
     another_type: {}
 relationships:
@@ -1487,12 +1659,10 @@ relationships:
 
     def test_node_plugins_to_install_field(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -1512,12 +1682,10 @@ plugins:
 
     def test_plugin_with_folder_as_only_property(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -1535,12 +1703,10 @@ plugins:
         # is not
         # put on the plugins_to_install dict like the rest of the plugins
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -1560,12 +1726,10 @@ plugins:
         # testing to ensure that only plugins of type agent_plugin are put
         # on the plugins_to_install field
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -1589,27 +1753,25 @@ plugins:
         # as test_plugin should be added from both test_node2 and test_node4
         # [only one should remain in the end]
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: 'cloudify.relationships.contained_in'
-                    target: test_node1
-        -   name: test_node3
-            type: test_type2
-            relationships:
-                -   type: 'cloudify.relationships.contained_in'
-                    target: test_node2
-        -   name: test_node4
-            type: test_type
-            relationships:
-                -   type: 'cloudify.relationships.contained_in'
-                    target: test_node3
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: 'cloudify.relationships.contained_in'
+                target: test_node1
+    test_node3:
+        type: test_type2
+        relationships:
+            -   type: 'cloudify.relationships.contained_in'
+                target: test_node2
+    test_node4:
+        type: test_type
+        relationships:
+            -   type: 'cloudify.relationships.contained_in'
+                target: test_node3
+node_types:
     cloudify.types.host: {}
     test_type:
         interfaces:
@@ -1633,10 +1795,16 @@ plugins:
         """
 
         result = parse(yaml)
-        # ensuring non-host nodes don't have this field
-        self.assertTrue('plugins_to_install' not in result['nodes'][1])
 
-        node = result['nodes'][0]
+        self.assertEquals(4, len(result['nodes']))
+        nodes = self._sort_result_nodes(
+            result['nodes'],
+            ['test_node1', 'test_node2', 'test_node3', 'test_node4'])
+
+        # ensuring non-host nodes don't have this field
+        self.assertTrue('plugins_to_install' not in nodes[1])
+
+        node = nodes[0]
         test_plugin = self._get_plugin_to_install_from_node(
             node, 'test_plugin')
         test_plugin2 = self._get_plugin_to_install_from_node(
@@ -1647,7 +1815,7 @@ plugins:
         self.assertEquals('test_plugin2', test_plugin2['name'])
         self.assertEquals('true', test_plugin2['agent_plugin'])
         self.assertEquals('http://test_plugin2.zip', test_plugin2['url'])
-        self.assertEquals(2, len(result['nodes'][0]['plugins_to_install']))
+        self.assertEquals(2, len(nodes[0]['plugins_to_install']))
 
     def test_node_cloudify_runtime_property(self):
         yaml = self.MINIMAL_BLUEPRINT
@@ -1695,7 +1863,7 @@ imports:
         mid_file_name = self.make_file_with_name(mid_level_yaml,
                                                  'mid_level.yaml')
 
-        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
+        top_level_yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
 
@@ -1715,7 +1883,7 @@ imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
-        top_level_yaml = self.BASIC_BLUEPRINT_SECTION + """
+        top_level_yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
         top_file_name = self.make_file_with_name(
@@ -1724,51 +1892,54 @@ imports:
         self._assert_blueprint(result)
 
     def test_node_interfaces_operation_mapping(self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_BLUEPRINT_SECTION + """
-            interfaces:
-                test_interface1:
-                    - install: test_plugin.install
-                    - terminate: test_plugin.terminate
-types:
+        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+                - terminate: test_plugin.terminate
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
             """
         result = parse(yaml)
         self._assert_blueprint(result)
 
     def test_node_without_host_id(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + """
-        -   name: test_node2
-            type: cloudify.types.host
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+    test_node2:
+        type: cloudify.types.host
+node_types:
     cloudify.types.host: {}
     test_type:
         properties:
-            - key
+            key: {}
         """
         result = parse(yaml)
-        self.assertFalse('host_id' in result['nodes'][0])
-        self.assertEquals('test_node2', result['nodes'][1]['host_id'])
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        self.assertFalse('host_id' in nodes[0])
+        self.assertEquals('test_node2', nodes[1]['host_id'])
 
     def test_instance_relationships_target_node_plugins(self):
         # tests that plugins defined on instance relationships as
         # "run_on_node"="target" will
         # indeed appear in the output on the target node's plugins section
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: "test_relationship"
-                    target: "test_node"
-                    source_interfaces:
-                        test_interface1:
-                            - install: test_plugin1.install
-                -   type: "test_relationship"
-                    target: "test_node"
-                    target_interfaces:
-                        test_interface1:
-                            - install: test_plugin2.install
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: "test_relationship"
+                target: "test_node"
+                source_interfaces:
+                    test_interface1:
+                        - install: test_plugin1.install
+            -   type: "test_relationship"
+                target: "test_node"
+                target_interfaces:
+                    test_interface1:
+                        - install: test_plugin2.install
 relationships:
     test_relationship: {}
 plugins:
@@ -1784,10 +1955,12 @@ plugins:
 
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
-        self.assertEquals('test_node2', result['nodes'][1]['id'])
-        self.assertEquals(2, len(result['nodes'][1]['relationships']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        self.assertEquals('test_node2', nodes[1]['id'])
+        self.assertEquals(2, len(nodes[1]['relationships']))
 
-        relationship1 = result['nodes'][1]['relationships'][0]
+        relationship1 = nodes[1]['relationships'][0]
         self.assertEquals('test_relationship', relationship1['type'])
         self.assertEquals('test_node', relationship1['target_id'])
         self.assertEquals('reachable', relationship1['state'])
@@ -1798,12 +1971,12 @@ plugins:
                              rel1_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel1_source_ops))
         self.assertEquals(8, len(relationship1))
-        plugin1_def = result['nodes'][1]['plugins']['test_plugin1']
+        plugin1_def = nodes[1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
         self.assertEquals('false', plugin1_def['agent_plugin'])
         self.assertEquals('http://test_url1.zip', plugin1_def['url'])
 
-        relationship2 = result['nodes'][1]['relationships'][1]
+        relationship2 = nodes[1]['relationships'][1]
         self.assertEquals('test_relationship', relationship2['type'])
         self.assertEquals('test_node', relationship2['target_id'])
         self.assertEquals('reachable', relationship2['state'])
@@ -1817,18 +1990,17 @@ plugins:
 
         # expecting the other plugin to be under test_node rather than
         # test_node2:
-        plugin2_def = result['nodes'][0]['plugins']['test_plugin2']
+        plugin2_def = nodes[0]['plugins']['test_plugin2']
         self.assertEquals('test_plugin2', plugin2_def['name'])
         self.assertEquals('false', plugin2_def['agent_plugin'])
         self.assertEquals('http://test_url2.zip', plugin2_def['url'])
 
     def test_multiple_instances(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-            instances:
-                deploy: 2
-                """
+        instances:
+            deploy: 2
+            """
         result = parse(yaml)
-        self.assertEquals('test_app', result['name'])
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -1838,18 +2010,19 @@ plugins:
 
     def test_import_types_combination(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type2
-            """]) + """
-types:
+    test_node2:
+        type: test_type2
+        """]) + """
+node_types:
     test_type2: {}
         """
 
         result = parse(yaml)
-        self.assertEquals('test_app', result['name'])
         self.assertEquals(2, len(result['nodes']))
-        node1 = result['nodes'][0]
-        node2 = result['nodes'][1]
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        node1 = nodes[0]
+        node2 = nodes[1]
         self.assertEquals('test_node', node1['id'])
         self.assertEquals('test_type', node1['type'])
         self.assertEquals('val', node1['properties']['key'])
@@ -1862,12 +2035,10 @@ types:
         # testing to ensure plugin installer is treated differently and is not
         # put on the plugins_to_install dict like the rest of the plugins
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -1884,11 +2055,11 @@ plugins:
         self.assertEquals([], result['nodes'][0]['plugins_to_install'])
 
     def test_operation_mapping_with_properties_injection(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install:
@@ -1914,17 +2085,17 @@ types:
 
     def test_relationship_operation_mapping_with_properties_injection(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                -   type: "test_relationship"
-                    target: "test_node"
-                    source_interfaces:
-                        test_interface1:
-                            - install:
-                                mapping: test_plugin.install
-                                properties:
-                                    key: "value"
+    test_node2:
+        type: test_type
+        relationships:
+            -   type: "test_relationship"
+                target: "test_node"
+                source_interfaces:
+                    test_interface1:
+                        - install:
+                            mapping: test_plugin.install
+                            properties:
+                                key: "value"
 relationships:
     test_relationship: {}
 plugins:
@@ -1935,7 +2106,10 @@ plugins:
                 """
 
         result = parse(yaml)
-        relationship1 = result['nodes'][1]['relationships'][0]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        relationship1 = nodes[1]['relationships'][0]
         rel1_source_ops = relationship1['source_operations']
         self.assertDictEqual(
             op_struct('test_plugin', 'install', {'key': 'value'}),
@@ -1945,11 +2119,11 @@ plugins:
             rel1_source_ops['test_interface1.install'])
 
     def test_operation_mapping_with_get_property(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
+node_types:
     test_type:
         properties:
-            - key
+            key: {}
         interfaces:
             test_interface1:
                 - install:
@@ -1980,22 +2154,22 @@ types:
 
     def test_relationship_operation_mapping_with_properties_injection_get_property(self):  # NOQA
         yaml = self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            properties:
-                key: "val"
-            relationships:
-                -   type: "test_relationship"
-                    target: "test_node"
-                    source_interfaces:
-                        test_interface1:
-                            - install:
-                                mapping: test_plugin.install
-                                properties:
-                                    delegated_key: { get_property: "key" }
-                                    nested_key:
-                                        prop1: "value1"
-                                        prop2: { get_property: "key" }
+    test_node2:
+        type: test_type
+        properties:
+            key: "val"
+        relationships:
+            -   type: "test_relationship"
+                target: "test_node"
+                source_interfaces:
+                    test_interface1:
+                        - install:
+                            mapping: test_plugin.install
+                            properties:
+                                delegated_key: { get_property: "key" }
+                                nested_key:
+                                    prop1: "value1"
+                                    prop2: { get_property: "key" }
 relationships:
     test_relationship: {}
 plugins:
@@ -2006,7 +2180,10 @@ plugins:
                 """
 
         result = parse(yaml)
-        relationship1 = result['nodes'][1]['relationships'][0]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        relationship1 = nodes[1]['relationships'][0]
         rel1_source_ops = relationship1['source_operations']
         expected_props = {'delegated_key': 'val',
                           'nested_key': {'prop1': 'value1', 'prop2': 'val'}}
@@ -2019,7 +2196,7 @@ plugins:
 
     def test_type_implementation(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-types:
+node_types:
     specific_test_type:
         derived_from: test_type
 
@@ -2035,12 +2212,13 @@ type_implementations:
 
     def test_type_implementation_with_new_properties(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-types:
+node_types:
     specific_test_type:
         derived_from: test_type
         properties:
-            - mandatory
-            - new_prop: default
+            mandatory: {}
+            new_prop:
+                default: 'default'
 
 type_implementations:
     implementation_of_specific_test_type:
@@ -2058,13 +2236,12 @@ type_implementations:
         self.assertEquals('default', node['properties']['new_prop'])
 
     def test_relationship_implementations(self):
-
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - type: test_relationship
-                  target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            - type: test_relationship
+              target: test_node
 relationships:
     test_relationship: {} """]) + """
 
@@ -2079,22 +2256,24 @@ relationship_implementations:
         target_node_ref: test_node
 """
         result = parse(yaml)
-        source_node = result['nodes'][1]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        source_node = nodes[1]
         self.assertEquals(1, len(source_node['relationships']))
         node_relationship = source_node['relationships'][0]
         self.assertEquals('specific_test_relationship',
                           node_relationship['type'])
 
     def test_relationship_two_types_implementations(self):
-
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
-        -   name: test_node2
-            type: test_type
-            relationships:
-                - type: test_relationship1
-                  target: test_node
-                - type: test_relationship2
-                  target: test_node
+    test_node2:
+        type: test_type
+        relationships:
+            - type: test_relationship1
+              target: test_node
+            - type: test_relationship2
+              target: test_node
 relationships:
     test_relationship1: {}
     test_relationship2: {} """]) + """
@@ -2116,7 +2295,10 @@ relationship_implementations:
         target_node_ref: test_node
 """
         result = parse(yaml)
-        source_node = result['nodes'][1]
+        self.assertEquals(2, len(result['nodes']))
+        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
+                                                          'test_node2'])
+        source_node = nodes[1]
         self.assertEquals(2, len(source_node['relationships']))
         node_relationship1 = source_node['relationships'][0]
         self.assertEquals('specific_test_relationship1',
@@ -2126,20 +2308,20 @@ relationship_implementations:
                           node_relationship2['type'])
 
     def test_operation_mapping_with_nested_get_property(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
+node_types:
     test_type:
         properties:
-            - key
-            - some_prop:
-                nested: 'nested_value'
+            key: {}
+            some_prop:
+                default:
+                    nested: 'nested_value'
         interfaces:
             test_interface1:
                 - install:
                     mapping: test_plugin.install
                     properties:
                         mapped: { get_property: "some_prop.nested" }
-
 """
         result = parse(yaml)
         node = result['nodes'][0]
@@ -2157,13 +2339,14 @@ types:
                           operations['test_interface1.install'])
 
     def test_operation_mapping_with_array_index(self):
-        yaml = self.BASIC_BLUEPRINT_SECTION + self.BASIC_PLUGIN + """
-types:
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
+node_types:
     test_type:
         properties:
-            - key
-            - some_prop:
-                -   nested_value
+            key: {}
+            some_prop:
+                default:
+                    -   nested_value
         interfaces:
             test_interface1:
                 - install:
@@ -2218,23 +2401,24 @@ workflows:
     workflow1:
         mapping: test_plugin.workflow1
         parameters:
-            - prop1: value1
-            - mandatory_prop
-            - nested_prop:
-                nested_key: nested_value
-                nested_list:
-                    - val1
-                    - val2
-
+            prop1:
+                default: value1
+            mandatory_prop: {}
+            nested_prop:
+                default:
+                    nested_key: nested_value
+                    nested_list:
+                        - val1
+                        - val2
 """
         result = parse(yaml)
         workflows = result['workflows']
         self.assertEqual(1, len(workflows))
-        parameters = [
-            {'prop1': 'value1'},
-            'mandatory_prop',
-            {
-                'nested_prop': {
+        parameters = {
+            'prop1': {'default': 'value1'},
+            'mandatory_prop': {},
+            'nested_prop': {
+                'default': {
                     'nested_key': 'nested_value',
                     'nested_list': [
                         'val1',
@@ -2242,7 +2426,7 @@ workflows:
                     ]
                 }
             }
-        ]
+        }
         self.assertEqual(op_struct('test_plugin', 'workflow1',
                                    parameters, 'parameters'),
                          workflows['workflow1'])
@@ -2286,12 +2470,10 @@ workflows:
 class ManagementPluginsToInstallTest(AbstractTestParser):
     def test_one_manager_one_agent_plugin_on_same_node(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -2324,12 +2506,10 @@ plugins:
 
     def test_agent_installer_plugin_is_ignored(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+node_types:
     cloudify.types.host:
         interfaces:
             test_management_interface:
@@ -2346,12 +2526,10 @@ plugins:
 
     def test_plugin_installer_plugin_is_ignored(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-types:
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+node_types:
     cloudify.types.host:
         interfaces:
             test_management_interface:
@@ -2368,21 +2546,19 @@ plugins:
 
     def test_same_plugin_one_two_nodes(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-            interfaces:
-                test_interface:
-                    - create: test_management_plugin.create
-        -   name: test_node2
-            type: cloudify.types.host
-            interfaces:
-                test_interface:
-                    - create: test_management_plugin.create
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+        interfaces:
+            test_interface:
+                - create: test_management_plugin.create
+    test_node2:
+        type: cloudify.types.host
+        interfaces:
+            test_interface:
+                - create: test_management_plugin.create
 
-types:
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -2417,17 +2593,15 @@ plugins:
 
     def test_two_plugins_on_one_node(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
-            interfaces:
-                test_interface:
-                    - start: test_management_plugin1.start
-                    - create: test_management_plugin2.create
+node_templates:
+    test_node1:
+        type: cloudify.types.host
+        interfaces:
+            test_interface:
+                - start: test_management_plugin1.start
+                - create: test_management_plugin2.create
 
-types:
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -2455,13 +2629,11 @@ plugins:
 
     def test_no_operation_mapping_no_plugin(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
+node_templates:
+    test_node1:
+        type: cloudify.types.host
 
-types:
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -2489,13 +2661,11 @@ plugins:
 
     def test_two_identical_plugins_on_node(self):
         yaml = """
-blueprint:
-    name: test_app
-    nodes:
-        -   name: test_node1
-            type: cloudify.types.host
+node_templates:
+    test_node1:
+        type: cloudify.types.host
 
-types:
+node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
@@ -2517,3 +2687,142 @@ plugins:
         management_plugins_to_install_for_plan = \
             result["management_plugins_to_install"]
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
+
+    def test_relationship_type_properties_empty_properties(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_templates:
+    test_node:
+        type: test_type
+node_types:
+    test_type: {}
+relationships:
+    test_relationship:
+        properties: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        relationship = result['relationships']['test_relationship']
+        self.assertEquals({}, relationship['properties'])
+
+    def test_relationship_type_properties_empty_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            key: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        relationship = result['relationships']['test_relationship']
+        self.assertEquals({'key': {}}, relationship['properties'])
+
+    def test_relationship_type_properties_property_with_description_only(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            key:
+                description: property_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        relationship = result['relationships']['test_relationship']
+        self.assertEquals({'key': {'description': 'property_desc'}},
+                          relationship['properties'])
+
+    def test_relationship_type_properties_standard_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+relationships:
+    test_relationship:
+        properties:
+            key:
+                default: val
+                description: property_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        relationship = result['relationships']['test_relationship']
+        self.assertEquals(
+            {'key': {'default': 'val', 'description': 'property_desc'}},
+            relationship['properties'])
+
+    def test_workflow_parameters_empty_parameters(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    test_workflow:
+        mapping: test_plugin.workflow1
+        parameters: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        workflow = result['workflows']['test_workflow']
+        self.assertEquals({}, workflow['parameters'])
+
+    def test_workflow_parameters_empty_parameter(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    test_workflow:
+        mapping: test_plugin.workflow1
+        parameters:
+            key: {}
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        workflow = result['workflows']['test_workflow']
+        self.assertEquals({'key': {}}, workflow['parameters'])
+
+    def test_workflow_parameters_parameter_with_description_only(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    test_workflow:
+        mapping: test_plugin.workflow1
+        parameters:
+            key:
+                description: parameter_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        workflow = result['workflows']['test_workflow']
+        self.assertEquals({'key': {'description': 'parameter_desc'}},
+                          workflow['parameters'])
+
+    def test_workflow_parameters_standard_parameter(self):
+        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
+workflows:
+    test_workflow:
+        mapping: test_plugin.workflow1
+        parameters:
+            key:
+                default: val
+                description: parameter_desc
+"""
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+        self.assertEquals('test_type', node['type'])
+        workflow = result['workflows']['test_workflow']
+        self.assertEquals(
+            {'key': {'default': 'val', 'description': 'parameter_desc'}},
+            workflow['parameters'])
