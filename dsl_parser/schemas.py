@@ -170,6 +170,9 @@ UNIQUE_STRING_ARRAY_SCHEMA = {
 
 IMPORTS_SCHEMA = UNIQUE_STRING_ARRAY_SCHEMA
 
+MEMBERS_SCHEMA = UNIQUE_STRING_ARRAY_SCHEMA.copy()
+MEMBERS_SCHEMA['minItems'] = 1
+
 # Schema validation is currently done using a json schema validator
 # ( see http://json-schema.org/ ), since no good YAML schema validator could
 # be found (both for Python and at all).
@@ -309,7 +312,7 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        'members': UNIQUE_STRING_ARRAY_SCHEMA,
+                        'members': MEMBERS_SCHEMA,
                         'policies': {
                             'type': 'object',
                             'patternProperties': {

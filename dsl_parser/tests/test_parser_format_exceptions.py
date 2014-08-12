@@ -866,6 +866,10 @@ policy_types:
 
     def test_groups_missing_member(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         policies:
@@ -879,6 +883,10 @@ groups:
 
     def test_groups_missing_policies(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         members: [member]
@@ -888,6 +896,10 @@ groups:
 
     def test_groups_extra_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         members: [member]
@@ -903,6 +915,10 @@ groups:
 
     def test_groups_policy_missing_type(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         members: [member]
@@ -916,6 +932,10 @@ groups:
 
     def test_groups_policy_missing_properties(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         members: [member]
@@ -928,6 +948,10 @@ groups:
 
     def test_groups_policy_extra_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         members: [member]
@@ -943,6 +967,10 @@ groups:
 
     def test_group_members_non_unique(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         members: [member, member]
@@ -957,6 +985,10 @@ groups:
 
     def test_group_members_bad_type1(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         members: [1]
@@ -971,6 +1003,10 @@ groups:
 
     def test_group_members_bad_type2(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         members: 1
@@ -999,6 +1035,10 @@ groups:
 
     def test_group_policy_type_bad_properties(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
 groups:
     group:
         members: [vm]
@@ -1006,6 +1046,23 @@ groups:
             policy:
                 type: type
                 properties: properties
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_group_no_members(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    type:
+        properties: {}
+        source: source
+groups:
+    group:
+        members: []
+        policies:
+            policy:
+                type: type
+                properties: {}
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
