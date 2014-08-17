@@ -14,12 +14,12 @@
 #    * limitations under the License.
 
 
-__author__ = 'idanmo'
-
 import json
 
 import parser
 import multi_instance
+
+from dsl_parser.functions import is_get_input, GET_INPUT_FUNCTION
 
 
 def parse_dsl(dsl_location, alias_mapping_url,
@@ -30,9 +30,29 @@ def parse_dsl(dsl_location, alias_mapping_url,
     return json.dumps(result)
 
 
-def prepare_deployment_plan(plan, **kwargs):
+def _set_plan_inputs(plan, inputs=None):
+    inputs = inputs if inputs else {}
+    # Verify inputs satisfied
+    for input_name, input_def in plan['inputs'].iteritems():
+        if input_name not in inputs:
+            if 'default' in input_def and input_def['default']:
+                inputs[input_name] = input_def['default']
+            else:
+                raise KeyError(
+                    'Mandatory input: \'{}\' was not specified'.format(
+                        input_name))
+    # Replace get_input function with inputs
+    for node_template in plan['nodes']:
+        for k, v in node_template['properties'].iteritems():
+            if is_get_input(v):
+                input_name = v[GET_INPUT_FUNCTION]
+                node_template['properties'][k] = inputs[input_name]
+
+
+def prepare_deployment_plan(plan, inputs=None, **kwargs):
     """
     Prepare a plan for deployment
     """
     plan = multi_instance.create_multi_instance_plan(plan)
-    return json.dumps(plan)
+    _set_plan_inputs(plan, inputs)
+    return plan

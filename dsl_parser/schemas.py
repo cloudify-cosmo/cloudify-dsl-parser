@@ -14,7 +14,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
 
 ADVANCED_OPERATION_MAPPING_SCHEMA = {
     'type': 'object',
@@ -172,6 +171,7 @@ IMPORTS_SCHEMA = UNIQUE_STRING_ARRAY_SCHEMA
 
 MEMBERS_SCHEMA = UNIQUE_STRING_ARRAY_SCHEMA.copy()
 MEMBERS_SCHEMA['minItems'] = 1
+
 
 # Schema validation is currently done using a json schema validator
 # ( see http://json-schema.org/ ), since no good YAML schema validator could
@@ -424,6 +424,7 @@ DSL_SCHEMA = {
                 }
             }
         },
+        'inputs': PROPERTIES_SCHEMA_SCHEMA
     },
     'required': ['node_templates'],
     'additionalProperties': False
