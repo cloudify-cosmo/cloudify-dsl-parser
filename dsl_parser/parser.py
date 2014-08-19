@@ -51,12 +51,13 @@ import os
 import copy
 import contextlib
 import re
-import yaml
 
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
 from collections import OrderedDict
+from collections import namedtuple
 
+import yaml
 from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 
@@ -64,7 +65,6 @@ from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 from dsl_parser.functions import is_get_input, GET_INPUT_FUNCTION
 from dsl_parser.exceptions import UnknownInputError
 
-from collections import namedtuple
 
 OpDescriptor = namedtuple('OpDescriptor', [
     'plugin', 'op_struct', 'name'])
