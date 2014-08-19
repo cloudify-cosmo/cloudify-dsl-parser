@@ -536,7 +536,7 @@ def _validate_inputs(node_templates, inputs):
                             node_template['name'],
                             k,
                             input_name))
-                if not input_name in inputs:
+                if input_name not in inputs:
                     raise ValueError(
                         "{}.properties.{} get_input function references an "
                         "unknown input '{}'".format(node_template['name'],

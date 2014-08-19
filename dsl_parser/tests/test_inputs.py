@@ -131,7 +131,9 @@ node_templates:
         properties:
             port: { get_input: port }
 """
-        self.assertRaises(MissingRequiredInputError, prepare_deployment_plan, parse(yaml))
+        self.assertRaises(MissingRequiredInputError,
+                          prepare_deployment_plan,
+                          parse(yaml))
 
     def test_inputs_default_value(self):
         yaml = """
