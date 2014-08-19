@@ -526,23 +526,30 @@ def _validate_relationship_impls(relationship_impls):
 
 
 def _validate_inputs(node_templates, inputs):
-    for node_template in node_templates:
-        for k, v in node_template['properties'].iteritems():
+    def validate_inputs_in_dict(dict_, path=None):
+        path = '' if path is None else path
+        for k, v in dict_.iteritems():
+            current_path = '{}.{}'.format(path, k)
             if is_get_input(v):
                 input_name = v[GET_INPUT_FUNCTION]
                 if not isinstance(input_name, str):
                     raise ValueError(
                         'get_input function argument should be a string in '
-                        '{}.properties.{} but is \'{}\''.format(
+                        '{}.properties{} but is \'{}\''.format(
                             node_template['name'],
-                            k,
+                            current_path,
                             input_name))
                 if input_name not in inputs:
                     raise UnknownInputError(
-                        "{}.properties.{} get_input function references an "
+                        "{}.properties{} get_input function references an "
                         "unknown input '{}'".format(node_template['name'],
-                                                    k,
+                                                    current_path,
                                                     input_name))
+            elif isinstance(v, dict):
+                validate_inputs_in_dict(v, current_path)
+
+    for node_template in node_templates:
+        validate_inputs_in_dict(node_template['properties'])
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):

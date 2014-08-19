@@ -173,3 +173,40 @@ node_templates:
                           prepare_deployment_plan,
                           parse(yaml),
                           inputs={'a': 'b'})
+
+    def test_get_input_in_nested_property(self):
+        yaml = """
+inputs:
+    port:
+        default: 8080
+node_types:
+    webserver_type:
+        properties:
+            server: {}
+node_templates:
+    webserver:
+        type: webserver_type
+        properties:
+            server:
+                port: { get_input: port }
+"""
+        parsed = prepare_deployment_plan(parse(yaml))
+        self.assertEqual(8080,
+                         parsed['nodes'][0]['properties']['server']['port'])
+        yaml = """
+inputs:
+    port:
+        default: 8080
+node_types:
+    webserver_type:
+        properties:
+            server: {}
+node_templates:
+    webserver:
+        type: webserver_type
+        properties:
+            server:
+                port: { get_input: port }
+                some_prop: { get_input: unknown }
+"""
+        self.assertRaises(UnknownInputError, parse, yaml)
