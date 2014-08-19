@@ -13,8 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
-
 NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
 NODE_TYPES = 'node_types'
@@ -30,6 +28,7 @@ PROPERTIES = 'properties'
 TYPE_HIERARCHY = 'type_hierarchy'
 POLICY_TYPES = 'policy_types'
 GROUPS = 'groups'
+INPUTS = 'inputs'
 
 HOST_TYPE = 'cloudify.types.host'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
@@ -52,18 +51,21 @@ import os
 import copy
 import contextlib
 import re
+
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
 from collections import OrderedDict
+from collections import namedtuple
 
 import yaml
 from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 
-from schemas import DSL_SCHEMA, IMPORTS_SCHEMA
+from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
+from dsl_parser.functions import is_get_input, GET_INPUT_FUNCTION
+from dsl_parser.exceptions import UnknownInputError
 
 
-from collections import namedtuple
 OpDescriptor = namedtuple('OpDescriptor', [
     'plugin', 'op_struct', 'name'])
 
@@ -189,13 +191,16 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         top_level_relationships, node_names_set, type_impls,
         relationship_impls, processed_plugins), nodes.iteritems())
 
+    inputs = combined_parsed_dsl.get(INPUTS, {})
+
     _post_process_nodes(processed_nodes,
                         _get_dict_prop(combined_parsed_dsl, NODE_TYPES),
                         _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS),
                         processed_plugins,
                         type_impls,
                         relationship_impls,
-                        node_names_set)
+                        node_names_set,
+                        inputs)
 
     processed_workflows = _process_workflows(
         combined_parsed_dsl.get(WORKFLOWS, {}),
@@ -219,6 +224,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         WORKFLOWS: processed_workflows,
         POLICY_TYPES: policy_types,
         GROUPS: groups,
+        INPUTS: inputs,
         'management_plugins_to_install': plan_management_plugins,
         'workflow_plugins_to_install': workflow_plugins_to_install
     }
@@ -227,7 +233,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
 
 def _post_process_nodes(processed_nodes, types, relationships, plugins,
-                        type_impls, relationship_impls, node_names):
+                        type_impls, relationship_impls, node_names, inputs):
     node_name_to_node = {node['id']: node for node in processed_nodes}
 
     depends_on_rel_types = _build_family_descendants_set(
@@ -287,6 +293,7 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
     _validate_relationship_impls(relationship_impls)
+    _validate_inputs(processed_nodes, inputs)
 
 
 def _create_type_hierarchy(type_name, types):
@@ -516,6 +523,33 @@ def _validate_relationship_impls(relationship_impls):
         ex.implementation = impl_name
         ex.source_node_ref = source_node_ref
         raise ex
+
+
+def _validate_inputs(node_templates, inputs):
+    def validate_inputs_in_dict(dict_, path=None):
+        path = '' if path is None else path
+        for k, v in dict_.iteritems():
+            current_path = '{}.{}'.format(path, k)
+            if is_get_input(v):
+                input_name = v[GET_INPUT_FUNCTION]
+                if not isinstance(input_name, str):
+                    raise ValueError(
+                        'get_input function argument should be a string in '
+                        '{}.properties{} but is \'{}\''.format(
+                            node_template['name'],
+                            current_path,
+                            input_name))
+                if input_name not in inputs:
+                    raise UnknownInputError(
+                        "{}.properties{} get_input function references an "
+                        "unknown input '{}'".format(node_template['name'],
+                                                    current_path,
+                                                    input_name))
+            elif isinstance(v, dict):
+                validate_inputs_in_dict(v, current_path)
+
+    for node_template in node_templates:
+        validate_inputs_in_dict(node_template['properties'])
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
