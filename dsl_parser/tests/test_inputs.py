@@ -70,7 +70,7 @@ node_templates:
         properties:
             port: { get_input: port }
 """
-        self.assertRaises(ValueError, parse, yaml)
+        self.assertRaises(UnknownInputError, parse, yaml)
         yaml = """
 node_types:
     webserver_type:

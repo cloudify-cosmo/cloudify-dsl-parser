@@ -62,6 +62,7 @@ from yaml.parser import ParserError
 
 from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 from dsl_parser.functions import is_get_input, GET_INPUT_FUNCTION
+from dsl_parser.exceptions import UnknownInputError
 
 from collections import namedtuple
 
@@ -537,7 +538,7 @@ def _validate_inputs(node_templates, inputs):
                             k,
                             input_name))
                 if input_name not in inputs:
-                    raise ValueError(
+                    raise UnknownInputError(
                         "{}.properties.{} get_input function references an "
                         "unknown input '{}'".format(node_template['name'],
                                                     k,
