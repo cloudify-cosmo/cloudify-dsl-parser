@@ -17,6 +17,7 @@ import unittest
 
 from dsl_parser.parser import parse
 from dsl_parser.tasks import prepare_deployment_plan
+from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
 
 
 class TestInputs(unittest.TestCase):
@@ -116,7 +117,7 @@ node_templates:
         self.assertEqual(8000,
                          parsed['nodes'][0]['properties']['port'])
 
-    def test_inputs_not_satisfied(self):
+    def test_missing_input(self):
         yaml = """
 inputs:
     port: {}
@@ -130,7 +131,7 @@ node_templates:
         properties:
             port: { get_input: port }
 """
-        self.assertRaises(KeyError, prepare_deployment_plan, parse(yaml))
+        self.assertRaises(MissingRequiredInputError, prepare_deployment_plan, parse(yaml))
 
     def test_inputs_default_value(self):
         yaml = """
@@ -150,3 +151,23 @@ node_templates:
         parsed = prepare_deployment_plan(parse(yaml))
         self.assertEqual(8080,
                          parsed['nodes'][0]['properties']['port'])
+
+    def test_unknown_input_provided(self):
+        yaml = """
+inputs:
+    port:
+        default: 8080
+node_types:
+    webserver_type:
+        properties:
+            port: {}
+node_templates:
+    webserver:
+        type: webserver_type
+        properties:
+            port: { get_input: port }
+"""
+        self.assertRaises(UnknownInputError,
+                          prepare_deployment_plan,
+                          parse(yaml),
+                          inputs={'a': 'b'})
