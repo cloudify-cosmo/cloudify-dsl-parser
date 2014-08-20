@@ -1712,12 +1712,10 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: plugin_installer.start
+                - start: plugin-installer.plugin_installer.start
 plugins:
-    plugin_installer:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
+    plugin-installer:
+        derived_from: cloudify.plugins.agent_plugin
         """
         # note that we're expecting an empty dict since every node which
         # is a host should have one
@@ -2044,12 +2042,10 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: plugin_installer.start
+                - start: plugin-installer.plugin_installer.start
 plugins:
-    plugin_installer:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
+    plugin-installer:
+        derived_from: cloudify.plugins.agent_plugin
         """
         # note that we're expecting an empty dict since every node which
         # is a host should have one
@@ -2815,12 +2811,10 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_management_interface:
-                - start: worker_installer.start
+                - start: agent-installer.worker_installer.start
 plugins:
-    worker_installer:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: "http://worker_installer.zip"
+    agent-installer:
+        derived_from: cloudify.plugins.manager_plugin
             """
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
