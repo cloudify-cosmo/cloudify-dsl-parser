@@ -855,9 +855,6 @@ policy_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-
-#########################
-
     def test_policy_triggers_parameters_simple_dictionary_schema_format(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 policy_triggers:
@@ -944,9 +941,6 @@ policy_triggers:
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
-
-
-########################
 
     def test_groups_missing_member(self):
         yaml = self.MINIMAL_BLUEPRINT + """
