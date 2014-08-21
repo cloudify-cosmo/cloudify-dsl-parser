@@ -213,9 +213,11 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
-    policy_types = combined_parsed_dsl.get(POLICY_TYPES, {})
+    policy_types = _process_policy_types(
+        combined_parsed_dsl.get(POLICY_TYPES, {}))
 
-    policy_triggers = combined_parsed_dsl.get(POLICY_TRIGGERS, {})
+    policy_triggers = _process_policy_triggers(
+        combined_parsed_dsl.get(POLICY_TRIGGERS, {}))
 
     groups = _process_groups(
         combined_parsed_dsl.get(GROUPS, {}),
@@ -797,6 +799,20 @@ def _process_workflows(workflows, plugins):
     return processed_workflows
 
 
+def _process_policy_types(policy_types):
+    processed = copy.deepcopy(policy_types)
+    for policy in processed.values():
+        policy[PROPERTIES] = policy.get(PROPERTIES, {})
+    return processed
+
+
+def _process_policy_triggers(policy_triggers):
+    processed = copy.deepcopy(policy_triggers)
+    for trigger in processed.values():
+        trigger[PARAMETERS] = trigger.get(PARAMETERS, {})
+    return processed
+
+
 def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
     node_names = {n['name'] for n in processed_nodes}
     processed_groups = copy.deepcopy(groups)
@@ -826,6 +842,7 @@ def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
                 node_name='group "{}", policy "{}"'.format(group_name,
                                                            policy_name))
             policy[PROPERTIES] = merged_properties
+            policy['triggers'] = policy.get('triggers', {})
             for trigger_name, trigger in policy['triggers'].items():
                 if trigger['type'] not in policy_triggers:
                     raise DSLParsingLogicException(

@@ -855,15 +855,6 @@ policy_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_policy_type_missing_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-policy_types:
-    test_policy:
-        source: source
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
     def test_groups_missing_member(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 policy_types:
@@ -926,22 +917,6 @@ groups:
             policy:
                 properties:
                     key: value
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_groups_policy_missing_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-policy_types:
-    type:
-        properties: {}
-        source: source
-groups:
-    group:
-        members: [member]
-        policies:
-            policy:
-                type: type
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)

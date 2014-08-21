@@ -300,7 +300,7 @@ DSL_SCHEMA = {
                             'type': 'string'
                         }
                     },
-                    'required': ['properties', 'source'],
+                    'required': ['source'],
                     'additionalProperties': False
                 },
             },
@@ -317,7 +317,7 @@ DSL_SCHEMA = {
                             'type': 'string'
                         }
                     },
-                    'required': ['parameters', 'source'],
+                    'required': ['source'],
                     'additionalProperties': False
                 },
                 },
@@ -357,14 +357,14 @@ DSL_SCHEMA = {
                                                             'type': 'object'
                                                         },
                                                     },
-                                                    'required': ['type', 'parameters'],
+                                                    'required': ['type'],
                                                     'additionalProperties': False
                                                 },
                                             },
                                             'additionalProperties': False
                                         }
                                     },
-                                    'required': ['type', 'properties', 'triggers'],
+                                    'required': ['type'],
                                     'additionalProperties': False
                                 },
                             },

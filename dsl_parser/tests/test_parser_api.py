@@ -2747,7 +2747,8 @@ groups:
                         policies=dict(
                             policy=dict(
                                 type='policy_type',
-                                properties={})))}))
+                                properties={},
+                                triggers={})))}))
         policy_types = """
 policy_types:
     policy_type:
@@ -2764,7 +2765,12 @@ policy_types:
             groups=groups[0]['groups'])
         expected_result['groups'].update(groups[1]['groups'])
 
+
         result = parse(yaml)
+        import pprint
+        pprint.pprint(result['groups'])
+        pprint.pprint(expected_result['groups'])
+
         self.assertDictEqual(result['groups'],
                              expected_result['groups'])
 
