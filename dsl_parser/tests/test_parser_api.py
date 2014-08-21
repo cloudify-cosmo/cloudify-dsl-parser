@@ -2792,7 +2792,6 @@ policy_types:
             groups=groups[0]['groups'])
         expected_result['groups'].update(groups[1]['groups'])
 
-
         result = parse(yaml)
         self.assertDictEqual(result['groups'],
                              expected_result['groups'])
