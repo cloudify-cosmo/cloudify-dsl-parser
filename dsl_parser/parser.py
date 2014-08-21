@@ -25,7 +25,9 @@ WORKFLOWS = 'workflows'
 RELATIONSHIPS = 'relationships'
 RELATIONSHIP_IMPLEMENTATIONS = 'relationship_implementations'
 PROPERTIES = 'properties'
+PARAMETERS = 'parameters'
 TYPE_HIERARCHY = 'type_hierarchy'
+POLICY_TRIGGERS = 'policy_triggers'
 POLICY_TYPES = 'policy_types'
 GROUPS = 'groups'
 INPUTS = 'inputs'
@@ -211,11 +213,16 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
     plan_management_plugins = _create_plan_management_plugins(processed_nodes)
 
-    policy_types = combined_parsed_dsl.get(POLICY_TYPES, {})
+    policy_types = _process_policy_types(
+        combined_parsed_dsl.get(POLICY_TYPES, {}))
+
+    policy_triggers = _process_policy_triggers(
+        combined_parsed_dsl.get(POLICY_TRIGGERS, {}))
 
     groups = _process_groups(
         combined_parsed_dsl.get(GROUPS, {}),
         policy_types,
+        policy_triggers,
         processed_nodes)
 
     plan = {
@@ -223,6 +230,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         RELATIONSHIPS: top_level_relationships,
         WORKFLOWS: processed_workflows,
         POLICY_TYPES: policy_types,
+        POLICY_TRIGGERS: policy_triggers,
         GROUPS: groups,
         INPUTS: inputs,
         'management_plugins_to_install': plan_management_plugins,
@@ -791,7 +799,21 @@ def _process_workflows(workflows, plugins):
     return processed_workflows
 
 
-def _process_groups(groups, policy_types, processed_nodes):
+def _process_policy_types(policy_types):
+    processed = copy.deepcopy(policy_types)
+    for policy in processed.values():
+        policy[PROPERTIES] = policy.get(PROPERTIES, {})
+    return processed
+
+
+def _process_policy_triggers(policy_triggers):
+    processed = copy.deepcopy(policy_triggers)
+    for trigger in processed.values():
+        trigger[PARAMETERS] = trigger.get(PARAMETERS, {})
+    return processed
+
+
+def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
     node_names = {n['name'] for n in processed_nodes}
     processed_groups = copy.deepcopy(groups)
     for group_name, group in processed_groups.items():
@@ -820,6 +842,29 @@ def _process_groups(groups, policy_types, processed_nodes):
                 node_name='group "{}", policy "{}"'.format(group_name,
                                                            policy_name))
             policy[PROPERTIES] = merged_properties
+            policy['triggers'] = policy.get('triggers', {})
+            for trigger_name, trigger in policy['triggers'].items():
+                if trigger['type'] not in policy_triggers:
+                    raise DSLParsingLogicException(
+                        42,
+                        'trigger "{}" of policy "{}" of group "{}" '
+                        'references a non existent '
+                        'policy trigger "{}"'
+                        .format(trigger_name,
+                                policy_name,
+                                group, trigger['type']))
+                merged_parameters = _merge_schema_and_instance_properties(
+                    trigger.get(PARAMETERS, {}),
+                    {},
+                    policy_triggers[trigger['type']].get(PARAMETERS, {}),
+                    '{0} \'{1}\' property is not part of '
+                    'the policy type properties schema',
+                    '{0} does not provide a value for mandatory '
+                    '\'{1}\' property which is '
+                    'part of its policy type schema',
+                    node_name='group "{}", policy "{}" trigger "{}"'
+                              .format(group_name, policy_name, trigger_name))
+                trigger[PARAMETERS] = merged_parameters
     return processed_groups
 
 
@@ -1262,7 +1307,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
     merge_no_override = {INTERFACES, NODE_TYPES, PLUGINS, WORKFLOWS,
                          TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
                          RELATIONSHIP_IMPLEMENTATIONS,
-                         POLICY_TYPES, GROUPS}
+                         POLICY_TYPES, GROUPS, POLICY_TRIGGERS}
     merge_one_nested_level_no_override = dict()
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)

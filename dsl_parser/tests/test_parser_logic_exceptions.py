@@ -668,6 +668,24 @@ groups:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 41, DSLParsingLogicException)
 
+    def test_group_missing_trigger_type(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_types:
+    policy_type:
+        source: source
+groups:
+    group:
+        members: [test_node]
+        policies:
+            policy:
+                type: policy_type
+                triggers:
+                    trigger1:
+                        type: non_existent_trigger
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 42, DSLParsingLogicException)
+
     def test_group_policy_type_undefined_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 policy_types:
@@ -701,6 +719,53 @@ groups:
             policy:
                 type: policy_type
                 properties: {}
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 107, DSLParsingLogicException)
+
+    def test_group_policy_trigger_undefined_parameter(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_triggers:
+    trigger:
+        source: source
+policy_types:
+    policy_type:
+        source: source
+groups:
+    group:
+        members: [test_node]
+        policies:
+            policy:
+                type: policy_type
+                triggers:
+                    trigger1:
+                        type: trigger
+                        parameters:
+                            some: undefined
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 106, DSLParsingLogicException)
+
+    def test_group_policy_trigger_missing_parameter(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_triggers:
+    trigger:
+        source: source
+        parameters:
+            param1:
+                description: the description
+policy_types:
+    policy_type:
+        source: source
+groups:
+    group:
+        members: [test_node]
+        policies:
+            policy:
+                type: policy_type
+                triggers:
+                    trigger1:
+                        type: trigger
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 107, DSLParsingLogicException)

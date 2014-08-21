@@ -267,7 +267,6 @@ node_templates:
 """
         multi_plan = parse_multi(yaml)
         nodes = multi_plan['node_instances']
-        print len(nodes)
         self.assertEquals(19, len(nodes))
 
         network_1 = nodes[15]

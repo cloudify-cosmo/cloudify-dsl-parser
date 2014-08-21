@@ -300,10 +300,27 @@ DSL_SCHEMA = {
                             'type': 'string'
                         }
                     },
-                    'required': ['properties', 'source'],
+                    'required': ['source'],
                     'additionalProperties': False
                 },
             },
+            'additionalProperties': False
+        },
+        'policy_triggers': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'type': 'object',
+                    'properties': {
+                        'parameters': PROPERTIES_SCHEMA_SCHEMA,
+                        'source': {
+                            'type': 'string'
+                        }
+                    },
+                    'required': ['source'],
+                    'additionalProperties': False
+                },
+                },
             'additionalProperties': False
         },
         'groups': {
@@ -325,9 +342,29 @@ DSL_SCHEMA = {
                                         },
                                         'properties': {
                                             'type': 'object'
+                                        },
+                                        'triggers': {
+                                            'type': 'object',
+                                            'patternProperties': {
+                                                '^': {
+                                                    'type': 'object',
+                                                    'properties': {
+                                                        #non-meta 'properties'
+                                                        'type': {
+                                                            'type': 'string'
+                                                        },
+                                                        'parameters': {
+                                                            'type': 'object'
+                                                        },
+                                                    },
+                                                    'required': ['type'],
+                                                    'additionalProperties': False
+                                                },
+                                            },
+                                            'additionalProperties': False
                                         }
                                     },
-                                    'required': ['type', 'properties'],
+                                    'required': ['type'],
                                     'additionalProperties': False
                                 },
                             },
