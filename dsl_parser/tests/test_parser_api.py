@@ -2794,10 +2794,6 @@ policy_types:
 
 
         result = parse(yaml)
-        import pprint
-        pprint.pprint(result['groups'])
-        pprint.pprint(expected_result['groups'])
-
         self.assertDictEqual(result['groups'],
                              expected_result['groups'])
 
