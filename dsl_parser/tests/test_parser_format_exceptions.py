@@ -855,6 +855,99 @@ policy_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
+
+#########################
+
+    def test_policy_triggers_parameters_simple_dictionary_schema_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_triggers:
+    test_trigger:
+        source: source
+        parameters:
+            key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_triggers_parameters_array_dictionary_schema_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_triggers:
+    test_trigger:
+        source: source
+        parameters:
+            key:
+                - default: val1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_triggers_parameters_schema_array_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_triggers:
+    test_trigger:
+        source: source
+        parameters:
+            - key: value
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_triggers_parameters_extra_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_triggers:
+    test_trigger:
+        source: source
+        parameters:
+            key:
+                default: val1
+                description: property_desc1
+                extra_property: this_is_not_allowed
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_trigger_source_non_string(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_triggers:
+    test_trigger:
+        source: 1
+        parameters:
+            key:
+                default: val1
+                description: property_desc1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_trigger_extra_property(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_triggers:
+    test_trigger:
+        extra_property: i_should_not_be_here
+        source: source
+        parameters:
+            key:
+                default: val1
+                description: property_desc1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+    def test_policy_trigger_missing_source(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+policy_triggers:
+    test_trigger:
+        parameters:
+            key:
+                default: val1
+                description: property_desc1
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)
+
+
+########################
+
     def test_groups_missing_member(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 policy_types:
