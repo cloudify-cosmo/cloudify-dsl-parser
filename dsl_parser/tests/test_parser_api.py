@@ -2701,6 +2701,33 @@ workflows:
         self.assertDictEqual(result['policy_types'],
                              expected_result['policy_types'])
 
+    def test_policy_trigger_imports(self):
+        policy_triggers = []
+        for i in range(2):
+            policy_triggers.append(dict(
+                policy_triggers={
+                    'policy_trigger{}'.format(i): dict(
+                        source='the_source',
+                        parameters=dict(
+                            property=dict(
+                                default='default_value',
+                                description='property description')))}))
+
+        yaml = self.create_yaml_with_imports([
+            self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS,
+            yml.safe_dump(policy_triggers[0]),
+            yml.safe_dump(policy_triggers[1]),
+        ])
+
+        expected_result = dict(
+            policy_triggers=policy_triggers[0]['policy_triggers'])
+        expected_result['policy_triggers'].update(policy_triggers[1][
+            'policy_triggers'])
+
+        result = parse(yaml)
+        self.assertDictEqual(result['policy_triggers'],
+                             expected_result['policy_triggers'])
+
     def test_groups_schema_properties_merge(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
 policy_types:
