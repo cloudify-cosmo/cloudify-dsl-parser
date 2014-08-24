@@ -1712,9 +1712,9 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: plugin-installer.plugin_installer.start
+                - start: plugin_installer.plugin_installer.start
 plugins:
-    plugin-installer:
+    plugin_installer:
         derived_from: cloudify.plugins.agent_plugin
         """
         # note that we're expecting an empty dict since every node which
@@ -2042,9 +2042,9 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: plugin-installer.plugin_installer.start
+                - start: plugin_installer.plugin_installer.start
 plugins:
-    plugin-installer:
+    plugin_installer:
         derived_from: cloudify.plugins.agent_plugin
         """
         # note that we're expecting an empty dict since every node which
@@ -2839,9 +2839,9 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_management_interface:
-                - start: agent-installer.worker_installer.start
+                - start: agent_installer.worker_installer.start
 plugins:
-    agent-installer:
+    agent_installer:
         derived_from: cloudify.plugins.manager_plugin
             """
         result = parse(yaml)

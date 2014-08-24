@@ -36,10 +36,10 @@ HOST_TYPE = 'cloudify.types.host'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
-PLUGIN_INSTALLER_PLUGIN = 'plugin-installer'
-AGENT_INSTALLER_PLUGIN = "agent-installer"
-WINDOWS_PLUGIN_INSTALLER_PLUGIN = 'windows-plugin-installer'
-WINDOWS_AGENT_INSTALLER_PLUGIN = "windows-agent-installer"
+PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
+AGENT_INSTALLER_PLUGIN = "agent_installer"
+WINDOWS_PLUGIN_INSTALLER_PLUGIN = 'windows_plugin_installer'
+WINDOWS_AGENT_INSTALLER_PLUGIN = "windows_agent_installer"
 
 PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN,
                                    WINDOWS_PLUGIN_INSTALLER_PLUGIN}
