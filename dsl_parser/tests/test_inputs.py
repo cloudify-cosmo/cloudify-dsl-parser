@@ -210,3 +210,41 @@ node_templates:
                 some_prop: { get_input: unknown }
 """
         self.assertRaises(UnknownInputError, parse, yaml)
+
+    def test_get_input_list_property(self):
+        yaml = """
+inputs:
+    port:
+        default: 8080
+node_types:
+    webserver_type:
+        properties:
+            server: {}
+node_templates:
+    webserver:
+        type: webserver_type
+        properties:
+            server:
+                - item1
+                - port: { get_input: port }
+"""
+        parsed = prepare_deployment_plan(parse(yaml))
+        self.assertEqual(8080,
+                         parsed['nodes'][0]['properties']['server'][1]['port'])
+        yaml = """
+inputs:
+    port:
+        default: 8080
+node_types:
+    webserver_type:
+        properties:
+            server: {}
+node_templates:
+    webserver:
+        type: webserver_type
+        properties:
+            server:
+                - item1
+                - port: { get_input: port1122 }
+"""
+        self.assertRaises(UnknownInputError, parse, yaml)

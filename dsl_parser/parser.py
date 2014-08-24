@@ -66,6 +66,7 @@ from yaml.parser import ParserError
 from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 from dsl_parser.functions import is_get_input, GET_INPUT_FUNCTION
 from dsl_parser.exceptions import UnknownInputError
+from dsl_parser.utils import scan_properties
 
 
 OpDescriptor = namedtuple('OpDescriptor', [
@@ -534,30 +535,24 @@ def _validate_relationship_impls(relationship_impls):
 
 
 def _validate_inputs(node_templates, inputs):
-    def validate_inputs_in_dict(dict_, path=None):
-        path = '' if path is None else path
-        for k, v in dict_.iteritems():
-            current_path = '{}.{}'.format(path, k)
-            if is_get_input(v):
-                input_name = v[GET_INPUT_FUNCTION]
-                if not isinstance(input_name, str):
-                    raise ValueError(
-                        'get_input function argument should be a string in '
-                        '{}.properties{} but is \'{}\''.format(
-                            node_template['name'],
-                            current_path,
-                            input_name))
-                if input_name not in inputs:
-                    raise UnknownInputError(
-                        "{}.properties{} get_input function references an "
-                        "unknown input '{}'".format(node_template['name'],
-                                                    current_path,
-                                                    input_name))
-            elif isinstance(v, dict):
-                validate_inputs_in_dict(v, current_path)
-
+    def handler(dict_, k, v, path):
+        if is_get_input(v):
+            input_name = v[GET_INPUT_FUNCTION]
+            if not isinstance(input_name, str):
+                raise ValueError(
+                    'get_input function argument should be a string in '
+                    '{} but is \'{}\''.format(
+                        path,
+                        input_name))
+            if input_name not in inputs:
+                raise UnknownInputError(
+                    "{} get_input function references an "
+                    "unknown input '{}'".format(path,
+                                                input_name))
     for node_template in node_templates:
-        validate_inputs_in_dict(node_template['properties'])
+        scan_properties(node_template['properties'],
+                        handler,
+                        '{0}.properties'.format(node_template['name']))
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):

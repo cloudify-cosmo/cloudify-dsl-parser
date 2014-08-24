@@ -21,6 +21,7 @@ import multi_instance
 
 from dsl_parser.functions import is_get_input, GET_INPUT_FUNCTION
 from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
+from dsl_parser.utils import scan_properties
 
 
 def parse_dsl(dsl_location, alias_mapping_url,
@@ -50,17 +51,16 @@ def _set_plan_inputs(plan, inputs=None):
                 'expected inputs: {}'.format(input_name,
                                              plan['inputs'].keys()))
 
-    def replace_get_input_in_dict(dict_):
-        for k, v in dict_.iteritems():
-            if is_get_input(v):
-                input_name = v[GET_INPUT_FUNCTION]
-                dict_[k] = inputs[input_name]
-            elif isinstance(v, dict):
-                replace_get_input_in_dict(v)
+    def handler(dict_, k, v, property_path):
+        if is_get_input(v):
+            input_name = v[GET_INPUT_FUNCTION]
+            dict_[k] = inputs[input_name]
 
-    # Replace get_input function with inputs
     for node_template in plan['nodes']:
-        replace_get_input_in_dict(node_template['properties'])
+        scan_properties(node_template['properties'],
+                        handler,
+                        '{0}.properties'.format(node_template['name']))
+
     plan['inputs'] = inputs
 
 
