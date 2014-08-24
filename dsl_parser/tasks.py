@@ -57,7 +57,9 @@ def _set_plan_inputs(plan, inputs=None):
             dict_[k] = inputs[input_name]
 
     for node_template in plan['nodes']:
-        scan_properties(node_template['properties'], handler, 'properties')
+        scan_properties(node_template['properties'],
+                        handler,
+                        '{0}.properties'.format(node_template['name']))
 
     plan['inputs'] = inputs
 
