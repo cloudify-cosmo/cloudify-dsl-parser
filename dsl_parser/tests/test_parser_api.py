@@ -2860,9 +2860,7 @@ node_types:
                 - start: plugin_installer.start
 plugins:
     plugin_installer:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://worker_installer.zip"
+        derived_from: cloudify.plugins.remote_plugin
             """
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
