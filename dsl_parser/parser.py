@@ -37,10 +37,9 @@ DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
 PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
-AGENT_INSTALLER_PLUGIN = "worker_installer"
+AGENT_INSTALLER_PLUGIN = "agent_installer"
 WINDOWS_PLUGIN_INSTALLER_PLUGIN = 'windows_plugin_installer'
 WINDOWS_AGENT_INSTALLER_PLUGIN = "windows_agent_installer"
-
 
 PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN,
                                    WINDOWS_PLUGIN_INSTALLER_PLUGIN}
@@ -768,7 +767,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
-        base_error_message = 'Could not extract plugin from {2} ' + \
+        base_error_message = 'Could not extract plugin from {2} ' \
                              'mapping {0}, which is declared for {2} ' \
                              '{1}.'.format(
                                  operation_mapping,
