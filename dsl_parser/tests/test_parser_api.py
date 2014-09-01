@@ -62,13 +62,8 @@ class TestParserApi(AbstractTestParser):
         return next(plugin for plugin in node['plugins_to_install']
                     if plugin['name'] == plugin_name)
 
-    def test_single_node_blueprint(self):
+    def test_minimal_blueprint(self):
         result = parse(self.MINIMAL_BLUEPRINT)
-        self._assert_minimal_blueprint(result)
-
-    def test_type_without_interface(self):
-        yaml = self.MINIMAL_BLUEPRINT
-        result = parse(yaml)
         self._assert_minimal_blueprint(result)
 
     def test_import_from_path(self):
@@ -147,9 +142,6 @@ plugins:
         node = result['nodes'][0]
         self._assert_blueprint(result)
 
-        plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('other_test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('other_test_plugin', 'start'),
                           operations['start'])
@@ -183,9 +175,6 @@ node_types:
         node = result['nodes'][0]
         self._assert_blueprint(result)
 
-        plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('other_test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('other_test_plugin', 'start'),
                           operations['start'])
@@ -610,9 +599,6 @@ plugins:
         result = parse(yaml)
         self._assert_blueprint(result)
         node = result['nodes'][0]
-        plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('test_plugin2', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(12, len(operations))
         self.assertEquals(op_struct('test_plugin2', 'start'),
@@ -666,9 +652,6 @@ plugins:
         result = parse(yaml)
         self._assert_blueprint(result)
         node = result['nodes'][0]
-        plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('test_plugin2', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(8, len(operations))
         self.assertEquals(op_struct('test_plugin2', 'start'),
@@ -703,9 +686,6 @@ plugins:
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('test_plugin', 'install'),
                           operations['test_interface1.install'])
@@ -713,9 +693,6 @@ plugins:
                           operations['terminate'])
         self.assertEquals(op_struct('test_plugin', 'terminate'),
                           operations['test_interface1.terminate'])
-        plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('other_test_plugin', plugin_props[PLUGIN_NAME_KEY])
         self.assertEquals(op_struct('other_test_plugin', 'install'),
                           operations['test_interface2.install'])
         self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
@@ -1976,9 +1953,6 @@ node_types:
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(
             op_struct('test_plugin', 'install', {'key': 'value'}),
@@ -2041,9 +2015,6 @@ node_types:
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         expected_props = {'delegated_key': 'val',
                           'nested_key': {'prop1': 'value1', 'prop2': 'val'}}
@@ -2224,9 +2195,6 @@ node_types:
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         expected_props = {'mapped': 'nested_value'}
         self.assertEquals(op_struct('test_plugin', 'install', expected_props),
@@ -2254,9 +2222,6 @@ node_types:
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
-        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         expected_props = {'mapped': 'nested_value'}
         self.assertEquals(op_struct('test_plugin', 'install', expected_props),

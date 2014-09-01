@@ -39,9 +39,8 @@ plugins:
         yaml = """
 plugins:
     plugin1:
-        derived_from: cloudify.plugins.remote_plugin
-        properties:
-            url: some_url
+        executor: central_deployment_agent
+        source: dummy
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -191,13 +190,11 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_plugin_without_url(self):
+    def test_plugin_without_source(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-
+        executor: central_deployment_agent
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -258,36 +255,22 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_plugin_without_derived_from_field(self):
+    def test_plugin_without_executor_field(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 plugins:
     test_plugin:
-        properties:
-            url: "http://test_url.zip"
+        source: dummy
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_plugin_with_url_and_extra_properties(self):
+    def test_plugin_extra_properties(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
-            extra_prop: "some_val"
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_plugin_with_folder_and_extra_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-plugins:
-    test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            folder: "http://test_url.zip"
-            extra_prop: "some_val"
+        executor: central_deployment_agent
+        source: dummy
+        another_field: bad
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
