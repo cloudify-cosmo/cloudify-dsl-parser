@@ -12,6 +12,8 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+from dsl_parser.constants import CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT, PLUGIN_EXECUTOR_KEY, PLUGIN_SOURCE_KEY, \
+    PLUGIN_NAME_KEY
 
 NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
@@ -285,11 +287,12 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                             another_node[PLUGINS].iteritems():
                         # only wish to add agent plugins, and only if they're
                         # not in the excluded plugins list
-                        if plugin_obj['agent_plugin'] == 'true' and \
+                        if plugin_obj[PLUGIN_EXECUTOR_KEY] == HOST_AGENT and \
                                 plugin_obj['name'] not in \
                                 PLUGINS_TO_INSTALL_EXCLUDE_LIST:
                             plugins_to_install[plugin_name] = plugin_obj
-                        if plugin_obj['manager_plugin'] == 'true' and \
+                        if plugin_obj[PLUGIN_EXECUTOR_KEY] \
+                                == CENTRAL_DEPLOYMENT_AGENT and \
                                 plugin_obj['name'] not in \
                                 MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
                             management_plugins_to_install[plugin_name] \
@@ -558,13 +561,15 @@ def _validate_agent_plugins_on_host_nodes(processed_nodes):
     for node in processed_nodes:
         if 'host_id' not in node and PLUGINS in node:
             for plugin in node[PLUGINS].itervalues():
-                if plugin['agent_plugin'] == 'true':
+                if plugin[PLUGIN_EXECUTOR_KEY] \
+                        == HOST_AGENT:
                     raise DSLParsingLogicException(
                         24, "node {0} has no relationship which makes it "
-                            "contained within a host and it has an agent "
-                            "plugin named {1}, agent plugins must be "
+                            "contained within a host and it has a "
+                            "plugin[{1}] with '{2}' as an executor. these types of plugins must be "
                             "installed on a host".format(node['id'],
-                                                         plugin['name']))
+                                                         plugin['name'],
+                                                         HOST_AGENT))
 
 
 def _build_family_descendants_set(types_dict, derived_from):
@@ -1116,32 +1121,20 @@ def _extract_node_host_id(processed_node, node_name_to_node, host_types,
 
 
 def _process_plugin(plugin, plugin_name):
-    cloudify_plugins = (
-        'cloudify.plugins.agent_plugin',
-        'cloudify.plugins.remote_plugin',
-        'cloudify.plugins.manager_plugin')
-    if plugin_name in cloudify_plugins or \
-            plugin_name == 'cloudify.plugins.plugin':
-        return plugin
-    # 'cloudify.plugins.plugin'
-    if plugin['derived_from'] not in cloudify_plugins:
-        # TODO: consider changing the below exception to type
-        # DSLParsingFormatException..?
+    if plugin[PLUGIN_EXECUTOR_KEY] not \
+            in [CENTRAL_DEPLOYMENT_AGENT,
+                HOST_AGENT]:
         raise DSLParsingLogicException(
-            18, 'plugin {0} has an illegal "derived_from" value {1}; value '
-                'must be either {2} or {3}'.format(
-                    plugin_name,
-                    plugin['derived_from'],
-                    'cloudify.plugins.agent_plugin',
-                    'cloudify.plugins.remote_plugin',
-                    'cloudify.plugins.manager_plugin'))
-    processed_plugin = copy.deepcopy(plugin.get(PROPERTIES, {}))
-    processed_plugin['name'] = plugin_name
-    processed_plugin['agent_plugin'] = \
-        str(plugin['derived_from'] == 'cloudify.plugins.agent_plugin').lower()
-    processed_plugin['manager_plugin'] = \
-        str(plugin['derived_from']
-            == 'cloudify.plugins.manager_plugin').lower()
+            18, 'plugin {0} has an illegal '
+                '{1} value {2}; value '
+                'must be either {3} or {4}'
+            .format(plugin_name,
+                    PLUGIN_EXECUTOR_KEY,
+                    plugin[PLUGIN_EXECUTOR_KEY],
+                    CENTRAL_DEPLOYMENT_AGENT,
+                    HOST_AGENT))
+    processed_plugin = copy.deepcopy(plugin)
+    processed_plugin[PLUGIN_NAME_KEY] = plugin_name
 
     return processed_plugin
 

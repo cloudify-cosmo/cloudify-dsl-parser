@@ -79,13 +79,12 @@ node_types:
                                         'test_type_grandparent', 'test_type']
         self.assertEquals(expected_circular_dependency, ex.circular_dependency)
 
-    def test_plugin_with_wrongful_derived_from_field(self):
+    def test_plugin_with_wrongful_executor_field(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 plugins:
     test_plugin:
-        derived_from: "bad value"
-        properties:
-            url: "http://test_url.zip"
+        executor: "bad value"
+        source: dummy
 
 node_types:
     test_type:
@@ -213,9 +212,8 @@ node_types:
                 - start: test_plugin.start
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
+        executor: host_agent
+        source: dummy
         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 24, DSLParsingLogicException)

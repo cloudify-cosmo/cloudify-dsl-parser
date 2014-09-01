@@ -255,35 +255,14 @@ DSL_SCHEMA = {
                 '^((?!cloudify\.plugins\.plugin).*)$|^cloudify\.plugins\.plugin.+$': {
                     'type': 'object',
                     'properties': {
-                        'derived_from': {
+                        'source': {
                             'type': 'string'
                         },
-                        #non-meta 'properties'
-                        'properties': {
-                            'type': 'object',
-                            'oneOf': [
-                                {
-                                    'properties': {
-                                        'url': {
-                                            'type': 'string'
-                                        }
-                                    },
-                                    'required': ['url'],
-                                    'additionalProperties': False
-                                },
-                                {
-                                    'properties': {
-                                        'folder': {
-                                            'type': 'string'
-                                        }
-                                    },
-                                    'required': ['folder'],
-                                    'additionalProperties': False
-                                }
-                            ]
+                        'executor': {
+                            'type': 'string'
                         }
                     },
-                    'required': ['derived_from'],
+                    'required': ['source', 'executor'],
                     'additionalProperties': False
                 }
             },

@@ -12,6 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+from dsl_parser.constants import PLUGIN_NAME_KEY
 
 __author__ = 'ran'
 
@@ -79,10 +80,8 @@ class TestParserApi(AbstractTestParser):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        self.assertEquals('test_plugin', plugin_props['name'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('test_plugin', 'install'),
                           operations['install'])
@@ -141,19 +140,16 @@ node_types:
 
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url2.zip"
+        executor: central_deployment_agent
+        source: dummy
 """
         result = parse(yaml)
         node = result['nodes'][0]
         self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('http://test_url2.zip', plugin_props['url'])
-        self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('other_test_plugin', plugin_props['name'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('other_test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('other_test_plugin', 'start'),
                           operations['start'])
@@ -169,9 +165,8 @@ plugins:
             [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url2.zip"
+        executor: central_deployment_agent
+        source: dummy
 node_types:
     test_type:
         properties:
@@ -183,16 +178,14 @@ node_types:
             test_interface2:
                 - start: other_test_plugin.start
                 - shutdown: other_test_plugin.shutdown
-        """
+"""
         result = parse(yaml)
         node = result['nodes'][0]
         self._assert_blueprint(result)
 
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('http://test_url2.zip', plugin_props['url'])
-        self.assertEquals('other_test_plugin', plugin_props['name'])
-        self.assertEquals('false', plugin_props['agent_plugin'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('other_test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('other_test_plugin', 'start'),
                           operations['start'])
@@ -605,27 +598,21 @@ node_types:
 
 plugins:
     test_plugin2:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url2.zip"
+        executor: central_deployment_agent
+        source: dummy
     test_plugin3:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url3.zip"
+        executor: central_deployment_agent
+        source: dummy
     test_plugin4:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url4.zip"
-    """
-
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('http://test_url2.zip', plugin_props['url'])
-        self.assertEquals('test_plugin2', plugin_props['name'])
-        self.assertEquals('false', plugin_props['agent_plugin'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('test_plugin2', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(12, len(operations))
         self.assertEquals(op_struct('test_plugin2', 'start'),
@@ -673,19 +660,15 @@ node_types:
 
 plugins:
     test_plugin2:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url2.zip"
-        """
-
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self._assert_blueprint(result)
         node = result['nodes'][0]
         plugin_props = node['plugins']['test_plugin2']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('http://test_url2.zip', plugin_props['url'])
-        self.assertEquals('test_plugin2', plugin_props['name'])
-        self.assertEquals('false', plugin_props['agent_plugin'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('test_plugin2', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(8, len(operations))
         self.assertEquals(op_struct('test_plugin2', 'start'),
@@ -714,18 +697,15 @@ node_types:
                 - shutdown: other_test_plugin.shutdown
 plugins:
     other_test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url2.zip"
-    """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        self.assertEquals('test_plugin', plugin_props['name'])
-        self.assertEquals('false', plugin_props['agent_plugin'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('test_plugin', 'install'),
                           operations['test_interface1.install'])
@@ -734,10 +714,8 @@ plugins:
         self.assertEquals(op_struct('test_plugin', 'terminate'),
                           operations['test_interface1.terminate'])
         plugin_props = node['plugins']['other_test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('http://test_url2.zip', plugin_props['url'])
-        self.assertEquals('other_test_plugin', plugin_props['name'])
-        self.assertEquals('false', plugin_props['agent_plugin'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('other_test_plugin', plugin_props[PLUGIN_NAME_KEY])
         self.assertEquals(op_struct('other_test_plugin', 'install'),
                           operations['test_interface2.install'])
         self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
@@ -745,35 +723,6 @@ plugins:
         self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
                           operations['test_interface2.shutdown'])
         self.assertEquals(6, len(operations))
-
-    def test_plugins_derived_from_field(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                - install: test_plugin1.install
-            test_interface2:
-                - install: test_plugin2.install
-
-plugins:
-    test_plugin1:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url1.zip"
-    test_plugin2:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url2.zip"
-    """
-        result = parse(yaml)
-        node = result['nodes'][0]
-        self.assertEquals('false',
-                          node['plugins']['test_plugin1']['agent_plugin'])
-        self.assertEquals('false',
-                          node['plugins']['test_plugin2']['agent_plugin'])
 
     def test_relative_path_import(self):
         bottom_level_yaml = self.BASIC_TYPE
@@ -1066,10 +1015,9 @@ relationships:
     test_relationship: {}
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
-                    """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
@@ -1094,8 +1042,6 @@ plugins:
         self.assertEquals(8, len(relationship))
         plugin_def = nodes[1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
-        self.assertEquals('false', plugin_def['agent_plugin'])
-        self.assertEquals('http://test_url.zip', plugin_def['url'])
 
     def test_instance_relationships_duplicate_relationship(self):
         # right now, having two relationships with the same (type,target)
@@ -1157,10 +1103,9 @@ relationships:
                 - op2: test_plugin.task_name2
 plugins:
     test_plugin:
-        derived_from: cloudify.plugins.remote_plugin
-        properties:
-            url: some_url
-                    """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
@@ -1281,11 +1226,9 @@ relationships:
                 - install
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
-
-        """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
@@ -1405,11 +1348,9 @@ relationships:
                 - install2
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
-
-        """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
@@ -1671,34 +1612,13 @@ node_types:
                 - start: test_plugin.start
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
-            """
+        executor: host_agent
+        source: dummy
+"""
         result = parse(yaml)
         plugin = result['nodes'][0]['plugins_to_install'][0]
         self.assertEquals('test_plugin', plugin['name'])
-        self.assertEquals('true', plugin['agent_plugin'])
-        self.assertEquals('http://test_plugin.zip', plugin['url'])
         self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
-
-    def test_plugin_with_folder_as_only_property(self):
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.types.host
-node_types:
-    cloudify.types.host:
-        interfaces:
-            test_interface:
-                - start: test_plugin.start
-plugins:
-    test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            folder: "test-folder"
-            """
-        parse(yaml)
 
     def test_node_plugins_to_install_field_installer_plugin(self):
         # testing to ensure the installer plugin is treated differently and
@@ -1715,15 +1635,16 @@ node_types:
                 - start: plugin_installer.plugin_installer.start
 plugins:
     plugin_installer:
-        derived_from: cloudify.plugins.agent_plugin
-        """
+        executor: host_agent
+        source: dummy
+"""
         # note that we're expecting an empty dict since every node which
         # is a host should have one
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]['plugins_to_install'])
 
     def test_node_plugins_to_install_field_remote_plugin(self):
-        # testing to ensure that only plugins of type agent_plugin are put
+        # testing to ensure that only plugins of executor 'host_agent' are put
         # on the plugins_to_install field
         yaml = """
 node_templates:
@@ -1736,10 +1657,9 @@ node_types:
                 - start: test_plugin.start
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_plugin.zip"
-        """
+        executor: central_deployment_agent
+        source: dummy
+"""
 
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]['plugins_to_install'])
@@ -1785,15 +1705,12 @@ relationships:
     cloudify.relationships.contained_in: {}
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
+        executor: host_agent
+        source: dummy
     test_plugin2:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin2.zip"
-        """
-
+        executor: host_agent
+        source: dummy
+"""
         result = parse(yaml)
 
         self.assertEquals(4, len(result['nodes']))
@@ -1810,11 +1727,7 @@ plugins:
         test_plugin2 = self._get_plugin_to_install_from_node(
             node, 'test_plugin2')
         self.assertEquals('test_plugin', test_plugin['name'])
-        self.assertEquals('true', test_plugin['agent_plugin'])
-        self.assertEquals('http://test_plugin.zip', test_plugin['url'])
         self.assertEquals('test_plugin2', test_plugin2['name'])
-        self.assertEquals('true', test_plugin2['agent_plugin'])
-        self.assertEquals('http://test_plugin2.zip', test_plugin2['url'])
         self.assertEquals(2, len(nodes[0]['plugins_to_install']))
 
     def test_node_cloudify_runtime_property(self):
@@ -1944,14 +1857,12 @@ relationships:
     test_relationship: {}
 plugins:
     test_plugin1:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url1.zip"
+        executor: central_deployment_agent
+        source: dummy
     test_plugin2:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url2.zip"
-                """
+        executor: central_deployment_agent
+        source: dummy
+"""
 
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
@@ -1973,8 +1884,6 @@ plugins:
         self.assertEquals(8, len(relationship1))
         plugin1_def = nodes[1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
-        self.assertEquals('false', plugin1_def['agent_plugin'])
-        self.assertEquals('http://test_url1.zip', plugin1_def['url'])
 
         relationship2 = nodes[1]['relationships'][1]
         self.assertEquals('test_relationship', relationship2['type'])
@@ -1992,8 +1901,6 @@ plugins:
         # test_node2:
         plugin2_def = nodes[0]['plugins']['test_plugin2']
         self.assertEquals('test_plugin2', plugin2_def['name'])
-        self.assertEquals('false', plugin2_def['agent_plugin'])
-        self.assertEquals('http://test_url2.zip', plugin2_def['url'])
 
     def test_multiple_instances(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -2045,8 +1952,9 @@ node_types:
                 - start: plugin_installer.plugin_installer.start
 plugins:
     plugin_installer:
-        derived_from: cloudify.plugins.agent_plugin
-        """
+        executor: host_agent
+        source: dummy
+"""
         # note that we're expecting an empty dict since every node which
         # is a host should have one
         result = parse(yaml)
@@ -2069,10 +1977,8 @@ node_types:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        self.assertEquals('test_plugin', plugin_props['name'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(
             op_struct('test_plugin', 'install', {'key': 'value'}),
@@ -2098,11 +2004,9 @@ relationships:
     test_relationship: {}
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
-                """
-
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
@@ -2138,10 +2042,8 @@ node_types:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        self.assertEquals('test_plugin', plugin_props['name'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         expected_props = {'delegated_key': 'val',
                           'nested_key': {'prop1': 'value1', 'prop2': 'val'}}
@@ -2172,11 +2074,9 @@ relationships:
     test_relationship: {}
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
-                """
-
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
@@ -2325,10 +2225,8 @@ node_types:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        self.assertEquals('test_plugin', plugin_props['name'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         expected_props = {'mapped': 'nested_value'}
         self.assertEquals(op_struct('test_plugin', 'install', expected_props),
@@ -2357,10 +2255,8 @@ node_types:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(4, len(plugin_props))
-        self.assertEquals('false', plugin_props['agent_plugin'])
-        self.assertEquals('http://test_url.zip', plugin_props['url'])
-        self.assertEquals('test_plugin', plugin_props['name'])
+        self.assertEquals(3, len(plugin_props))
+        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         expected_props = {'mapped': 'nested_value'}
         self.assertEquals(op_struct('test_plugin', 'install', expected_props),
@@ -2440,9 +2336,8 @@ workflows:
         workflows2 = """
 plugins:
     test_plugin2:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
+        executor: central_deployment_agent
+        source: dummy
 workflows:
     workflow2: test_plugin2.workflow2
 """
@@ -2794,7 +2689,7 @@ policy_types:
 
 
 class ManagementPluginsToInstallTest(AbstractTestParser):
-    def test_one_manager_one_agent_plugin_on_same_node(self):
+    def test_one_central_one_host_plugin_on_same_node(self):
         yaml = """
 node_templates:
     test_node1:
@@ -2807,30 +2702,25 @@ node_types:
                 - create: test_management_plugin.create
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
+        executor: host_agent
+        source: dummy
     test_management_plugin:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: "http://test_management_plugin.zip"
-            """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         management_plugins_to_install_for_node = \
             result['nodes'][0]['management_plugins_to_install']
         self.assertEquals(1, len(management_plugins_to_install_for_node))
         plugin = management_plugins_to_install_for_node[0]
         self.assertEquals('test_management_plugin', plugin['name'])
-        self.assertEquals('false', plugin['agent_plugin'])
-        self.assertEquals('true', plugin['manager_plugin'])
-        self.assertEquals('http://test_management_plugin.zip', plugin['url'])
 
         # check the property on the plan is correct
         management_plugins_to_install_for_plan = \
             result["management_plugins_to_install"]
         self.assertEquals(1, len(management_plugins_to_install_for_plan))
 
-    def test_agent_installer_plugin_is_ignored(self):
+    def test_agent_instller_plugin_is_ignored(self):
         yaml = """
 node_templates:
     test_node1:
@@ -2842,8 +2732,10 @@ node_types:
                 - start: agent_installer.worker_installer.start
 plugins:
     agent_installer:
-        derived_from: cloudify.plugins.manager_plugin
-            """
+        source: dummy
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
                           ['management_plugins_to_install'])
@@ -2860,8 +2752,9 @@ node_types:
                 - start: plugin_installer.start
 plugins:
     plugin_installer:
-        derived_from: cloudify.plugins.remote_plugin
-            """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
                           ['management_plugins_to_install'])
@@ -2888,14 +2781,12 @@ node_types:
 
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
+        executor: host_agent
+        source: dummy
     test_management_plugin:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: "http://test_management_plugin.zip"
-            """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         for node in result['nodes']:
             management_plugins_to_install_for_node = \
@@ -2903,10 +2794,6 @@ plugins:
             self.assertEquals(1, len(management_plugins_to_install_for_node))
             plugin = management_plugins_to_install_for_node[0]
             self.assertEquals('test_management_plugin', plugin['name'])
-            self.assertEquals('false', plugin['agent_plugin'])
-            self.assertEquals('true', plugin['manager_plugin'])
-            self.assertEquals('http://test_management_plugin.zip',
-                              plugin['url'])
 
         # check the property on the plan is correct
         management_plugins_to_install_for_plan = \
@@ -2931,14 +2818,12 @@ node_types:
 
 plugins:
     test_management_plugin1:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: "http://test_management_plugin1.zip"
+        executor: central_deployment_agent
+        source: dummy
     test_management_plugin2:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: "http://test_management_plugin2.zip"
-            """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         management_plugins_to_install_for_node = \
             result['nodes'][0]['management_plugins_to_install']
@@ -2963,14 +2848,12 @@ node_types:
 
 plugins:
     test_management_plugin:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: "http://test_management_plugin1.zip"
+        executor: central_deployment_agent
+        source: dummy
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
-            """
+        executor: host_agent
+        source: dummy
+"""
         result = parse(yaml)
         management_plugins_to_install_for_node = \
             result['nodes'][0]['management_plugins_to_install']
@@ -2996,10 +2879,9 @@ node_types:
 
 plugins:
     test_management_plugin:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: "http://test_management_plugin1.zip"
-            """
+        executor: central_deployment_agent
+        source: dummy
+"""
         result = parse(yaml)
         management_plugins_to_install_for_node = \
             result['nodes'][0]['management_plugins_to_install']
