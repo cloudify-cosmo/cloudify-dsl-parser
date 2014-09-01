@@ -13,7 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 from dsl_parser.constants import CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT, PLUGIN_EXECUTOR_KEY, \
-    PLUGIN_NAME_KEY
+    PLUGIN_NAME_KEY, DEPLOYMENT_PLUGINS_TO_INSTALL
 
 NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
@@ -45,7 +45,7 @@ WINDOWS_AGENT_INSTALLER_PLUGIN = "windows_agent_installer"
 
 PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN,
                                    WINDOWS_PLUGIN_INSTALLER_PLUGIN}
-MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST \
+DEPLOYMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST \
     = {PLUGIN_INSTALLER_PLUGIN,
        AGENT_INSTALLER_PLUGIN, WINDOWS_PLUGIN_INSTALLER_PLUGIN,
        WINDOWS_AGENT_INSTALLER_PLUGIN}
@@ -143,11 +143,13 @@ def _create_plan_management_plugins(processed_nodes):
     management_plugins = []
     management_plugin_names = set()
     for node in processed_nodes:
-        if "management_plugins_to_install" in node:
-            for management_plugin in node['management_plugins_to_install']:
-                if management_plugin['name'] not in management_plugin_names:
+        if DEPLOYMENT_PLUGINS_TO_INSTALL in node:
+            for management_plugin in node[DEPLOYMENT_PLUGINS_TO_INSTALL]:
+                if management_plugin[PLUGIN_NAME_KEY] \
+                        not in management_plugin_names:
                     management_plugins.append(management_plugin)
-                    management_plugin_names.add(management_plugin['name'])
+                    management_plugin_names\
+                        .add(management_plugin[PLUGIN_NAME_KEY])
     return management_plugins
 
 
@@ -235,7 +237,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         POLICY_TRIGGERS: policy_triggers,
         GROUPS: groups,
         INPUTS: inputs,
-        'management_plugins_to_install': plan_management_plugins,
+        DEPLOYMENT_PLUGINS_TO_INSTALL: plan_management_plugins,
         'workflow_plugins_to_install': workflow_plugins_to_install
     }
 
@@ -271,11 +273,11 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
             node['host_id'] = host_id
 
     # set plugins_to_install property for nodes
-    # set management_plugins_to_install property nodes
+    # set deployment_plugins_to_install property for nodes
     for node in processed_nodes:
         if node['type'] in host_types:
             plugins_to_install = {}
-            management_plugins_to_install = {}
+            deployment_plugins_to_install = {}
             for another_node in processed_nodes:
                 # going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
@@ -294,12 +296,12 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         if plugin_obj[PLUGIN_EXECUTOR_KEY] \
                                 == CENTRAL_DEPLOYMENT_AGENT and \
                                 plugin_obj['name'] not in \
-                                MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
-                            management_plugins_to_install[plugin_name] \
+                                DEPLOYMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
+                            deployment_plugins_to_install[plugin_name] \
                                 = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
-            node['management_plugins_to_install'] \
-                = management_plugins_to_install.values()
+            node[DEPLOYMENT_PLUGINS_TO_INSTALL] \
+                = deployment_plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)

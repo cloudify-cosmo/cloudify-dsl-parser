@@ -12,7 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-from dsl_parser.constants import PLUGIN_NAME_KEY
+from dsl_parser.constants import PLUGIN_NAME_KEY, DEPLOYMENT_PLUGINS_TO_INSTALL
 
 __author__ = 'ran'
 
@@ -2709,16 +2709,16 @@ plugins:
         source: dummy
 """
         result = parse(yaml)
-        management_plugins_to_install_for_node = \
-            result['nodes'][0]['management_plugins_to_install']
-        self.assertEquals(1, len(management_plugins_to_install_for_node))
-        plugin = management_plugins_to_install_for_node[0]
+        deployment_plugins_to_install_for_node = \
+            result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(1, len(deployment_plugins_to_install_for_node))
+        plugin = deployment_plugins_to_install_for_node[0]
         self.assertEquals('test_management_plugin', plugin['name'])
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = \
-            result["management_plugins_to_install"]
-        self.assertEquals(1, len(management_plugins_to_install_for_plan))
+        deployment_plugins_to_install_for_plan = \
+            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
 
     def test_agent_instller_plugin_is_ignored(self):
         yaml = """
@@ -2738,7 +2738,7 @@ plugins:
 """
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
-                          ['management_plugins_to_install'])
+                          [DEPLOYMENT_PLUGINS_TO_INSTALL])
 
     def test_plugin_installer_plugin_is_ignored(self):
         yaml = """
@@ -2757,7 +2757,7 @@ plugins:
 """
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
-                          ['management_plugins_to_install'])
+                          [DEPLOYMENT_PLUGINS_TO_INSTALL])
 
     def test_same_plugin_one_two_nodes(self):
         yaml = """
@@ -2789,16 +2789,16 @@ plugins:
 """
         result = parse(yaml)
         for node in result['nodes']:
-            management_plugins_to_install_for_node = \
-                node['management_plugins_to_install']
-            self.assertEquals(1, len(management_plugins_to_install_for_node))
-            plugin = management_plugins_to_install_for_node[0]
+            deployment_plugins_to_install_for_node = \
+                node[DEPLOYMENT_PLUGINS_TO_INSTALL]
+            self.assertEquals(1, len(deployment_plugins_to_install_for_node))
+            plugin = deployment_plugins_to_install_for_node[0]
             self.assertEquals('test_management_plugin', plugin['name'])
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = \
-            result["management_plugins_to_install"]
-        self.assertEquals(1, len(management_plugins_to_install_for_plan))
+        deployment_plugins_to_install_for_plan = \
+            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
 
     def test_two_plugins_on_one_node(self):
         yaml = """
@@ -2825,14 +2825,14 @@ plugins:
         source: dummy
 """
         result = parse(yaml)
-        management_plugins_to_install_for_node = \
-            result['nodes'][0]['management_plugins_to_install']
-        self.assertEquals(2, len(management_plugins_to_install_for_node))
+        deployment_plugins_to_install_for_node = \
+            result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(2, len(deployment_plugins_to_install_for_node))
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = \
-            result["management_plugins_to_install"]
-        self.assertEquals(2, len(management_plugins_to_install_for_plan))
+        deployment_plugins_to_install_for_plan = \
+            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(2, len(deployment_plugins_to_install_for_plan))
 
     def test_no_operation_mapping_no_plugin(self):
         yaml = """
@@ -2855,14 +2855,14 @@ plugins:
         source: dummy
 """
         result = parse(yaml)
-        management_plugins_to_install_for_node = \
-            result['nodes'][0]['management_plugins_to_install']
-        self.assertEquals(0, len(management_plugins_to_install_for_node))
+        deployment_plugins_to_install_for_node = \
+            result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(0, len(deployment_plugins_to_install_for_node))
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = \
-            result["management_plugins_to_install"]
-        self.assertEquals(0, len(management_plugins_to_install_for_plan))
+        deployment_plugins_to_install_for_plan = \
+            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(0, len(deployment_plugins_to_install_for_plan))
 
     def test_two_identical_plugins_on_node(self):
         yaml = """
@@ -2883,14 +2883,14 @@ plugins:
         source: dummy
 """
         result = parse(yaml)
-        management_plugins_to_install_for_node = \
-            result['nodes'][0]['management_plugins_to_install']
-        self.assertEquals(1, len(management_plugins_to_install_for_node))
+        deployment_plugins_to_install_for_node = \
+            result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(1, len(deployment_plugins_to_install_for_node))
 
         # check the property on the plan is correct
-        management_plugins_to_install_for_plan = \
-            result["management_plugins_to_install"]
-        self.assertEquals(1, len(management_plugins_to_install_for_plan))
+        deployment_plugins_to_install_for_plan = \
+            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
 
 ##############################################
 # NOTE!!!
