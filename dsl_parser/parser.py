@@ -12,7 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-from dsl_parser.constants import CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT, PLUGIN_EXECUTOR_KEY, PLUGIN_SOURCE_KEY, \
+from dsl_parser.constants import CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT, PLUGIN_EXECUTOR_KEY, \
     PLUGIN_NAME_KEY
 
 NODE_TEMPLATES = 'node_templates'
@@ -566,7 +566,8 @@ def _validate_agent_plugins_on_host_nodes(processed_nodes):
                     raise DSLParsingLogicException(
                         24, "node {0} has no relationship which makes it "
                             "contained within a host and it has a "
-                            "plugin[{1}] with '{2}' as an executor. these types of plugins must be "
+                            "plugin[{1}] with '{2}' as an executor. "
+                            "These types of plugins must be "
                             "installed on a host".format(node['id'],
                                                          plugin['name'],
                                                          HOST_AGENT))
