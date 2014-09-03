@@ -41,7 +41,8 @@ CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
 PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
 AGENT_INSTALLER_PLUGIN = "agent_installer"
 WINDOWS_PLUGIN_INSTALLER_PLUGIN = 'windows_plugin_installer'
-WINDOWS_AGENT_INSTALLER_PLUGIN = "windows_agent_installer"
+WINDOWS_AGENT_INSTALLER_PLUGIN = 'windows_agent_installer'
+DEFAULT_WORKFLOWS_PLUGIN = 'default_workflows'
 
 PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN,
                                    WINDOWS_PLUGIN_INSTALLER_PLUGIN}
@@ -49,6 +50,9 @@ DEPLOYMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST \
     = {PLUGIN_INSTALLER_PLUGIN,
        AGENT_INSTALLER_PLUGIN, WINDOWS_PLUGIN_INSTALLER_PLUGIN,
        WINDOWS_AGENT_INSTALLER_PLUGIN}
+
+WORKFLOWS_PLUGINS_TO_INSTALL_EXCLUDE_LIST = {DEFAULT_WORKFLOWS_PLUGIN}
+
 
 import os
 import copy
@@ -159,8 +163,9 @@ def _create_plan_workflow_plugins(workflows, plugins):
     for workflow, op_struct in workflows.items():
         if op_struct['plugin'] not in workflow_plugin_names:
             plugin_name = op_struct['plugin']
-            workflow_plugins.append(plugins[plugin_name])
-            workflow_plugin_names.add(plugin_name)
+            if plugin_name not in WORKFLOWS_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
+                workflow_plugins.append(plugins[plugin_name])
+                workflow_plugin_names.add(plugin_name)
     return workflow_plugins
 
 
