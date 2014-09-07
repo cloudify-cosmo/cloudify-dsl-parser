@@ -44,15 +44,6 @@ WINDOWS_PLUGIN_INSTALLER_PLUGIN = 'windows_plugin_installer'
 WINDOWS_AGENT_INSTALLER_PLUGIN = 'windows_agent_installer'
 DEFAULT_WORKFLOWS_PLUGIN = 'default_workflows'
 
-PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN,
-                                   WINDOWS_PLUGIN_INSTALLER_PLUGIN}
-DEPLOYMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST \
-    = {PLUGIN_INSTALLER_PLUGIN,
-       AGENT_INSTALLER_PLUGIN, WINDOWS_PLUGIN_INSTALLER_PLUGIN,
-       WINDOWS_AGENT_INSTALLER_PLUGIN}
-
-WORKFLOWS_PLUGINS_TO_INSTALL_EXCLUDE_LIST = {DEFAULT_WORKFLOWS_PLUGIN}
-
 
 import os
 import copy
@@ -163,7 +154,7 @@ def _create_plan_workflow_plugins(workflows, plugins):
     for workflow, op_struct in workflows.items():
         if op_struct['plugin'] not in workflow_plugin_names:
             plugin_name = op_struct['plugin']
-            if plugin_name not in WORKFLOWS_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
+            if plugins[plugin_name]['source'] != 'system':
                 workflow_plugins.append(plugins[plugin_name])
                 workflow_plugin_names.add(plugin_name)
     return workflow_plugins
@@ -294,14 +285,11 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                             another_node[PLUGINS].iteritems():
                         # only wish to add agent plugins, and only if they're
                         # not in the excluded plugins list
-                        if plugin_obj[PLUGIN_EXECUTOR_KEY] == HOST_AGENT and \
-                                plugin_obj['name'] not in \
-                                PLUGINS_TO_INSTALL_EXCLUDE_LIST:
+                        if plugin_obj[PLUGIN_EXECUTOR_KEY] == HOST_AGENT \
+                                and plugin_obj['source'] != 'system':
                             plugins_to_install[plugin_name] = plugin_obj
-                        if plugin_obj[PLUGIN_EXECUTOR_KEY] \
-                                == CENTRAL_DEPLOYMENT_AGENT and \
-                                plugin_obj['name'] not in \
-                                DEPLOYMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
+                        if plugin_obj[PLUGIN_EXECUTOR_KEY] == CENTRAL_DEPLOYMENT_AGENT \
+                                and plugin_obj['source'] != 'system':
                             deployment_plugins_to_install[plugin_name] \
                                 = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()

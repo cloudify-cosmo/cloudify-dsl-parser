@@ -2697,9 +2697,8 @@ node_types:
                 - start: agent_installer.worker_installer.start
 plugins:
     agent_installer:
-        source: dummy
         executor: central_deployment_agent
-        source: dummy
+        source: system
 """
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
@@ -2718,7 +2717,7 @@ node_types:
 plugins:
     plugin_installer:
         executor: central_deployment_agent
-        source: dummy
+        source: system
 """
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]
