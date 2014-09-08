@@ -60,6 +60,10 @@ def _set_plan_inputs(plan, inputs=None):
         scan_properties(node_template['properties'],
                         handler,
                         '{0}.properties'.format(node_template['name']))
+        for name, definition in node_template['operations'].items():
+            scan_properties(definition['properties'],
+                            handler,
+                            '{0}.properties'.format(name))
 
     plan['inputs'] = inputs
 
