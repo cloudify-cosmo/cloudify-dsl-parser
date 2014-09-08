@@ -248,3 +248,57 @@ node_templates:
                 - port: { get_input: port1122 }
 """
         self.assertRaises(UnknownInputError, parse, yaml)
+
+    def test_input_in_interface(self):
+        yaml = """
+plugins:
+    plugin:
+        derived_from: cloudify.plugins.remote_plugin
+
+inputs:
+    port:
+        default: 8080
+node_types:
+    webserver_type: {}
+node_templates:
+    webserver:
+        type: webserver_type
+        interfaces:
+            lifecycle:
+                -   configure:
+                        mapping: plugin.operation
+                        properties:
+                            port: { get_input: port }
+"""
+        prepared = prepare_deployment_plan(parse(yaml))
+        node_template = prepared['nodes'][0]
+        op = node_template['operations']['lifecycle.configure']
+        self.assertEqual(8080, op['properties']['port'])
+        op = node_template['operations']['configure']
+        self.assertEqual(8080, op['properties']['port'])
+
+        prepared = prepare_deployment_plan(parse(yaml), inputs={'port': 8000})
+        node_template = prepared['nodes'][0]
+        op = node_template['operations']['lifecycle.configure']
+        self.assertEqual(8000, op['properties']['port'])
+        op = node_template['operations']['configure']
+        self.assertEqual(8000, op['properties']['port'])
+
+    def test_invalid_input_in_interfaces(self):
+        yaml = """
+plugins:
+    plugin:
+        derived_from: cloudify.plugins.remote_plugin
+node_types:
+    webserver_type: {}
+node_templates:
+    webserver:
+        type: webserver_type
+        interfaces:
+            lifecycle:
+                -   configure:
+                        mapping: plugin.operation
+                        properties:
+                            port: { get_input: aaa }
+"""
+        self.assertRaises(UnknownInputError, parse, yaml)

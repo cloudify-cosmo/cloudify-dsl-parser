@@ -547,6 +547,12 @@ def _validate_inputs(node_templates, inputs):
         scan_properties(node_template['properties'],
                         handler,
                         '{0}.properties'.format(node_template['name']))
+        for name, definition in node_template['operations'].items():
+            if 'properties' in definition:
+                scan_properties(definition['properties'],
+                                handler,
+                                '{0}.{1}.properties'.format(
+                                    node_template['name'], name))
 
 
 def _validate_outputs(node_templates, outputs):
