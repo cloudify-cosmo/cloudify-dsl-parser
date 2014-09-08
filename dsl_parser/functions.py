@@ -29,7 +29,8 @@ class GetInput(object):
         self._parse_args(args)
 
     def _parse_args(self, args):
-        if not isinstance(args, str):
+        valid_args_type = isinstance(args, str) or isinstance(args, unicode)
+        if not valid_args_type:
             raise ValueError(
                 "get_input function argument should be a string in "
                 "{} but is '{}'.".format(self.context, args))

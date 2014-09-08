@@ -51,8 +51,8 @@ def _set_plan_inputs(plan, inputs=None):
                 'expected inputs: {}'.format(input_name,
                                              plan['inputs'].keys()))
 
-    def handler(dict_, k, v, _):
-        func = functions.parse(v)
+    def handler(dict_, k, v, path):
+        func = functions.parse(v, context=path)
         if isinstance(func, functions.GetInput):
             dict_[k] = inputs[func.input_name]
 
