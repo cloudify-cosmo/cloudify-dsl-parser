@@ -260,7 +260,25 @@ inputs:
         default: 8080
 node_types:
     webserver_type: {}
+relationships:
+    cloudify.relationships.contained_in: {}
+    rel:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            source_interface:
+                -   op1:
+                        mapping: plugin.operation
+                        properties:
+                            source_port: { get_input: port }
+        target_interfaces:
+            target_interface:
+                -   op2:
+                        mapping: plugin.operation
+                        properties:
+                            target_port: { get_input: port }
 node_templates:
+    ws1:
+        type: webserver_type
     webserver:
         type: webserver_type
         interfaces:
@@ -269,20 +287,48 @@ node_templates:
                         mapping: plugin.operation
                         properties:
                             port: { get_input: port }
+        relationships:
+            -   type: rel
+                target: ws1
 """
         prepared = prepare_deployment_plan(parse(yaml))
-        node_template = prepared['nodes'][0]
+
+        node_template = \
+            [x for x in prepared['nodes'] if x['name'] == 'webserver'][0]
         op = node_template['operations']['lifecycle.configure']
         self.assertEqual(8080, op['properties']['port'])
         op = node_template['operations']['configure']
         self.assertEqual(8080, op['properties']['port'])
+        # relationship interfaces
+        source_ops = node_template['relationships'][0]['source_operations']
+        self.assertEqual(
+            8080,
+            source_ops['source_interface.op1']['properties']['source_port'])
+        self.assertEqual(8080, source_ops['op1']['properties']['source_port'])
+        target_ops = node_template['relationships'][0]['target_operations']
+        self.assertEqual(
+            8080,
+            target_ops['target_interface.op2']['properties']['target_port'])
+        self.assertEqual(8080, target_ops['op2']['properties']['target_port'])
 
         prepared = prepare_deployment_plan(parse(yaml), inputs={'port': 8000})
-        node_template = prepared['nodes'][0]
+        node_template = \
+            [x for x in prepared['nodes'] if x['name'] == 'webserver'][0]
         op = node_template['operations']['lifecycle.configure']
         self.assertEqual(8000, op['properties']['port'])
         op = node_template['operations']['configure']
         self.assertEqual(8000, op['properties']['port'])
+        # relationship interfaces
+        source_ops = node_template['relationships'][0]['source_operations']
+        self.assertEqual(
+            8000,
+            source_ops['source_interface.op1']['properties']['source_port'])
+        self.assertEqual(8000, source_ops['op1']['properties']['source_port'])
+        target_ops = node_template['relationships'][0]['target_operations']
+        self.assertEqual(
+            8000,
+            target_ops['target_interface.op2']['properties']['target_port'])
+        self.assertEqual(8000, target_ops['op2']['properties']['target_port'])
 
     def test_invalid_input_in_interfaces(self):
         yaml = """

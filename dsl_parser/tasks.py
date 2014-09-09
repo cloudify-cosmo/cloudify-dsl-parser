@@ -21,7 +21,7 @@ import multi_instance
 
 from dsl_parser import functions
 from dsl_parser import exceptions
-from dsl_parser.utils import scan_properties
+from dsl_parser import utils
 
 
 def parse_dsl(dsl_location, alias_mapping_url,
@@ -57,15 +57,12 @@ def _set_plan_inputs(plan, inputs=None):
             dict_[k] = inputs[func.input_name]
 
     for node_template in plan['nodes']:
-        scan_properties(node_template['properties'],
-                        handler,
-                        '{0}.properties'.format(node_template['name']))
-        for name, definition in node_template['operations'].items():
-            if 'properties' in definition:
-                scan_properties(definition['properties'],
-                                handler,
-                                '{0}.{1}.properties'.format(
-                                    node_template['name'], name))
+        utils.scan_properties(node_template['properties'],
+                              handler,
+                              '{0}.properties'.format(node_template['name']))
+
+        utils.scan_node_operation_properties(node_template, handler)
+
     plan['inputs'] = inputs
 
 

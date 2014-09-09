@@ -39,3 +39,29 @@ def scan_properties(value, handler, path=''):
     elif isinstance(value, list):
         for item in value:
             scan_properties(item, handler, path)
+
+
+def _scan_operations(operations, handler, path=''):
+    for name, definition in operations.iteritems():
+        if isinstance(definition, dict) and 'properties' in definition:
+            scan_properties(definition['properties'],
+                            handler,
+                            '{0}.{1}.properties'.format(path, name))
+
+
+def scan_node_operation_properties(node_template, handler):
+    scan_properties(node_template['operations'],
+                    handler,
+                    '{0}.operations'.format(node_template['name']))
+    if 'relationships' in node_template:
+        for r in node_template['relationships']:
+            _scan_operations(r.get(['source_operations'], {}),
+                             handler,
+                             '{0}.{1}'.format(
+                                 node_template['name'], r['type']))
+            _scan_operations(r.get(['target_operations'], {}),
+                             handler,
+                             '{0}.{1}'.format(
+                                 node_template['name'], r['type']))
+
+

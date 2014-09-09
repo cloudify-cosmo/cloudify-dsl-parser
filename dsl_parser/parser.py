@@ -64,8 +64,8 @@ from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 
 from dsl_parser import functions
+from dsl_parser import utils
 from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
-from dsl_parser.utils import scan_properties
 
 
 OpDescriptor = namedtuple('OpDescriptor', [
@@ -543,16 +543,13 @@ def _validate_inputs(node_templates, inputs):
         func = functions.parse(v, context=path)
         if isinstance(func, functions.GetInput):
             func.validate(inputs)
+
     for node_template in node_templates:
-        scan_properties(node_template['properties'],
-                        handler,
-                        '{0}.properties'.format(node_template['name']))
-        for name, definition in node_template['operations'].items():
-            if 'properties' in definition:
-                scan_properties(definition['properties'],
-                                handler,
-                                '{0}.{1}.properties'.format(
-                                    node_template['name'], name))
+        node_name = node_template['name']
+        utils.scan_properties(node_template['properties'],
+                              handler,
+                              '{0}.properties'.format(node_name))
+        utils.scan_node_operation_properties(node_template, handler)
 
 
 def _validate_outputs(node_templates, outputs):
@@ -561,7 +558,7 @@ def _validate_outputs(node_templates, outputs):
         if isinstance(func, functions.GetAttribute):
             func.validate(node_templates)
     for output in outputs.values():
-        scan_properties(output, handler, 'outputs')
+        utils.scan_properties(output, handler, 'outputs')
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
