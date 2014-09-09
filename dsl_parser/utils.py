@@ -63,5 +63,3 @@ def scan_node_operation_properties(node_template, handler):
                              handler,
                              '{0}.{1}'.format(
                                  node_template['name'], r['type']))
-
-
