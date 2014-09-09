@@ -55,11 +55,11 @@ def scan_node_operation_properties(node_template, handler):
                     '{0}.operations'.format(node_template['name']))
     if 'relationships' in node_template:
         for r in node_template['relationships']:
-            _scan_operations(r.get(['source_operations'], {}),
+            _scan_operations(r.get('source_operations', {}),
                              handler,
                              '{0}.{1}'.format(
                                  node_template['name'], r['type']))
-            _scan_operations(r.get(['target_operations'], {}),
+            _scan_operations(r.get('target_operations', {}),
                              handler,
                              '{0}.{1}'.format(
                                  node_template['name'], r['type']))
