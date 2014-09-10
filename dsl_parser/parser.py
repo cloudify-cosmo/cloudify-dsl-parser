@@ -12,8 +12,6 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-from dsl_parser.constants import CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT, PLUGIN_EXECUTOR_KEY, \
-    PLUGIN_NAME_KEY, DEPLOYMENT_PLUGINS_TO_INSTALL
 
 NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
@@ -49,20 +47,24 @@ import os
 import copy
 import contextlib
 import re
+import yaml
 
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
 from collections import OrderedDict
 from collections import namedtuple
-
-import yaml
 from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
-
 from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 from dsl_parser.functions import is_get_input, GET_INPUT_FUNCTION
 from dsl_parser.exceptions import UnknownInputError
 from dsl_parser.utils import scan_properties
+from dsl_parser.constants import CENTRAL_DEPLOYMENT_AGENT
+from dsl_parser.constants import PLUGIN_NAME_KEY
+from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
+from dsl_parser.constants import HOST_AGENT
+from dsl_parser.constants import PLUGIN_EXECUTOR_KEY
+
 
 
 OpDescriptor = namedtuple('OpDescriptor', [
@@ -269,11 +271,9 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
             node['host_id'] = host_id
 
     # set plugins_to_install property for nodes
-    # set deployment_plugins_to_install property for nodes
     for node in processed_nodes:
         if node['type'] in host_types:
             plugins_to_install = {}
-            deployment_plugins_to_install = {}
             for another_node in processed_nodes:
                 # going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
@@ -288,13 +288,20 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         if plugin_obj[PLUGIN_EXECUTOR_KEY] == HOST_AGENT \
                                 and plugin_obj['source'] != 'system':
                             plugins_to_install[plugin_name] = plugin_obj
-                        if plugin_obj[PLUGIN_EXECUTOR_KEY] == CENTRAL_DEPLOYMENT_AGENT \
-                                and plugin_obj['source'] != 'system':
-                            deployment_plugins_to_install[plugin_name] \
-                                = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
-            node[DEPLOYMENT_PLUGINS_TO_INSTALL] \
-                = deployment_plugins_to_install.values()
+
+    # set deployment_plugins_to_install property for nodes
+    for node in processed_nodes:
+        deployment_plugins_to_install = {}
+        for plugin_name, plugin_obj in \
+                node[PLUGINS].iteritems():
+            if plugin_obj[PLUGIN_EXECUTOR_KEY] == CENTRAL_DEPLOYMENT_AGENT \
+                    and plugin_obj['source'] != 'system':
+                deployment_plugins_to_install[plugin_name] \
+                    = plugin_obj
+        node[DEPLOYMENT_PLUGINS_TO_INSTALL] \
+            = deployment_plugins_to_install.values()
+
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)

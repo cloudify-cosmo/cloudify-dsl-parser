@@ -12,15 +12,13 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-from dsl_parser.constants import PLUGIN_NAME_KEY, DEPLOYMENT_PLUGINS_TO_INSTALL
 
-__author__ = 'ran'
-
-from urllib import pathname2url
 import os
-
 import yaml as yml
 
+from dsl_parser.constants import PLUGIN_NAME_KEY
+from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
+from urllib import pathname2url
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.parser import parse, parse_from_path, parse_from_url
 from dsl_parser.parser import TYPE_HIERARCHY
@@ -1597,7 +1595,7 @@ plugins:
         self.assertEquals('test_plugin', plugin['name'])
         self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
 
-    def test_node_plugins_to_install_field_installer_plugin(self):
+    def test_system_plugin_is_ignored_in_plugins_to_install(self):
         # testing to ensure the installer plugin is treated differently and
         # is not
         # put on the plugins_to_install dict like the rest of the plugins
@@ -1613,31 +1611,10 @@ node_types:
 plugins:
     plugin_installer:
         executor: host_agent
-        source: dummy
+        source: system
 """
         # note that we're expecting an empty dict since every node which
         # is a host should have one
-        result = parse(yaml)
-        self.assertEquals([], result['nodes'][0]['plugins_to_install'])
-
-    def test_node_plugins_to_install_field_remote_plugin(self):
-        # testing to ensure that only plugins of executor 'host_agent' are put
-        # on the plugins_to_install field
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.types.host
-node_types:
-    cloudify.types.host:
-        interfaces:
-            test_interface:
-                - start: test_plugin.start
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-        source: dummy
-"""
-
         result = parse(yaml)
         self.assertEquals([], result['nodes'][0]['plugins_to_install'])
 
@@ -1914,28 +1891,6 @@ node_types:
         self.assertEquals('test_node2', node2['id'])
         self.assertEquals('test_type2', node2['type'])
         self.assertEquals(1, node2['instances']['deploy'])
-
-    def test_node_plugins_to_install_field_plugin_installer_plugin(self):
-        # testing to ensure plugin installer is treated differently and is not
-        # put on the plugins_to_install dict like the rest of the plugins
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.types.host
-node_types:
-    cloudify.types.host:
-        interfaces:
-            test_interface:
-                - start: plugin_installer.plugin_installer.start
-plugins:
-    plugin_installer:
-        executor: host_agent
-        source: dummy
-"""
-        # note that we're expecting an empty dict since every node which
-        # is a host should have one
-        result = parse(yaml)
-        self.assertEquals([], result['nodes'][0]['plugins_to_install'])
 
     def test_operation_mapping_with_properties_injection(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
@@ -2653,7 +2608,8 @@ policy_types:
                              expected_result['groups'])
 
 
-class ManagementPluginsToInstallTest(AbstractTestParser):
+class DeploymentPluginsToInstallTest(AbstractTestParser):
+
     def test_one_central_one_host_plugin_on_same_node(self):
         yaml = """
 node_templates:
@@ -2685,68 +2641,39 @@ plugins:
             result[DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
 
-    def test_agent_instller_plugin_is_ignored(self):
+    def test_node_plugins_to_install_no_host(self):
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.types.base
 node_types:
-    cloudify.types.host:
+    cloudify.types.base:
         interfaces:
-            test_management_interface:
-                - start: agent_installer.worker_installer.start
+            test_interface:
+                - start: cloud.server.start
 plugins:
-    agent_installer:
+    cloud:
         executor: central_deployment_agent
-        source: system
+        source: dummy
 """
         result = parse(yaml)
-        self.assertEquals([], result['nodes'][0]
-                          [DEPLOYMENT_PLUGINS_TO_INSTALL])
-
-    def test_plugin_installer_plugin_is_ignored(self):
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.types.host
-node_types:
-    cloudify.types.host:
-        interfaces:
-            test_management_interface:
-                - start: plugin_installer.start
-plugins:
-    plugin_installer:
-        executor: central_deployment_agent
-        source: system
-"""
-        result = parse(yaml)
-        self.assertEquals([], result['nodes'][0]
-                          [DEPLOYMENT_PLUGINS_TO_INSTALL])
+        self.assertEquals(1, len(result[DEPLOYMENT_PLUGINS_TO_INSTALL]))
 
     def test_same_plugin_one_two_nodes(self):
         yaml = """
 node_templates:
     test_node1:
         type: cloudify.types.host
-        interfaces:
-            test_interface:
-                - create: test_management_plugin.create
     test_node2:
         type: cloudify.types.host
-        interfaces:
-            test_interface:
-                - create: test_management_plugin.create
 
 node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                - start: test_management_plugin.start
 
 plugins:
-    test_plugin:
-        executor: host_agent
-        source: dummy
     test_management_plugin:
         executor: central_deployment_agent
         source: dummy
@@ -2769,16 +2696,13 @@ plugins:
 node_templates:
     test_node1:
         type: cloudify.types.host
-        interfaces:
-            test_interface:
-                - start: test_management_plugin1.start
-                - create: test_management_plugin2.create
 
 node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                - start: test_management_plugin1.start
+                - create: test_management_plugin2.create
 
 plugins:
     test_management_plugin1:
