@@ -246,13 +246,7 @@ DSL_SCHEMA = {
         'plugins': {
             'type': 'object',
             'patternProperties': {
-                #this is specifically for the root plugin, not meant for other uses
-                '^cloudify.plugins.plugin$': {
-                    'type': 'object',
-                    'properties': {},
-                    'additionalProperties': False
-                },
-                '^((?!cloudify\.plugins\.plugin).*)$|^cloudify\.plugins\.plugin.+$': {
+                '^': {
                     'type': 'object',
                     'properties': {
                         'source': {
