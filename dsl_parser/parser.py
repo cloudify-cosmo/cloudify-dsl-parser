@@ -66,7 +66,6 @@ from dsl_parser.constants import HOST_AGENT
 from dsl_parser.constants import PLUGIN_EXECUTOR_KEY
 
 
-
 OpDescriptor = namedtuple('OpDescriptor', [
     'plugin', 'op_struct', 'name'])
 
@@ -301,7 +300,6 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                     = plugin_obj
         node[DEPLOYMENT_PLUGINS_TO_INSTALL] \
             = deployment_plugins_to_install.values()
-
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
