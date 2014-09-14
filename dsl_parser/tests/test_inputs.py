@@ -253,7 +253,8 @@ node_templates:
         yaml = """
 plugins:
     plugin:
-        derived_from: cloudify.plugins.remote_plugin
+        executor: central_deployment_agent
+        source: dummy
 
 inputs:
     port:
@@ -334,7 +335,8 @@ node_templates:
         yaml = """
 plugins:
     plugin:
-        derived_from: cloudify.plugins.remote_plugin
+        executor: central_deployment_agent
+        source: dummy
 node_types:
     webserver_type: {}
 node_templates:
