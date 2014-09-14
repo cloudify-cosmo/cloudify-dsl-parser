@@ -56,10 +56,6 @@ from collections import OrderedDict
 from collections import namedtuple
 from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
-from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
-from dsl_parser.functions import is_get_input, GET_INPUT_FUNCTION
-from dsl_parser.exceptions import UnknownInputError
-from dsl_parser.utils import scan_properties
 from dsl_parser.constants import CENTRAL_DEPLOYMENT_AGENT
 from dsl_parser.constants import PLUGIN_NAME_KEY
 from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
