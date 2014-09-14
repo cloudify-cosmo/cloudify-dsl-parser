@@ -31,6 +31,7 @@ POLICY_TRIGGERS = 'policy_triggers'
 POLICY_TYPES = 'policy_types'
 GROUPS = 'groups'
 INPUTS = 'inputs'
+OUTPUTS = 'outputs'
 
 HOST_TYPE = 'cloudify.types.host'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
@@ -64,6 +65,9 @@ from dsl_parser.constants import PLUGIN_NAME_KEY
 from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 from dsl_parser.constants import HOST_AGENT
 from dsl_parser.constants import PLUGIN_EXECUTOR_KEY
+from dsl_parser import functions
+from dsl_parser import utils
+from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
 
 
 OpDescriptor = namedtuple('OpDescriptor', [
@@ -195,6 +199,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         relationship_impls, processed_plugins), nodes.iteritems())
 
     inputs = combined_parsed_dsl.get(INPUTS, {})
+    outputs = combined_parsed_dsl.get(OUTPUTS, {})
 
     _post_process_nodes(processed_nodes,
                         _get_dict_prop(combined_parsed_dsl, NODE_TYPES),
@@ -203,7 +208,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                         type_impls,
                         relationship_impls,
                         node_names_set,
-                        inputs)
+                        inputs,
+                        outputs)
 
     processed_workflows = _process_workflows(
         combined_parsed_dsl.get(WORKFLOWS, {}),
@@ -235,6 +241,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         GROUPS: groups,
         INPUTS: inputs,
         DEPLOYMENT_PLUGINS_TO_INSTALL: plan_management_plugins,
+        OUTPUTS: outputs,
         'workflow_plugins_to_install': workflow_plugins_to_install
     }
 
@@ -242,7 +249,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
 
 def _post_process_nodes(processed_nodes, types, relationships, plugins,
-                        type_impls, relationship_impls, node_names, inputs):
+                        type_impls, relationship_impls, node_names,
+                        inputs, outputs):
     node_name_to_node = {node['id']: node for node in processed_nodes}
 
     depends_on_rel_types = _build_family_descendants_set(
@@ -305,6 +313,7 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     _validate_type_impls(type_impls)
     _validate_relationship_impls(relationship_impls)
     _validate_inputs(processed_nodes, inputs)
+    _validate_outputs(processed_nodes, outputs)
 
 
 def _create_type_hierarchy(type_name, types):
@@ -538,23 +547,25 @@ def _validate_relationship_impls(relationship_impls):
 
 def _validate_inputs(node_templates, inputs):
     def handler(dict_, k, v, path):
-        if is_get_input(v):
-            input_name = v[GET_INPUT_FUNCTION]
-            if not isinstance(input_name, str):
-                raise ValueError(
-                    'get_input function argument should be a string in '
-                    '{} but is \'{}\''.format(
-                        path,
-                        input_name))
-            if input_name not in inputs:
-                raise UnknownInputError(
-                    "{} get_input function references an "
-                    "unknown input '{}'".format(path,
-                                                input_name))
+        func = functions.parse(v, context=path)
+        if isinstance(func, functions.GetInput):
+            func.validate(inputs)
+
     for node_template in node_templates:
-        scan_properties(node_template['properties'],
-                        handler,
-                        '{0}.properties'.format(node_template['name']))
+        node_name = node_template['name']
+        utils.scan_properties(node_template['properties'],
+                              handler,
+                              '{0}.properties'.format(node_name))
+        utils.scan_node_operation_properties(node_template, handler)
+
+
+def _validate_outputs(node_templates, outputs):
+    def handler(dict_, k, v, _):
+        func = functions.parse(v)
+        if isinstance(func, functions.GetAttribute):
+            func.validate(node_templates)
+    for output in outputs.values():
+        utils.scan_properties(output, handler, 'outputs')
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):

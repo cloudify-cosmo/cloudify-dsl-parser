@@ -19,9 +19,9 @@ import json
 import parser
 import multi_instance
 
-from dsl_parser.functions import is_get_input, GET_INPUT_FUNCTION
-from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
-from dsl_parser.utils import scan_properties
+from dsl_parser import functions
+from dsl_parser import exceptions
+from dsl_parser import utils
 
 
 def parse_dsl(dsl_location, alias_mapping_url,
@@ -40,26 +40,28 @@ def _set_plan_inputs(plan, inputs=None):
             if 'default' in input_def and input_def['default'] is not None:
                 inputs[input_name] = input_def['default']
             else:
-                raise MissingRequiredInputError(
+                raise exceptions.MissingRequiredInputError(
                     'Required input \'{}\' was not specified - expected '
                     'inputs: {}'.format(input_name, plan['inputs'].keys()))
     # Verify all inputs appear in plan
     for input_name in inputs.keys():
         if input_name not in plan['inputs']:
-            raise UnknownInputError(
+            raise exceptions.UnknownInputError(
                 'Unknown input \'{}\' specified - '
                 'expected inputs: {}'.format(input_name,
                                              plan['inputs'].keys()))
 
-    def handler(dict_, k, v, property_path):
-        if is_get_input(v):
-            input_name = v[GET_INPUT_FUNCTION]
-            dict_[k] = inputs[input_name]
+    def handler(dict_, k, v, path):
+        func = functions.parse(v, context=path)
+        if isinstance(func, functions.GetInput):
+            dict_[k] = inputs[func.input_name]
 
     for node_template in plan['nodes']:
-        scan_properties(node_template['properties'],
-                        handler,
-                        '{0}.properties'.format(node_template['name']))
+        utils.scan_properties(node_template['properties'],
+                              handler,
+                              '{0}.properties'.format(node_template['name']))
+
+        utils.scan_node_operation_properties(node_template, handler)
 
     plan['inputs'] = inputs
 

@@ -159,6 +159,81 @@ WORKFLOWS_SCHEMA = {
     }
 }
 
+OUTPUTS_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'anyOf': [
+                {
+                    'type': 'object',
+                    'properties': {
+                        'description': {
+                            'type': 'string'
+                        },
+                        'value': {
+                            'type': 'number'
+                        }
+                    },
+                    'required': ['value'],
+                    'additionalProperties': False
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'description': {
+                            'type': 'string'
+                        },
+                        'value': {
+                            'type': 'string'
+                        }
+                    },
+                    'required': ['value'],
+                    'additionalProperties': False
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'description': {
+                            'type': 'string'
+                        },
+                        'value': {
+                            'type': 'object'
+                        }
+                    },
+                    'required': ['value'],
+                    'additionalProperties': False
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'description': {
+                            'type': 'string'
+                        },
+                        'value': {
+                            'type': 'array'
+                        }
+                    },
+                    'required': ['value'],
+                    'additionalProperties': False
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'description': {
+                            'type': 'string'
+                        },
+                        'value': {
+                            'type': 'boolean'
+                        }
+                    },
+                    'required': ['value'],
+                    'additionalProperties': False
+                },
+            ]
+        },
+    }
+}
+
 UNIQUE_STRING_ARRAY_SCHEMA = {
     'type': 'array',
     'items': {
@@ -434,7 +509,8 @@ DSL_SCHEMA = {
                 }
             }
         },
-        'inputs': PROPERTIES_SCHEMA_SCHEMA
+        'inputs': PROPERTIES_SCHEMA_SCHEMA,
+        'outputs': OUTPUTS_SCHEMA
     },
     'required': ['node_templates'],
     'additionalProperties': False
