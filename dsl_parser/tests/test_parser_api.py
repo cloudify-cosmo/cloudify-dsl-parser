@@ -390,8 +390,8 @@ node_types:
         self.assertEquals('test_type', node['type'])
         self.assertEquals('test_type', node['declared_type'])
         self.assertEquals('val', node['properties']['key'])
-        # TODO: assert type's default and description values once 'type' is
-        # part of the parser's output
+        # TODO: assert node-type's default and description values once
+        # 'node_types' is part of the parser's output
 
     def test_type_properties_property_with_description_only(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
@@ -420,6 +420,7 @@ node_types:
             key:
                 default: val
                 description: property_desc
+                type: string
 """
         result = parse(yaml)
         self.assertEquals(1, len(result['nodes']))
@@ -2523,6 +2524,7 @@ relationships:
             key:
                 default: val
                 description: property_desc
+                type: string
 """
         result = parse(yaml)
         self.assertEquals(1, len(result['nodes']))
@@ -2531,7 +2533,8 @@ relationships:
         self.assertEquals('test_type', node['type'])
         relationship = result['relationships']['test_relationship']
         self.assertEquals(
-            {'key': {'default': 'val', 'description': 'property_desc'}},
+            {'key': {'default': 'val', 'description': 'property_desc',
+                     'type': 'string'}},
             relationship['properties'])
 
     def test_workflow_parameters_empty_parameters(self):
@@ -2592,6 +2595,7 @@ workflows:
             key:
                 default: val
                 description: parameter_desc
+                type: string
 """
         result = parse(yaml)
         self.assertEquals(1, len(result['nodes']))
@@ -2600,7 +2604,8 @@ workflows:
         self.assertEquals('test_type', node['type'])
         workflow = result['workflows']['test_workflow']
         self.assertEquals(
-            {'key': {'default': 'val', 'description': 'parameter_desc'}},
+            {'key': {'default': 'val', 'description': 'parameter_desc',
+                     'type': 'string'}},
             workflow['parameters'])
 
     def test_policy_type_properties_empty_properties(self):
@@ -2664,7 +2669,8 @@ workflows:
                     properties=dict(
                         property=dict(
                             default='default_value',
-                            description='property description')))))
+                            description='property description',
+                            type='string')))))
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
             yml.safe_dump(policy_types)
         result = parse(yaml)
@@ -2707,7 +2713,8 @@ workflows:
                         parameters=dict(
                             property=dict(
                                 default='default_value',
-                                description='property description')))}))
+                                description='property description',
+                                type='string')))}))
 
         yaml = self.create_yaml_with_imports([
             self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS,
@@ -2791,6 +2798,105 @@ policy_types:
         result = parse(yaml)
         self.assertDictEqual(result['groups'],
                              expected_result['groups'])
+
+    def test_property_schema_type_property_with_intrinsic_functions(self):
+        yaml = """
+node_templates:
+    test_node:
+        type: test_type
+        properties:
+            int1: { get_input: x }
+node_types:
+    test_type:
+        properties:
+            int1:
+                type: integer
+inputs:
+    x: {}
+        """
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+
+    def test_property_schema_type_property(self):
+        yaml = """
+node_templates:
+    test_node:
+        type: test_type
+        properties:
+            string1: val
+            string2: true
+            string3: 5
+            string4: 5.7
+            boolean1: true
+            boolean2: false
+            boolean3: False
+            boolean4: FALSE
+            boolean5: Yes
+            boolean6: On
+            boolean7: No
+            boolean8: Off
+            integer1: 5
+            integer2: -5
+            integer3: 1000000000000
+            integer4: 0
+            float1: 5.7
+            float2: 5.735935
+            float3: 5.0
+            float4: 5
+            float5: -5.7
+
+node_types:
+    test_type:
+        properties:
+            string1:
+                type: string
+            string2:
+                type: string
+            string3:
+                type: string
+            string4:
+                type: string
+            boolean1:
+                type: boolean
+            boolean2:
+                type: boolean
+            boolean3:
+                type: boolean
+            boolean4:
+                type: boolean
+            boolean5:
+                type: boolean
+            boolean6:
+                type: boolean
+            boolean7:
+                type: boolean
+            boolean8:
+                type: boolean
+            integer1:
+                type: integer
+            integer2:
+                type: integer
+            integer3:
+                type: integer
+            integer4:
+                type: integer
+            float1:
+                type: float
+            float2:
+                type: float
+            float3:
+                type: float
+            float4:
+                type: float
+            float5:
+                type: float
+                """
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
 
 
 class ManagementPluginsToInstallTest(AbstractTestParser):
