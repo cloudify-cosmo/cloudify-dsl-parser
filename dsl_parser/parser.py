@@ -57,6 +57,8 @@ from collections import namedtuple
 from jsonschema import validate, ValidationError
 from yaml.parser import ParserError
 from dsl_parser.constants import CENTRAL_DEPLOYMENT_AGENT
+from dsl_parser.constants import PLUGIN_SOURCE_KEY
+from dsl_parser.constants import PLUGIN_INSTALL_KEY
 from dsl_parser.constants import PLUGIN_NAME_KEY
 from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 from dsl_parser.constants import HOST_AGENT
@@ -135,18 +137,18 @@ def _load_yaml(yaml_stream, error_message):
     return parsed_dsl
 
 
-def _create_plan_management_plugins(processed_nodes):
-    management_plugins = []
-    management_plugin_names = set()
+def _create_plan_deployment_plugins(processed_nodes):
+    deployment_plugins = []
+    deployment_plugin_names = set()
     for node in processed_nodes:
         if DEPLOYMENT_PLUGINS_TO_INSTALL in node:
             for management_plugin in node[DEPLOYMENT_PLUGINS_TO_INSTALL]:
                 if management_plugin[PLUGIN_NAME_KEY] \
-                        not in management_plugin_names:
-                    management_plugins.append(management_plugin)
-                    management_plugin_names\
+                        not in deployment_plugin_names:
+                    deployment_plugins.append(management_plugin)
+                    deployment_plugin_names\
                         .add(management_plugin[PLUGIN_NAME_KEY])
-    return management_plugins
+    return deployment_plugins
 
 
 def _create_plan_workflow_plugins(workflows, plugins):
@@ -155,14 +157,14 @@ def _create_plan_workflow_plugins(workflows, plugins):
     for workflow, op_struct in workflows.items():
         if op_struct['plugin'] not in workflow_plugin_names:
             plugin_name = op_struct['plugin']
-            if plugins[plugin_name]['source'] != 'system':
-                workflow_plugins.append(plugins[plugin_name])
-                workflow_plugin_names.add(plugin_name)
+            workflow_plugins.append(plugins[plugin_name])
+            workflow_plugin_names.add(plugin_name)
     return workflow_plugins
 
 
 def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
            resources_base_url, dsl_location=None):
+
     alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
 
     parsed_dsl = _load_yaml(dsl_string, 'Failed to parse DSL')
@@ -214,7 +216,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         processed_workflows,
         processed_plugins)
 
-    plan_management_plugins = _create_plan_management_plugins(processed_nodes)
+    plan_management_plugins = _create_plan_deployment_plugins(processed_nodes)
 
     policy_types = _process_policy_types(
         combined_parsed_dsl.get(POLICY_TYPES, {}))
@@ -1134,22 +1136,23 @@ def _process_plugin(plugin, plugin_name):
                     CENTRAL_DEPLOYMENT_AGENT,
                     HOST_AGENT))
 
-    plugin_source = plugin.get('source', None)
-    plugin_install = plugin.get('install', True)
+    plugin_source = plugin.get(PLUGIN_SOURCE_KEY, None)
+    plugin_install = plugin.get(PLUGIN_INSTALL_KEY, True)
 
     if plugin_install and not plugin_source:
         raise DSLParsingLogicException(
             50,
             "plugin {0} needs to be installed, "
-            "but doe's not declare a 'source' property"
-            .format(plugin_name)
+            "but doe's not declare a {1} property"
+            .format(plugin_name, PLUGIN_SOURCE_KEY)
         )
 
     processed_plugin = copy.deepcopy(plugin)
 
     # augment plugin dictionary
     processed_plugin[PLUGIN_NAME_KEY] = plugin_name
-    processed_plugin['install'] = plugin_install
+    processed_plugin[PLUGIN_INSTALL_KEY] = plugin_install
+    processed_plugin[PLUGIN_SOURCE_KEY] = plugin_source
 
     return processed_plugin
 
