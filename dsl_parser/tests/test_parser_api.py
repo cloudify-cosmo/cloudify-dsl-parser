@@ -73,7 +73,7 @@ class TestParserApi(AbstractTestParser):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins']['test_plugin']
-        self.assertEquals(3, len(plugin_props))
+        self.assertEquals(4, len(plugin_props))
         self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('test_plugin', 'install'),
@@ -1595,28 +1595,154 @@ plugins:
         self.assertEquals('test_plugin', plugin['name'])
         self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
 
-    def test_system_plugin_is_ignored_in_plugins_to_install(self):
-        # testing to ensure the installer plugin is treated differently and
-        # is not
-        # put on the plugins_to_install dict like the rest of the plugins
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.types.host
-node_types:
-    cloudify.types.host:
-        interfaces:
-            test_interface:
-                - start: plugin_installer.plugin_installer.start
+    def test_plugin_with_install_true_existing_source(self):
+
+        """
+        install: True and source given. all good
+        """
+
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 plugins:
-    plugin_installer:
-        executor: host_agent
-        source: system
-"""
-        # note that we're expecting an empty dict since every node which
-        # is a host should have one
+    test_plugin:
+        executor: central_deployment_agent
+        install: true
+        source: dummy
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
         result = parse(yaml)
-        self.assertEquals([], result['nodes'][0]['plugins_to_install'])
+        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        self.assertTrue(plugin['install'])
+        self.assertEqual('dummy', plugin['source'])
+
+    def test_plugin_with_install_false_existing_source(self):
+
+        """
+        install: False, we don't care about the source
+        """
+
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+        install: false
+        source: dummy
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
+        result = parse(yaml)
+        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        self.assertFalse(plugin['install'])
+        self.assertEqual('dummy', plugin['source'])
+
+    def test_plugin_with_install_false_missing_source(self):
+
+        """
+        install: False, we don't care about the source
+        """
+
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+        install: false
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
+        result = parse(yaml)
+        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        self.assertFalse(plugin['install'])
+
+    def test_plugin_with_missing_install_existing_source(self):
+
+        """
+        Assumes install true, source is given, all good.
+        """
+
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+        source: dummy
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
+        result = parse(yaml)
+        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        self.assertTrue(plugin['install'])
+        self.assertEqual('dummy', plugin['source'])
+
+    def test_plugin_with_no_install_existing_source(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+        install: false
+        source: dummy
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
+        result = parse(yaml)
+        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        self.assertFalse(plugin['install'])
+        self.assertEqual('dummy', plugin['source'])
+
+    def test_plugin_with_install_existing_source(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+        install: true
+        source: dummy
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
+        result = parse(yaml)
+        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        self.assertTrue(plugin['install'])
+        self.assertEqual('dummy', plugin['source'])
 
     def test_node_plugins_to_install_field_plugins_from_contained_nodes(self):
         # testing to ensure plugins from nodes with contained_in relationships
@@ -1633,17 +1759,17 @@ node_templates:
     test_node2:
         type: test_type
         relationships:
-            -   type: 'cloudify.relationships.contained_in'
+            -   type: cloudify.relationships.contained_in
                 target: test_node1
     test_node3:
         type: test_type2
         relationships:
-            -   type: 'cloudify.relationships.contained_in'
+            -   type: cloudify.relationships.contained_in
                 target: test_node2
     test_node4:
         type: test_type
         relationships:
-            -   type: 'cloudify.relationships.contained_in'
+            -   type: cloudify.relationships.contained_in
                 target: test_node3
 node_types:
     cloudify.types.host: {}

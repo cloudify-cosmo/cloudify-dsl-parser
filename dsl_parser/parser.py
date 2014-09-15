@@ -284,26 +284,18 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         another_node['host_id'] == node['id'] and \
                         PLUGINS in another_node:
                     # ok to override here since we assume it is the same plugin
-                    for plugin_name, plugin_obj in \
-                            another_node[PLUGINS].iteritems():
-                        # only wish to add agent plugins, and only if they're
-                        # not in the excluded plugins list
-                        if plugin_obj[PLUGIN_EXECUTOR_KEY] == HOST_AGENT \
-                                and plugin_obj['source'] != 'system':
+                    for plugin_name, plugin_obj in another_node[PLUGINS].iteritems():
+                        if plugin_obj[PLUGIN_EXECUTOR_KEY] == HOST_AGENT:
                             plugins_to_install[plugin_name] = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
 
     # set deployment_plugins_to_install property for nodes
     for node in processed_nodes:
         deployment_plugins_to_install = {}
-        for plugin_name, plugin_obj in \
-                node[PLUGINS].iteritems():
-            if plugin_obj[PLUGIN_EXECUTOR_KEY] == CENTRAL_DEPLOYMENT_AGENT \
-                    and plugin_obj['source'] != 'system':
-                deployment_plugins_to_install[plugin_name] \
-                    = plugin_obj
-        node[DEPLOYMENT_PLUGINS_TO_INSTALL] \
-            = deployment_plugins_to_install.values()
+        for plugin_name, plugin_obj in node[PLUGINS].iteritems():
+            if plugin_obj[PLUGIN_EXECUTOR_KEY] == CENTRAL_DEPLOYMENT_AGENT:
+                deployment_plugins_to_install[plugin_name] = plugin_obj
+        node[DEPLOYMENT_PLUGINS_TO_INSTALL] = deployment_plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
@@ -1141,8 +1133,23 @@ def _process_plugin(plugin, plugin_name):
                     plugin[PLUGIN_EXECUTOR_KEY],
                     CENTRAL_DEPLOYMENT_AGENT,
                     HOST_AGENT))
+
+    plugin_source = plugin.get('source', None)
+    plugin_install = plugin.get('install', True)
+
+    if plugin_install and not plugin_source:
+        raise DSLParsingLogicException(
+            50,
+            "plugin {0} needs to be installed, "
+            "but doe's not declare a 'source' property"
+            .format(plugin_name)
+        )
+
     processed_plugin = copy.deepcopy(plugin)
+
+    # augment plugin dictionary
     processed_plugin[PLUGIN_NAME_KEY] = plugin_name
+    processed_plugin['install'] = plugin_install
 
     return processed_plugin
 

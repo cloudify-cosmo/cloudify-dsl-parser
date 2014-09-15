@@ -98,6 +98,55 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 18, DSLParsingLogicException)
 
+    def test_plugin_with_missing_install_missing_source(self):
+
+        """
+        Assumes install: True, but no source is defined
+        so it should fail
+
+        """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 50, DSLParsingLogicException)
+
+    def test_plugin_with_install_true_missing_source(self):
+
+        """
+        install: True, but no source is defined
+        so it should fail
+
+        """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+        install: true
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 50, DSLParsingLogicException)
+
     def test_top_level_relationships_relationship_with_undefined_plugin(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:

@@ -190,15 +190,6 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_plugin_without_source(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
     def test_import_bad_syntax(self):
         yaml = """
 imports: fake-file.yaml

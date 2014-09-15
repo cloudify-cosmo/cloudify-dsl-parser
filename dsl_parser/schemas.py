@@ -329,9 +329,12 @@ DSL_SCHEMA = {
                         },
                         'executor': {
                             'type': 'string'
+                        },
+                        'install': {
+                            'type': 'boolean'
                         }
                     },
-                    'required': ['source', 'executor'],
+                    'required': ['executor'],
                     'additionalProperties': False
                 }
             },
