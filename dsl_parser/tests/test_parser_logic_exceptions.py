@@ -769,3 +769,38 @@ groups:
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 107, DSLParsingLogicException)
+
+    def test_test(self):
+        def temptemp(prop_type, prop_val):
+            yaml = """
+node_templates:
+    test_node:
+        type: test_type
+        properties:
+            string1: {0}
+node_types:
+    test_type:
+        properties:
+            string1:
+                type: {1}
+        """.format(prop_val, prop_type)
+
+            self._assert_dsl_parsing_exception_error_code(
+                yaml, 50, DSLParsingLogicException)
+
+        temptemp('boolean', 'not-a-boolean')
+        temptemp('boolean', '5')
+        temptemp('boolean', '5.0')
+        temptemp('boolean', '1')
+        # temptemp('boolean', 'Yes')
+        # temptemp('boolean', 'On')
+        temptemp('integer', 'not-an-integer')
+        # temptemp('integer', 'True')
+        temptemp('integer', '5.0')
+        temptemp('integer', '"5"')
+        temptemp('integer', 'NaN')
+        temptemp('float', 'not-a-float')
+        # temptemp('float', 'True')
+        temptemp('float', '"5.0"')
+        temptemp('float', 'NaN')
+        temptemp('float', 'inf')

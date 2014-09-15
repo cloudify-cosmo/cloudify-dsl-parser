@@ -62,6 +62,15 @@ INTERFACES_SCHEMA = {
     'minProperties': 1
 }
 
+PROPERTY_TYPES_SCHEMA = {
+    'enum': [
+        'string',
+        'integer',
+        'float',
+        'boolean'
+    ]
+}
+
 PROPERTIES_SCHEMA_SCHEMA = {
     'type': 'object',
     'patternProperties': {
@@ -78,7 +87,8 @@ PROPERTIES_SCHEMA_SCHEMA = {
                         },
                         'description': {
                             'type': 'string'
-                        }
+                        },
+                        'type': PROPERTY_TYPES_SCHEMA
                     },
                     'additionalProperties': False
                 },
@@ -90,7 +100,8 @@ PROPERTIES_SCHEMA_SCHEMA = {
                         },
                         'description': {
                             'type': 'string'
-                        }
+                        },
+                        'type': PROPERTY_TYPES_SCHEMA
                     },
                     'additionalProperties': False
                 },
@@ -102,7 +113,8 @@ PROPERTIES_SCHEMA_SCHEMA = {
                         },
                         'description': {
                             'type': 'string'
-                        }
+                        },
+                        'type': PROPERTY_TYPES_SCHEMA
                     },
                     'additionalProperties': False
                 },
@@ -114,7 +126,8 @@ PROPERTIES_SCHEMA_SCHEMA = {
                         },
                         'description': {
                             'type': 'string'
-                        }
+                        },
+                        'type': PROPERTY_TYPES_SCHEMA
                     },
                     'additionalProperties': False
                 },
@@ -126,7 +139,8 @@ PROPERTIES_SCHEMA_SCHEMA = {
                         },
                         'description': {
                             'type': 'string'
-                        }
+                        },
+                        'type': PROPERTY_TYPES_SCHEMA
                     },
                     'additionalProperties': False
                 }
