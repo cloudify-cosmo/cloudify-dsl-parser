@@ -1256,6 +1256,10 @@ def _validate_properties_types(properties, properties_schema):
             continue
         prop_val = properties[prop_key]
 
+        if functions.parse(prop_val) != prop_val:
+            # intrinsic function - not validated at the moment
+            continue
+
         if prop_type == 'integer':
             if isinstance(prop_val, (int, long)) and not isinstance(
                     prop_val, bool):

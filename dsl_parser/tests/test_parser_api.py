@@ -2799,6 +2799,26 @@ policy_types:
         self.assertDictEqual(result['groups'],
                              expected_result['groups'])
 
+    def test_property_schema_type_property_with_intrinsic_functions(self):
+        yaml = """
+node_templates:
+    test_node:
+        type: test_type
+        properties:
+            int1: { get_input: x }
+node_types:
+    test_type:
+        properties:
+            int1:
+                type: integer
+inputs:
+    x: {}
+        """
+        result = parse(yaml)
+        self.assertEquals(1, len(result['nodes']))
+        node = result['nodes'][0]
+        self.assertEquals('test_node', node['id'])
+
     def test_property_schema_type_property(self):
         yaml = """
 node_templates:
