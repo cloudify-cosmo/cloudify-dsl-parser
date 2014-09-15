@@ -1257,15 +1257,15 @@ def _validate_properties_types(properties, properties_schema):
         prop_val = properties[prop_key]
 
         if prop_type == 'integer':
-            if isinstance(prop_val, (int, long)):
+            if isinstance(prop_val, (int, long)) and not isinstance(
+                    prop_val, bool):
                 continue
         elif prop_type == 'float':
-            if isinstance(prop_val, (int, float, long)):
+            if isinstance(prop_val, (int, float, long)) and not isinstance(
+                    prop_val, bool):
                 continue
         elif prop_type == 'boolean':
-            if isinstance(prop_val, bool) or (isinstance(
-                    prop_val, str) and prop_val.lower() in \
-                    ('true', 'false')):
+            if isinstance(prop_val, bool):
                 continue
         elif prop_type == 'string':
             continue
@@ -1277,7 +1277,7 @@ def _validate_properties_types(properties, properties_schema):
         raise DSLParsingLogicException(
             50, 'Property type validation failed: Property {0} type '
                 'is {1}, yet it was assigned with the value {2}'.format(
-                prop_key, prop_type, prop_val))
+                    prop_key, prop_type, prop_val))
 
 
 def _apply_ref(filename, path_context, alias_mapping, resources_base_url):

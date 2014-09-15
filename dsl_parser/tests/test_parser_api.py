@@ -2533,7 +2533,8 @@ relationships:
         self.assertEquals('test_type', node['type'])
         relationship = result['relationships']['test_relationship']
         self.assertEquals(
-            {'key': {'default': 'val', 'description': 'property_desc'}},
+            {'key': {'default': 'val', 'description': 'property_desc',
+                     'type': 'string'}},
             relationship['properties'])
 
     def test_workflow_parameters_empty_parameters(self):
@@ -2603,7 +2604,8 @@ workflows:
         self.assertEquals('test_type', node['type'])
         workflow = result['workflows']['test_workflow']
         self.assertEquals(
-            {'key': {'default': 'val', 'description': 'parameter_desc'}},
+            {'key': {'default': 'val', 'description': 'parameter_desc',
+                     'type': 'string'}},
             workflow['parameters'])
 
     def test_policy_type_properties_empty_properties(self):
@@ -2812,7 +2814,10 @@ node_templates:
             boolean3: False
             boolean4: FALSE
             boolean5: FaLsE
-            boolean6: 'True'
+            boolean6: Yes
+            boolean7: On
+            boolean8: No
+            boolean9: Off
             integer1: 5
             integer2: -5
             integer3: 1000000000000
@@ -2845,6 +2850,12 @@ node_types:
             boolean5:
                 type: boolean
             boolean6:
+                type: boolean
+            boolean7:
+                type: boolean
+            boolean8:
+                type: boolean
+            boolean9:
                 type: boolean
             integer1:
                 type: integer

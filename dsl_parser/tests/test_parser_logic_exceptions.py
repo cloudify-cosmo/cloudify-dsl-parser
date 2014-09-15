@@ -770,8 +770,8 @@ groups:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 107, DSLParsingLogicException)
 
-    def test_test(self):
-        def temptemp(prop_type, prop_val):
+    def test_properties_schema_invalid_values_for_types(self):
+        def test_type_with_value(prop_type, prop_val):
             yaml = """
 node_templates:
     test_node:
@@ -788,19 +788,20 @@ node_types:
             self._assert_dsl_parsing_exception_error_code(
                 yaml, 50, DSLParsingLogicException)
 
-        temptemp('boolean', 'not-a-boolean')
-        temptemp('boolean', '5')
-        temptemp('boolean', '5.0')
-        temptemp('boolean', '1')
-        # temptemp('boolean', 'Yes')
-        # temptemp('boolean', 'On')
-        temptemp('integer', 'not-an-integer')
-        # temptemp('integer', 'True')
-        temptemp('integer', '5.0')
-        temptemp('integer', '"5"')
-        temptemp('integer', 'NaN')
-        temptemp('float', 'not-a-float')
-        # temptemp('float', 'True')
-        temptemp('float', '"5.0"')
-        temptemp('float', 'NaN')
-        temptemp('float', 'inf')
+        test_type_with_value('boolean', 'not-a-boolean')
+        test_type_with_value('boolean', '"True"')
+        test_type_with_value('boolean', '5')
+        test_type_with_value('boolean', '5.0')
+        test_type_with_value('boolean', '1')
+        test_type_with_value('integer', 'not-an-integer')
+        test_type_with_value('integer', 'True')
+        test_type_with_value('integer', '"True"')
+        test_type_with_value('integer', '5.0')
+        test_type_with_value('integer', '"5"')
+        test_type_with_value('integer', 'NaN')
+        test_type_with_value('float', 'not-a-float')
+        test_type_with_value('float', 'True')
+        test_type_with_value('float', '"True"')
+        test_type_with_value('float', '"5.0"')
+        test_type_with_value('float', 'NaN')
+        test_type_with_value('float', 'inf')
