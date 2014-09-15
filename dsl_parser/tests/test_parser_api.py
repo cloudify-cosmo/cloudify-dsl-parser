@@ -2813,11 +2813,10 @@ node_templates:
             boolean2: false
             boolean3: False
             boolean4: FALSE
-            boolean5: FaLsE
-            boolean6: Yes
-            boolean7: On
-            boolean8: No
-            boolean9: Off
+            boolean5: Yes
+            boolean6: On
+            boolean7: No
+            boolean8: Off
             integer1: 5
             integer2: -5
             integer3: 1000000000000
@@ -2854,8 +2853,6 @@ node_types:
             boolean7:
                 type: boolean
             boolean8:
-                type: boolean
-            boolean9:
                 type: boolean
             integer1:
                 type: integer
