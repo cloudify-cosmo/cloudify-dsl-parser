@@ -29,3 +29,14 @@ class UnknownInputError(Exception):
     """
     def __init__(self, *args, **kwargs):
         super(UnknownInputError, self).__init__(*args, **kwargs)
+
+
+class FunctionEvaluationError(Exception):
+    """
+    An error raised when an intrinsic function was unable to get evaluated.
+    """
+    def __init__(self, func_name, message=None):
+        msg = 'Unable to evaluate {0} function'.format(func_name)
+        if message:
+            msg = '{0}: {1}'.format(msg, message)
+        super(FunctionEvaluationError, self).__init__(msg)

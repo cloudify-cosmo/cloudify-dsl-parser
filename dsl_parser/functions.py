@@ -15,7 +15,7 @@
 
 
 from dsl_parser import exceptions
-
+from dsl_parser import utils
 
 GET_INPUT_FUNCTION = 'get_input'
 GET_ATTRIBUTE_FUNCTION = 'get_attribute'
@@ -81,3 +81,43 @@ def parse(raw_function, context=None):
             func_args = raw_function.values()[0]
             return TEMPLATE_FUNCTIONS[func_name](context, func_args)
     return raw_function
+
+
+def evaluate_outputs(outputs_def, get_node_instances_method):
+    """Evaluates an outputs definition containing intrinsic functions.
+
+    :param outputs_def: Outputs definition.
+    :param get_node_instances_method: A method for getting node instances.
+    :return: Outputs dict.
+    """
+    context = {}
+    outputs = {k: v['value'] for k, v in outputs_def.iteritems()}
+
+    def handler(dict_, k, v, _):
+        func = parse(v)
+        if isinstance(func, GetAttribute):
+            attributes = []
+            if 'node_instances' not in context:
+                context['node_instances'] = get_node_instances_method()
+            for instance in context['node_instances']:
+                if instance.node_id == func.node_name:
+                    attributes.append(
+                        instance.runtime_properties.get(
+                            func.attribute_name) if
+                        instance.runtime_properties else None)
+            if len(attributes) == 1:
+                dict_[k] = attributes[0]
+            elif len(attributes) == 0:
+                raise exceptions.FunctionEvaluationError(
+                    GET_ATTRIBUTE_FUNCTION,
+                    'Node specified in function does not exist: {0}.'.format(
+                        func.node_name)
+                )
+            elif len(attributes) > 1:
+                raise exceptions.FunctionEvaluationError(
+                    GET_ATTRIBUTE_FUNCTION,
+                    'Multi instances of node "{0}" are not supported by '
+                    'function.'.format(func.node_name))
+
+    utils.scan_properties(outputs, handler, 'outputs')
+    return outputs
