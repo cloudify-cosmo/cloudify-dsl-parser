@@ -13,6 +13,25 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+
+import os
+import copy
+import contextlib
+import re
+from urllib import pathname2url
+from urllib2 import urlopen, URLError
+from collections import OrderedDict
+from collections import namedtuple
+
+import yaml
+from jsonschema import validate, ValidationError
+from yaml.parser import ParserError
+
+from dsl_parser import constants
+from dsl_parser import functions
+from dsl_parser import utils
+from dsl_parser import schemas
+
 NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
 NODE_TYPES = 'node_types'
@@ -42,32 +61,6 @@ AGENT_INSTALLER_PLUGIN = "agent_installer"
 WINDOWS_PLUGIN_INSTALLER_PLUGIN = 'windows_plugin_installer'
 WINDOWS_AGENT_INSTALLER_PLUGIN = 'windows_agent_installer'
 DEFAULT_WORKFLOWS_PLUGIN = 'default_workflows'
-
-
-import os
-import copy
-import contextlib
-import re
-import yaml
-
-from urllib import pathname2url
-from urllib2 import urlopen, URLError
-from collections import OrderedDict
-from collections import namedtuple
-from jsonschema import validate, ValidationError
-from yaml.parser import ParserError
-from dsl_parser.constants import CENTRAL_DEPLOYMENT_AGENT
-from dsl_parser.constants import PLUGIN_SOURCE_KEY
-from dsl_parser.constants import PLUGIN_INSTALL_KEY
-from dsl_parser.constants import PLUGIN_NAME_KEY
-from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
-from dsl_parser.constants import HOST_AGENT
-from dsl_parser.constants import PLUGIN_EXECUTOR_KEY
-from dsl_parser import functions
-from dsl_parser import utils
-from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
-
-
 OpDescriptor = namedtuple('OpDescriptor', [
     'plugin', 'op_struct', 'name'])
 
@@ -141,13 +134,13 @@ def _create_plan_deployment_plugins(processed_nodes):
     deployment_plugins = []
     deployment_plugin_names = set()
     for node in processed_nodes:
-        if DEPLOYMENT_PLUGINS_TO_INSTALL in node:
-            for management_plugin in node[DEPLOYMENT_PLUGINS_TO_INSTALL]:
-                if management_plugin[PLUGIN_NAME_KEY] \
+        if constants.DEPLOYMENT_PLUGINS_TO_INSTALL in node:
+            for management_plugin in node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
+                if management_plugin[constants.PLUGIN_NAME_KEY] \
                         not in deployment_plugin_names:
                     deployment_plugins.append(management_plugin)
                     deployment_plugin_names\
-                        .add(management_plugin[PLUGIN_NAME_KEY])
+                        .add(management_plugin[constants.PLUGIN_NAME_KEY])
     return deployment_plugins
 
 
@@ -238,7 +231,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         POLICY_TRIGGERS: policy_triggers,
         GROUPS: groups,
         INPUTS: inputs,
-        DEPLOYMENT_PLUGINS_TO_INSTALL: plan_management_plugins,
+        constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_management_plugins,
         OUTPUTS: outputs,
         'workflow_plugins_to_install': workflow_plugins_to_install
     }
@@ -288,7 +281,7 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                     # ok to override here since we assume it is the same plugin
                     for plugin_name, plugin_obj in \
                             another_node[PLUGINS].iteritems():
-                        if plugin_obj[PLUGIN_EXECUTOR_KEY] == HOST_AGENT:
+                        if plugin_obj[constants.PLUGIN_EXECUTOR_KEY] == constants.HOST_AGENT:
                             plugins_to_install[plugin_name] = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
 
@@ -296,9 +289,9 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     for node in processed_nodes:
         deployment_plugins_to_install = {}
         for plugin_name, plugin_obj in node[PLUGINS].iteritems():
-            if plugin_obj[PLUGIN_EXECUTOR_KEY] == CENTRAL_DEPLOYMENT_AGENT:
+            if plugin_obj[constants.PLUGIN_EXECUTOR_KEY] == constants.CENTRAL_DEPLOYMENT_AGENT:
                 deployment_plugins_to_install[plugin_name] = plugin_obj
-        node[DEPLOYMENT_PLUGINS_TO_INSTALL] = \
+        node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] = \
             deployment_plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
@@ -564,8 +557,8 @@ def _validate_agent_plugins_on_host_nodes(processed_nodes):
     for node in processed_nodes:
         if 'host_id' not in node and PLUGINS in node:
             for plugin in node[PLUGINS].itervalues():
-                if plugin[PLUGIN_EXECUTOR_KEY] \
-                        == HOST_AGENT:
+                if plugin[constants.PLUGIN_EXECUTOR_KEY] \
+                        == constants.HOST_AGENT:
                     raise DSLParsingLogicException(
                         24, "node {0} has no relationship which makes it "
                             "contained within a host and it has a "
@@ -573,7 +566,7 @@ def _validate_agent_plugins_on_host_nodes(processed_nodes):
                             "These types of plugins must be "
                             "installed on a host".format(node['id'],
                                                          plugin['name'],
-                                                         HOST_AGENT))
+                                                         constants.HOST_AGENT))
 
 
 def _build_family_descendants_set(types_dict, derived_from):
@@ -1125,36 +1118,36 @@ def _extract_node_host_id(processed_node, node_name_to_node, host_types,
 
 
 def _process_plugin(plugin, plugin_name):
-    if plugin[PLUGIN_EXECUTOR_KEY] not \
-            in [CENTRAL_DEPLOYMENT_AGENT,
-                HOST_AGENT]:
+    if plugin[constants.PLUGIN_EXECUTOR_KEY] not \
+            in [constants.CENTRAL_DEPLOYMENT_AGENT,
+                constants.HOST_AGENT]:
         raise DSLParsingLogicException(
             18, 'plugin {0} has an illegal '
                 '{1} value {2}; value '
                 'must be either {3} or {4}'
             .format(plugin_name,
-                    PLUGIN_EXECUTOR_KEY,
-                    plugin[PLUGIN_EXECUTOR_KEY],
-                    CENTRAL_DEPLOYMENT_AGENT,
-                    HOST_AGENT))
+                    constants.PLUGIN_EXECUTOR_KEY,
+                    plugin[constants.PLUGIN_EXECUTOR_KEY],
+                    constants.CENTRAL_DEPLOYMENT_AGENT,
+                    constants.HOST_AGENT))
 
-    plugin_source = plugin.get(PLUGIN_SOURCE_KEY, None)
-    plugin_install = plugin.get(PLUGIN_INSTALL_KEY, True)
+    plugin_source = plugin.get(constants.PLUGIN_SOURCE_KEY, None)
+    plugin_install = plugin.get(constants.PLUGIN_INSTALL_KEY, True)
 
     if plugin_install and not plugin_source:
         raise DSLParsingLogicException(
             50,
             "plugin {0} needs to be installed, "
             "but doe's not declare a {1} property"
-            .format(plugin_name, PLUGIN_SOURCE_KEY)
+            .format(plugin_name, constants.PLUGIN_SOURCE_KEY)
         )
 
     processed_plugin = copy.deepcopy(plugin)
 
     # augment plugin dictionary
-    processed_plugin[PLUGIN_NAME_KEY] = plugin_name
-    processed_plugin[PLUGIN_INSTALL_KEY] = plugin_install
-    processed_plugin[PLUGIN_SOURCE_KEY] = plugin_source
+    processed_plugin[constants.PLUGIN_NAME_KEY] = plugin_name
+    processed_plugin[constants.PLUGIN_INSTALL_KEY] = plugin_install
+    processed_plugin[constants.PLUGIN_SOURCE_KEY] = plugin_source
 
     return processed_plugin
 
@@ -1519,7 +1512,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list,
 
 def _validate_dsl_schema(parsed_dsl):
     try:
-        validate(parsed_dsl, DSL_SCHEMA)
+        validate(parsed_dsl, schemas.DSL_SCHEMA)
     except ValidationError, ex:
         raise DSLParsingFormatException(
             1, '{0}; Path to error: {1}'
@@ -1532,7 +1525,7 @@ def _validate_imports_section(imports_section, dsl_location):
     # while the standard validation runs only after combining all imports
     # together
     try:
-        validate(imports_section, IMPORTS_SCHEMA)
+        validate(imports_section, schemas.IMPORTS_SCHEMA)
     except ValidationError, ex:
         raise DSLParsingFormatException(
             2, 'Improper "imports" section in yaml {0}; {1}; Path to error: '

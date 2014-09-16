@@ -1701,50 +1701,6 @@ node_types:
         self.assertTrue(plugin['install'])
         self.assertEqual('dummy', plugin['source'])
 
-    def test_plugin_with_no_install_existing_source(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-        install: false
-        source: dummy
-
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                - install: test_plugin.install
-
-        """
-        result = parse(yaml)
-        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
-        self.assertFalse(plugin['install'])
-        self.assertEqual('dummy', plugin['source'])
-
-    def test_plugin_with_install_existing_source(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-        install: true
-        source: dummy
-
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                - install: test_plugin.install
-
-        """
-        result = parse(yaml)
-        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
-        self.assertTrue(plugin['install'])
-        self.assertEqual('dummy', plugin['source'])
-
     def test_node_plugins_to_install_field_plugins_from_contained_nodes(self):
         # testing to ensure plugins from nodes with contained_in relationships
         #  to a host node (whether direct
