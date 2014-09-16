@@ -113,7 +113,7 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
                     'Node specified in function does not exist: {0}.'.format(
                         func.node_name)
                 )
-            elif len(attributes) > 1:
+            else:
                 raise exceptions.FunctionEvaluationError(
                     GET_ATTRIBUTE_FUNCTION,
                     'Multi instances of node "{0}" are not supported by '
