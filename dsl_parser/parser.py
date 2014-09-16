@@ -286,7 +286,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         another_node['host_id'] == node['id'] and \
                         PLUGINS in another_node:
                     # ok to override here since we assume it is the same plugin
-                    for plugin_name, plugin_obj in another_node[PLUGINS].iteritems():
+                    for plugin_name, plugin_obj in \
+                            another_node[PLUGINS].iteritems():
                         if plugin_obj[PLUGIN_EXECUTOR_KEY] == HOST_AGENT:
                             plugins_to_install[plugin_name] = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
@@ -297,7 +298,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
         for plugin_name, plugin_obj in node[PLUGINS].iteritems():
             if plugin_obj[PLUGIN_EXECUTOR_KEY] == CENTRAL_DEPLOYMENT_AGENT:
                 deployment_plugins_to_install[plugin_name] = plugin_obj
-        node[DEPLOYMENT_PLUGINS_TO_INSTALL] = deployment_plugins_to_install.values()
+        node[DEPLOYMENT_PLUGINS_TO_INSTALL] = \
+            deployment_plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
