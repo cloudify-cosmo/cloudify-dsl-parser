@@ -816,3 +816,39 @@ groups:
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 107, DSLParsingLogicException)
+
+    def test_properties_schema_invalid_values_for_types(self):
+        def test_type_with_value(prop_type, prop_val):
+            yaml = """
+node_templates:
+    test_node:
+        type: test_type
+        properties:
+            string1: {0}
+node_types:
+    test_type:
+        properties:
+            string1:
+                type: {1}
+        """.format(prop_val, prop_type)
+
+            self._assert_dsl_parsing_exception_error_code(
+                yaml, 50, DSLParsingLogicException)
+
+        test_type_with_value('boolean', 'not-a-boolean')
+        test_type_with_value('boolean', '"True"')
+        test_type_with_value('boolean', '5')
+        test_type_with_value('boolean', '5.0')
+        test_type_with_value('boolean', '1')
+        test_type_with_value('integer', 'not-an-integer')
+        test_type_with_value('integer', 'True')
+        test_type_with_value('integer', '"True"')
+        test_type_with_value('integer', '5.0')
+        test_type_with_value('integer', '"5"')
+        test_type_with_value('integer', 'NaN')
+        test_type_with_value('float', 'not-a-float')
+        test_type_with_value('float', 'True')
+        test_type_with_value('float', '"True"')
+        test_type_with_value('float', '"5.0"')
+        test_type_with_value('float', 'NaN')
+        test_type_with_value('float', 'inf')

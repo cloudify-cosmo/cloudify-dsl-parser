@@ -1102,3 +1102,14 @@ groups:
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
+
+    def test_unknown_property_schema_type(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+node_types:
+    test_type:
+        properties:
+            key:
+                type: unknown-type
+                """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)

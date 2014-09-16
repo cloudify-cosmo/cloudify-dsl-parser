@@ -1250,7 +1250,44 @@ def _merge_schema_and_instance_properties(
             ex.property = key
             raise ex
 
+    _validate_properties_types(merged_properties, schema_properties)
+
     return merged_properties
+
+
+def _validate_properties_types(properties, properties_schema):
+    for prop_key, prop in properties_schema.iteritems():
+        prop_type = prop.get('type')
+        if prop_type is None:
+            continue
+        prop_val = properties[prop_key]
+
+        if functions.parse(prop_val) != prop_val:
+            # intrinsic function - not validated at the moment
+            continue
+
+        if prop_type == 'integer':
+            if isinstance(prop_val, (int, long)) and not isinstance(
+                    prop_val, bool):
+                continue
+        elif prop_type == 'float':
+            if isinstance(prop_val, (int, float, long)) and not isinstance(
+                    prop_val, bool):
+                continue
+        elif prop_type == 'boolean':
+            if isinstance(prop_val, bool):
+                continue
+        elif prop_type == 'string':
+            continue
+        else:
+            raise RuntimeError(
+                'Unexpected type defined in property schema for property {0} -'
+                ' unknown type is {1}'.format(prop_key, prop_type))
+
+        raise DSLParsingLogicException(
+            50, 'Property type validation failed: Property {0} type '
+                'is {1}, yet it was assigned with the value {2}'.format(
+                    prop_key, prop_type, prop_val))
 
 
 def _apply_ref(filename, path_context, alias_mapping, resources_base_url):
