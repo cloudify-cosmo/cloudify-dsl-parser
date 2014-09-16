@@ -15,6 +15,7 @@
 
 import unittest
 
+from dsl_parser import exceptions
 from dsl_parser import functions
 from dsl_parser.parser import parse
 from dsl_parser.parser import DSLParsingFormatException
@@ -142,3 +143,97 @@ outputs:
             self.fail('Expected exception.')
         except KeyError, e:
             self.assertTrue('does not exist' in str(e))
+
+    def test_valid_evaluation(self):
+        yaml = """
+node_types:
+    webserver_type: {}
+node_templates:
+    webserver:
+        type: webserver_type
+outputs:
+    port:
+        description: p0
+        value: { get_attribute: [ webserver, port ] }
+"""
+        parsed = parse(yaml)
+
+        def get_node_instances():
+            return [
+                NodeInstance({
+                    'node_id': 'webserver',
+                    'runtime_properties': {
+                        'port': 8080
+                    }
+                })
+            ]
+        o = functions.evaluate_outputs(parsed['outputs'], get_node_instances)
+        self.assertEqual(8080, o['port'])
+
+    def test_unknown_node_instance_evaluation(self):
+        yaml = """
+node_types:
+    webserver_type: {}
+node_templates:
+    webserver:
+        type: webserver_type
+outputs:
+    port:
+        description: p0
+        value: { get_attribute: [ webserver, port ] }
+"""
+        parsed = parse(yaml)
+
+        def get_node_instances():
+            return []
+
+        try:
+            functions.evaluate_outputs(parsed['outputs'], get_node_instances)
+            self.fail()
+        except exceptions.FunctionEvaluationError, e:
+            self.assertIn('Node specified in function does not exist', str(e))
+            self.assertIn('webserver', str(e))
+
+    def test_invalid_multi_instance_evaluation(self):
+        yaml = """
+node_types:
+    webserver_type: {}
+node_templates:
+    webserver:
+        type: webserver_type
+outputs:
+    port:
+        description: p0
+        value: { get_attribute: [ webserver, port ] }
+"""
+        parsed = parse(yaml)
+
+        def get_node_instances():
+            node_instance = NodeInstance({
+                'node_id': 'webserver',
+                'runtime_properties': {
+                    'port': 8080
+                }
+            })
+            return [node_instance, node_instance]
+
+        try:
+            functions.evaluate_outputs(parsed['outputs'], get_node_instances)
+            self.fail()
+        except exceptions.FunctionEvaluationError, e:
+            self.assertIn('Multi instances of node', str(e))
+            self.assertIn('webserver', str(e))
+
+
+class NodeInstance(dict):
+
+    def __init__(self, values):
+        self.update(values)
+
+    @property
+    def node_id(self):
+        return self.get('node_id')
+
+    @property
+    def runtime_properties(self):
+        return self.get('runtime_properties')
