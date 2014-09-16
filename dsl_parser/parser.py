@@ -135,7 +135,8 @@ def _create_plan_deployment_plugins(processed_nodes):
     deployment_plugin_names = set()
     for node in processed_nodes:
         if constants.DEPLOYMENT_PLUGINS_TO_INSTALL in node:
-            for management_plugin in node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
+            for management_plugin in \
+                    node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
                 if management_plugin[constants.PLUGIN_NAME_KEY] \
                         not in deployment_plugin_names:
                     deployment_plugins.append(management_plugin)
@@ -281,7 +282,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                     # ok to override here since we assume it is the same plugin
                     for plugin_name, plugin_obj in \
                             another_node[PLUGINS].iteritems():
-                        if plugin_obj[constants.PLUGIN_EXECUTOR_KEY] == constants.HOST_AGENT:
+                        if plugin_obj[constants.PLUGIN_EXECUTOR_KEY]\
+                                == constants.HOST_AGENT:
                             plugins_to_install[plugin_name] = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
 
@@ -289,7 +291,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     for node in processed_nodes:
         deployment_plugins_to_install = {}
         for plugin_name, plugin_obj in node[PLUGINS].iteritems():
-            if plugin_obj[constants.PLUGIN_EXECUTOR_KEY] == constants.CENTRAL_DEPLOYMENT_AGENT:
+            if plugin_obj[constants.PLUGIN_EXECUTOR_KEY] \
+                    == constants.CENTRAL_DEPLOYMENT_AGENT:
                 deployment_plugins_to_install[plugin_name] = plugin_obj
         node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] = \
             deployment_plugins_to_install.values()
