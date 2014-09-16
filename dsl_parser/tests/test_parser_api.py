@@ -263,8 +263,10 @@ node_types:
 imports:
     -   {0}""".format(imported_alias)
         result = self.parse(yaml,
-                       alias_mapping_dict={'{0}'.format(imported_alias):
-                                           '{0}'.format(imported_filename)})
+                            alias_mapping_dict={
+                                '{0}'.format(imported_alias):
+                                '{0}'.format(imported_filename)
+                            })
         self._assert_minimal_blueprint(result)
 
     def test_alias_mapping_imports_using_path(self):
@@ -1785,7 +1787,8 @@ plugins:
 imports:
     -   {0}""".format(resource_file_name)
         result = self.parse(yaml,
-                       resources_base_url=file_url[:-len(resource_file_name)])
+                            resources_base_url=file_url[:-len(
+                                resource_file_name)])
         self._assert_minimal_blueprint(result)
 
     def test_import_resources_from_url(self):
@@ -2823,6 +2826,7 @@ imports:
                self.MINIMAL_BLUEPRINT
         result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)
+
 
 class DeploymentPluginsToInstallTest(AbstractTestParser):
 
