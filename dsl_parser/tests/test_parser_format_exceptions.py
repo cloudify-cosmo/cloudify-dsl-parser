@@ -16,6 +16,7 @@
 __author__ = 'ran'
 
 from dsl_parser.parser import DSLParsingFormatException
+from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
@@ -23,7 +24,7 @@ class TestParserFormatExceptions(AbstractTestParser):
 
     def test_empty_dsl(self):
         self._assert_dsl_parsing_exception_error_code(
-            '', 0, DSLParsingFormatException)
+            '', 1, DSLParsingFormatException)
 
     def test_illegal_yaml_dsl(self):
         yaml = """
@@ -35,7 +36,7 @@ plugins:
         self._assert_dsl_parsing_exception_error_code(
             yaml, -1, DSLParsingFormatException)
 
-    def test_no_blueprint(self):
+    def test_no_node_templates(self):
         yaml = """
 plugins:
     plugin1:
@@ -1139,3 +1140,10 @@ node_types:
                 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
+
+    def test_invalid_version_field_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+tosca_definitions_version: [cloudify_1_0]
+    """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException, dsl_parse)
