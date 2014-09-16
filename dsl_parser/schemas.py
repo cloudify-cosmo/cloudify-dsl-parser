@@ -278,6 +278,9 @@ MEMBERS_SCHEMA['minItems'] = 1
 DSL_SCHEMA = {
     'type': 'object',
     'properties': {
+        'tosca_definitions_version': {
+            'type': 'string'
+        },
         'node_templates': {
             'type': 'object',
             'patternProperties': {
@@ -553,6 +556,6 @@ DSL_SCHEMA = {
         'inputs': PROPERTIES_SCHEMA_SCHEMA,
         'outputs': OUTPUTS_SCHEMA
     },
-    'required': ['node_templates'],
+    'required': ['tosca_definitions_version', 'node_templates'],
     'additionalProperties': False
 }

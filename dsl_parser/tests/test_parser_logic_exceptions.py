@@ -16,6 +16,7 @@
 __author__ = 'ran'
 
 from dsl_parser.parser import DSLParsingLogicException, parse_from_path
+from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
@@ -805,3 +806,38 @@ node_types:
         test_type_with_value('float', '"5.0"')
         test_type_with_value('float', 'NaN')
         test_type_with_value('float', 'inf')
+
+    def test_no_version_field(self):
+        yaml = self.MINIMAL_BLUEPRINT
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 27, DSLParsingLogicException, dsl_parse)
+
+    def test_no_version_field_in_main_blueprint_file(self):
+        imported_yaml = self.BASIC_VERSION_SECTION
+        imported_yaml_filename = self.make_yaml_file(imported_yaml)
+        yaml = """
+imports:
+    -   {0}""".format(imported_yaml_filename) + self.MINIMAL_BLUEPRINT
+
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 27, DSLParsingLogicException, dsl_parse)
+
+    def test_mismatching_version_in_import(self):
+        imported_yaml = """
+tosca_definitions_version: cloudify_1_1
+    """
+        imported_yaml_filename = self.make_yaml_file(imported_yaml)
+        yaml = """
+imports:
+    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION +\
+               self.MINIMAL_BLUEPRINT
+
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 28, DSLParsingLogicException, dsl_parse)
+
+    def test_unsupported_version(self):
+        yaml = """
+    tosca_definitions_version: unsupported_version
+        """ + self.MINIMAL_BLUEPRINT
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 29, DSLParsingLogicException, dsl_parse)
