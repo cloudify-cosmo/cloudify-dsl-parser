@@ -41,10 +41,9 @@ node_templates:
     BASIC_PLUGIN = """
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
-            """
+        executor: central_deployment_agent
+        source: dummy
+"""
 
     BASIC_TYPE = """
 node_types:

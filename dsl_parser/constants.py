@@ -1,0 +1,23 @@
+########
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
+
+
+CENTRAL_DEPLOYMENT_AGENT = 'central_deployment_agent'
+HOST_AGENT = 'host_agent'
+PLUGIN_EXECUTOR_KEY = 'executor'
+PLUGIN_SOURCE_KEY = 'source'
+PLUGIN_INSTALL_KEY = 'install'
+PLUGIN_NAME_KEY = 'name'
+DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
