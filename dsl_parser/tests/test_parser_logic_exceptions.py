@@ -837,7 +837,7 @@ imports:
 
     def test_unsupported_version(self):
         yaml = """
-    tosca_definitions_version: unsupported_version
+tosca_definitions_version: unsupported_version
         """ + self.MINIMAL_BLUEPRINT
         self._assert_dsl_parsing_exception_error_code(
             yaml, 29, DSLParsingLogicException, dsl_parse)

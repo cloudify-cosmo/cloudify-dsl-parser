@@ -1406,6 +1406,8 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
                         "version is {0}, import with different version is {"
                         "1}, version of problematic import is {2}".format(
                             dsl_version, single_import, imported_dsl_version))
+            # no need to keep imported dsl's version - it's only used for
+            # validation against the main blueprint's version
             del parsed_imported_dsl[VERSION]
 
         _replace_ref_with_inline_paths(parsed_imported_dsl, single_import,

@@ -36,7 +36,7 @@ plugins:
         self._assert_dsl_parsing_exception_error_code(
             yaml, -1, DSLParsingFormatException)
 
-    def test_no_blueprint(self):
+    def test_no_node_templates(self):
         yaml = """
 plugins:
     plugin1:
