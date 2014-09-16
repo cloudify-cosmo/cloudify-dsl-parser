@@ -22,10 +22,14 @@ import os
 import uuid
 import yaml
 from dsl_parser.parser import DSLParsingException
-from dsl_parser.parser import parse
+from dsl_parser.parser import parse as dsl_parse
 
 
 class AbstractTestParser(unittest.TestCase):
+    BASIC_VERSION_SECTION = """
+tosca_definitions_version: cloudify_1_0
+    """
+
     BASIC_NODE_TEMPLATES_SECTION = """
 node_templates:
     test_node:
@@ -109,10 +113,18 @@ imports:"""
     -   {0}""".format(filename if not as_uri else self._path2url(filename))
         return yaml
 
+    def parse(self, dsl_string, alias_mapping_dict=None,
+              alias_mapping_url=None, resources_base_url=None):
+        dsl_string = AbstractTestParser.BASIC_VERSION_SECTION + dsl_string
+        return dsl_parse(dsl_string, alias_mapping_dict, alias_mapping_url,
+                         resources_base_url)
+
     def _assert_dsl_parsing_exception_error_code(
             self, dsl,
             expected_error_code, exception_type=DSLParsingException,
-            parsing_method=parse):
+            parsing_method=None):
+        if not parsing_method:
+            parsing_method = self.parse
         try:
             parsing_method(dsl)
             self.fail()

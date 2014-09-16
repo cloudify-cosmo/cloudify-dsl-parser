@@ -20,8 +20,8 @@ from dsl_parser.constants import PLUGIN_NAME_KEY
 from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 from urllib import pathname2url
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.parser import parse, parse_from_path, parse_from_url
-from dsl_parser.parser import TYPE_HIERARCHY
+from dsl_parser.parser import TYPE_HIERARCHY, parse_from_path, parse_from_url
+from dsl_parser.parser import parse as dsl_parse
 
 
 def op_struct(plugin_name, operation_mapping, properties=None,
@@ -61,12 +61,12 @@ class TestParserApi(AbstractTestParser):
                     if plugin['name'] == plugin_name)
 
     def test_minimal_blueprint(self):
-        result = parse(self.MINIMAL_BLUEPRINT)
+        result = self.parse(self.MINIMAL_BLUEPRINT)
         self._assert_minimal_blueprint(result)
 
     def test_import_from_path(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT])
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
 
     def _assert_blueprint(self, result):
@@ -108,12 +108,12 @@ node_types:
                     key2: value2
             """
 
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_blueprint(result)
 
     def test_type_with_single_implicit_interface_and_plugin(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_blueprint(result)
 
     def test_dsl_with_type_with_operation_mappings(self):
@@ -136,7 +136,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self._assert_blueprint(result)
 
@@ -169,7 +169,7 @@ node_types:
                 - start: other_test_plugin.start
                 - shutdown: other_test_plugin.shutdown
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self._assert_blueprint(result)
 
@@ -196,16 +196,18 @@ imports:
 imports:
     -   {0}""".format(mid_file_name)
 
-        result = parse(top_level_yaml)
+        result = self.parse(top_level_yaml)
         self._assert_blueprint(result)
 
     def test_parse_dsl_from_file(self):
-        filename = self.make_yaml_file(self.MINIMAL_BLUEPRINT)
+        filename = self.make_yaml_file(self.BASIC_VERSION_SECTION +
+                                       self.MINIMAL_BLUEPRINT)
         result = parse_from_path(filename)
         self._assert_minimal_blueprint(result)
 
     def test_parse_dsl_from_url(self):
-        filename_url = self.make_yaml_file(self.MINIMAL_BLUEPRINT, True)
+        filename_url = self.make_yaml_file(self.BASIC_VERSION_SECTION +
+                                           self.MINIMAL_BLUEPRINT, True)
         result = parse_from_url(filename_url)
         self._assert_minimal_blueprint(result)
 
@@ -213,7 +215,7 @@ imports:
         yaml = self.MINIMAL_BLUEPRINT + """
 imports: []
         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
 
     def test_diamond_imports(self):
@@ -234,7 +236,7 @@ imports:
 imports:
     -   {0}
     -   {1}""".format(mid_file_name, mid_file_name2)
-        result = parse(top_level_yaml)
+        result = self.parse(top_level_yaml)
         self._assert_blueprint(result)
 
     def test_node_get_type_properties_including_overriding_properties(self):
@@ -247,7 +249,7 @@ node_types:
             key2:
                 default: "val2"
     """
-        result = parse(yaml)
+        result = self.parse(yaml)
         # this will also check property "key" = "val"
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
@@ -260,7 +262,7 @@ node_types:
         yaml = """
 imports:
     -   {0}""".format(imported_alias)
-        result = parse(yaml,
+        result = self.parse(yaml,
                        alias_mapping_dict={'{0}'.format(imported_alias):
                                            '{0}'.format(imported_filename)})
         self._assert_minimal_blueprint(result)
@@ -274,7 +276,7 @@ imports:
     -   {0}""".format(imported_alias)
         alias_path = self.make_alias_yaml_file({
             '{0}'.format(imported_alias): '{0}'.format(imported_filename)})
-        result = parse(yaml, alias_mapping_url=alias_path)
+        result = self.parse(yaml, alias_mapping_url=alias_path)
         self._assert_minimal_blueprint(result)
 
     def test_instance_relationship_base_property(self):
@@ -319,7 +321,7 @@ relationships:
     derived_from_contained_in:
         derived_from: cloudify.relationships.contained_in
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(7, len(result['nodes']))
         nodes = self._sort_result_nodes(
             result['nodes'],
@@ -347,7 +349,7 @@ node_types:
     test_type:
         properties: {}
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -362,7 +364,7 @@ node_types:
         properties:
             key: {}
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -381,7 +383,7 @@ node_types:
             key:
                 description: property_desc
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -402,7 +404,7 @@ node_types:
                 description: property_desc
                 type: string
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -433,7 +435,7 @@ node_types:
             key3:
                 default: "val3_parent"
     """
-        result = parse(yaml)
+        result = self.parse(yaml)
         # this will also check property "key" = "val"
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
@@ -450,7 +452,7 @@ node_types:
             key2:
                 default: "val2"
     """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self.assertEqual(1, len(node[TYPE_HIERARCHY]))
         self.assertEqual('test_type', node[TYPE_HIERARCHY][0])
@@ -467,7 +469,7 @@ node_types:
                 default: "val2"
     test_type_parent: {}
     """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self.assertEqual(2, len(node[TYPE_HIERARCHY]))
         self.assertEqual('test_type_parent', node[TYPE_HIERARCHY][0])
@@ -488,7 +490,7 @@ node_types:
 
     parent_type: {}
     """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self.assertEqual(3, len(node[TYPE_HIERARCHY]))
         self.assertEqual('parent_type', node[TYPE_HIERARCHY][0])
@@ -506,7 +508,7 @@ type_implementations:
         type: specific_test_type
         node_ref: test_node
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self.assertEqual(2, len(node[TYPE_HIERARCHY]))
         self.assertEqual('test_type', node[TYPE_HIERARCHY][0])
@@ -545,7 +547,7 @@ node_types:
 
     test_type_grandgrandparent: {}
     """
-        result = parse(yaml)
+        result = self.parse(yaml)
         # this will also check property "key" = "val"
         self._assert_minimal_blueprint(result)
         node = result['nodes'][0]
@@ -595,7 +597,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_blueprint(result)
         node = result['nodes'][0]
         operations = node['operations']
@@ -648,7 +650,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_blueprint(result)
         node = result['nodes'][0]
         operations = node['operations']
@@ -682,7 +684,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         operations = node['operations']
@@ -712,12 +714,12 @@ imports:
         top_level_yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 imports:
     -   {0}""".format(mid_file_name)
-        result = parse(top_level_yaml)
+        result = self.parse(top_level_yaml)
         self._assert_blueprint(result)
 
     def test_import_from_file_uri(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT], True)
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
 
     def test_relative_file_uri_import(self):
@@ -732,14 +734,14 @@ imports:
         top_level_yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 imports:
     -   {0}""".format('file:///' + pathname2url(mid_file_name))
-        result = parse(top_level_yaml)
+        result = self.parse(top_level_yaml)
         self._assert_blueprint(result)
 
     def test_empty_top_level_relationships(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships: {}
                         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
         self.assertEquals(0, len(result['relationships']))
 
@@ -748,7 +750,7 @@ relationships: {}
 relationships:
     test_relationship: {}
                         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
         self.assertDictEqual({'name': 'test_relationship'},
                              result['relationships']['test_relationship'])
@@ -766,7 +768,7 @@ relationships:
             test_interface4:
                 - test_interface4_op1: test_plugin.task_name
         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_blueprint(result)
         self.assertDictEqual({'name': 'empty_rel'},
                              result['relationships']['empty_rel'])
@@ -812,7 +814,7 @@ relationships:
 imports:
     -   {0}""".format(mid_file_name)
 
-        result = parse(top_level_yaml)
+        result = self.parse(top_level_yaml)
         self._assert_blueprint(result)
         self.assertDictEqual({'name': 'empty_rel'},
                              result['relationships']['empty_rel'])
@@ -866,7 +868,7 @@ relationships:
                     comp1: 1
                     comp2: 2
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
         relationships = result['relationships']
         self.assertEquals(1, len(relationships))
@@ -912,7 +914,7 @@ relationships:
                 default: prop6_value_3
             prop7: {}
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
         relationships = result['relationships']
         self.assertEquals(3, len(relationships))
@@ -973,7 +975,7 @@ relationships:
         yaml = self.MINIMAL_BLUEPRINT + """
         relationships: []
                 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
         self.assertListEqual([], result['nodes'][0]['relationships'])
 
@@ -994,7 +996,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1033,7 +1035,7 @@ plugins:
 relationships:
     test_relationship: {}
                     """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1082,7 +1084,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1156,7 +1158,7 @@ relationship_implementations:
             prop5: prop5_value_new
             prop7: prop7_value_new_impl
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1205,7 +1207,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1327,7 +1329,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1441,7 +1443,7 @@ plugins:
 relationships:
     relationship: {}
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1463,7 +1465,7 @@ relationships:
     rel2:
         derived_from: relationship
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1488,7 +1490,7 @@ relationships:
     rel3:
         derived_from: rel2
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1512,7 +1514,7 @@ node_types:
         properties:
             key: {}
             """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals('test_node', result['nodes'][0]['host_id'])
 
     def test_node_host_id_field_via_relationship(self):
@@ -1537,7 +1539,7 @@ node_types:
 relationships:
     cloudify.relationships.contained_in: {}
             """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals('test_node1', result['nodes'][1]['host_id'])
         self.assertEquals('test_node1', result['nodes'][2]['host_id'])
 
@@ -1551,7 +1553,7 @@ node_types:
     another_type:
         derived_from: cloudify.types.host
             """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals('test_node1', result['nodes'][0]['host_id'])
 
     def test_node_host_id_field_via_relationship_derived_from_inheritance(
@@ -1573,7 +1575,7 @@ relationships:
     test_relationship:
         derived_from: cloudify.relationships.contained_in
             """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals('test_node1', result['nodes'][1]['host_id'])
 
     def test_node_plugins_to_install_field(self):
@@ -1591,7 +1593,7 @@ plugins:
         executor: host_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         plugin = result['nodes'][0]['plugins_to_install'][0]
         self.assertEquals('test_plugin', plugin['name'])
         self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
@@ -1618,7 +1620,7 @@ node_types:
                 - install: test_plugin.install
 
         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
         self.assertTrue(plugin['install'])
         self.assertEqual('dummy', plugin['source'])
@@ -1645,7 +1647,7 @@ node_types:
                 - install: test_plugin.install
 
         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
         self.assertFalse(plugin['install'])
         self.assertEqual('dummy', plugin['source'])
@@ -1671,7 +1673,7 @@ node_types:
                 - install: test_plugin.install
 
         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
         self.assertFalse(plugin['install'])
 
@@ -1696,7 +1698,7 @@ node_types:
                 - install: test_plugin.install
 
         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
         self.assertTrue(plugin['install'])
         self.assertEqual('dummy', plugin['source'])
@@ -1748,7 +1750,7 @@ plugins:
         executor: host_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
 
         self.assertEquals(4, len(result['nodes']))
         nodes = self._sort_result_nodes(
@@ -1769,7 +1771,7 @@ plugins:
 
     def test_node_cloudify_runtime_property(self):
         yaml = self.MINIMAL_BLUEPRINT
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(
             {},
             result['nodes'][0]['properties']['cloudify_runtime'])
@@ -1782,7 +1784,7 @@ plugins:
         yaml = """
 imports:
     -   {0}""".format(resource_file_name)
-        result = parse(yaml,
+        result = self.parse(yaml,
                        resources_base_url=file_url[:-len(resource_file_name)])
         self._assert_minimal_blueprint(result)
 
@@ -1791,7 +1793,7 @@ imports:
         file_name = self.make_file_with_name(
             self.MINIMAL_BLUEPRINT, resource_file_name, 'resources')
         file_url = self._path2url(file_name)
-        yaml = """
+        yaml = self.BASIC_VERSION_SECTION + """
 imports:
     -   {0}""".format(resource_file_name)
         top_file = self.make_yaml_file(yaml, True)
@@ -1817,7 +1819,7 @@ imports:
 imports:
     -   {0}""".format(mid_file_name)
 
-        result = parse(top_level_yaml)
+        result = self.parse(top_level_yaml)
         self._assert_blueprint(result)
 
     def test_recursive_imports_with_complete_circle(self):
@@ -1833,7 +1835,9 @@ imports:
     -   {0}""".format(bottom_file_name)
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
-        top_level_yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+        top_level_yaml = \
+            self.BASIC_VERSION_SECTION + self.BASIC_NODE_TEMPLATES_SECTION +\
+            """
 imports:
     -   {0}""".format(mid_file_name)
         top_file_name = self.make_file_with_name(
@@ -1852,7 +1856,7 @@ node_types:
         properties:
             key: {}
             """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_blueprint(result)
 
     def test_node_without_host_id(self):
@@ -1865,7 +1869,7 @@ node_types:
         properties:
             key: {}
         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1901,7 +1905,7 @@ plugins:
         source: dummy
 """
 
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1944,7 +1948,7 @@ plugins:
         instances:
             deploy: 2
             """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -1961,7 +1965,7 @@ node_types:
     test_type2: {}
         """
 
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -1988,7 +1992,7 @@ node_types:
                     properties:
                         key: "value"
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         operations = node['operations']
@@ -2019,7 +2023,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -2050,7 +2054,7 @@ node_types:
 
 
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         operations = node['operations']
@@ -2086,7 +2090,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -2112,7 +2116,7 @@ type_implementations:
         type: specific_test_type
         node_ref: test_node
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result,
                                        expected_type='specific_test_type',
                                        expected_declared_type='test_type')
@@ -2134,7 +2138,7 @@ type_implementations:
         properties:
             mandatory: mandatory_value
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self._assert_minimal_blueprint(result,
                                        expected_type='specific_test_type',
                                        expected_declared_type='test_type')
@@ -2162,7 +2166,7 @@ relationship_implementations:
         source_node_ref: test_node2
         target_node_ref: test_node
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -2201,7 +2205,7 @@ relationship_implementations:
         source_node_ref: test_node2
         target_node_ref: test_node
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(2, len(result['nodes']))
         nodes = self._sort_result_nodes(result['nodes'], ['test_node',
                                                           'test_node2'])
@@ -2230,7 +2234,7 @@ node_types:
                     properties:
                         mapped: { get_property: "some_prop.nested" }
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         operations = node['operations']
@@ -2257,7 +2261,7 @@ node_types:
                         mapped: { get_property: "some_prop[0]" }
 
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         operations = node['operations']
@@ -2268,14 +2272,14 @@ node_types:
                           operations['test_interface1.install'])
 
     def test_no_workflows(self):
-        result = parse(self.MINIMAL_BLUEPRINT)
+        result = self.parse(self.MINIMAL_BLUEPRINT)
         self.assertEquals(result['workflows'], {})
 
     def test_empty_workflows(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 workflows: {}
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEqual(result['workflows'], {})
 
     def test_workflow_basic_mapping(self):
@@ -2283,7 +2287,7 @@ workflows: {}
 workflows:
     workflow1: test_plugin.workflow1
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         workflows = result['workflows']
         self.assertEqual(1, len(workflows))
         self.assertEqual(op_struct('test_plugin', 'workflow1'),
@@ -2308,7 +2312,7 @@ workflows:
                         - val1
                         - val2
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         workflows = result['workflows']
         self.assertEqual(1, len(workflows))
         parameters = {
@@ -2349,7 +2353,7 @@ workflows:
             workflows1,
             workflows2
         ])
-        result = parse(yaml)
+        result = self.parse(yaml)
         workflows = result['workflows']
         self.assertEqual(2, len(workflows))
         self.assertEqual(op_struct('test_plugin', 'workflow1'),
@@ -2373,7 +2377,7 @@ relationships:
     test_relationship:
         properties: {}
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -2388,7 +2392,7 @@ relationships:
         properties:
             key: {}
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -2404,7 +2408,7 @@ relationships:
             key:
                 description: property_desc
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -2423,7 +2427,7 @@ relationships:
                 description: property_desc
                 type: string
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -2441,7 +2445,7 @@ workflows:
         mapping: test_plugin.workflow1
         parameters: {}
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -2457,7 +2461,7 @@ workflows:
         parameters:
             key: {}
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -2474,7 +2478,7 @@ workflows:
             key:
                 description: parameter_desc
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -2494,7 +2498,7 @@ workflows:
                 description: parameter_desc
                 type: string
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -2513,7 +2517,7 @@ workflows:
                     properties=dict())))
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
             yml.safe_dump(policy_types)
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertDictEqual(result['policy_types'],
                              policy_types['policy_types'])
 
@@ -2526,7 +2530,7 @@ workflows:
                         property=dict()))))
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
             yml.safe_dump(policy_types)
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertDictEqual(result['policy_types'],
                              policy_types['policy_types'])
 
@@ -2540,7 +2544,7 @@ workflows:
                             description='property description')))))
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
             yml.safe_dump(policy_types)
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertDictEqual(result['policy_types'],
                              policy_types['policy_types'])
 
@@ -2554,7 +2558,7 @@ workflows:
                             default='default_value')))))
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
             yml.safe_dump(policy_types)
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertDictEqual(result['policy_types'],
                              policy_types['policy_types'])
 
@@ -2570,7 +2574,7 @@ workflows:
                             type='string')))))
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + '\n' + \
             yml.safe_dump(policy_types)
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertDictEqual(result['policy_types'],
                              policy_types['policy_types'])
 
@@ -2596,7 +2600,7 @@ workflows:
             policy_types=policy_types[0]['policy_types'])
         expected_result['policy_types'].update(policy_types[1]['policy_types'])
 
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertDictEqual(result['policy_types'],
                              expected_result['policy_types'])
 
@@ -2624,7 +2628,7 @@ workflows:
         expected_result['policy_triggers'].update(policy_triggers[1][
             'policy_triggers'])
 
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertDictEqual(result['policy_triggers'],
                              expected_result['policy_triggers'])
 
@@ -2650,7 +2654,7 @@ groups:
                     key2: group_value2
                     key3: group_value3
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         groups = result['groups']
         self.assertEqual(1, len(groups))
         group = groups['group']
@@ -2692,7 +2696,7 @@ policy_types:
             groups=groups[0]['groups'])
         expected_result['groups'].update(groups[1]['groups'])
 
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertDictEqual(result['groups'],
                              expected_result['groups'])
 
@@ -2711,7 +2715,7 @@ node_types:
 inputs:
     x: {}
         """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
@@ -2790,11 +2794,35 @@ node_types:
             float5:
                 type: float
                 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result['nodes']))
         node = result['nodes'][0]
         self.assertEquals('test_node', node['id'])
 
+    def test_version_field(self):
+        yaml = self.MINIMAL_BLUEPRINT + self.BASIC_VERSION_SECTION
+        result = dsl_parse(yaml)
+        self._assert_minimal_blueprint(result)
+
+    def test_version_field_with_versionless_imports(self):
+        imported_yaml = str()
+        imported_yaml_filename = self.make_yaml_file(imported_yaml)
+        yaml = """
+imports:
+    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION + \
+               self.MINIMAL_BLUEPRINT
+        result = dsl_parse(yaml)
+        self._assert_minimal_blueprint(result)
+
+    def test_version_field_with_imports_with_version(self):
+        imported_yaml = self.BASIC_VERSION_SECTION
+        imported_yaml_filename = self.make_yaml_file(imported_yaml)
+        yaml = """
+imports:
+    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION + \
+               self.MINIMAL_BLUEPRINT
+        result = dsl_parse(yaml)
+        self._assert_minimal_blueprint(result)
 
 class DeploymentPluginsToInstallTest(AbstractTestParser):
 
@@ -2817,7 +2845,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         deployment_plugins_to_install_for_node = \
             result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(1, len(deployment_plugins_to_install_for_node))
@@ -2844,7 +2872,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         self.assertEquals(1, len(result[DEPLOYMENT_PLUGINS_TO_INSTALL]))
 
     def test_same_plugin_one_two_nodes(self):
@@ -2866,7 +2894,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         for node in result['nodes']:
             deployment_plugins_to_install_for_node = \
                 node[DEPLOYMENT_PLUGINS_TO_INSTALL]
@@ -2900,7 +2928,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         deployment_plugins_to_install_for_node = \
             result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(2, len(deployment_plugins_to_install_for_node))
@@ -2930,7 +2958,7 @@ plugins:
         executor: host_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         deployment_plugins_to_install_for_node = \
             result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(0, len(deployment_plugins_to_install_for_node))
@@ -2958,7 +2986,7 @@ plugins:
         executor: central_deployment_agent
         source: dummy
 """
-        result = parse(yaml)
+        result = self.parse(yaml)
         deployment_plugins_to_install_for_node = \
             result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(1, len(deployment_plugins_to_install_for_node))

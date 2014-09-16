@@ -32,6 +32,9 @@ from dsl_parser import functions
 from dsl_parser import utils
 from dsl_parser import schemas
 
+SUPPORTED_VERSIONS = ['cloudify_1_0']
+
+VERSION = 'tosca_definitions_version'
 NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
 NODE_TYPES = 'node_types'
@@ -125,8 +128,8 @@ def _load_yaml(yaml_stream, error_message):
         raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'
                                         .format(error_message, ex))
     if parsed_dsl is None:
-        raise DSLParsingFormatException(0, '{0}: Empty yaml'
-                                        .format(error_message))
+        # empty yaml file
+        parsed_dsl = {}
     return parsed_dsl
 
 
@@ -170,6 +173,13 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                                            dsl_location, resources_base_url)
 
     _validate_dsl_schema(combined_parsed_dsl)
+
+    dsl_version = combined_parsed_dsl[VERSION]
+    if dsl_version not in SUPPORTED_VERSIONS:
+        raise DSLParsingLogicException(
+            29, 'Unexpected tosca_definitions_version {0}; Currently '
+                'supported version are: {1}'.format(dsl_version,
+                                                    SUPPORTED_VERSIONS))
 
     nodes = combined_parsed_dsl[NODE_TEMPLATES]
     node_names_set = {node_name for node_name in nodes.keys()}
@@ -1354,9 +1364,15 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
     _replace_ref_with_inline_paths(combined_parsed_dsl, dsl_location,
                                    alias_mapping, resources_base_url)
 
+    if VERSION not in parsed_dsl:
+        raise DSLParsingLogicException(
+            27, '{0} field must appear in the main blueprint file'.format(
+                VERSION))
+
     if IMPORTS not in parsed_dsl:
         return combined_parsed_dsl
 
+    dsl_version = parsed_dsl[VERSION]
     _validate_imports_section(parsed_dsl[IMPORTS], dsl_location)
 
     ordered_imports_list = []
@@ -1380,6 +1396,20 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
                     .format(single_import, ex.message))
             error.failed_import = single_import
             raise error
+
+        if VERSION in parsed_imported_dsl:
+            imported_dsl_version = parsed_imported_dsl[VERSION]
+            if imported_dsl_version != dsl_version:
+                raise DSLParsingLogicException(
+                    28, "An import uses a different "
+                        "tosca_definitions_version than the one defined in "
+                        "the main blueprint's file: main blueprint's file "
+                        "version is {0}, import with different version is {"
+                        "1}, version of problematic import is {2}".format(
+                            dsl_version, single_import, imported_dsl_version))
+            # no need to keep imported dsl's version - it's only used for
+            # validation against the main blueprint's version
+            del parsed_imported_dsl[VERSION]
 
         _replace_ref_with_inline_paths(parsed_imported_dsl, single_import,
                                        alias_mapping, resources_base_url)
