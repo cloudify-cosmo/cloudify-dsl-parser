@@ -13,6 +13,28 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+
+import os
+import copy
+import contextlib
+import re
+from urllib import pathname2url
+from urllib2 import urlopen, URLError
+from collections import OrderedDict
+from collections import namedtuple
+
+import yaml
+from jsonschema import validate, ValidationError
+from yaml.parser import ParserError
+
+from dsl_parser import constants
+from dsl_parser import functions
+from dsl_parser import utils
+from dsl_parser import schemas
+
+SUPPORTED_VERSIONS = ['cloudify_1_0']
+
+VERSION = 'tosca_definitions_version'
 NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
 NODE_TYPES = 'node_types'
@@ -40,35 +62,8 @@ CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
 PLUGIN_INSTALLER_PLUGIN = 'plugin_installer'
 AGENT_INSTALLER_PLUGIN = "agent_installer"
 WINDOWS_PLUGIN_INSTALLER_PLUGIN = 'windows_plugin_installer'
-WINDOWS_AGENT_INSTALLER_PLUGIN = "windows_agent_installer"
-
-PLUGINS_TO_INSTALL_EXCLUDE_LIST = {PLUGIN_INSTALLER_PLUGIN,
-                                   WINDOWS_PLUGIN_INSTALLER_PLUGIN}
-MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST \
-    = {PLUGIN_INSTALLER_PLUGIN,
-       AGENT_INSTALLER_PLUGIN, WINDOWS_PLUGIN_INSTALLER_PLUGIN,
-       WINDOWS_AGENT_INSTALLER_PLUGIN}
-
-import os
-import copy
-import contextlib
-import re
-
-from urllib import pathname2url
-from urllib2 import urlopen, URLError
-from collections import OrderedDict
-from collections import namedtuple
-
-import yaml
-from jsonschema import validate, ValidationError
-from yaml.parser import ParserError
-
-from dsl_parser import functions
-from dsl_parser import models
-from dsl_parser import scan
-from dsl_parser.schemas import DSL_SCHEMA, IMPORTS_SCHEMA
-
-
+WINDOWS_AGENT_INSTALLER_PLUGIN = 'windows_agent_installer'
+DEFAULT_WORKFLOWS_PLUGIN = 'default_workflows'
 OpDescriptor = namedtuple('OpDescriptor', [
     'plugin', 'op_struct', 'name'])
 
@@ -133,21 +128,24 @@ def _load_yaml(yaml_stream, error_message):
         raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'
                                         .format(error_message, ex))
     if parsed_dsl is None:
-        raise DSLParsingFormatException(0, '{0}: Empty yaml'
-                                        .format(error_message))
+        # empty yaml file
+        parsed_dsl = {}
     return parsed_dsl
 
 
-def _create_plan_management_plugins(processed_nodes):
-    management_plugins = []
-    management_plugin_names = set()
+def _create_plan_deployment_plugins(processed_nodes):
+    deployment_plugins = []
+    deployment_plugin_names = set()
     for node in processed_nodes:
-        if "management_plugins_to_install" in node:
-            for management_plugin in node['management_plugins_to_install']:
-                if management_plugin['name'] not in management_plugin_names:
-                    management_plugins.append(management_plugin)
-                    management_plugin_names.add(management_plugin['name'])
-    return management_plugins
+        if constants.DEPLOYMENT_PLUGINS_TO_INSTALL in node:
+            for management_plugin in \
+                    node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
+                if management_plugin[constants.PLUGIN_NAME_KEY] \
+                        not in deployment_plugin_names:
+                    deployment_plugins.append(management_plugin)
+                    deployment_plugin_names\
+                        .add(management_plugin[constants.PLUGIN_NAME_KEY])
+    return deployment_plugins
 
 
 def _create_plan_workflow_plugins(workflows, plugins):
@@ -163,6 +161,7 @@ def _create_plan_workflow_plugins(workflows, plugins):
 
 def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
            resources_base_url, dsl_location=None):
+
     alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
 
     parsed_dsl = _load_yaml(dsl_string, 'Failed to parse DSL')
@@ -174,6 +173,13 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                                            dsl_location, resources_base_url)
 
     _validate_dsl_schema(combined_parsed_dsl)
+
+    dsl_version = combined_parsed_dsl[VERSION]
+    if dsl_version not in SUPPORTED_VERSIONS:
+        raise DSLParsingLogicException(
+            29, 'Unexpected tosca_definitions_version {0}; Currently '
+                'supported version are: {1}'.format(dsl_version,
+                                                    SUPPORTED_VERSIONS))
 
     nodes = combined_parsed_dsl[NODE_TEMPLATES]
     node_names_set = {node_name for node_name in nodes.keys()}
@@ -202,7 +208,10 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                         _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS),
                         processed_plugins,
                         type_impls,
-                        relationship_impls)
+                        relationship_impls,
+                        node_names_set,
+                        inputs,
+                        outputs)
 
     processed_workflows = _process_workflows(
         combined_parsed_dsl.get(WORKFLOWS, {}),
@@ -211,7 +220,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         processed_workflows,
         processed_plugins)
 
-    plan_management_plugins = _create_plan_management_plugins(processed_nodes)
+    plan_management_plugins = _create_plan_deployment_plugins(processed_nodes)
 
     policy_types = _process_policy_types(
         combined_parsed_dsl.get(POLICY_TYPES, {}))
@@ -225,7 +234,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         policy_triggers,
         processed_nodes)
 
-    plan = models.Plan({
+    plan = {
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
         WORKFLOWS: processed_workflows,
@@ -233,18 +242,17 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         POLICY_TRIGGERS: policy_triggers,
         GROUPS: groups,
         INPUTS: inputs,
+        constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_management_plugins,
         OUTPUTS: outputs,
-        'management_plugins_to_install': plan_management_plugins,
         'workflow_plugins_to_install': workflow_plugins_to_install
-    })
-
-    _process_functions(plan)
+    }
 
     return plan
 
 
 def _post_process_nodes(processed_nodes, types, relationships, plugins,
-                        type_impls, relationship_impls):
+                        type_impls, relationship_impls, node_names,
+                        inputs, outputs):
     node_name_to_node = {node['id']: node for node in processed_nodes}
 
     depends_on_rel_types = _build_family_descendants_set(
@@ -272,11 +280,9 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
             node['host_id'] = host_id
 
     # set plugins_to_install property for nodes
-    # set management_plugins_to_install property nodes
     for node in processed_nodes:
         if node['type'] in host_types:
             plugins_to_install = {}
-            management_plugins_to_install = {}
             for another_node in processed_nodes:
                 # going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
@@ -286,24 +292,26 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                     # ok to override here since we assume it is the same plugin
                     for plugin_name, plugin_obj in \
                             another_node[PLUGINS].iteritems():
-                        # only wish to add agent plugins, and only if they're
-                        # not in the excluded plugins list
-                        if plugin_obj['agent_plugin'] == 'true' and \
-                                plugin_obj['name'] not in \
-                                PLUGINS_TO_INSTALL_EXCLUDE_LIST:
+                        if plugin_obj[constants.PLUGIN_EXECUTOR_KEY]\
+                                == constants.HOST_AGENT:
                             plugins_to_install[plugin_name] = plugin_obj
-                        if plugin_obj['manager_plugin'] == 'true' and \
-                                plugin_obj['name'] not in \
-                                MANAGEMENT_PLUGINS_TO_INSTALL_EXCLUDE_LIST:
-                            management_plugins_to_install[plugin_name] \
-                                = plugin_obj
             node['plugins_to_install'] = plugins_to_install.values()
-            node['management_plugins_to_install'] \
-                = management_plugins_to_install.values()
+
+    # set deployment_plugins_to_install property for nodes
+    for node in processed_nodes:
+        deployment_plugins_to_install = {}
+        for plugin_name, plugin_obj in node[PLUGINS].iteritems():
+            if plugin_obj[constants.PLUGIN_EXECUTOR_KEY] \
+                    == constants.CENTRAL_DEPLOYMENT_AGENT:
+                deployment_plugins_to_install[plugin_name] = plugin_obj
+        node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] = \
+            deployment_plugins_to_install.values()
 
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
     _validate_relationship_impls(relationship_impls)
+    _validate_inputs(processed_nodes, inputs)
+    _validate_outputs(processed_nodes, outputs)
 
 
 def _create_type_hierarchy(type_name, types):
@@ -374,6 +382,62 @@ def _add_base_type_to_relationship(relationship,
     relationship['base'] = base
 
 
+pattern = re.compile("(.+)\[(\d+)\]")
+
+
+def _expand(context_properties, node_properties, node_id, operation_name):
+
+    def raise_exception(property_path):
+        ex = DSLParsingLogicException(
+            104, 'Mapped property {0} does not exist in the '
+                 'context node properties {1} (node {2}, '
+                 'operation {3})'.format(property_path,
+                                         node_properties,
+                                         node_id,
+                                         operation_name))
+        ex.property_name = property_path
+        raise ex
+
+    if not context_properties:
+        return None
+    result = {}
+    for key, value in context_properties.items():
+        if type(value) == dict:
+            if len(value) == 1 and value.keys()[0] == 'get_property':
+                property_path = value.values()[0]
+                current_properties_level = node_properties
+                for property_segment in property_path.split('.'):
+                    match = pattern.match(property_segment)
+                    if match:
+                        index = int(match.group(2))
+                        property_name = match.group(1)
+                        if property_name not in current_properties_level:
+                            raise_exception(property_path)
+                        if type(current_properties_level[property_name]) != \
+                                list:
+                            raise_exception(property_path)
+                        current_properties_level = \
+                            current_properties_level[property_name][index]
+                    else:
+                        if property_segment not in current_properties_level:
+                            raise_exception(property_path)
+                        current_properties_level = \
+                            current_properties_level[property_segment]
+                    result[key] = current_properties_level
+            else:
+                if 'get_property' in value:
+                    raise DSLParsingLogicException(
+                        105, "Additional properties are not allowed when "
+                             "using 'get_property' (node {0}, operation {1}, "
+                             "property {2})".format(key,
+                                                    node_id, operation_name))
+                result[key] = _expand(value, node_properties, node_id,
+                                      operation_name)
+        else:
+            result[key] = value
+    return result
+
+
 def _process_context_operations(partial_error_message, interfaces, plugins,
                                 node, error_code):
     operations = {}
@@ -388,13 +452,18 @@ def _process_context_operations(partial_error_message, interfaces, plugins,
         _validate_no_duplicate_operations(operation_mapping_context,
                                           interface_name, node['id'],
                                           node['type'])
+        # for operation_name, plugin_name, operation_mapping, \
+        #         operation_properties in operation_mapping_context:
         for op_descriptor in operation_mapping_context:
             if op_descriptor.plugin is not None:
                 op_struct = op_descriptor.op_struct
                 plugin_name = op_descriptor.op_struct['plugin']
                 operation_name = op_descriptor.name
-                operation_properties = op_descriptor.op_struct.get(
-                    'properties')
+                operation_properties = _expand(
+                    op_descriptor.op_struct.get('properties'),
+                    _get_dict_prop(node, 'properties'),
+                    node['id'],
+                    operation_name)
                 node[PLUGINS][plugin_name] = op_descriptor.plugin
                 op_struct = op_struct.copy()
                 if operation_properties is not None:
@@ -474,38 +543,43 @@ def _validate_relationship_impls(relationship_impls):
         raise ex
 
 
-def _process_functions(plan):
-    def handler(dict_, k, v, scope, path):
-        func = functions.parse(v, scope=scope, path=path)
-        if isinstance(func, functions.Function):
-            func.validate(plan)
+def _validate_inputs(node_templates, inputs):
+    def handler(dict_, k, v, path):
+        func = functions.parse(v, context=path)
+        if isinstance(func, functions.GetInput):
+            func.validate(inputs)
 
-    for node_template in plan['nodes']:
+    for node_template in node_templates:
         node_name = node_template['name']
-        scan.scan_properties(node_template['properties'],
-                             handler,
-                             scope=node_template,
-                             path='{0}.properties'.format(node_name))
-        scan.scan_node_operation_properties(node_template, handler)
+        utils.scan_properties(node_template['properties'],
+                              handler,
+                              '{0}.properties'.format(node_name))
+        utils.scan_node_operation_properties(node_template, handler)
 
-    for output_name, output in plan['outputs'].iteritems():
-        scan.scan_properties(output, handler,
-                             scope=scan.OUTPUTS_SCOPE,
-                             context=plan['outputs'],
-                             path='output.{0}'.format(output_name))
+
+def _validate_outputs(node_templates, outputs):
+    def handler(dict_, k, v, _):
+        func = functions.parse(v)
+        if isinstance(func, functions.GetAttribute):
+            func.validate(node_templates)
+    for output in outputs.values():
+        utils.scan_properties(output, handler, 'outputs')
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
     for node in processed_nodes:
         if 'host_id' not in node and PLUGINS in node:
             for plugin in node[PLUGINS].itervalues():
-                if plugin['agent_plugin'] == 'true':
+                if plugin[constants.PLUGIN_EXECUTOR_KEY] \
+                        == constants.HOST_AGENT:
                     raise DSLParsingLogicException(
                         24, "node {0} has no relationship which makes it "
-                            "contained within a host and it has an agent "
-                            "plugin named {1}, agent plugins must be "
+                            "contained within a host and it has a "
+                            "plugin[{1}] with '{2}' as an executor. "
+                            "These types of plugins must be "
                             "installed on a host".format(node['id'],
-                                                         plugin['name']))
+                                                         plugin['name'],
+                                                         constants.HOST_AGENT))
 
 
 def _build_family_descendants_set(types_dict, derived_from):
@@ -1057,32 +1131,36 @@ def _extract_node_host_id(processed_node, node_name_to_node, host_types,
 
 
 def _process_plugin(plugin, plugin_name):
-    cloudify_plugins = (
-        'cloudify.plugins.agent_plugin',
-        'cloudify.plugins.remote_plugin',
-        'cloudify.plugins.manager_plugin')
-    if plugin_name in cloudify_plugins or \
-            plugin_name == 'cloudify.plugins.plugin':
-        return plugin
-    # 'cloudify.plugins.plugin'
-    if plugin['derived_from'] not in cloudify_plugins:
-        # TODO: consider changing the below exception to type
-        # DSLParsingFormatException..?
+    if plugin[constants.PLUGIN_EXECUTOR_KEY] not \
+            in [constants.CENTRAL_DEPLOYMENT_AGENT,
+                constants.HOST_AGENT]:
         raise DSLParsingLogicException(
-            18, 'plugin {0} has an illegal "derived_from" value {1}; value '
-                'must be either {2} or {3}'.format(
-                    plugin_name,
-                    plugin['derived_from'],
-                    'cloudify.plugins.agent_plugin',
-                    'cloudify.plugins.remote_plugin',
-                    'cloudify.plugins.manager_plugin'))
-    processed_plugin = copy.deepcopy(plugin.get(PROPERTIES, {}))
-    processed_plugin['name'] = plugin_name
-    processed_plugin['agent_plugin'] = \
-        str(plugin['derived_from'] == 'cloudify.plugins.agent_plugin').lower()
-    processed_plugin['manager_plugin'] = \
-        str(plugin['derived_from']
-            == 'cloudify.plugins.manager_plugin').lower()
+            18, 'plugin {0} has an illegal '
+                '{1} value {2}; value '
+                'must be either {3} or {4}'
+            .format(plugin_name,
+                    constants.PLUGIN_EXECUTOR_KEY,
+                    plugin[constants.PLUGIN_EXECUTOR_KEY],
+                    constants.CENTRAL_DEPLOYMENT_AGENT,
+                    constants.HOST_AGENT))
+
+    plugin_source = plugin.get(constants.PLUGIN_SOURCE_KEY, None)
+    plugin_install = plugin.get(constants.PLUGIN_INSTALL_KEY, True)
+
+    if plugin_install and not plugin_source:
+        raise DSLParsingLogicException(
+            50,
+            "plugin {0} needs to be installed, "
+            "but doe's not declare a {1} property"
+            .format(plugin_name, constants.PLUGIN_SOURCE_KEY)
+        )
+
+    processed_plugin = copy.deepcopy(plugin)
+
+    # augment plugin dictionary
+    processed_plugin[constants.PLUGIN_NAME_KEY] = plugin_name
+    processed_plugin[constants.PLUGIN_INSTALL_KEY] = plugin_install
+    processed_plugin[constants.PLUGIN_SOURCE_KEY] = plugin_source
 
     return processed_plugin
 
@@ -1286,9 +1364,15 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
     _replace_ref_with_inline_paths(combined_parsed_dsl, dsl_location,
                                    alias_mapping, resources_base_url)
 
+    if VERSION not in parsed_dsl:
+        raise DSLParsingLogicException(
+            27, '{0} field must appear in the main blueprint file'.format(
+                VERSION))
+
     if IMPORTS not in parsed_dsl:
         return combined_parsed_dsl
 
+    dsl_version = parsed_dsl[VERSION]
     _validate_imports_section(parsed_dsl[IMPORTS], dsl_location)
 
     ordered_imports_list = []
@@ -1312,6 +1396,20 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
                     .format(single_import, ex.message))
             error.failed_import = single_import
             raise error
+
+        if VERSION in parsed_imported_dsl:
+            imported_dsl_version = parsed_imported_dsl[VERSION]
+            if imported_dsl_version != dsl_version:
+                raise DSLParsingLogicException(
+                    28, "An import uses a different "
+                        "tosca_definitions_version than the one defined in "
+                        "the main blueprint's file: main blueprint's file "
+                        "version is {0}, import with different version is {"
+                        "1}, version of problematic import is {2}".format(
+                            dsl_version, single_import, imported_dsl_version))
+            # no need to keep imported dsl's version - it's only used for
+            # validation against the main blueprint's version
+            del parsed_imported_dsl[VERSION]
 
         _replace_ref_with_inline_paths(parsed_imported_dsl, single_import,
                                        alias_mapping, resources_base_url)
@@ -1447,7 +1545,7 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list,
 
 def _validate_dsl_schema(parsed_dsl):
     try:
-        validate(parsed_dsl, DSL_SCHEMA)
+        validate(parsed_dsl, schemas.DSL_SCHEMA)
     except ValidationError, ex:
         raise DSLParsingFormatException(
             1, '{0}; Path to error: {1}'
@@ -1460,7 +1558,7 @@ def _validate_imports_section(imports_section, dsl_location):
     # while the standard validation runs only after combining all imports
     # together
     try:
-        validate(imports_section, IMPORTS_SCHEMA)
+        validate(imports_section, schemas.IMPORTS_SCHEMA)
     except ValidationError, ex:
         raise DSLParsingFormatException(
             2, 'Improper "imports" section in yaml {0}; {1}; Path to error: '

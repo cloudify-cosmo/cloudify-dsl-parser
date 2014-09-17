@@ -16,6 +16,7 @@
 __author__ = 'ran'
 
 from dsl_parser.parser import DSLParsingFormatException
+from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
@@ -23,7 +24,7 @@ class TestParserFormatExceptions(AbstractTestParser):
 
     def test_empty_dsl(self):
         self._assert_dsl_parsing_exception_error_code(
-            '', 0, DSLParsingFormatException)
+            '', 1, DSLParsingFormatException)
 
     def test_illegal_yaml_dsl(self):
         yaml = """
@@ -35,13 +36,12 @@ plugins:
         self._assert_dsl_parsing_exception_error_code(
             yaml, -1, DSLParsingFormatException)
 
-    def test_no_blueprint(self):
+    def test_no_node_templates(self):
         yaml = """
 plugins:
     plugin1:
-        derived_from: cloudify.plugins.remote_plugin
-        properties:
-            url: some_url
+        executor: central_deployment_agent
+        source: dummy
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -191,17 +191,6 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_plugin_without_url(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-plugins:
-    test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
     def test_import_bad_syntax(self):
         yaml = """
 imports: fake-file.yaml
@@ -258,36 +247,22 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_plugin_without_derived_from_field(self):
+    def test_plugin_without_executor_field(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 plugins:
     test_plugin:
-        properties:
-            url: "http://test_url.zip"
+        source: dummy
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_plugin_with_url_and_extra_properties(self):
+    def test_plugin_extra_properties(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "http://test_url.zip"
-            extra_prop: "some_val"
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_plugin_with_folder_and_extra_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-plugins:
-    test_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            folder: "http://test_url.zip"
-            extra_prop: "some_val"
+        executor: central_deployment_agent
+        source: dummy
+        another_field: bad
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -1139,3 +1114,10 @@ node_types:
                 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
+
+    def test_invalid_version_field_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+tosca_definitions_version: [cloudify_1_0]
+    """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException, dsl_parse)

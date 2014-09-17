@@ -278,6 +278,9 @@ MEMBERS_SCHEMA['minItems'] = 1
 DSL_SCHEMA = {
     'type': 'object',
     'properties': {
+        'tosca_definitions_version': {
+            'type': 'string'
+        },
         'node_templates': {
             'type': 'object',
             'patternProperties': {
@@ -335,44 +338,20 @@ DSL_SCHEMA = {
         'plugins': {
             'type': 'object',
             'patternProperties': {
-                #this is specifically for the root plugin, not meant for other uses
-                '^cloudify.plugins.plugin$': {
-                    'type': 'object',
-                    'properties': {},
-                    'additionalProperties': False
-                },
-                '^((?!cloudify\.plugins\.plugin).*)$|^cloudify\.plugins\.plugin.+$': {
+                '^': {
                     'type': 'object',
                     'properties': {
-                        'derived_from': {
+                        'source': {
                             'type': 'string'
                         },
-                        #non-meta 'properties'
-                        'properties': {
-                            'type': 'object',
-                            'oneOf': [
-                                {
-                                    'properties': {
-                                        'url': {
-                                            'type': 'string'
-                                        }
-                                    },
-                                    'required': ['url'],
-                                    'additionalProperties': False
-                                },
-                                {
-                                    'properties': {
-                                        'folder': {
-                                            'type': 'string'
-                                        }
-                                    },
-                                    'required': ['folder'],
-                                    'additionalProperties': False
-                                }
-                            ]
+                        'executor': {
+                            'type': 'string'
+                        },
+                        'install': {
+                            'type': 'boolean'
                         }
                     },
-                    'required': ['derived_from'],
+                    'required': ['executor'],
                     'additionalProperties': False
                 }
             },
@@ -553,6 +532,6 @@ DSL_SCHEMA = {
         'inputs': PROPERTIES_SCHEMA_SCHEMA,
         'outputs': OUTPUTS_SCHEMA
     },
-    'required': ['node_templates'],
+    'required': ['tosca_definitions_version', 'node_templates'],
     'additionalProperties': False
 }

@@ -13,23 +13,21 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import unittest
-
 from dsl_parser import exceptions
 from dsl_parser import functions
-from dsl_parser.parser import parse
 from dsl_parser.parser import DSLParsingFormatException
 from dsl_parser.tasks import prepare_deployment_plan
+from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
-class TestOutputs(unittest.TestCase):
+class TestOutputs(AbstractTestParser):
 
     def test_outputs_definition(self):
         yaml = """
 node_templates: {}
 outputs: {}
 """
-        parsed = parse(yaml)
+        parsed = self.parse(yaml)
         self.assertEqual(0, len(parsed['outputs']))
 
     def test_outputs_valid_output(self):
@@ -52,7 +50,7 @@ outputs:
         description: p4
         value: false
 """
-        parsed = parse(yaml)
+        parsed = self.parse(yaml)
         outputs = parsed['outputs']
         self.assertEqual(5, len(parsed['outputs']))
         self.assertEqual('p0', outputs['port0']['description'])
@@ -75,7 +73,7 @@ outputs:
     port:
         description: p0
 """
-        self.assertRaises(DSLParsingFormatException, parse, yaml)
+        self.assertRaises(DSLParsingFormatException, self.parse, yaml)
 
     def test_valid_get_attribute(self):
         yaml = """
@@ -89,7 +87,7 @@ outputs:
         description: p0
         value: { get_attribute: [ webserver, port ] }
 """
-        parsed = parse(yaml)
+        parsed = self.parse(yaml)
         outputs = parsed['outputs']
         func = functions.parse(outputs['port']['value'])
         self.assertTrue(isinstance(func, functions.GetAttribute))
@@ -107,7 +105,7 @@ outputs:
         value: { get_attribute: [ webserver, port ] }
 """
         try:
-            parse(yaml)
+            self.parse(yaml)
             self.fail('Expected exception.')
         except KeyError, e:
             self.assertTrue('does not exist' in str(e))
@@ -119,7 +117,7 @@ outputs:
         value: { get_attribute: aaa }
 """
         try:
-            parse(yaml)
+            self.parse(yaml)
             self.fail('Expected exception.')
         except ValueError, e:
             self.assertTrue('Illegal arguments passed' in str(e))
@@ -139,7 +137,7 @@ outputs:
             port: { get_attribute: [ aaa, port ] }
 """
         try:
-            parse(yaml)
+            self.parse(yaml)
             self.fail('Expected exception.')
         except KeyError, e:
             self.assertTrue('does not exist' in str(e))
@@ -156,7 +154,7 @@ outputs:
         description: p0
         value: { get_attribute: [ webserver, port ] }
 """
-        parsed = parse(yaml)
+        parsed = self.parse(yaml)
 
         def get_node_instances():
             return [
@@ -182,7 +180,7 @@ outputs:
         description: p0
         value: { get_attribute: [ webserver, port ] }
 """
-        parsed = parse(yaml)
+        parsed = self.parse(yaml)
 
         def get_node_instances():
             return []
@@ -206,7 +204,7 @@ outputs:
         description: p0
         value: { get_attribute: [ webserver, port ] }
 """
-        parsed = parse(yaml)
+        parsed = self.parse(yaml)
 
         def get_node_instances():
             node_instance = NodeInstance({

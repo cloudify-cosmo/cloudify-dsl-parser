@@ -19,11 +19,6 @@ import random
 
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.multi_instance import create_multi_instance_plan
-from dsl_parser.parser import parse
-
-
-def parse_multi(yaml):
-    return create_multi_instance_plan(parse(yaml))
 
 
 class TestMultiInstance(AbstractTestParser):
@@ -52,6 +47,9 @@ relationships:
 node_templates:
     """
 
+    def parse_multi(self, yaml):
+        return create_multi_instance_plan(self.parse(yaml))
+
     def setUp(self):
         random.seed(0)
         AbstractTestParser.setUp(self)
@@ -69,7 +67,7 @@ node_templates:
             deploy: 2
 """
 
-        multi_plan = parse_multi(yaml)
+        multi_plan = self.parse_multi(yaml)
         nodes = multi_plan['node_instances']
         self.assertEquals(2, len(nodes))
         self.assertEquals('host_d82c0', nodes[0]['id'])
@@ -88,7 +86,7 @@ node_templates:
             -   type: cloudify.relationships.contained_in
                 target: host
 """
-        multi_plan = parse_multi(yaml)
+        multi_plan = self.parse_multi(yaml)
         nodes = multi_plan['node_instances']
         db = nodes[0]
         host = nodes[1]
@@ -115,7 +113,7 @@ node_templates:
             -   type: cloudify.relationships.contained_in
                 target: host
 """
-        multi_plan = parse_multi(yaml)
+        multi_plan = self.parse_multi(yaml)
         nodes = multi_plan['node_instances']
         self.assertEquals(4, len(nodes))
 
@@ -167,7 +165,7 @@ node_templates:
                 target: db
 """
 
-        multi_plan = parse_multi(yaml)
+        multi_plan = self.parse_multi(yaml)
         nodes = multi_plan['node_instances']
         self.assertEquals(5, len(nodes))
 
@@ -212,7 +210,7 @@ node_templates:
         type: type
 """
 
-        multi_plan = parse_multi(yaml)
+        multi_plan = self.parse_multi(yaml)
         nodes = multi_plan['node_instances']
         self.assertEquals(1, len(nodes))
         self.assertEquals('node1_id_d82c0', nodes[0]['id'])
@@ -265,7 +263,7 @@ node_templates:
             -   type: cloudify.relationships.contained_in
                 target: db
 """
-        multi_plan = parse_multi(yaml)
+        multi_plan = self.parse_multi(yaml)
         nodes = multi_plan['node_instances']
         self.assertEquals(19, len(nodes))
 

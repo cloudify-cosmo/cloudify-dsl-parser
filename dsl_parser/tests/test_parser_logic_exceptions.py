@@ -16,6 +16,7 @@
 __author__ = 'ran'
 
 from dsl_parser.parser import DSLParsingLogicException, parse_from_path
+from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
@@ -79,13 +80,12 @@ node_types:
                                         'test_type_grandparent', 'test_type']
         self.assertEquals(expected_circular_dependency, ex.circular_dependency)
 
-    def test_plugin_with_wrongful_derived_from_field(self):
+    def test_plugin_with_wrongful_executor_field(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 plugins:
     test_plugin:
-        derived_from: "bad value"
-        properties:
-            url: "http://test_url.zip"
+        executor: "bad value"
+        source: dummy
 
 node_types:
     test_type:
@@ -98,6 +98,55 @@ node_types:
         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 18, DSLParsingLogicException)
+
+    def test_plugin_with_missing_install_missing_source(self):
+
+        """
+        Assumes install: True, but no source is defined
+        so it should fail
+
+        """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 50, DSLParsingLogicException)
+
+    def test_plugin_with_install_true_missing_source(self):
+
+        """
+        install: True, but no source is defined
+        so it should fail
+
+        """
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+        install: true
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                - install: test_plugin.install
+
+        """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 50, DSLParsingLogicException)
 
     def test_top_level_relationships_relationship_with_undefined_plugin(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -213,9 +262,8 @@ node_types:
                 - start: test_plugin.start
 plugins:
     test_plugin:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "http://test_plugin.zip"
+        executor: host_agent
+        source: dummy
         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 24, DSLParsingLogicException)
@@ -730,3 +778,38 @@ node_types:
         test_type_with_value('float', '"5.0"')
         test_type_with_value('float', 'NaN')
         test_type_with_value('float', 'inf')
+
+    def test_no_version_field(self):
+        yaml = self.MINIMAL_BLUEPRINT
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 27, DSLParsingLogicException, dsl_parse)
+
+    def test_no_version_field_in_main_blueprint_file(self):
+        imported_yaml = self.BASIC_VERSION_SECTION
+        imported_yaml_filename = self.make_yaml_file(imported_yaml)
+        yaml = """
+imports:
+    -   {0}""".format(imported_yaml_filename) + self.MINIMAL_BLUEPRINT
+
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 27, DSLParsingLogicException, dsl_parse)
+
+    def test_mismatching_version_in_import(self):
+        imported_yaml = """
+tosca_definitions_version: cloudify_1_1
+    """
+        imported_yaml_filename = self.make_yaml_file(imported_yaml)
+        yaml = """
+imports:
+    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION +\
+               self.MINIMAL_BLUEPRINT
+
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 28, DSLParsingLogicException, dsl_parse)
+
+    def test_unsupported_version(self):
+        yaml = """
+tosca_definitions_version: unsupported_version
+        """ + self.MINIMAL_BLUEPRINT
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 29, DSLParsingLogicException, dsl_parse)
