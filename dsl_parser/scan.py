@@ -14,7 +14,11 @@
 #    * limitations under the License.
 
 
-def scan_properties(value, handler, path=''):
+NODE_TEMPLATE_SCOPE = 'node_template'
+OUTPUTS_SCOPE = 'outputs'
+
+
+def scan_properties(value, handler, scope=None, context=None, path=''):
     """
     Scans properties dict recursively and applies the provided handler
     method for each property.
@@ -34,32 +38,38 @@ def scan_properties(value, handler, path=''):
     if isinstance(value, dict):
         for k, v in value.iteritems():
             current_path = '{0}.{1}'.format(path, k)
-            handler(value, k, v, current_path)
-            scan_properties(v, handler, current_path)
+            handler(value, k, v, scope, current_path)
+            scan_properties(v, handler, scope, context, current_path)
     elif isinstance(value, list):
         for item in value:
-            scan_properties(item, handler, path)
+            scan_properties(item, handler, scope, context, path)
 
 
-def _scan_operations(operations, handler, path=''):
+def _scan_operations(node, operations, handler, path=''):
     for name, definition in operations.iteritems():
         if isinstance(definition, dict) and 'properties' in definition:
             scan_properties(definition['properties'],
                             handler,
-                            '{0}.{1}.properties'.format(path, name))
+                            scope=NODE_TEMPLATE_SCOPE,
+                            context=node,
+                            path='{0}.{1}.properties'.format(path, name))
 
 
 def scan_node_operation_properties(node_template, handler):
     scan_properties(node_template['operations'],
                     handler,
-                    '{0}.operations'.format(node_template['name']))
+                    scope=NODE_TEMPLATE_SCOPE,
+                    context=node_template,
+                    path='{0}.operations'.format(node_template['name']))
     if 'relationships' in node_template:
         for r in node_template['relationships']:
-            _scan_operations(r.get('source_operations', {}),
+            _scan_operations(node_template,
+                             r.get('source_operations', {}),
                              handler,
                              '{0}.{1}'.format(
                                  node_template['name'], r['type']))
-            _scan_operations(r.get('target_operations', {}),
+            _scan_operations(node_template,
+                             r.get('target_operations', {}),
                              handler,
                              '{0}.{1}'.format(
                                  node_template['name'], r['type']))
