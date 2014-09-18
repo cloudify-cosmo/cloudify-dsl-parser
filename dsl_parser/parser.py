@@ -17,7 +17,6 @@
 import os
 import copy
 import contextlib
-import re
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
 from collections import OrderedDict
