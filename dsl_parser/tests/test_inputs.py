@@ -254,7 +254,6 @@ plugins:
     plugin:
         executor: central_deployment_agent
         source: dummy
-
 inputs:
     port:
         default: 8080
@@ -350,3 +349,22 @@ node_templates:
                             port: { get_input: aaa }
 """
         self.assertRaises(UnknownInputError, self.parse, yaml)
+
+    def test_input_in_outputs(self):
+        yaml = """
+inputs:
+    port:
+        default: 8080
+node_types:
+    webserver_type:
+        properties: {}
+node_templates:
+    webserver:
+        type: webserver_type
+outputs:
+    a:
+        value: { get_input: port }
+"""
+        prepared = prepare_deployment_plan(self.parse(yaml))
+        outputs = prepared.outputs
+        self.assertEqual(8080, outputs['a']['value'])

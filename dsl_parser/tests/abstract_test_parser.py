@@ -131,3 +131,6 @@ imports:"""
         except exception_type, ex:
             self.assertEquals(expected_error_code, ex.err_code)
             return ex
+
+    def get_node_by_name(self, plan, name):
+        return [x for x in plan.node_templates if x['name'] == name][0]

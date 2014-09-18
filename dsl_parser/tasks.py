@@ -21,7 +21,7 @@ import multi_instance
 
 from dsl_parser import functions
 from dsl_parser import exceptions
-from dsl_parser import utils
+from dsl_parser import scan
 
 
 def parse_dsl(dsl_location, alias_mapping_url,
@@ -50,20 +50,25 @@ def _set_plan_inputs(plan, inputs=None):
                 'Unknown input \'{}\' specified - '
                 'expected inputs: {}'.format(input_name,
                                              plan['inputs'].keys()))
-
-    def handler(dict_, k, v, path):
-        func = functions.parse(v, context=path)
-        if isinstance(func, functions.GetInput):
-            dict_[k] = inputs[func.input_name]
-
-    for node_template in plan['nodes']:
-        utils.scan_properties(node_template['properties'],
-                              handler,
-                              '{0}.properties'.format(node_template['name']))
-
-        utils.scan_node_operation_properties(node_template, handler)
-
     plan['inputs'] = inputs
+
+
+def _process_functions(plan):
+    def handler(dict_, k, v, scope, context, path):
+        func = functions.parse(v, scope=scope, context=context, path=path)
+        evaluated_value = v
+        while isinstance(func, functions.Function):
+            if isinstance(func, functions.GetAttribute):
+                dict_[k] = func.raw
+                return
+            evaluated_value = func.evaluate(plan)
+            func = functions.parse(evaluated_value,
+                                   scope=scope,
+                                   context=context,
+                                   path=path)
+        dict_[k] = evaluated_value
+
+    scan.scan_service_template(plan, handler)
 
 
 def prepare_deployment_plan(plan, inputs=None, **kwargs):
@@ -72,4 +77,5 @@ def prepare_deployment_plan(plan, inputs=None, **kwargs):
     """
     plan = multi_instance.create_multi_instance_plan(plan)
     _set_plan_inputs(plan, inputs)
+    _process_functions(plan)
     return plan

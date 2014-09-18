@@ -17,7 +17,6 @@
 import os
 import copy
 import contextlib
-import re
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
 from collections import OrderedDict
@@ -29,7 +28,8 @@ from yaml.parser import ParserError
 
 from dsl_parser import constants
 from dsl_parser import functions
-from dsl_parser import utils
+from dsl_parser import models
+from dsl_parser import scan
 from dsl_parser import schemas
 
 SUPPORTED_VERSIONS = ['cloudify_1_0']
@@ -234,7 +234,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         policy_triggers,
         processed_nodes)
 
-    plan = {
+    plan = models.Plan({
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
         WORKFLOWS: processed_workflows,
@@ -245,7 +245,9 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_management_plugins,
         OUTPUTS: outputs,
         'workflow_plugins_to_install': workflow_plugins_to_install
-    }
+    })
+
+    _validate_functions(plan)
 
     return plan
 
@@ -310,8 +312,6 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
     _validate_agent_plugins_on_host_nodes(processed_nodes)
     _validate_type_impls(type_impls)
     _validate_relationship_impls(relationship_impls)
-    _validate_inputs(processed_nodes, inputs)
-    _validate_outputs(processed_nodes, outputs)
 
 
 def _create_type_hierarchy(type_name, types):
@@ -382,62 +382,6 @@ def _add_base_type_to_relationship(relationship,
     relationship['base'] = base
 
 
-pattern = re.compile("(.+)\[(\d+)\]")
-
-
-def _expand(context_properties, node_properties, node_id, operation_name):
-
-    def raise_exception(property_path):
-        ex = DSLParsingLogicException(
-            104, 'Mapped property {0} does not exist in the '
-                 'context node properties {1} (node {2}, '
-                 'operation {3})'.format(property_path,
-                                         node_properties,
-                                         node_id,
-                                         operation_name))
-        ex.property_name = property_path
-        raise ex
-
-    if not context_properties:
-        return None
-    result = {}
-    for key, value in context_properties.items():
-        if type(value) == dict:
-            if len(value) == 1 and value.keys()[0] == 'get_property':
-                property_path = value.values()[0]
-                current_properties_level = node_properties
-                for property_segment in property_path.split('.'):
-                    match = pattern.match(property_segment)
-                    if match:
-                        index = int(match.group(2))
-                        property_name = match.group(1)
-                        if property_name not in current_properties_level:
-                            raise_exception(property_path)
-                        if type(current_properties_level[property_name]) != \
-                                list:
-                            raise_exception(property_path)
-                        current_properties_level = \
-                            current_properties_level[property_name][index]
-                    else:
-                        if property_segment not in current_properties_level:
-                            raise_exception(property_path)
-                        current_properties_level = \
-                            current_properties_level[property_segment]
-                    result[key] = current_properties_level
-            else:
-                if 'get_property' in value:
-                    raise DSLParsingLogicException(
-                        105, "Additional properties are not allowed when "
-                             "using 'get_property' (node {0}, operation {1}, "
-                             "property {2})".format(key,
-                                                    node_id, operation_name))
-                result[key] = _expand(value, node_properties, node_id,
-                                      operation_name)
-        else:
-            result[key] = value
-    return result
-
-
 def _process_context_operations(partial_error_message, interfaces, plugins,
                                 node, error_code):
     operations = {}
@@ -459,11 +403,8 @@ def _process_context_operations(partial_error_message, interfaces, plugins,
                 op_struct = op_descriptor.op_struct
                 plugin_name = op_descriptor.op_struct['plugin']
                 operation_name = op_descriptor.name
-                operation_properties = _expand(
-                    op_descriptor.op_struct.get('properties'),
-                    _get_dict_prop(node, 'properties'),
-                    node['id'],
-                    operation_name)
+                operation_properties = op_descriptor.op_struct.get(
+                    'properties')
                 node[PLUGINS][plugin_name] = op_descriptor.plugin
                 op_struct = op_struct.copy()
                 if operation_properties is not None:
@@ -543,27 +484,13 @@ def _validate_relationship_impls(relationship_impls):
         raise ex
 
 
-def _validate_inputs(node_templates, inputs):
-    def handler(dict_, k, v, path):
-        func = functions.parse(v, context=path)
-        if isinstance(func, functions.GetInput):
-            func.validate(inputs)
+def _validate_functions(plan):
+    def handler(dict_, k, v, scope, context, path):
+        func = functions.parse(v, scope=scope, context=context, path=path)
+        if isinstance(func, functions.Function):
+            func.validate(plan)
 
-    for node_template in node_templates:
-        node_name = node_template['name']
-        utils.scan_properties(node_template['properties'],
-                              handler,
-                              '{0}.properties'.format(node_name))
-        utils.scan_node_operation_properties(node_template, handler)
-
-
-def _validate_outputs(node_templates, outputs):
-    def handler(dict_, k, v, _):
-        func = functions.parse(v)
-        if isinstance(func, functions.GetAttribute):
-            func.validate(node_templates)
-    for output in outputs.values():
-        utils.scan_properties(output, handler, 'outputs')
+    scan.scan_service_template(plan, handler)
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
