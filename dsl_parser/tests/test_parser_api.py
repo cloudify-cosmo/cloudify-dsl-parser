@@ -2039,75 +2039,6 @@ plugins:
             op_struct('test_plugin', 'install', {'key': 'value'}),
             rel1_source_ops['test_interface1.install'])
 
-    def test_operation_mapping_with_get_property(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                - install:
-                    mapping: test_plugin.install
-                    properties:
-                        delegated_key: { get_property: "key" }
-                        nested_key:
-                            prop1: "value1"
-                            prop2: { get_property: "key" }
-
-
-"""
-        result = self.parse(yaml)
-        node = result['nodes'][0]
-        self.assertEquals('test_type', node['type'])
-        operations = node['operations']
-        expected_props = {'delegated_key': 'val',
-                          'nested_key': {'prop1': 'value1', 'prop2': 'val'}}
-        self.assertEquals(op_struct('test_plugin', 'install', expected_props),
-                          operations['install'])
-        self.assertEquals(op_struct('test_plugin', 'install', expected_props),
-                          operations['test_interface1.install'])
-
-    def test_relationship_operation_mapping_with_properties_injection_get_property(self):  # NOQA
-        yaml = self.MINIMAL_BLUEPRINT + """
-    test_node2:
-        type: test_type
-        properties:
-            key: "val"
-        relationships:
-            -   type: "test_relationship"
-                target: "test_node"
-                source_interfaces:
-                    test_interface1:
-                        - install:
-                            mapping: test_plugin.install
-                            properties:
-                                delegated_key: { get_property: "key" }
-                                nested_key:
-                                    prop1: "value1"
-                                    prop2: { get_property: "key" }
-relationships:
-    test_relationship: {}
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-        source: dummy
-"""
-        result = self.parse(yaml)
-        self.assertEquals(2, len(result['nodes']))
-        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
-                                                          'test_node2'])
-        relationship1 = nodes[1]['relationships'][0]
-        rel1_source_ops = relationship1['source_operations']
-        expected_props = {'delegated_key': 'val',
-                          'nested_key': {'prop1': 'value1', 'prop2': 'val'}}
-        self.assertDictEqual(
-            op_struct('test_plugin', 'install', expected_props),
-            rel1_source_ops['install'])
-        self.assertDictEqual(
-            op_struct('test_plugin', 'install', expected_props),
-            rel1_source_ops['test_interface1.install'])
-
     def test_type_implementation(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
 node_types:
@@ -2220,59 +2151,6 @@ relationship_implementations:
         node_relationship2 = source_node['relationships'][1]
         self.assertEquals('specific_test_relationship2',
                           node_relationship2['type'])
-
-    def test_operation_mapping_with_nested_get_property(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-node_types:
-    test_type:
-        properties:
-            key: {}
-            some_prop:
-                default:
-                    nested: 'nested_value'
-        interfaces:
-            test_interface1:
-                - install:
-                    mapping: test_plugin.install
-                    properties:
-                        mapped: { get_property: "some_prop.nested" }
-"""
-        result = self.parse(yaml)
-        node = result['nodes'][0]
-        self.assertEquals('test_type', node['type'])
-        operations = node['operations']
-        expected_props = {'mapped': 'nested_value'}
-        self.assertEquals(op_struct('test_plugin', 'install', expected_props),
-                          operations['install'])
-        self.assertEquals(op_struct('test_plugin', 'install', expected_props),
-                          operations['test_interface1.install'])
-
-    def test_operation_mapping_with_array_index(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-node_types:
-    test_type:
-        properties:
-            key: {}
-            some_prop:
-                default:
-                    -   nested_value
-        interfaces:
-            test_interface1:
-                - install:
-                    mapping: test_plugin.install
-                    properties:
-                        mapped: { get_property: "some_prop[0]" }
-
-"""
-        result = self.parse(yaml)
-        node = result['nodes'][0]
-        self.assertEquals('test_type', node['type'])
-        operations = node['operations']
-        expected_props = {'mapped': 'nested_value'}
-        self.assertEquals(op_struct('test_plugin', 'install', expected_props),
-                          operations['install'])
-        self.assertEquals(op_struct('test_plugin', 'install', expected_props),
-                          operations['test_interface1.install'])
 
     def test_no_workflows(self):
         result = self.parse(self.MINIMAL_BLUEPRINT)

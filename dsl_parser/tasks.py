@@ -78,15 +78,18 @@ def scan_service_template(plan, handler):
 
 
 def _process_functions(plan):
-    def handler(dict_, k, v, scope, path):
-        func = functions.parse(v, scope=scope, path=path)
+    def handler(dict_, k, v, scope, context, path):
+        func = functions.parse(v, scope=scope, context=context, path=path)
         evaluated_value = v
         while isinstance(func, functions.Function):
             if isinstance(func, functions.GetAttribute):
                 dict_[k] = func.raw
                 return
             evaluated_value = func.evaluate(plan)
-            func = functions.parse(evaluated_value, scope=scope, path=path)
+            func = functions.parse(evaluated_value,
+                                   scope=scope,
+                                   context=context,
+                                   path=path)
         dict_[k] = evaluated_value
 
     scan_service_template(plan, handler)

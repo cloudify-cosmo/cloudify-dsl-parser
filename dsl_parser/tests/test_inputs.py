@@ -254,7 +254,6 @@ plugins:
     plugin:
         executor: central_deployment_agent
         source: dummy
-
 inputs:
     port:
         default: 8080

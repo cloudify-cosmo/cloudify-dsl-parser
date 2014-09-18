@@ -16,12 +16,15 @@
 import abc
 
 from dsl_parser import exceptions
-from dsl_parser import models
 from dsl_parser import scan
 
 GET_INPUT_FUNCTION = 'get_input'
 GET_PROPERTY_FUNCTION = 'get_property'
 GET_ATTRIBUTE_FUNCTION = 'get_attribute'
+
+SELF = 'SELF'
+SOURCE = 'SOURCE'
+TARGET = 'TARGET'
 
 
 class Function(object):
@@ -30,6 +33,7 @@ class Function(object):
 
     def __init__(self, args, scope=None, context=None, path=None, raw=None):
         self.scope = scope
+        self.context = context
         self.path = path
         self.raw = raw
         self._parse_args(args)
@@ -68,14 +72,10 @@ class GetInput(Function):
                 "unknown input '{}'.".format(self.context, self.input_name))
 
     def evaluate(self, plan):
-        raise NotImplementedError()
+        return plan.inputs[self.input_name]
 
 
 class GetProperty(Function):
-
-    SELF = 'SELF'
-    SOURCE = 'SOURCE'
-    TARGET = 'TARGET'
 
     def __init__(self, args, **kwargs):
         self.node_name = None
@@ -92,30 +92,50 @@ class GetProperty(Function):
         self.property_name = args[1]
 
     def validate(self, plan):
-        if self.node_name == self.SELF:
-            if not isinstance(self.scope, models.NodeTemplate):
+        if self.node_name == SELF:
+            if self.scope != scan.NODE_TEMPLATE_SCOPE:
                 raise ValueError(
                     '{0} can only be used in a context of node template but '
-                    'appears in {1}.'.format(self.SELF, self.scope))
-            node = self.scope
+                    'appears in {1}.'.format(SELF, self.scope))
+            node = self.context
+        elif self.node_name in [SOURCE, TARGET]:
+            if self.scope != scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE:
+                raise ValueError(
+                    '{0} can only be used within a relationship but is used '
+                    'in {1}'.format(self.node_name, self.path))
+            if self.node_name == SOURCE:
+                node = self.context['node_template']
+            else:
+                target_node = self.context['relationship']['target_id']
+                node = [
+                    x for x in plan.node_templates
+                    if x['name'] == target_node][0]
         else:
             found = [
                 x for x in plan.node_templates if self.node_name in x['id']]
             if len(found) == 0:
                 raise KeyError(
                     "{0} function node reference '{1}' does not exist.".format(
-                        self._get_function_name(), self.node_name))
+                        GET_PROPERTY_FUNCTION, self.node_name))
             node = found[0]
         if self.property_name not in node['properties']:
             raise KeyError(
-                "Property of node template '{0}.properties.{1}' referenced "
+                "Node template property '{0}.properties.{1}' referenced "
                 "from '{2}' doesn't exist.".format(node['name'],
                                                    self.property_name,
                                                    self.path))
 
     def evaluate(self, plan):
-        if self.node_name == self.SELF:
+        if self.node_name == SELF:
             node_template = self.scope
+        elif self.node_name in [SOURCE, TARGET]:
+            if self.node_name == SOURCE:
+                node_template = self.context['node_template']
+            else:
+                target_node_id = self.context['relationship']['target_id']
+                node_template = [
+                    x for x in plan.node_templates
+                    if x['name'] == target_node_id][0]
         else:
             node_template = [
                 x for x in plan.node_templates
@@ -140,16 +160,21 @@ class GetAttribute(Function):
         self.attribute_name = args[1]
 
     def validate(self, plan):
-        if not isinstance(self.scope, models.Outputs):
-            raise ValueError('{0} function can only be used in outputs but '
+        if self.scope != scan.OUTPUTS_SCOPE:
+            raise ValueError('{0} function can only be used in outputs but is '
                              'used in {1}.'.format(GET_ATTRIBUTE_FUNCTION,
                                                    self.path))
+        if self.node_name == SELF:
+            raise ValueError('{0} cannot be used with {1} function in '
+                             '{2}.'.format(SELF,
+                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.path))
         found = [
             x for x in plan.node_templates if self.node_name in x['id']]
         if len(found) == 0:
             raise KeyError(
                 "{0} function node reference '{1}' does not exist.".format(
-                    self._get_function_name(), self.node_name))
+                    GET_ATTRIBUTE_FUNCTION, self.node_name))
 
     def evaluate(self, plan):
         raise RuntimeError(
@@ -184,16 +209,16 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
     :param get_node_instances_method: A method for getting node instances.
     :return: Outputs dict.
     """
-    context = {}
+    ctx = {}
     outputs = {k: v['value'] for k, v in outputs_def.iteritems()}
 
-    def handler(dict_, k, v, _):
-        func = parse(v)
+    def handler(dict_, k, v, scope, context, path):
+        func = parse(v, scope=scope, context=context, path=path)
         if isinstance(func, GetAttribute):
             attributes = []
-            if 'node_instances' not in context:
-                context['node_instances'] = get_node_instances_method()
-            for instance in context['node_instances']:
+            if 'node_instances' not in ctx:
+                ctx['node_instances'] = get_node_instances_method()
+            for instance in ctx['node_instances']:
                 if instance.node_id == func.node_name:
                     attributes.append(
                         instance.runtime_properties.get(
