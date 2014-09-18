@@ -50,14 +50,6 @@ def _set_plan_inputs(plan, inputs=None):
                 'Unknown input \'{}\' specified - '
                 'expected inputs: {}'.format(input_name,
                                              plan['inputs'].keys()))
-
-    # def handler(dict_, k, v, scope, path):
-    #     func = functions.parse(v, scope=scope, path=path)
-    #     if isinstance(func, functions.GetInput):
-    #         dict_[k] = inputs[func.input_name]
-    #
-    # scan_service_template(plan, handler)
-
     plan['inputs'] = inputs
 
 
@@ -65,7 +57,8 @@ def scan_service_template(plan, handler):
     for node_template in plan.node_templates:
         scan.scan_properties(node_template['properties'],
                              handler,
-                             scope=node_template,
+                             scope=scan.NODE_TEMPLATE_SCOPE,
+                             context=node_template,
                              path='{0}.properties'.format(
                                  node_template['name']))
 
@@ -73,7 +66,8 @@ def scan_service_template(plan, handler):
         for output_name, output in plan.outputs.iteritems():
             scan.scan_properties(output,
                                  handler,
-                                 scope=plan.outputs,
+                                 scope=scan.OUTPUTS_SCOPE,
+                                 context=plan.outputs,
                                  path='outputs.{0}'.format(output_name))
 
 

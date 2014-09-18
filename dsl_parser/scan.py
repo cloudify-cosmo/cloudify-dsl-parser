@@ -38,6 +38,8 @@ def scan_properties(value, handler, scope=None, context=None, path=''):
     :param handler: A method for applying for to each property.
     :param path: The properties base path (for debugging purposes).
     """
+    assert context
+    assert scope
     if isinstance(value, dict):
         for k, v in value.iteritems():
             current_path = '{0}.{1}'.format(path, k)

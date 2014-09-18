@@ -92,6 +92,9 @@ class GetProperty(Function):
         self.property_name = args[1]
 
     def validate(self, plan):
+        self.evaluate(plan)
+
+    def evaluate(self, plan):
         if self.node_name == SELF:
             if self.scope != scan.NODE_TEMPLATE_SCOPE:
                 raise ValueError(
@@ -124,23 +127,7 @@ class GetProperty(Function):
                 "from '{2}' doesn't exist.".format(node['name'],
                                                    self.property_name,
                                                    self.path))
-
-    def evaluate(self, plan):
-        if self.node_name == SELF:
-            node_template = self.scope
-        elif self.node_name in [SOURCE, TARGET]:
-            if self.node_name == SOURCE:
-                node_template = self.context['node_template']
-            else:
-                target_node_id = self.context['relationship']['target_id']
-                node_template = [
-                    x for x in plan.node_templates
-                    if x['name'] == target_node_id][0]
-        else:
-            node_template = [
-                x for x in plan.node_templates
-                if x['name'] == self.node_name][0]
-        return node_template['properties'][self.property_name]
+        return node['properties'][self.property_name]
 
 
 class GetAttribute(Function):
@@ -238,5 +225,9 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
                     'Multi instances of node "{0}" are not supported by '
                     'function.'.format(func.node_name))
 
-    scan.scan_properties(outputs, handler, 'outputs')
+    scan.scan_properties(outputs,
+                         handler,
+                         scope=scan.OUTPUTS_SCOPE,
+                         context=outputs,
+                         path='outputs')
     return outputs
