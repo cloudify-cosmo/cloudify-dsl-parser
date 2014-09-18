@@ -53,24 +53,6 @@ def _set_plan_inputs(plan, inputs=None):
     plan['inputs'] = inputs
 
 
-def scan_service_template(plan, handler):
-    for node_template in plan.node_templates:
-        scan.scan_properties(node_template['properties'],
-                             handler,
-                             scope=scan.NODE_TEMPLATE_SCOPE,
-                             context=node_template,
-                             path='{0}.properties'.format(
-                                 node_template['name']))
-
-        scan.scan_node_operation_properties(node_template, handler)
-        for output_name, output in plan.outputs.iteritems():
-            scan.scan_properties(output,
-                                 handler,
-                                 scope=scan.OUTPUTS_SCOPE,
-                                 context=plan.outputs,
-                                 path='outputs.{0}'.format(output_name))
-
-
 def _process_functions(plan):
     def handler(dict_, k, v, scope, context, path):
         func = functions.parse(v, scope=scope, context=context, path=path)
@@ -86,7 +68,7 @@ def _process_functions(plan):
                                    path=path)
         dict_[k] = evaluated_value
 
-    scan_service_template(plan, handler)
+    scan.scan_service_template(plan, handler)
 
 
 def prepare_deployment_plan(plan, inputs=None, **kwargs):

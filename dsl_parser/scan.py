@@ -38,8 +38,6 @@ def scan_properties(value, handler, scope=None, context=None, path=''):
     :param handler: A method for applying for to each property.
     :param path: The properties base path (for debugging purposes).
     """
-    assert context
-    assert scope
     if isinstance(value, dict):
         for k, v in value.iteritems():
             current_path = '{0}.{1}'.format(path, k)
@@ -86,3 +84,21 @@ def scan_node_operation_properties(node_template, handler):
                          context=context,
                          path='{0}.{1}'.format(node_template['name'],
                                                r['type']))
+
+
+def scan_service_template(plan, handler):
+    for node_template in plan.node_templates:
+        scan_properties(node_template['properties'],
+                        handler,
+                        scope=NODE_TEMPLATE_SCOPE,
+                        context=node_template,
+                        path='{0}.properties'.format(
+                            node_template['name']))
+
+        scan_node_operation_properties(node_template, handler)
+    for output_name, output in plan.outputs.iteritems():
+        scan_properties(output,
+                        handler,
+                        scope=OUTPUTS_SCOPE,
+                        context=plan.outputs,
+                        path='outputs.{0}'.format(output_name))

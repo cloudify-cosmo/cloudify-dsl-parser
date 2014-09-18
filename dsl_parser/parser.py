@@ -490,20 +490,7 @@ def _validate_functions(plan):
         if isinstance(func, functions.Function):
             func.validate(plan)
 
-    for node_template in plan['nodes']:
-        node_name = node_template['name']
-        scan.scan_properties(node_template['properties'],
-                             handler,
-                             scope=scan.NODE_TEMPLATE_SCOPE,
-                             context=node_template,
-                             path='{0}.properties'.format(node_name))
-        scan.scan_node_operation_properties(node_template, handler)
-
-    for output_name, output in plan['outputs'].iteritems():
-        scan.scan_properties(output, handler,
-                             scope=scan.OUTPUTS_SCOPE,
-                             context=plan['outputs'],
-                             path='outputs.{0}'.format(output_name))
+    scan.scan_service_template(plan, handler)
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):

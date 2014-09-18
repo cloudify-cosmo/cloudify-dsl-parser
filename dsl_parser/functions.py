@@ -58,7 +58,7 @@ class GetInput(Function):
         super(GetInput, self).__init__(args, **kwargs)
 
     def _parse_args(self, args):
-        valid_args_type = isinstance(args, str) or isinstance(args, unicode)
+        valid_args_type = isinstance(args, basestring)
         if not valid_args_type:
             raise ValueError(
                 "get_input function argument should be a string in "
