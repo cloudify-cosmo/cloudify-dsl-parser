@@ -27,7 +27,7 @@ from dsl_parser.parser import parse as dsl_parse
 
 class AbstractTestParser(unittest.TestCase):
     BASIC_VERSION_SECTION = """
-tosca_definitions_version: cloudify_1_0
+tosca_definitions_version: cloudify_dsl_1_0
     """
 
     BASIC_NODE_TEMPLATES_SECTION = """

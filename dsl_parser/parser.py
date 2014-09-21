@@ -32,7 +32,7 @@ from dsl_parser import models
 from dsl_parser import scan
 from dsl_parser import schemas
 
-SUPPORTED_VERSIONS = ['cloudify_1_0']
+SUPPORTED_VERSIONS = ['cloudify_dsl_1_0']
 
 VERSION = 'tosca_definitions_version'
 NODE_TEMPLATES = 'node_templates'
