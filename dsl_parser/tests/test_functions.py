@@ -320,8 +320,8 @@ node_templates:
             prepare_deployment_plan(self.parse(yaml))
             self.fail()
         except RuntimeError, e:
-            print str(e)
-            pass
+            self.assertIn('Circular get_property function call detected',
+                          str(e))
 
 
 class TestGetAttribute(AbstractTestParser):

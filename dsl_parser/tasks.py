@@ -60,11 +60,13 @@ def _process_functions(plan):
         func = functions.parse(v, scope=scope, context=context, path=path)
         evaluated_value = v
         while isinstance(func, functions.Function):
-            if str(func.raw) in funcs:
-                raise RuntimeError(
-                    'Circular function call detected in {0} {1}'.format(
-                        scope, path))
             if isinstance(func, functions.GetProperty):
+                if str(func.raw) in funcs:
+                    raise RuntimeError(
+                        'Circular {0} function call detected in {1} '
+                        '{2}'.format(functions.GET_PROPERTY_FUNCTION,
+                                     scope,
+                                     path))
                 funcs.add(str(func.raw))
             if isinstance(func, functions.GetAttribute):
                 return func.raw
