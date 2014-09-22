@@ -30,10 +30,8 @@ def scan_properties(value,
     method for each property.
 
     The handler method should have the following signature:
-    def handler(dictionary, key, value, scope, context, path):
+    def handler(value, scope, context, path):
 
-    * dictionary - the dictionary the property belongs to.
-    * key - the name of the property.
     * value - the value of the property.
     * scope - scope of the operation (string).
     * context - scanner context (i.e. actual node template).
