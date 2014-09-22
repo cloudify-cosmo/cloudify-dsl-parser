@@ -16,6 +16,7 @@
 import os
 import yaml as yml
 
+from dsl_parser import constants
 from dsl_parser.constants import PLUGIN_NAME_KEY
 from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 from urllib import pathname2url
@@ -2704,6 +2705,91 @@ imports:
                self.MINIMAL_BLUEPRINT
         result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)
+
+    def test_script_mapping(self):
+        yaml = self.BASIC_VERSION_SECTION + """
+plugins:
+    {0}:
+        executor: central_deployment_agent
+        install: false
+node_types:
+    type:
+        interfaces:
+            test:
+                - op: stub.py
+                - op2:
+                    mapping: stub.py
+                    properties:
+                        key: value
+relationships:
+    relationship:
+        source_interfaces:
+            test:
+                - op: stub.py
+        target_interfaces:
+            test:
+                - op: stub.py
+workflows:
+    workflow: stub.py
+    workflow2:
+        mapping: stub.py
+        parameters:
+            key:
+                default: value
+
+node_templates:
+    node1:
+        type: type
+        relationships:
+            -   target: node2
+                type: relationship
+    node2:
+        type: type
+
+""".format(constants.SCRIPT_PLUGIN_NAME)
+        self.make_file_with_name(content='content',
+                                 filename='stub.py')
+        yaml_path = self.make_file_with_name(content=yaml,
+                                             filename='blueprint.yaml')
+        result = self.parse_from_path(yaml_path)
+        node = result['nodes'][0]
+        relationship = node['relationships'][0]
+
+        operation = node['operations']['test.op']
+        operation2 = node['operations']['test.op2']
+        source_operation = relationship['source_operations']['test.op']
+        target_operation = relationship['target_operations']['test.op']
+        workflow = result['workflows']['workflow']
+        workflow2 = result['workflows']['workflow2']
+
+        def assert_operation(op, extra_properties=False):
+            properties = {'script_path': 'stub.py'}
+            if extra_properties:
+                properties.update({'key': 'value'})
+            self.assertDictEqual(op, op_struct(
+                plugin_name=constants.SCRIPT_PLUGIN_NAME,
+                operation_mapping=constants.SCRIPT_PLUGIN_RUN_TASK,
+                properties=properties))
+
+        assert_operation(operation)
+        assert_operation(operation2, extra_properties=True)
+        assert_operation(source_operation)
+        assert_operation(target_operation)
+
+        self.assertEqual(workflow['operation'],
+                         constants.SCRIPT_PLUGIN_EXECUTE_WORKFLOW_TASK)
+        self.assertEqual(1, len(workflow['parameters']))
+        self.assertEqual(workflow['parameters']['script_path']['default'],
+                         'stub.py')
+        self.assertEqual(workflow['plugin'], constants.SCRIPT_PLUGIN_NAME)
+
+        self.assertEqual(workflow2['operation'],
+                         constants.SCRIPT_PLUGIN_EXECUTE_WORKFLOW_TASK)
+        self.assertEqual(2, len(workflow2['parameters']))
+        self.assertEqual(workflow2['parameters']['script_path']['default'],
+                         'stub.py')
+        self.assertEqual(workflow2['parameters']['key']['default'], 'value')
+        self.assertEqual(workflow['plugin'], constants.SCRIPT_PLUGIN_NAME)
 
 
 class DeploymentPluginsToInstallTest(AbstractTestParser):

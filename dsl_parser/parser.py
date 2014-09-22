@@ -162,9 +162,13 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
     parsed_dsl = _load_yaml(dsl_string, 'Failed to parse DSL')
 
+    # not sure about the name. this will actually be the dsl_location
+    # minus the /blueprint.yaml at the end of it
+    resource_base = None
     if dsl_location:
         dsl_location = _dsl_location_to_url(dsl_location, alias_mapping,
                                             resources_base_url)
+        resource_base = dsl_location[:dsl_location.rfind('/')]
     combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping,
                                            dsl_location, resources_base_url)
 
@@ -180,7 +184,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     nodes = combined_parsed_dsl[NODE_TEMPLATES]
     node_names_set = {node_name for node_name in nodes.keys()}
 
-    top_level_relationships = _process_relationships(combined_parsed_dsl)
+    top_level_relationships = _process_relationships(combined_parsed_dsl,
+                                                     resource_base)
 
     type_impls = _get_dict_prop(combined_parsed_dsl, TYPE_IMPLEMENTATIONS)\
         .copy()
@@ -194,7 +199,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     processed_nodes = map(lambda node_name_and_node: _process_node(
         node_name_and_node[0], node_name_and_node[1], combined_parsed_dsl,
         top_level_relationships, node_names_set, type_impls,
-        relationship_impls, processed_plugins), nodes.iteritems())
+        relationship_impls, processed_plugins, resource_base),
+        nodes.iteritems())
 
     inputs = combined_parsed_dsl.get(INPUTS, {})
     outputs = combined_parsed_dsl.get(OUTPUTS, {})
@@ -207,11 +213,13 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                         relationship_impls,
                         node_names_set,
                         inputs,
-                        outputs)
+                        outputs,
+                        resource_base)
 
     processed_workflows = _process_workflows(
         combined_parsed_dsl.get(WORKFLOWS, {}),
-        processed_plugins)
+        processed_plugins,
+        resource_base)
     workflow_plugins_to_install = _create_plan_workflow_plugins(
         processed_workflows,
         processed_plugins)
@@ -250,7 +258,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 
 def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         type_impls, relationship_impls, node_names,
-                        inputs, outputs):
+                        inputs, outputs, resource_base):
     node_name_to_node = {node['id']: node for node in processed_nodes}
 
     depends_on_rel_types = _build_family_descendants_set(
@@ -266,7 +274,8 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
                                          contained_in_rel_types,
                                          connected_to_rel_types,
                                          depends_on_rel_types,
-                                         relationships)
+                                         relationships,
+                                         resource_base)
         node[TYPE_HIERARCHY] = _create_type_hierarchy(node['type'], types)
 
     # set host_id property to all relevant nodes
@@ -330,17 +339,18 @@ def _post_process_node_relationships(processed_node,
                                      contained_in_rel_types,
                                      connected_to_rel_types,
                                      depends_on_rel_type,
-                                     relationships):
+                                     relationships,
+                                     resource_base):
     contained_in_relationships = []
     if RELATIONSHIPS in processed_node:
         for relationship in processed_node[RELATIONSHIPS]:
             target_node = node_name_to_node[relationship['target_id']]
             _process_node_relationships_operations(
                 relationship, 'source_interfaces', 'source_operations',
-                processed_node, plugins)
+                processed_node, plugins, resource_base)
             _process_node_relationships_operations(
                 relationship, 'target_interfaces', 'target_operations',
-                target_node, plugins)
+                target_node, plugins, resource_base)
             _add_base_type_to_relationship(relationship,
                                            contained_in_rel_types,
                                            connected_to_rel_types,
@@ -379,7 +389,7 @@ def _add_base_type_to_relationship(relationship,
 
 
 def _process_context_operations(partial_error_message, interfaces, plugins,
-                                node, error_code):
+                                node, error_code, resource_base):
     operations = {}
     for interface_name, interface in interfaces.items():
         operation_mapping_context = \
@@ -388,7 +398,8 @@ def _process_context_operations(partial_error_message, interfaces, plugins,
                 plugins,
                 error_code,
                 'In interface {0} {1}'.format(interface_name,
-                                              partial_error_message))
+                                              partial_error_message),
+                resource_base)
         _validate_no_duplicate_operations(operation_mapping_context,
                                           interface_name, node['id'],
                                           node['type'])
@@ -423,7 +434,8 @@ def _process_node_relationships_operations(relationship,
                                            interfaces_attribute,
                                            operations_attribute,
                                            node_for_plugins,
-                                           plugins):
+                                           plugins,
+                                           resource_base):
     if interfaces_attribute in relationship:
         partial_error_message = 'in relationship of type {0} in node {1}'\
                                 .format(relationship['type'],
@@ -432,7 +444,7 @@ def _process_node_relationships_operations(relationship,
         operations = _process_context_operations(
             partial_error_message,
             relationship[interfaces_attribute],
-            plugins, node_for_plugins, 19)
+            plugins, node_for_plugins, 19, resource_base)
 
         relationship[operations_attribute] = operations
 
@@ -441,14 +453,16 @@ def _extract_plugin_names_and_operation_mapping_from_interface(
         interface,
         plugins,
         error_code,
-        partial_error_message):
+        partial_error_message,
+        resource_base):
     plugin_names = plugins.keys()
     result = []
     for operation in interface:
         op_descriptor = \
             _extract_plugin_name_and_operation_mapping_from_operation(
                 plugins, plugin_names, operation, error_code,
-                partial_error_message)
+                partial_error_message,
+                resource_base)
         result.append(op_descriptor)
     return result
 
@@ -556,7 +570,7 @@ def _extract_complete_type_recursive(type_obj, type_name, dsl_container,
     return merging_func(complete_super_type, current_level_type)
 
 
-def _process_relationships(combined_parsed_dsl):
+def _process_relationships(combined_parsed_dsl, resource_base):
     processed_relationships = {}
     if RELATIONSHIPS not in combined_parsed_dsl:
         return processed_relationships
@@ -569,14 +583,15 @@ def _process_relationships(combined_parsed_dsl):
             _rel_inheritance_merging_func, [], True)
 
         plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
-        _validate_relationship_fields(complete_rel_obj, plugins, rel_name)
+        _validate_relationship_fields(complete_rel_obj, plugins, rel_name,
+                                      resource_base)
         complete_rel_obj_copy = copy.deepcopy(complete_rel_obj)
         processed_relationships[rel_name] = complete_rel_obj_copy
         processed_relationships[rel_name]['name'] = rel_name
     return processed_relationships
 
 
-def _validate_relationship_fields(rel_obj, plugins, rel_name):
+def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
     for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
         if interfaces in rel_obj:
             for interface_name, interface in rel_obj[interfaces].items():
@@ -585,7 +600,8 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name):
                         interface,
                         plugins,
                         19,
-                        'Relationship: {0}'.format(rel_name))
+                        'Relationship: {0}'.format(rel_name),
+                        resource_base=resource_base)
                 _validate_no_duplicate_operations(
                     operation_mapping_context, interface_name,
                     relationship_name=rel_name)
@@ -665,6 +681,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         operation,
         error_code,
         partial_error_message,
+        resource_base,
         is_workflows=False):
     properties_field_name = 'parameters' if is_workflows else 'properties'
     if type(operation) == str:
@@ -702,6 +719,45 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 operation_properties,
                 properties_field_name
             ))
+    elif resource_base and _resource_exists(resource_base, operation_mapping):
+        operation_properties = copy.deepcopy(operation_properties or {})
+        if constants.SCRIPT_PATH_PROPERTY in operation_properties:
+            message = 'Cannot define {0} property in {1} for {2} "{3}"' \
+                      .format(constants.SCRIPT_PATH_PROPERTY,
+                              operation_mapping,
+                              'workflow' if is_workflows else 'operation',
+                              operation_name)
+            raise DSLParsingLogicException(60, message)
+        script_path = operation_mapping
+        if is_workflows:
+            operation_mapping = constants.SCRIPT_PLUGIN_EXECUTE_WORKFLOW_TASK
+            operation_properties.update({
+                constants.SCRIPT_PATH_PROPERTY: {
+                    'default': script_path,
+                    'description': 'added during dsl parsing'
+                }
+            })
+        else:
+            operation_mapping = constants.SCRIPT_PLUGIN_RUN_TASK
+            operation_properties.update({
+                constants.SCRIPT_PATH_PROPERTY: script_path
+            })
+        if constants.SCRIPT_PLUGIN_NAME not in plugins:
+            message = 'Script plugin is not defined but it is required for' \
+                      ' mapping: {0} of {1} "{2}"' \
+                .format(operation_mapping,
+                        'workflow' if is_workflows else 'operation',
+                        operation_name)
+            raise DSLParsingLogicException(61, message)
+        return OpDescriptor(
+            name=operation_name,
+            plugin=plugins[constants.SCRIPT_PLUGIN_NAME],
+            op_struct=_operation_struct(
+                constants.SCRIPT_PLUGIN_NAME,
+                operation_mapping,
+                operation_properties,
+                properties_field_name
+            ))
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
@@ -715,7 +771,11 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         raise DSLParsingLogicException(error_code, error_message)
 
 
-def _process_workflows(workflows, plugins):
+def _resource_exists(resource_base, resource_name):
+    return _validate_url_exists('{0}/{1}'.format(resource_base, resource_name))
+
+
+def _process_workflows(workflows, plugins, resource_base):
     processed_workflows = {}
     plugin_names = plugins.keys()
     for name, mapping in workflows.items():
@@ -726,6 +786,7 @@ def _process_workflows(workflows, plugins):
                 operation={name: mapping},
                 error_code=21,
                 partial_error_message='',
+                resource_base=resource_base,
                 is_workflows=True)
         processed_workflows[name] = op_descriptor.op_struct
     return processed_workflows
@@ -985,7 +1046,7 @@ def _operation_struct(plugin_name, operation_mapping, operation_properties,
 
 def _process_node(node_name, node, parsed_dsl,
                   top_level_relationships, node_names_set, type_impls,
-                  relationship_impls, plugins):
+                  relationship_impls, plugins, resource_base):
     declared_node_type_name = node['type']
     processed_node = {'name': node_name,
                       'id': node_name,
@@ -1021,7 +1082,7 @@ def _process_node(node_name, node, parsed_dsl,
             partial_error_message,
             complete_node_type[INTERFACES],
             plugins,
-            processed_node, 10)
+            processed_node, 10, resource_base)
 
         processed_node['operations'] = operations
 
