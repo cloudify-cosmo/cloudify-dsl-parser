@@ -502,7 +502,7 @@ def _validate_functions(plan):
     if not get_property_functions:
         return
 
-    # Validate circular get_property
+    # Validate there are no circular get_property calls
     for func in get_property_functions:
         visited_functions = ['{0}.{1}'.format(
             func.get_node_template(plan)['name'],
