@@ -46,7 +46,7 @@ def timeout(seconds=10):
 
 class AbstractTestParser(unittest.TestCase):
     BASIC_VERSION_SECTION = """
-tosca_definitions_version: cloudify_1_0
+tosca_definitions_version: cloudify_dsl_1_0
     """
 
     BASIC_NODE_TEMPLATES_SECTION = """

@@ -1117,7 +1117,7 @@ node_types:
 
     def test_invalid_version_field_format(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-tosca_definitions_version: [cloudify_1_0]
+tosca_definitions_version: [cloudify_dsl_1_0]
     """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException, dsl_parse)
