@@ -485,7 +485,7 @@ def _validate_relationship_impls(relationship_impls):
 
 
 def _validate_functions(plan):
-    def handler(dict_, k, v, scope, context, path):
+    def handler(v, scope, context, path):
         func = functions.parse(v, scope=scope, context=context, path=path)
         if isinstance(func, functions.Function):
             func.validate(plan)

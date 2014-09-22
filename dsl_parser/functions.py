@@ -199,7 +199,7 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
     ctx = {}
     outputs = {k: v['value'] for k, v in outputs_def.iteritems()}
 
-    def handler(dict_, k, v, scope, context, path):
+    def handler(v, scope, context, path):
         func = parse(v, scope=scope, context=context, path=path)
         if isinstance(func, GetAttribute):
             attributes = []
@@ -212,7 +212,7 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
                             func.attribute_name) if
                         instance.runtime_properties else None)
             if len(attributes) == 1:
-                dict_[k] = attributes[0]
+                return attributes[0]
             elif len(attributes) == 0:
                 raise exceptions.FunctionEvaluationError(
                     GET_ATTRIBUTE_FUNCTION,
@@ -229,5 +229,6 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
                          handler,
                          scope=scan.OUTPUTS_SCOPE,
                          context=outputs,
-                         path='outputs')
+                         path='outputs',
+                         replace=True)
     return outputs

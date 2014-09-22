@@ -19,13 +19,18 @@ NODE_TEMPLATE_RELATIONSHIP_SCOPE = 'node_template_relationship'
 OUTPUTS_SCOPE = 'outputs'
 
 
-def scan_properties(value, handler, scope=None, context=None, path=''):
+def scan_properties(value,
+                    handler,
+                    scope=None,
+                    context=None,
+                    path='',
+                    replace=False):
     """
     Scans properties dict recursively and applies the provided handler
     method for each property.
 
     The handler method should have the following signature:
-    def handler(dictionary, key, scope, context, value, path):
+    def handler(dictionary, key, value, scope, context, path):
 
     * dictionary - the dictionary the property belongs to.
     * key - the name of the property.
@@ -33,6 +38,7 @@ def scan_properties(value, handler, scope=None, context=None, path=''):
     * scope - scope of the operation (string).
     * context - scanner context (i.e. actual node template).
     * path - current property path.
+    * replace - replace current dict/list values of scanned properties.
 
     :param value: The properties container (dict/list).
     :param handler: A method for applying for to each property.
@@ -41,35 +47,53 @@ def scan_properties(value, handler, scope=None, context=None, path=''):
     if isinstance(value, dict):
         for k, v in value.iteritems():
             current_path = '{0}.{1}'.format(path, k)
-            handler(value, k, v, scope, context, current_path)
-            scan_properties(v, handler,
-                            scope=scope,
-                            context=context,
-                            path=current_path)
+            result = handler(v, scope, context, current_path)
+            if replace and result != v:
+                value[k] = result
+            else:
+                scan_properties(v, handler,
+                                scope=scope,
+                                context=context,
+                                path=current_path,
+                                replace=replace)
     elif isinstance(value, list):
-        for item in value:
-            scan_properties(item, handler,
-                            scope=scope,
-                            context=context,
-                            path=path)
+        for index, item in enumerate(value):
+            current_path = '{0}[{1}]'.format(path, index)
+            result = handler(item, scope, context, current_path)
+            if replace and result != item:
+                value[index] = result
+            else:
+                scan_properties(item,
+                                handler,
+                                scope=scope,
+                                context=context,
+                                path=path,
+                                replace=replace)
 
 
-def _scan_operations(operations, handler, scope=None, context=None, path=''):
+def _scan_operations(operations,
+                     handler,
+                     scope=None,
+                     context=None,
+                     path='',
+                     replace=False):
     for name, definition in operations.iteritems():
         if isinstance(definition, dict) and 'properties' in definition:
             scan_properties(definition['properties'],
                             handler,
                             scope=scope,
                             context=context,
-                            path='{0}.{1}.properties'.format(path, name))
+                            path='{0}.{1}.properties'.format(path, name),
+                            replace=replace)
 
 
-def scan_node_operation_properties(node_template, handler):
+def scan_node_operation_properties(node_template, handler, replace=False):
     _scan_operations(node_template['operations'],
                      handler,
                      scope=NODE_TEMPLATE_SCOPE,
                      context=node_template,
-                     path='{0}.operations'.format(node_template['name']))
+                     path='{0}.operations'.format(node_template['name']),
+                     replace=replace)
     for r in node_template.get('relationships', []):
         context = {'node_template': node_template, 'relationship': r}
         _scan_operations(r.get('source_operations', {}),
@@ -77,28 +101,32 @@ def scan_node_operation_properties(node_template, handler):
                          scope=NODE_TEMPLATE_RELATIONSHIP_SCOPE,
                          context=context,
                          path='{0}.{1}'.format(node_template['name'],
-                                               r['type']))
+                                               r['type']),
+                         replace=replace)
         _scan_operations(r.get('target_operations', {}),
                          handler,
                          scope=NODE_TEMPLATE_RELATIONSHIP_SCOPE,
                          context=context,
                          path='{0}.{1}'.format(node_template['name'],
-                                               r['type']))
+                                               r['type']),
+                         replace=replace)
 
 
-def scan_service_template(plan, handler):
+def scan_service_template(plan, handler, replace=False):
     for node_template in plan.node_templates:
         scan_properties(node_template['properties'],
                         handler,
                         scope=NODE_TEMPLATE_SCOPE,
                         context=node_template,
                         path='{0}.properties'.format(
-                            node_template['name']))
+                            node_template['name']),
+                        replace=replace)
 
-        scan_node_operation_properties(node_template, handler)
+        scan_node_operation_properties(node_template, handler, replace=replace)
     for output_name, output in plan.outputs.iteritems():
         scan_properties(output,
                         handler,
                         scope=OUTPUTS_SCOPE,
                         context=plan.outputs,
-                        path='outputs.{0}'.format(output_name))
+                        path='outputs.{0}'.format(output_name),
+                        replace=replace)

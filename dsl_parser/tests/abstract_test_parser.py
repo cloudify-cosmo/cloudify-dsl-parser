@@ -13,16 +13,33 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
 
 import tempfile
 import shutil
 import unittest
 import os
 import uuid
+from functools import wraps
+from multiprocessing import Process
+
 import yaml
+
 from dsl_parser.parser import DSLParsingException
 from dsl_parser.parser import parse as dsl_parse
+
+
+def timeout(seconds=10):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            process = Process(None, func, None, args, kwargs)
+            process.start()
+            process.join(seconds)
+            if process.is_alive():
+                process.terminate()
+                raise RuntimeError(
+                    'test timeout exceeded [timeout={0}]'.format(seconds))
+        return wraps(func)(wrapper)
+    return decorator
 
 
 class AbstractTestParser(unittest.TestCase):

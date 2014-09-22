@@ -16,6 +16,7 @@
 
 from dsl_parser.tasks import prepare_deployment_plan
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
+from dsl_parser.tests.abstract_test_parser import timeout
 
 
 class TestGetProperty(AbstractTestParser):
@@ -274,6 +275,53 @@ node_templates:
         prepared = prepare_deployment_plan(self.parse(yaml % {
             'source': 'SOURCE', 'target': 'TARGET'}))
         do_assertions()
+
+    def test_recursive_with_nesting(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+            c: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: 1
+            b: { get_property: [SELF, c] }
+            c: [ { get_property: [SELF, a ] }, 2 ]
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        vm = self.get_node_by_name(parsed, 'vm')
+        self.assertEqual(1, vm['properties']['b'][0])
+        self.assertEqual(2, vm['properties']['b'][1])
+        self.assertEqual(1, vm['properties']['c'][0])
+        self.assertEqual(2, vm['properties']['c'][1])
+
+    @timeout(seconds=10)
+    def test_circular_get_property(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+            c: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: { get_property: [SELF, b] }
+            b: { get_property: [SELF, c] }
+            c: { get_property: [SELF, a] }
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except RuntimeError, e:
+            print str(e)
+            pass
 
 
 class TestGetAttribute(AbstractTestParser):
