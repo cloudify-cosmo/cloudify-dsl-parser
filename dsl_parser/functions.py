@@ -94,7 +94,7 @@ class GetProperty(Function):
     def validate(self, plan):
         self.evaluate(plan)
 
-    def evaluate(self, plan):
+    def get_node_template(self, plan):
         if self.node_name == SELF:
             if self.scope != scan.NODE_TEMPLATE_SCOPE:
                 raise ValueError(
@@ -127,7 +127,10 @@ class GetProperty(Function):
                 "from '{2}' doesn't exist.".format(node['name'],
                                                    self.property_name,
                                                    self.path))
-        return node['properties'][self.property_name]
+        return node
+
+    def evaluate(self, plan):
+        return self.get_node_template(plan)['properties'][self.property_name]
 
 
 class GetAttribute(Function):

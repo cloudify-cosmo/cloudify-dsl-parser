@@ -48,25 +48,23 @@ def scan_properties(value,
             result = handler(v, scope, context, current_path)
             if replace and result != v:
                 value[k] = result
-            else:
-                scan_properties(v, handler,
-                                scope=scope,
-                                context=context,
-                                path=current_path,
-                                replace=replace)
+            scan_properties(v, handler,
+                            scope=scope,
+                            context=context,
+                            path=current_path,
+                            replace=replace)
     elif isinstance(value, list):
         for index, item in enumerate(value):
             current_path = '{0}[{1}]'.format(path, index)
             result = handler(item, scope, context, current_path)
             if replace and result != item:
                 value[index] = result
-            else:
-                scan_properties(item,
-                                handler,
-                                scope=scope,
-                                context=context,
-                                path=path,
-                                replace=replace)
+            scan_properties(item,
+                            handler,
+                            scope=scope,
+                            context=context,
+                            path=path,
+                            replace=replace)
 
 
 def _scan_operations(operations,

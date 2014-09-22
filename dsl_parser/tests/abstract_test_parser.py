@@ -38,6 +38,8 @@ def timeout(seconds=10):
                 process.terminate()
                 raise RuntimeError(
                     'test timeout exceeded [timeout={0}]'.format(seconds))
+            if process.exitcode != 0:
+                raise RuntimeError()
         return wraps(func)(wrapper)
     return decorator
 

@@ -55,19 +55,9 @@ def _set_plan_inputs(plan, inputs=None):
 
 def _process_functions(plan):
     def handler(v, scope, context, path):
-        # For circular function calls validation
-        funcs = set()
         func = functions.parse(v, scope=scope, context=context, path=path)
         evaluated_value = v
         while isinstance(func, functions.Function):
-            if isinstance(func, functions.GetProperty):
-                if str(func.raw) in funcs:
-                    raise RuntimeError(
-                        'Circular {0} function call detected in {1} '
-                        '{2}'.format(functions.GET_PROPERTY_FUNCTION,
-                                     scope,
-                                     path))
-                funcs.add(str(func.raw))
             if isinstance(func, functions.GetAttribute):
                 return func.raw
             evaluated_value = func.evaluate(plan)

@@ -485,12 +485,56 @@ def _validate_relationship_impls(relationship_impls):
 
 
 def _validate_functions(plan):
+    get_property_functions = []
+
     def handler(v, scope, context, path):
         func = functions.parse(v, scope=scope, context=context, path=path)
         if isinstance(func, functions.Function):
             func.validate(plan)
+        if isinstance(func, functions.GetProperty):
+            get_property_functions.append(func)
+            return func
+        return v
 
-    scan.scan_service_template(plan, handler)
+    # Replace all get_property functions with their instance representation
+    scan.scan_service_template(plan, handler, replace=True)
+
+    if not get_property_functions:
+        return
+
+    # Validate circular get_property
+    for func in get_property_functions:
+        visited_functions = ['{0}.{1}'.format(
+            func.get_node_template(plan)['name'],
+            func.property_name)]
+
+        def validate_no_circular_get_property(*args):
+            r = args[0]
+            if isinstance(r, functions.GetProperty):
+                func_id = '{0}.{1}'.format(
+                    r.get_node_template(plan)['name'],
+                    r.property_name)
+                if func_id in visited_functions:
+                    raise RuntimeError(
+                        'Circular get_property function call detected: '
+                        '{0} -> {1}'.format(' -> '.join(visited_functions),
+                                            func_id))
+                visited_functions.append(func_id)
+                r = r.evaluate(plan)
+                validate_no_circular_get_property(r)
+            else:
+                scan.scan_properties(r, validate_no_circular_get_property)
+
+        result = func.evaluate(plan)
+        validate_no_circular_get_property(result)
+
+    def replace_with_raw_function(*args):
+        if isinstance(args[0], functions.GetProperty):
+            return args[0].raw
+        return args[0]
+
+    # Change previously replaced get_property instances with raw values
+    scan.scan_service_template(plan, replace_with_raw_function, replace=True)
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
