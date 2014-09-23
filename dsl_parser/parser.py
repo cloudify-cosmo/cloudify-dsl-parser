@@ -734,7 +734,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             operation_properties.update({
                 constants.SCRIPT_PATH_PROPERTY: {
                     'default': script_path,
-                    'description': 'added during dsl parsing'
+                    'description': 'Workflow script executed by the script'
+                                   ' plugin'
                 }
             })
         else:
