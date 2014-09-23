@@ -227,6 +227,8 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
                     GET_ATTRIBUTE_FUNCTION,
                     'Multi instances of node "{0}" are not supported by '
                     'function.'.format(func.node_name))
+        else:
+            return v
 
     scan.scan_properties(outputs,
                          handler,

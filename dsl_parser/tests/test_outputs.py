@@ -153,6 +153,9 @@ outputs:
     port:
         description: p0
         value: { get_attribute: [ webserver, port ] }
+    endpoint:
+        value:
+            port: { get_attribute: [ webserver, port ] }
 """
         parsed = self.parse(yaml)
 
@@ -167,6 +170,7 @@ outputs:
             ]
         o = functions.evaluate_outputs(parsed['outputs'], get_node_instances)
         self.assertEqual(8080, o['port'])
+        self.assertEqual(8080, o['endpoint']['port'])
 
     def test_unknown_node_instance_evaluation(self):
         yaml = """
