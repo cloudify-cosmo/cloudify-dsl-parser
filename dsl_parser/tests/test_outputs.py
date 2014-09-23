@@ -92,7 +92,7 @@ outputs:
         func = functions.parse(outputs['port']['value'])
         self.assertTrue(isinstance(func, functions.GetAttribute))
         self.assertEqual('webserver', func.node_name)
-        self.assertEqual('port', func.attribute_name)
+        self.assertEqual('port', func.attribute_path[0])
         prepared = prepare_deployment_plan(parsed)
         self.assertEqual(parsed['outputs'], prepared['outputs'])
 
@@ -225,6 +225,43 @@ outputs:
         except exceptions.FunctionEvaluationError, e:
             self.assertIn('Multi instances of node', str(e))
             self.assertIn('webserver', str(e))
+
+    def test_get_attribute_nested_property(self):
+        yaml = """
+node_types:
+    webserver_type: {}
+node_templates:
+    webserver:
+        type: webserver_type
+outputs:
+    port:
+        value: { get_attribute: [ webserver, endpoint, port ] }
+    protocol:
+        value: { get_attribute: [ webserver, endpoint, url, protocol ] }
+    none:
+        value: { get_attribute: [ webserver, endpoint, url, none ] }
+"""
+        parsed = self.parse(yaml)
+
+        def get_node_instances():
+            node_instance = NodeInstance({
+                'node_id': 'webserver',
+                'runtime_properties': {
+                    'endpoint': {
+                        'url': {
+                            'protocol': 'http'
+                        },
+                        'port': 8080
+                    }
+                }
+            })
+            return [node_instance]
+
+        outputs = functions.evaluate_outputs(parsed['outputs'],
+                                             get_node_instances)
+        self.assertEqual(8080, outputs['port'])
+        self.assertEqual('http', outputs['protocol'])
+        self.assertIsNone(outputs['none'])
 
 
 class NodeInstance(dict):

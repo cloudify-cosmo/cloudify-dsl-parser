@@ -401,6 +401,109 @@ outputs:
             self.assertIn('Circular get_property function call detected',
                           str(e))
 
+    @timeout(seconds=10)
+    def test_circular_self_get_property(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: [ { get_property: [SELF, a ] } ]
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except RuntimeError, e:
+            self.assertIn('Circular get_property function call detected',
+                          str(e))
+
+    def test_nested_property_path(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            endpoint: {}
+            a: { type: integer }
+    server_type:
+        properties:
+            port: { type: integer }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            endpoint:
+                url:
+                    protocol: http
+                port: 80
+            a: { get_property: [ SELF, endpoint, port ] }
+    server:
+        type: server_type
+        properties:
+            port: { get_property: [ vm, endpoint, port ] }
+outputs:
+    a:
+        value: { get_property: [ vm, endpoint, port ] }
+    b:
+        value: { get_property: [ vm, endpoint, url, protocol ] }
+
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        vm = self.get_node_by_name(parsed, 'vm')
+        self.assertEqual(80, vm['properties']['a'])
+        server = self.get_node_by_name(parsed, 'server')
+        self.assertEqual(80, server['properties']['port'])
+        outputs = parsed.outputs
+        self.assertEqual(80, outputs['a']['value'])
+        self.assertEqual('http', outputs['b']['value'])
+
+    def test_invalid_nested_property(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a:
+                a0: { get_property: [ SELF, a, notfound ] }
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except KeyError, e:
+            self.assertIn(
+                "Node template property 'vm.properties.a.notfound' "
+                "referenced from 'vm.properties.a.a0' doesn't exist.", str(e))
+
+    def test_circular_nested_property_path(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a:
+                a0: { get_property: [ SELF, b, b0 ] }
+            b:
+                b0: { get_property: [ SELF, a, a0 ] }
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except RuntimeError, e:
+            self.assertIn('Circular get_property function call detected',
+                          str(e))
+
 
 class TestGetAttribute(AbstractTestParser):
 

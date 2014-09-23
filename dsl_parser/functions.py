@@ -79,17 +79,17 @@ class GetProperty(Function):
 
     def __init__(self, args, **kwargs):
         self.node_name = None
-        self.property_name = None
+        self.property_path = None
         super(GetProperty, self).__init__(args, **kwargs)
 
     def _parse_args(self, args):
         if not isinstance(args, list) or len(args) < 2:
             raise ValueError(
-                'Illegal arguments passed to {0} function. '
-                'Expected: [ node_name, property_name ] but got: {1}.'.format(
-                    GET_PROPERTY_FUNCTION, args))
+                'Illegal arguments passed to {0} function. Expected: '
+                '<node_name, property_name [, nested-property-1, ... ]> but '
+                'got: {1}.'.format(GET_PROPERTY_FUNCTION, args))
         self.node_name = args[0]
-        self.property_name = args[1]
+        self.property_path = args[1:]
 
     def validate(self, plan):
         self.evaluate(plan)
@@ -121,33 +121,34 @@ class GetProperty(Function):
                     "{0} function node reference '{1}' does not exist.".format(
                         GET_PROPERTY_FUNCTION, self.node_name))
             node = found[0]
-        if self.property_name not in node['properties']:
-            raise KeyError(
-                "Node template property '{0}.properties.{1}' referenced "
-                "from '{2}' doesn't exist.".format(node['name'],
-                                                   self.property_name,
-                                                   self.path))
+        self._get_property_value(node)
         return node
 
+    def _get_property_value(self, node_template):
+        return _get_property_value(node_template['name'],
+                                   node_template['properties'],
+                                   self.property_path,
+                                   self.path)
+
     def evaluate(self, plan):
-        return self.get_node_template(plan)['properties'][self.property_name]
+        return self._get_property_value(self.get_node_template(plan))
 
 
 class GetAttribute(Function):
 
     def __init__(self, args, **kwargs):
         self.node_name = None
-        self.attribute_name = None
+        self.attribute_path = None
         super(GetAttribute, self).__init__(args, **kwargs)
 
     def _parse_args(self, args):
         if not isinstance(args, list) or len(args) < 2:
             raise ValueError(
                 'Illegal arguments passed to {0} function. '
-                'Expected: [ node_name, property_name ] but got: {1}.'.format(
-                    GET_ATTRIBUTE_FUNCTION, args))
+                'Expected: <node_name, attribute_name [, nested-attr-1, ...]>'
+                'but got: {1}.'.format(GET_ATTRIBUTE_FUNCTION, args))
         self.node_name = args[0]
-        self.attribute_name = args[1]
+        self.attribute_path = args[1:]
 
     def validate(self, plan):
         if self.scope != scan.OUTPUTS_SCOPE:
@@ -177,6 +178,33 @@ TEMPLATE_FUNCTIONS = {
     GET_ATTRIBUTE_FUNCTION: GetAttribute,
     GET_INPUT_FUNCTION: GetInput
 }
+
+
+def _get_property_value(node_name,
+                        properties,
+                        property_path,
+                        context_path='',
+                        raise_if_not_found=True):
+    """Extracts a property's value according to the provided property path
+
+    :param node_name: Node name the property belongs to (for logging).
+    :param properties: Properties dict.
+    :param property_path: Property path as list.
+    :param context_path: Context path (for logging).
+    :param raise_if_not_found: Whether to raise an error if property not found.
+    :return: Property value.
+    """
+    value = properties
+    for p in property_path:
+        if not isinstance(value, dict) or p not in value:
+            if raise_if_not_found:
+                raise KeyError(
+                    "Node template property '{0}.properties.{1}' referenced "
+                    "from '{2}' doesn't exist.".format(
+                        node_name, '.'.join(property_path), context_path))
+            return None
+        value = value[p]
+    return value
 
 
 def parse(raw_function, scope=None, context=None, path=None):
@@ -211,9 +239,11 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
             for instance in ctx['node_instances']:
                 if instance.node_id == func.node_name:
                     attributes.append(
-                        instance.runtime_properties.get(
-                            func.attribute_name) if
-                        instance.runtime_properties else None)
+                        _get_property_value(instance.node_id,
+                                            instance.runtime_properties,
+                                            func.attribute_path,
+                                            path,
+                                            raise_if_not_found=False))
             if len(attributes) == 1:
                 return attributes[0]
             elif len(attributes) == 0:

@@ -516,14 +516,14 @@ def _validate_functions(plan):
     for func in get_property_functions:
         visited_functions = ['{0}.{1}'.format(
             func.get_node_template(plan)['name'],
-            func.property_name)]
+            ','.join(func.property_path))]
 
         def validate_no_circular_get_property(*args):
             r = args[0]
             if isinstance(r, functions.GetProperty):
                 func_id = '{0}.{1}'.format(
                     r.get_node_template(plan)['name'],
-                    r.property_name)
+                    ','.join(r.property_path))
                 if func_id in visited_functions:
                     raise RuntimeError(
                         'Circular get_property function call detected: '
