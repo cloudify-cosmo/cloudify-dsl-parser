@@ -16,6 +16,7 @@
 
 from dsl_parser.tasks import prepare_deployment_plan
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
+from dsl_parser.tests.abstract_test_parser import timeout
 
 
 class TestGetProperty(AbstractTestParser):
@@ -274,6 +275,131 @@ node_templates:
         prepared = prepare_deployment_plan(self.parse(yaml % {
             'source': 'SOURCE', 'target': 'TARGET'}))
         do_assertions()
+
+    def test_recursive_with_nesting(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+            c: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: 1
+            b: { get_property: [SELF, c] }
+            c: [ { get_property: [SELF, a ] }, 2 ]
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        vm = self.get_node_by_name(parsed, 'vm')
+        self.assertEqual(1, vm['properties']['b'][0])
+        self.assertEqual(2, vm['properties']['b'][1])
+        self.assertEqual(1, vm['properties']['c'][0])
+        self.assertEqual(2, vm['properties']['c'][1])
+
+    # @timeout(seconds=10)
+    def test_circular_get_property(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+            c: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: { get_property: [SELF, b] }
+            b: { get_property: [SELF, c] }
+            c: { get_property: [SELF, a] }
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except RuntimeError, e:
+            self.assertIn('Circular get_property function call detected',
+                          str(e))
+
+    @timeout(seconds=10)
+    def test_circular_get_property_with_nesting(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            b: { type: string }
+            c: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            b: { get_property: [SELF, c] }
+            c: [ { get_property: [SELF, b ] }, 2 ]
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except RuntimeError, e:
+            self.assertIn('Circular get_property function call detected',
+                          str(e))
+
+    def test_recursive_get_property_in_outputs(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+            c: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: 1
+            b: { get_property: [SELF, c] }
+            c: [ { get_property: [SELF, a ] }, 2 ]
+outputs:
+    o:
+        value:
+            a: { get_property: [vm, b] }
+            b: [0, { get_property: [vm, b] }]
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        outputs = parsed.outputs
+        self.assertEqual(1, outputs['o']['value']['a'][0])
+        self.assertEqual(2, outputs['o']['value']['a'][1])
+        self.assertEqual(0, outputs['o']['value']['b'][0])
+        self.assertEqual(1, outputs['o']['value']['b'][1][0])
+        self.assertEqual(2, outputs['o']['value']['b'][1][1])
+
+    @timeout(seconds=10)
+    def test_circular_get_property_from_outputs(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            b: { type: string }
+            c: { type: string }
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            b: { get_property: [SELF, c] }
+            c: [ { get_property: [SELF, b ] }, 2 ]
+outputs:
+    o:
+        value:
+            a: 1
+            b: { get_property: [vm, b] }
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except RuntimeError, e:
+            self.assertIn('Circular get_property function call detected',
+                          str(e))
 
 
 class TestGetAttribute(AbstractTestParser):

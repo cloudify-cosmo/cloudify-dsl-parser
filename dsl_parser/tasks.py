@@ -54,21 +54,26 @@ def _set_plan_inputs(plan, inputs=None):
 
 
 def _process_functions(plan):
-    def handler(dict_, k, v, scope, context, path):
+    def handler(v, scope, context, path):
         func = functions.parse(v, scope=scope, context=context, path=path)
         evaluated_value = v
         while isinstance(func, functions.Function):
             if isinstance(func, functions.GetAttribute):
-                dict_[k] = func.raw
-                return
+                return func.raw
             evaluated_value = func.evaluate(plan)
+            scan.scan_properties(evaluated_value,
+                                 handler,
+                                 scope=scope,
+                                 context=context,
+                                 path=path,
+                                 replace=True)
             func = functions.parse(evaluated_value,
                                    scope=scope,
                                    context=context,
                                    path=path)
-        dict_[k] = evaluated_value
+        return evaluated_value
 
-    scan.scan_service_template(plan, handler)
+    scan.scan_service_template(plan, handler, replace=True)
 
 
 def prepare_deployment_plan(plan, inputs=None, **kwargs):

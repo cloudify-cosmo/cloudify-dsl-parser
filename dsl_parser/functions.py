@@ -94,7 +94,7 @@ class GetProperty(Function):
     def validate(self, plan):
         self.evaluate(plan)
 
-    def evaluate(self, plan):
+    def get_node_template(self, plan):
         if self.node_name == SELF:
             if self.scope != scan.NODE_TEMPLATE_SCOPE:
                 raise ValueError(
@@ -127,7 +127,10 @@ class GetProperty(Function):
                 "from '{2}' doesn't exist.".format(node['name'],
                                                    self.property_name,
                                                    self.path))
-        return node['properties'][self.property_name]
+        return node
+
+    def evaluate(self, plan):
+        return self.get_node_template(plan)['properties'][self.property_name]
 
 
 class GetAttribute(Function):
@@ -199,7 +202,7 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
     ctx = {}
     outputs = {k: v['value'] for k, v in outputs_def.iteritems()}
 
-    def handler(dict_, k, v, scope, context, path):
+    def handler(v, scope, context, path):
         func = parse(v, scope=scope, context=context, path=path)
         if isinstance(func, GetAttribute):
             attributes = []
@@ -212,7 +215,7 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
                             func.attribute_name) if
                         instance.runtime_properties else None)
             if len(attributes) == 1:
-                dict_[k] = attributes[0]
+                return attributes[0]
             elif len(attributes) == 0:
                 raise exceptions.FunctionEvaluationError(
                     GET_ATTRIBUTE_FUNCTION,
@@ -229,5 +232,6 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
                          handler,
                          scope=scan.OUTPUTS_SCOPE,
                          context=outputs,
-                         path='outputs')
+                         path='outputs',
+                         replace=True)
     return outputs
