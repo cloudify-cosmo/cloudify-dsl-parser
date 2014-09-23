@@ -299,7 +299,7 @@ node_templates:
         self.assertEqual(1, vm['properties']['c'][0])
         self.assertEqual(2, vm['properties']['c'][1])
 
-    # @timeout(seconds=10)
+    @timeout(seconds=10)
     def test_circular_get_property(self):
         yaml = """
 node_types:
@@ -481,6 +481,7 @@ node_templates:
                 "Node template property 'vm.properties.a.notfound' "
                 "referenced from 'vm.properties.a.a0' doesn't exist.", str(e))
 
+    @timeout(seconds=10)
     def test_circular_nested_property_path(self):
         yaml = """
 node_types:
@@ -501,7 +502,8 @@ node_templates:
             prepare_deployment_plan(self.parse(yaml))
             self.fail()
         except RuntimeError, e:
-            self.assertIn('Circular get_property function call detected',
+            self.assertIn('Circular get_property function call detected: '
+                          'vm.b,b0 -> vm.a,a0 -> vm.b,b0',
                           str(e))
 
 
