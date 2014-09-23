@@ -26,6 +26,7 @@ import yaml
 
 from dsl_parser.parser import DSLParsingException
 from dsl_parser.parser import parse as dsl_parse
+from dsl_parser.parser import parse_from_path as dsl_parse_from_path
 
 
 def timeout(seconds=10):
@@ -137,6 +138,12 @@ imports:"""
         dsl_string = AbstractTestParser.BASIC_VERSION_SECTION + dsl_string
         return dsl_parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                          resources_base_url)
+
+    def parse_from_path(self, dsl_path, alias_mapping_dict=None,
+                        alias_mapping_url=None, resources_base_url=None):
+        return dsl_parse_from_path(dsl_path,
+                                   alias_mapping_dict, alias_mapping_url,
+                                   resources_base_url)
 
     def _assert_dsl_parsing_exception_error_code(
             self, dsl,

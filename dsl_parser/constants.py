@@ -21,3 +21,8 @@ PLUGIN_SOURCE_KEY = 'source'
 PLUGIN_INSTALL_KEY = 'install'
 PLUGIN_NAME_KEY = 'name'
 DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
+
+SCRIPT_PLUGIN_NAME = 'script'
+SCRIPT_PLUGIN_RUN_TASK = 'script_runner.tasks.run'
+SCRIPT_PLUGIN_EXECUTE_WORKFLOW_TASK = 'script_runner.tasks.execute_workflow'
+SCRIPT_PATH_PROPERTY = 'script_path'

@@ -15,6 +15,7 @@
 
 __author__ = 'ran'
 
+from dsl_parser import constants
 from dsl_parser.parser import DSLParsingLogicException, parse_from_path
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
@@ -813,3 +814,49 @@ tosca_definitions_version: unsupported_version
         """ + self.MINIMAL_BLUEPRINT
         self._assert_dsl_parsing_exception_error_code(
             yaml, 29, DSLParsingLogicException, dsl_parse)
+
+    def test_script_mapping_illegal_script_path_override(self):
+        yaml = self.BASIC_VERSION_SECTION + """
+plugins:
+    {0}:
+        executor: central_deployment_agent
+        install: false
+node_types:
+    type:
+        interfaces:
+            test:
+                - op:
+                    mapping: stub.py
+                    properties:
+                        script_path: invalid
+node_templates:
+    node:
+        type: type
+
+""".format(constants.SCRIPT_PLUGIN_NAME)
+        self.make_file_with_name(content='content',
+                                 filename='stub.py')
+        yaml_path = self.make_file_with_name(content=yaml,
+                                             filename='blueprint.yaml')
+        self._assert_dsl_parsing_exception_error_code(
+            yaml_path, 60, DSLParsingLogicException,
+            parsing_method=self.parse_from_path)
+
+    def test_script_mapping_missing_script_plugin(self):
+        yaml = self.BASIC_VERSION_SECTION + """
+node_types:
+    type:
+        interfaces:
+            test:
+                - op: stub.py
+node_templates:
+    node:
+        type: type
+""".format(constants.SCRIPT_PLUGIN_NAME)
+        self.make_file_with_name(content='content',
+                                 filename='stub.py')
+        yaml_path = self.make_file_with_name(content=yaml,
+                                             filename='blueprint.yaml')
+        self._assert_dsl_parsing_exception_error_code(
+            yaml_path, 61, DSLParsingLogicException,
+            parsing_method=self.parse_from_path)
