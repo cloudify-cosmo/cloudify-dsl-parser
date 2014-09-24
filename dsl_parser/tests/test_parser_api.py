@@ -2466,7 +2466,7 @@ workflows:
         for i in range(2):
             policy_types.append(dict(
                 policy_types={
-                    'policy_type{}'.format(i): dict(
+                    'policy_type{0}'.format(i): dict(
                         source='the_source',
                         properties=dict(
                             property=dict(
