@@ -24,9 +24,9 @@ install_requires = [
 ]
 
 try:
-    from collections import OrderedDict
+    from collections import OrderedDict  # NOQA
 except ImportError, e:
-    install_requires.append['ordereddict==1.1']
+    install_requires.append('ordereddict==1.1')
 
 
 setup(
