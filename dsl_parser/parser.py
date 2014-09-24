@@ -19,7 +19,6 @@ import copy
 import contextlib
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
-from collections import OrderedDict
 from collections import namedtuple
 
 import yaml
@@ -31,6 +30,12 @@ from dsl_parser import functions
 from dsl_parser import models
 from dsl_parser import scan
 from dsl_parser import schemas
+
+try:
+    from collections import OrderedDict
+except ImportError, e:
+    from ordereddict import OrderedDict
+
 
 SUPPORTED_VERSIONS = ['cloudify_dsl_1_0']
 
