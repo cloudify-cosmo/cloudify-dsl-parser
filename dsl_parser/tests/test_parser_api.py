@@ -2555,7 +2555,7 @@ groups:
         for i in range(2):
             groups.append(dict(
                 groups={
-                    'group{}'.format(i): dict(
+                    'group{0}'.format(i): dict(
                         members=['test_node'],
                         policies=dict(
                             policy=dict(

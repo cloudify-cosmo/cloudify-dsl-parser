@@ -864,14 +864,14 @@ def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
             if member not in node_names:
                 raise DSLParsingLogicException(
                     40,
-                    'member "{}" of group "{}" does not '
+                    'member "{0}" of group "{1}" does not '
                     'match any defined node'.format(member, groups))
         for policy_name, policy in group['policies'].items():
             if policy['type'] not in policy_types:
                 raise DSLParsingLogicException(
                     41,
-                    'policy "{}" of group "{}" references a non existent '
-                    'policy type "{}"'
+                    'policy "{0}" of group "{1}" references a non existent '
+                    'policy type "{2}"'
                     .format(policy_name, group, policy['type']))
             merged_properties = _merge_schema_and_instance_properties(
                 policy.get(PROPERTIES, {}),
@@ -882,17 +882,17 @@ def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
                 '{0} does not provide a value for mandatory '
                 '\'{1}\' property which is '
                 'part of its policy type schema',
-                node_name='group "{}", policy "{}"'.format(group_name,
-                                                           policy_name))
+                node_name='group "{0}", policy "{1}"'.format(group_name,
+                                                             policy_name))
             policy[PROPERTIES] = merged_properties
             policy['triggers'] = policy.get('triggers', {})
             for trigger_name, trigger in policy['triggers'].items():
                 if trigger['type'] not in policy_triggers:
                     raise DSLParsingLogicException(
                         42,
-                        'trigger "{}" of policy "{}" of group "{}" '
+                        'trigger "{0}" of policy "{1}" of group "{2}" '
                         'references a non existent '
-                        'policy trigger "{}"'
+                        'policy trigger "{3}"'
                         .format(trigger_name,
                                 policy_name,
                                 group, trigger['type']))
@@ -905,7 +905,7 @@ def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
                     '{0} does not provide a value for mandatory '
                     '\'{1}\' property which is '
                     'part of its policy type schema',
-                    node_name='group "{}", policy "{}" trigger "{}"'
+                    node_name='group "{0}", policy "{1}" trigger "{2}"'
                               .format(group_name, policy_name, trigger_name))
                 trigger[PARAMETERS] = merged_parameters
     return processed_groups

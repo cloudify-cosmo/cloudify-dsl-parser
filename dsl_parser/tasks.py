@@ -41,15 +41,15 @@ def _set_plan_inputs(plan, inputs=None):
                 inputs[input_name] = input_def['default']
             else:
                 raise exceptions.MissingRequiredInputError(
-                    'Required input \'{}\' was not specified - expected '
-                    'inputs: {}'.format(input_name, plan['inputs'].keys()))
+                    'Required input \'{0}\' was not specified - expected '
+                    'inputs: {1}'.format(input_name, plan['inputs'].keys()))
     # Verify all inputs appear in plan
     for input_name in inputs.keys():
         if input_name not in plan['inputs']:
             raise exceptions.UnknownInputError(
-                'Unknown input \'{}\' specified - '
-                'expected inputs: {}'.format(input_name,
-                                             plan['inputs'].keys()))
+                'Unknown input \'{0}\' specified - '
+                'expected inputs: {1}'.format(input_name,
+                                              plan['inputs'].keys()))
     plan['inputs'] = inputs
 
 
