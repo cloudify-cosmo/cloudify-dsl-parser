@@ -182,7 +182,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                                                     SUPPORTED_VERSIONS))
 
     nodes = combined_parsed_dsl[NODE_TEMPLATES]
-    node_names_set = {node_name for node_name in nodes.keys()}
+    node_names_set = set(nodes.keys())
 
     top_level_relationships = _process_relationships(combined_parsed_dsl,
                                                      resource_base)

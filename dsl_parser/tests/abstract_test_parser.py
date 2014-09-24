@@ -16,7 +16,6 @@
 
 import tempfile
 import shutil
-import unittest
 import os
 import uuid
 from functools import wraps

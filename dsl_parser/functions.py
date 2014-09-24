@@ -228,7 +228,7 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
     :return: Outputs dict.
     """
     ctx = {}
-    outputs = {k: v['value'] for k, v in outputs_def.iteritems()}
+    outputs = dict((k, v['value']) for k, v in outputs_def.iteritems())
 
     def handler(v, scope, context, path):
         func = parse(v, scope=scope, context=context, path=path)

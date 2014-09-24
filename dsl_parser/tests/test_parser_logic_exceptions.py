@@ -480,9 +480,9 @@ relationships:
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 112, DSLParsingLogicException)
-        self.assertSetEqual({'cloudify.relationships.contained_in',
-                             'derived_from_contained_in'},
-                            set(ex.relationship_types))
+        self.assertEqual(set(['cloudify.relationships.contained_in',
+                              'derived_from_contained_in']),
+                         set(ex.relationship_types))
 
     def test_relationship_implementation_ambiguous(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
