@@ -259,7 +259,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         type_impls, relationship_impls, node_names,
                         inputs, outputs, resource_base):
-    node_name_to_node = {node['id']: node for node in processed_nodes}
+    node_name_to_node = dict((node['id'], node) for node in processed_nodes)
 
     depends_on_rel_types = _build_family_descendants_set(
         relationships, DEPENDS_ON_REL_TYPE)
@@ -569,8 +569,8 @@ def _validate_agent_plugins_on_host_nodes(processed_nodes):
 
 
 def _build_family_descendants_set(types_dict, derived_from):
-    return {type_name for type_name in types_dict.iterkeys()
-            if _is_derived_from(type_name, types_dict, derived_from)}
+    return set(type_name for type_name in types_dict.iterkeys()
+            if _is_derived_from(type_name, types_dict, derived_from))
 
 
 def _is_derived_from(type_name, types, derived_from):
@@ -857,7 +857,7 @@ def _process_policy_triggers(policy_triggers):
 
 
 def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
-    node_names = {n['name'] for n in processed_nodes}
+    node_names = set(n['name'] for n in processed_nodes)
     processed_groups = copy.deepcopy(groups)
     for group_name, group in processed_groups.items():
         for member in group['members']:
@@ -978,9 +978,9 @@ def _process_node_relationships(node, node_name, node_names_set,
 def _get_implementation(lookup_message_str, type_name, implementations,
                         impl_category, types, err_code_ambig,
                         err_code_derive, candidate_func):
-    candidates = {impl_name: impl_content for impl_name, impl_content in
+    candidates = dict((impl_name, impl_content) for impl_name, impl_content in
                   implementations.iteritems() if
-                  candidate_func(impl_content)}
+                  candidate_func(impl_content))
 
     if len(candidates) > 1:
         ex = \
@@ -1388,10 +1388,10 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
 
     # TODO: Find a solution for top level workflows, which should be probably
     # somewhat merged with override
-    merge_no_override = {INTERFACES, NODE_TYPES, PLUGINS, WORKFLOWS,
+    merge_no_override = set([INTERFACES, NODE_TYPES, PLUGINS, WORKFLOWS,
                          TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
                          RELATIONSHIP_IMPLEMENTATIONS,
-                         POLICY_TYPES, GROUPS, POLICY_TRIGGERS}
+                         POLICY_TYPES, GROUPS, POLICY_TRIGGERS])
     merge_one_nested_level_no_override = dict()
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
