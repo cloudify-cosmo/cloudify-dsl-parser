@@ -2492,7 +2492,7 @@ workflows:
         for i in range(2):
             policy_triggers.append(dict(
                 policy_triggers={
-                    'policy_trigger{}'.format(i): dict(
+                    'policy_trigger{0}'.format(i): dict(
                         source='the_source',
                         parameters=dict(
                             property=dict(
