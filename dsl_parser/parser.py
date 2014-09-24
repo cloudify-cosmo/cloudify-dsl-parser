@@ -193,8 +193,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                                         RELATIONSHIP_IMPLEMENTATIONS).copy()
 
     plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
-    processed_plugins = {name: _process_plugin(plugin, name)
-                         for (name, plugin) in plugins.items()}
+    processed_plugins = dict((name, _process_plugin(plugin, name))
+                             for (name, plugin) in plugins.items())
 
     processed_nodes = map(lambda node_name_and_node: _process_node(
         node_name_and_node[0], node_name_and_node[1], combined_parsed_dsl,
