@@ -570,7 +570,7 @@ def _validate_agent_plugins_on_host_nodes(processed_nodes):
 
 def _build_family_descendants_set(types_dict, derived_from):
     return set(type_name for type_name in types_dict.iterkeys()
-            if _is_derived_from(type_name, types_dict, derived_from))
+               if _is_derived_from(type_name, types_dict, derived_from))
 
 
 def _is_derived_from(type_name, types, derived_from):
@@ -979,8 +979,8 @@ def _get_implementation(lookup_message_str, type_name, implementations,
                         impl_category, types, err_code_ambig,
                         err_code_derive, candidate_func):
     candidates = dict((impl_name, impl_content) for impl_name, impl_content in
-                  implementations.iteritems() if
-                  candidate_func(impl_content))
+                      implementations.iteritems() if
+                      candidate_func(impl_content))
 
     if len(candidates) > 1:
         ex = \
@@ -1389,9 +1389,9 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
     # TODO: Find a solution for top level workflows, which should be probably
     # somewhat merged with override
     merge_no_override = set([INTERFACES, NODE_TYPES, PLUGINS, WORKFLOWS,
-                         TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
-                         RELATIONSHIP_IMPLEMENTATIONS,
-                         POLICY_TYPES, GROUPS, POLICY_TRIGGERS])
+                             TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
+                             RELATIONSHIP_IMPLEMENTATIONS,
+                             POLICY_TYPES, GROUPS, POLICY_TRIGGERS])
     merge_one_nested_level_no_override = dict()
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
