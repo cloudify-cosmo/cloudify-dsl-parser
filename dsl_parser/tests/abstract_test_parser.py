@@ -16,12 +16,12 @@
 
 import tempfile
 import shutil
-import unittest
 import os
 import uuid
 from functools import wraps
 from multiprocessing import Process
 
+import testtools
 import yaml
 
 from dsl_parser.parser import DSLParsingException
@@ -45,7 +45,7 @@ def timeout(seconds=10):
     return decorator
 
 
-class AbstractTestParser(unittest.TestCase):
+class AbstractTestParser(testtools.TestCase):
     BASIC_VERSION_SECTION = """
 tosca_definitions_version: cloudify_dsl_1_0
     """
@@ -92,10 +92,12 @@ node_types:
         BASIC_PLUGIN + BASIC_TYPE
 
     def setUp(self):
+        super(AbstractTestParser, self).setUp()
         self._temp_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
+        super(AbstractTestParser, self).tearDown()
 
     def make_alias_yaml_file(self, alias):
         filename = 'tempfile{0}.yaml'.format(uuid.uuid4())

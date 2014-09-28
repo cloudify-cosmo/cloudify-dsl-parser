@@ -62,14 +62,14 @@ class GetInput(Function):
         if not valid_args_type:
             raise ValueError(
                 "get_input function argument should be a string in "
-                "{} but is '{}'.".format(self.context, args))
+                "{0} but is '{1}'.".format(self.context, args))
         self.input_name = args
 
     def validate(self, plan):
         if self.input_name not in plan.inputs:
             raise exceptions.UnknownInputError(
-                "{} get_input function references an "
-                "unknown input '{}'.".format(self.context, self.input_name))
+                "{0} get_input function references an "
+                "unknown input '{1}'.".format(self.context, self.input_name))
 
     def evaluate(self, plan):
         return plan.inputs[self.input_name]
@@ -228,7 +228,7 @@ def evaluate_outputs(outputs_def, get_node_instances_method):
     :return: Outputs dict.
     """
     ctx = {}
-    outputs = {k: v['value'] for k, v in outputs_def.iteritems()}
+    outputs = dict((k, v['value']) for k, v in outputs_def.iteritems())
 
     def handler(v, scope, context, path):
         func = parse(v, scope=scope, context=context, path=path)

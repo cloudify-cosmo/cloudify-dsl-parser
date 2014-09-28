@@ -19,7 +19,6 @@ import copy
 import contextlib
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
-from collections import OrderedDict
 from collections import namedtuple
 
 import yaml
@@ -31,6 +30,12 @@ from dsl_parser import functions
 from dsl_parser import models
 from dsl_parser import scan
 from dsl_parser import schemas
+
+try:
+    from collections import OrderedDict
+except ImportError, e:
+    from ordereddict import OrderedDict
+
 
 SUPPORTED_VERSIONS = ['cloudify_dsl_1_0']
 
@@ -182,7 +187,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                                                     SUPPORTED_VERSIONS))
 
     nodes = combined_parsed_dsl[NODE_TEMPLATES]
-    node_names_set = {node_name for node_name in nodes.keys()}
+    node_names_set = set(nodes.keys())
 
     top_level_relationships = _process_relationships(combined_parsed_dsl,
                                                      resource_base)
@@ -193,8 +198,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                                         RELATIONSHIP_IMPLEMENTATIONS).copy()
 
     plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
-    processed_plugins = {name: _process_plugin(plugin, name)
-                         for (name, plugin) in plugins.items()}
+    processed_plugins = dict((name, _process_plugin(plugin, name))
+                             for (name, plugin) in plugins.items())
 
     processed_nodes = map(lambda node_name_and_node: _process_node(
         node_name_and_node[0], node_name_and_node[1], combined_parsed_dsl,
@@ -259,7 +264,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
 def _post_process_nodes(processed_nodes, types, relationships, plugins,
                         type_impls, relationship_impls, node_names,
                         inputs, outputs, resource_base):
-    node_name_to_node = {node['id']: node for node in processed_nodes}
+    node_name_to_node = dict((node['id'], node) for node in processed_nodes)
 
     depends_on_rel_types = _build_family_descendants_set(
         relationships, DEPENDS_ON_REL_TYPE)
@@ -569,8 +574,8 @@ def _validate_agent_plugins_on_host_nodes(processed_nodes):
 
 
 def _build_family_descendants_set(types_dict, derived_from):
-    return {type_name for type_name in types_dict.iterkeys()
-            if _is_derived_from(type_name, types_dict, derived_from)}
+    return set(type_name for type_name in types_dict.iterkeys()
+               if _is_derived_from(type_name, types_dict, derived_from))
 
 
 def _is_derived_from(type_name, types, derived_from):
@@ -857,21 +862,21 @@ def _process_policy_triggers(policy_triggers):
 
 
 def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
-    node_names = {n['name'] for n in processed_nodes}
+    node_names = set(n['name'] for n in processed_nodes)
     processed_groups = copy.deepcopy(groups)
     for group_name, group in processed_groups.items():
         for member in group['members']:
             if member not in node_names:
                 raise DSLParsingLogicException(
                     40,
-                    'member "{}" of group "{}" does not '
+                    'member "{0}" of group "{1}" does not '
                     'match any defined node'.format(member, groups))
         for policy_name, policy in group['policies'].items():
             if policy['type'] not in policy_types:
                 raise DSLParsingLogicException(
                     41,
-                    'policy "{}" of group "{}" references a non existent '
-                    'policy type "{}"'
+                    'policy "{0}" of group "{1}" references a non existent '
+                    'policy type "{2}"'
                     .format(policy_name, group, policy['type']))
             merged_properties = _merge_schema_and_instance_properties(
                 policy.get(PROPERTIES, {}),
@@ -882,17 +887,17 @@ def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
                 '{0} does not provide a value for mandatory '
                 '\'{1}\' property which is '
                 'part of its policy type schema',
-                node_name='group "{}", policy "{}"'.format(group_name,
-                                                           policy_name))
+                node_name='group "{0}", policy "{1}"'.format(group_name,
+                                                             policy_name))
             policy[PROPERTIES] = merged_properties
             policy['triggers'] = policy.get('triggers', {})
             for trigger_name, trigger in policy['triggers'].items():
                 if trigger['type'] not in policy_triggers:
                     raise DSLParsingLogicException(
                         42,
-                        'trigger "{}" of policy "{}" of group "{}" '
+                        'trigger "{0}" of policy "{1}" of group "{2}" '
                         'references a non existent '
-                        'policy trigger "{}"'
+                        'policy trigger "{3}"'
                         .format(trigger_name,
                                 policy_name,
                                 group, trigger['type']))
@@ -905,7 +910,7 @@ def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
                     '{0} does not provide a value for mandatory '
                     '\'{1}\' property which is '
                     'part of its policy type schema',
-                    node_name='group "{}", policy "{}" trigger "{}"'
+                    node_name='group "{0}", policy "{1}" trigger "{2}"'
                               .format(group_name, policy_name, trigger_name))
                 trigger[PARAMETERS] = merged_parameters
     return processed_groups
@@ -978,9 +983,9 @@ def _process_node_relationships(node, node_name, node_names_set,
 def _get_implementation(lookup_message_str, type_name, implementations,
                         impl_category, types, err_code_ambig,
                         err_code_derive, candidate_func):
-    candidates = {impl_name: impl_content for impl_name, impl_content in
-                  implementations.iteritems() if
-                  candidate_func(impl_content)}
+    candidates = dict((impl_name, impl_content) for impl_name, impl_content in
+                      implementations.iteritems() if
+                      candidate_func(impl_content))
 
     if len(candidates) > 1:
         ex = \
@@ -1388,10 +1393,10 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
 
     # TODO: Find a solution for top level workflows, which should be probably
     # somewhat merged with override
-    merge_no_override = {INTERFACES, NODE_TYPES, PLUGINS, WORKFLOWS,
-                         TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
-                         RELATIONSHIP_IMPLEMENTATIONS,
-                         POLICY_TYPES, GROUPS, POLICY_TRIGGERS}
+    merge_no_override = set([INTERFACES, NODE_TYPES, PLUGINS, WORKFLOWS,
+                             TYPE_IMPLEMENTATIONS, RELATIONSHIPS,
+                             RELATIONSHIP_IMPLEMENTATIONS,
+                             POLICY_TYPES, GROUPS, POLICY_TRIGGERS])
     merge_one_nested_level_no_override = dict()
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)

@@ -287,9 +287,9 @@ type_implementations:
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 103, DSLParsingLogicException)
-        self.assertItemsEqual(
-            ['first_implementation', 'second_implementation'],
-            ex.implementations)
+        self.assertEqual(
+            set(['first_implementation', 'second_implementation']),
+            set(ex.implementations))
 
     def test_type_implementation_not_derived_type(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
@@ -480,9 +480,9 @@ relationships:
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 112, DSLParsingLogicException)
-        self.assertSetEqual({'cloudify.relationships.contained_in',
-                             'derived_from_contained_in'},
-                            set(ex.relationship_types))
+        self.assertEqual(set(['cloudify.relationships.contained_in',
+                              'derived_from_contained_in']),
+                         set(ex.relationship_types))
 
     def test_relationship_implementation_ambiguous(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
@@ -511,10 +511,10 @@ relationship_implementations:
 """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 108, DSLParsingLogicException)
-        self.assertItemsEqual(
-            ['specific_test_relationship_impl1',
-             'specific_test_relationship_impl2'],
-            ex.implementations)
+        self.assertEqual(
+            set(['specific_test_relationship_impl1',
+                 'specific_test_relationship_impl2']),
+            set(ex.implementations))
 
     def test_relationship_implementation_not_derived_type(self):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
