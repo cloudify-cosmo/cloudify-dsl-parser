@@ -19,7 +19,6 @@ import copy
 import contextlib
 from urllib import pathname2url
 from urllib2 import urlopen, URLError
-from collections import OrderedDict
 from collections import namedtuple
 
 import yaml
@@ -31,6 +30,7 @@ from dsl_parser import functions
 from dsl_parser import models
 from dsl_parser import scan
 from dsl_parser import schemas
+from dsl_parser import interfaces_parser
 
 SUPPORTED_VERSIONS = ['cloudify_dsl_1_0']
 
@@ -403,8 +403,6 @@ def _process_context_operations(partial_error_message, interfaces, plugins,
         _validate_no_duplicate_operations(operation_mapping_context,
                                           interface_name, node['id'],
                                           node['type'])
-        # for operation_name, plugin_name, operation_mapping, \
-        #         operation_properties in operation_mapping_context:
         for op_descriptor in operation_mapping_context:
             if op_descriptor.plugin is not None:
                 op_struct = op_descriptor.op_struct
@@ -457,10 +455,14 @@ def _extract_plugin_names_and_operation_mapping_from_interface(
         resource_base):
     plugin_names = plugins.keys()
     result = []
-    for operation in interface:
+    for operation_name, operation_content in interface.items():
         op_descriptor = \
             _extract_plugin_name_and_operation_mapping_from_operation(
-                plugins, plugin_names, operation, error_code,
+                plugins,
+                plugin_names,
+                operation_name,
+                operation_content,
+                error_code,
                 partial_error_message,
                 resource_base)
         result.append(op_descriptor)
@@ -662,93 +664,51 @@ def _rel_inheritance_merging_func(complete_super_type,
     merged_type = current_level_type
 
     if merge_properties:
-        merged_props_array = _merge_sub_dicts(complete_super_type,
-                                              merged_type,
-                                              PROPERTIES)
+        merged_props_array = merge_sub_dicts(
+            complete_super_type,
+            merged_type,
+            PROPERTIES
+        )
         if len(merged_props_array) > 0:
             merged_type[PROPERTIES] = merged_props_array
 
     # derived source and target interfaces
     for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
-        merged_interfaces = _merge_interface_dicts(complete_super_type,
-                                                   merged_type, interfaces)
+        merged_interfaces = interfaces_parser.merge_interface_dicts(
+            complete_super_type,
+            merged_type,
+            interfaces
+        )
         if len(merged_interfaces) > 0:
             merged_type[interfaces] = merged_interfaces
 
     return merged_type
 
 
-def _merge_interface_dicts(overridden, overriding, interfaces_attribute):
-    if interfaces_attribute not in overridden and \
-            interfaces_attribute not in overriding:
-        return {}
-    if interfaces_attribute not in overridden:
-        return overriding[interfaces_attribute]
-    if interfaces_attribute not in overriding:
-        return overridden[interfaces_attribute]
-    merged_interfaces = copy.deepcopy(overridden[interfaces_attribute])
-    for overriding_interface, interface_obj in \
-            overriding[interfaces_attribute].items():
-        interface_obj_copy = copy.deepcopy(interface_obj)
-        if overriding_interface not in overridden[interfaces_attribute]:
-            merged_interfaces[overriding_interface] = interface_obj_copy
-        else:
-            merged_interfaces[overriding_interface] = _merge_interface_list(
-                overridden[interfaces_attribute][overriding_interface],
-                interface_obj_copy)
-    return merged_interfaces
-
-
-def _merge_interface_list(overridden_interface, overriding_interface):
-
-    def op_and_op_name(op):
-        if type(op) == str:
-            return op, op
-        key, value = op.items()[0]
-        return key, op
-
-    # OrderedDict for easier testability
-    overridden = OrderedDict((x, y) for x, y in map(op_and_op_name,
-                                                    overridden_interface))
-    overriding = OrderedDict((x, y) for x, y in map(op_and_op_name,
-                                                    overriding_interface))
-    result = []
-    for op_name, operation in overridden.items():
-        if op_name not in overriding:
-            result.append(operation)
-        else:
-            result.append(overriding[op_name])
-    for op_name, operation in overriding.items():
-        if op_name not in overridden:
-            result.append(operation)
-    return result
-
-
 def _extract_plugin_name_and_operation_mapping_from_operation(
         plugins,
         plugin_names,
-        operation,
+        operation_name,
+        operation_content,
         error_code,
         partial_error_message,
         resource_base,
         is_workflows=False):
-    properties_field_name = 'parameters' if is_workflows else 'properties'
-    if type(operation) == str:
-        return OpDescriptor(name=operation,
+    payload_field_name = 'parameters' if is_workflows else 'inputs'
+    if not operation_content:
+        return OpDescriptor(name=operation_name,
                             plugin=None,
                             op_struct=_operation_struct(
                                 None,
                                 None,
                                 None,
-                                properties_field_name))
-    operation_name = operation.keys()[0]
-    operation_content = operation.values()[0]
-    operation_properties = None
+                                payload_field_name))
+    operation_payload = None
     if type(operation_content) == str:
         operation_mapping = operation_content
     else:
-        operation_mapping = operation_content['mapping']
-        operation_properties = operation_content[properties_field_name]
+        operation_mapping = operation_content['implementation']
+        operation_payload = operation_content[payload_field_name]
 
     longest_prefix = 0
     longest_prefix_plugin_name = None
@@ -765,22 +725,22 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             op_struct=_operation_struct(
                 longest_prefix_plugin_name,
                 operation_mapping[longest_prefix + 1:],
-                operation_properties,
-                properties_field_name
+                operation_payload,
+                payload_field_name
             ))
     elif resource_base and _resource_exists(resource_base, operation_mapping):
-        operation_properties = copy.deepcopy(operation_properties or {})
-        if constants.SCRIPT_PATH_PROPERTY in operation_properties:
+        operation_payload = copy.deepcopy(operation_payload or {})
+        if constants.SCRIPT_PATH_PROPERTY in operation_payload:
             message = 'Cannot define {0} property in {1} for {2} "{3}"' \
-                      .format(constants.SCRIPT_PATH_PROPERTY,
-                              operation_mapping,
-                              'workflow' if is_workflows else 'operation',
-                              operation_name)
+                .format(constants.SCRIPT_PATH_PROPERTY,
+                        operation_mapping,
+                        'workflow' if is_workflows else 'operation',
+                        operation_name)
             raise DSLParsingLogicException(60, message)
         script_path = operation_mapping
         if is_workflows:
             operation_mapping = constants.SCRIPT_PLUGIN_EXECUTE_WORKFLOW_TASK
-            operation_properties.update({
+            operation_payload.update({
                 constants.SCRIPT_PATH_PROPERTY: {
                     'default': script_path,
                     'description': 'Workflow script executed by the script'
@@ -789,7 +749,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             })
         else:
             operation_mapping = constants.SCRIPT_PLUGIN_RUN_TASK
-            operation_properties.update({
+            operation_payload.update({
                 constants.SCRIPT_PATH_PROPERTY: script_path
             })
         if constants.SCRIPT_PLUGIN_NAME not in plugins:
@@ -805,8 +765,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             op_struct=_operation_struct(
                 constants.SCRIPT_PLUGIN_NAME,
                 operation_mapping,
-                operation_properties,
-                properties_field_name
+                operation_payload,
+                payload_field_name
             ))
     else:
         # This is an error for validation done somewhere down the
@@ -873,7 +833,7 @@ def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
                     'policy "{}" of group "{}" references a non existent '
                     'policy type "{}"'
                     .format(policy_name, group, policy['type']))
-            merged_properties = _merge_schema_and_instance_properties(
+            merged_properties = merge_schema_and_instance_properties(
                 policy.get(PROPERTIES, {}),
                 {},
                 policy_types[policy['type']].get(PROPERTIES, {}),
@@ -896,7 +856,7 @@ def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
                         .format(trigger_name,
                                 policy_name,
                                 group, trigger['type']))
-                merged_parameters = _merge_schema_and_instance_properties(
+                merged_parameters = merge_schema_and_instance_properties(
                     trigger.get(PARAMETERS, {}),
                     {},
                     policy_triggers[trigger['type']].get(PARAMETERS, {}),
@@ -906,7 +866,7 @@ def _process_groups(groups, policy_types, policy_triggers, processed_nodes):
                     '\'{1}\' property which is '
                     'part of its policy type schema',
                     node_name='group "{}", policy "{}" trigger "{}"'
-                              .format(group_name, policy_name, trigger_name))
+                    .format(group_name, policy_name, trigger_name))
                 trigger[PARAMETERS] = merged_parameters
     return processed_groups
 
@@ -954,7 +914,7 @@ def _process_node_relationships(node, node_name, node_names_set,
                 relationship,
                 merge_properties=False)
             complete_relationship[PROPERTIES] = \
-                _merge_schema_and_instance_properties(
+                merge_schema_and_instance_properties(
                     _get_dict_prop(relationship, PROPERTIES),
                     impl_properties,
                     _get_dict_prop(relationship_complete_type, PROPERTIES),
@@ -1199,7 +1159,7 @@ def _process_plugin(plugin, plugin_name):
     return processed_plugin
 
 
-def _merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
+def merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
     overridden_sub_dict = _get_dict_prop(overridden_dict, sub_dict_key)
     overriding_sub_dict = _get_dict_prop(overriding_dict, sub_dict_key)
     return dict(overridden_sub_dict.items() + overriding_sub_dict.items())
@@ -1210,9 +1170,11 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl,
     def types_and_node_inheritance_common_merging_func(complete_super_type,
                                                        merged_type):
         # derive interfaces
-        merged_type[INTERFACES] = _merge_interface_dicts(complete_super_type,
-                                                         merged_type,
-                                                         INTERFACES)
+        merged_type[INTERFACES] = interfaces_parser.merge_interface_dicts(
+            complete_super_type,
+            merged_type,
+            INTERFACES
+        )
         return merged_type
 
     def types_inheritance_merging_func(complete_super_type,
@@ -1221,9 +1183,10 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl,
         # derive properties. This is not part of the common merging func of
         # types and nodes since node properties aren't derived from the
         # type; type properties are the node properties' schema.
-        merged_type[PROPERTIES] = _merge_sub_dicts(complete_super_type,
-                                                   merged_type,
-                                                   PROPERTIES)
+        merged_type[PROPERTIES] = merge_sub_dicts(
+            complete_super_type,
+            merged_type,
+            PROPERTIES)
 
         types_and_node_inheritance_common_merging_func(complete_super_type,
                                                        merged_type)
@@ -1235,11 +1198,12 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl,
         parsed_dsl[NODE_TYPES],
         types_inheritance_merging_func, [], False)
 
-    complete_node = types_and_node_inheritance_common_merging_func(
-        complete_type,
-        copy.deepcopy(node))
+    # merge schema and instance interfaces inputs
+    complete_node = interfaces_parser.merge_type_and_node_interfaces(
+        node_name, complete_type, node)
 
-    complete_node[PROPERTIES] = _merge_schema_and_instance_properties(
+    # merge schema and instance node properties
+    complete_node[PROPERTIES] = merge_schema_and_instance_properties(
         _get_dict_prop(node, PROPERTIES),
         impl_properties,
         _get_dict_prop(complete_type, PROPERTIES),
@@ -1255,29 +1219,34 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl,
     return complete_node
 
 
-def _merge_schema_and_instance_properties(
+def merge_schema_and_instance_properties(
         instance_properties,
         impl_properties,
         schema_properties,
         undefined_property_error_message,
         missing_property_error_message,
-        node_name):
-
+        node_name, is_interface_inputs=False):
     instance_properties = dict(instance_properties.items() +
                                impl_properties.items())
 
     flattened_schema_props = {}
     for prop_key, prop in schema_properties.iteritems():
-        flattened_schema_props[prop_key] =\
+        flattened_schema_props[prop_key] = \
             prop['default'] if 'default' in prop else None
 
-    for key in instance_properties.iterkeys():
-        if key not in flattened_schema_props:
-            ex = DSLParsingLogicException(
-                106,
-                undefined_property_error_message.format(node_name, key))
-            ex.property = key
-            raise ex
+    if not is_interface_inputs:
+
+        # validate instance properties don't
+        # contain properties that are not defined
+        # in the schema.
+
+        for key in instance_properties.iterkeys():
+            if key not in flattened_schema_props:
+                ex = DSLParsingLogicException(
+                    106,
+                    undefined_property_error_message.format(node_name, key))
+                ex.property = key
+                raise ex
 
     merged_properties = dict(flattened_schema_props.items() +
                              instance_properties.items())

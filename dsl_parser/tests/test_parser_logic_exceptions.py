@@ -36,8 +36,8 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                - install: missing_plugin.install
-                - terminate: missing_plugin.terminate
+                install: missing_plugin.install
+                terminate: missing_plugin.terminate
         properties:
             install_agent:
                 default: 'false'
@@ -94,7 +94,7 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install: test_plugin.install
 
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -118,7 +118,7 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install: test_plugin.install
 
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -143,7 +143,7 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install: test_plugin.install
 
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -155,7 +155,7 @@ relationships:
     test_relationship:
         source_interfaces:
             some_interface:
-                - op: no_plugin.op
+                op: no_plugin.op
                         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 19, DSLParsingLogicException)
@@ -244,7 +244,7 @@ relationships:
                 target: "test_node"
                 source_interfaces:
                     an_interface:
-                        - op: no_plugin.op
+                        op: no_plugin.op
 relationships:
     test_relationship: {}
                         """
@@ -260,7 +260,7 @@ node_types:
     test_type:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                start: test_plugin.start
 plugins:
     test_plugin:
         executor: host_agent
@@ -309,8 +309,8 @@ type_implementations:
         yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
         interfaces:
             test_interface1:
-                - install
-                - install: test_plugin.install
+                install: {}
+                install: test_plugin.install
 node_types:
     test_type:
         properties:
@@ -327,8 +327,8 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install
-                - install: test_plugin.install
+                install: {}
+                install: test_plugin.install
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 20, DSLParsingLogicException)
@@ -342,8 +342,8 @@ relationships:
     empty_relationship:
         source_interfaces:
             test_interface1:
-                - install
-                - install: test_plugin.install
+                install: {}
+                install: test_plugin.install
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 20, DSLParsingLogicException)
@@ -357,8 +357,8 @@ relationships:
     empty_relationship:
         target_interfaces:
             test_interface1:
-                - install
-                - install: test_plugin.install
+                install: {}
+                install: test_plugin.install
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 20, DSLParsingLogicException)
@@ -372,8 +372,8 @@ relationships:
                 target: test_node
                 source_interfaces:
                     test_interface1:
-                        - install
-                        - install: test_plugin.install
+                        install: {}
+                        install: test_plugin.install
 node_types:
     test_type:
         properties:
@@ -394,8 +394,8 @@ relationships:
                 target: test_node
                 target_interfaces:
                     test_interface1:
-                        - install
-                        - install: test_plugin.install
+                        install: {}
+                        install: test_plugin.install
 node_types:
     test_type:
         properties:
@@ -825,10 +825,12 @@ node_types:
     type:
         interfaces:
             test:
-                - op:
-                    mapping: stub.py
-                    properties:
-                        script_path: invalid
+                op:
+                    implementation: stub.py
+                    inputs:
+                        script_path:
+                            default: invalid
+                            type: string
 node_templates:
     node:
         type: type
@@ -848,7 +850,7 @@ node_types:
     type:
         interfaces:
             test:
-                - op: stub.py
+                op: stub.py
 node_templates:
     node:
         type: type

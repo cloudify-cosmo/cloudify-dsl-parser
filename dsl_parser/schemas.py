@@ -15,52 +15,40 @@
 #    * limitations under the License.
 
 
-ADVANCED_OPERATION_MAPPING_SCHEMA = {
+PLAIN_OPERATION_MAPPING_SCHEMA = {
     'type': 'object',
     'properties': {
-        'mapping': {
+        'implementation': {
             'type': 'string'
         },
-        'properties': {
+        'inputs': {
             'type': 'object',
             'minProperties': 1
         }
     },
-    'required': ['mapping', 'properties'],
+    'required': ['implementation', 'inputs'],
     'additionalProperties': False
 }
 
-INTERFACES_SCHEMA = {
+
+PLAIN_INTERFACES_SCHEMA = {
     'type': 'object',
     'patternProperties': {
         '^': {
-            'type': 'array',
-            'items': {
-                'oneOf': [
-                    {
-                        'type': 'string'
-                    },
-                    {
-                        'type': 'object',
-                        'patternProperties': {
-                            '^': {
-                                'oneOf': [
-                                    {'type': 'string'},
-                                    ADVANCED_OPERATION_MAPPING_SCHEMA,
-                                ]
-                            }
-                        },
-                        'maxProperties': 1,
-                        'minProperties': 1
-                    }
-                ]
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'oneOf': [
+                        {'type': 'string'},
+                        PLAIN_OPERATION_MAPPING_SCHEMA
+                    ]
+                }
             },
-            'uniqueItems': True,
-            'minItems': 1
         }
     },
     'minProperties': 1
 }
+
 
 PROPERTY_TYPES_SCHEMA = {
     'enum': [
@@ -147,6 +135,41 @@ PROPERTIES_SCHEMA_SCHEMA = {
             ]
         }
     }
+}
+
+ADVANCED_OPERATION_MAPPING_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'implementation': {
+            'type': 'string'
+        },
+        'inputs': PROPERTIES_SCHEMA_SCHEMA
+    },
+    'required': ['implementation', 'inputs'],
+    'additionalProperties': False
+}
+
+NODE_TYPE_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'oneOf': [
+                        {'type': 'string'},
+                        {
+                            'type': 'object',
+                            'minProperties': 0,
+                            'maxProperties': 0
+                        },
+                        ADVANCED_OPERATION_MAPPING_SCHEMA
+                    ]
+                }
+            },
+            }
+    },
+    'minProperties': 1
 }
 
 WORKFLOW_MAPPING_SCHEMA = {
@@ -301,7 +324,7 @@ DSL_SCHEMA = {
                             'required': ['deploy'],
                             'additionalProperties': False
                         },
-                        'interfaces': INTERFACES_SCHEMA,
+                        'interfaces': PLAIN_INTERFACES_SCHEMA,
                         'relationships': {
                             'type': 'array',
                             'items': {
@@ -318,8 +341,8 @@ DSL_SCHEMA = {
                                     'properties': {
                                         'type': 'object'
                                     },
-                                    'source_interfaces': INTERFACES_SCHEMA,
-                                    'target_interfaces': INTERFACES_SCHEMA,
+                                    'source_interfaces': PLAIN_INTERFACES_SCHEMA,
+                                    'target_interfaces': PLAIN_INTERFACES_SCHEMA,
                                 },
                                 'required': ['type', 'target'],
                                 'additionalProperties': False
@@ -451,7 +474,7 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        'interfaces': INTERFACES_SCHEMA,
+                        'interfaces': NODE_TYPE_INTERFACES_SCHEMA,
                         #non-meta 'properties'
                         'properties': PROPERTIES_SCHEMA_SCHEMA,
                         'derived_from': {
@@ -494,8 +517,8 @@ DSL_SCHEMA = {
                         'derived_from': {
                             'type': 'string'
                         },
-                        'source_interfaces': INTERFACES_SCHEMA,
-                        'target_interfaces': INTERFACES_SCHEMA,
+                        'source_interfaces': PLAIN_INTERFACES_SCHEMA,
+                        'target_interfaces': PLAIN_INTERFACES_SCHEMA,
                         #non-meta 'properties'
                         'properties': PROPERTIES_SCHEMA_SCHEMA
                     },

@@ -343,10 +343,10 @@ node_templates:
         type: webserver_type
         interfaces:
             lifecycle:
-                -   configure:
-                        mapping: plugin.operation
-                        properties:
-                            port: { get_input: aaa }
+                configure:
+                    implementation: plugin.operation
+                    inputs:
+                        port: { get_input: aaa }
 """
         self.assertRaises(UnknownInputError, self.parse, yaml)
 

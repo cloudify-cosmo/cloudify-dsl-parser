@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,3 +12,16 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+
+import os
+
+from dsl_parser.parser import parse_from_path as _parse_from_path
+from dsl_parser.tests.resources import dsl
+
+
+def parse_dsl_resource(path):
+
+    dsl_dir = os.path.dirname(dsl.__file__)
+    return _parse_from_path(
+        dsl_file_path=os.path.join(dsl_dir, path),
+    )

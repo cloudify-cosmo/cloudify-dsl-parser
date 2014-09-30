@@ -112,13 +112,13 @@ node_templates:
         type: vm_type
         interfaces:
             interface:
-                -   op:
-                        mapping: plugin.op
-                        properties:
-                            x: { get_property: [vm, notfound] }
+                op:
+                    implementation: plugin.op
+                    inputs:
+                        x: { get_property: [vm, notfound] }
 """
         try:
-            self.parse(yaml)
+            a = self.parse(yaml)
             self.fail()
         except KeyError, e:
             self.assertIn('Node template property', str(e))

@@ -70,8 +70,8 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
+                install: test_plugin.install
+                terminate: test_plugin.terminate
         properties:
             install_agent:
                 default: 'false'
