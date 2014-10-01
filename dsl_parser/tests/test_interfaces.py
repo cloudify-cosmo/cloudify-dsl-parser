@@ -153,8 +153,6 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
 
-
-
     def test_node_template_operation_mapping_merges_node_type_no_op(self):
         dsl = parse(
             'node_template_operation_mapping_merges_node_type_no_op.yaml'  # NOQA
@@ -314,8 +312,6 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
 
-
-
     def test_node_template_operation_merges_node_type_no_op(self):
         dsl = parse(
             'node_template_operation_merges_node_type_no_op.yaml'
@@ -456,8 +452,6 @@ class TestInterfaces(unittest.TestCase):
             }
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
-
-
 
     def test_node_type_no_op_merges_node_type_no_op(self):
         dsl = parse(
@@ -607,7 +601,6 @@ class TestInterfaces(unittest.TestCase):
         )
         operations = dsl['nodes'][0]['operations']
         self.assertEqual(operations, {})
-
 
     def test_node_type_operation_mapping_merges_node_type_no_op(self):
         dsl = parse(
@@ -767,8 +760,6 @@ class TestInterfaces(unittest.TestCase):
             }
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
-
-
 
     def test_node_type_operation_merges_node_type_no_op(self):
         dsl = parse(
