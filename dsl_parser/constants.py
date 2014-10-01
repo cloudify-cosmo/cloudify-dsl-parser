@@ -28,3 +28,4 @@ SCRIPT_PLUGIN_EXECUTE_WORKFLOW_TASK = 'script_runner.tasks.execute_workflow'
 SCRIPT_PATH_PROPERTY = 'script_path'
 
 FUNCTION_NAME_PATH_SEPARATOR = '__sep__'
+INTERFACES = 'interfaces'

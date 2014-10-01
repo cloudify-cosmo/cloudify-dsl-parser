@@ -16,6 +16,7 @@
 import copy
 from collections import OrderedDict
 
+from dsl_parser.constants import INTERFACES
 
 def merge_type_operation_to_complete_node(operation_name,
                                           operation,
@@ -23,8 +24,6 @@ def merge_type_operation_to_complete_node(operation_name,
                                           interface_name,
                                           complete_node,
                                           node_name):
-
-    from dsl_parser.parser import INTERFACES
 
     if operation_name not in node[INTERFACES][interface_name]:
 
@@ -49,7 +48,6 @@ def merge_type_interface_to_complete_node(interface_name,
                                           node,
                                           node_name,
                                           complete_node):
-    from dsl_parser.parser import INTERFACES
 
     if interface_name not in node[INTERFACES]:
 
@@ -78,8 +76,6 @@ def merge_type_interfaces_to_complete_node(
         node,
         node_name):
 
-    from dsl_parser.parser import INTERFACES
-
     for interface_name, interface in complete_type[INTERFACES].items():
 
         # initialize interface on complete node.
@@ -94,8 +90,6 @@ def merge_type_interfaces_to_complete_node(
 
 
 def merge_template_interfaces_to_complete_node(complete_node, node):
-
-    from dsl_parser.parser import INTERFACES
 
     for interface_name, interface in node[INTERFACES].items():
         if interface_name not in complete_node[INTERFACES]:
@@ -135,8 +129,6 @@ def merge_node_type_and_node_template_interfaces(
              It does not mutate the original 'node'.
     :rtype dict
     """
-
-    from dsl_parser.parser import INTERFACES
 
     complete_node = copy.deepcopy(node)
     complete_node[INTERFACES] = {}
