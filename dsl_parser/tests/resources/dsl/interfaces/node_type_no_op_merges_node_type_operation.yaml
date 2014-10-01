@@ -14,17 +14,17 @@ plugins:
         install: false
 
 node_types:
-    cloudify.types.base:
-        properties:
-            key:
-                default: value
-
     cloudify.types.base1:
-        derived_from: cloudify.types.base
-        properties:
-            key1:
-                default: value1
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start: mock.tasks.start
+
+    cloudify.types.base2:
+        derived_from: cloudify.types.base1
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: {}
 
 node_templates:
     base:
-        type: cloudify.types.base1
+        type: cloudify.types.base2

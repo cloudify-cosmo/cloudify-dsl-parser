@@ -44,7 +44,7 @@ def merge_type_and_node_interfaces(node_name, complete_type, node):
                 if isinstance(operation, str):
                     node[INTERFACES][interface_name][operation_name] = ''
                 if isinstance(operation, dict):
-                    node[INTERFACES][interface_name][operation_name] = {}
+                    node[INTERFACES][interface_name][operation_name] = None
 
             complete_node[
                 INTERFACES][interface_name][operation_name] = \
@@ -86,7 +86,7 @@ def augment_operation(operation):
         }
     if isinstance(operation, dict):
         return {
-            'implementation': operation.get('implementation', {}),
+            'implementation': operation.get('implementation', ''),
             'inputs': operation.get('inputs', {})
         }
 
@@ -97,15 +97,19 @@ def _merge_operation_dicts(node_name,
 
     from dsl_parser.parser import merge_schema_and_instance_properties
 
+    if not node_template_operation:
+        # no-op mapping
+        return {
+            'implementation': '',
+            'inputs': {}
+        }
+
     return {
 
         # override implementation
         'implementation': node_template_operation.get(
             'implementation',
-            node_type_operation.get(
-                'implementation',
-                {}
-            )
+            node_type_operation.get('implementation', '')
         ),
 
         # validate and merge with inputs schema
@@ -133,6 +137,28 @@ def _merge_operation_strings(node_name,
 def _merge_mixed_operation(node_name,
                            node_template_operation,
                            node_type_operation):
+
+    if node_template_operation is None:
+
+        from dsl_parser.parser import merge_schema_and_instance_properties
+
+        return {
+
+            # override implementation
+            'implementation': node_type_operation.get('implementation', ''),
+
+            # validate and merge with inputs schema
+            'inputs': merge_schema_and_instance_properties(
+                instance_properties={},
+                impl_properties={},
+                schema_properties=node_type_operation.get('inputs', {}),
+                undefined_property_error_message=None,
+                missing_property_error_message=None,
+                node_name=node_name,
+                is_interface_inputs=True
+            )
+        }
+
     if isinstance(node_template_operation, str):
         # this means the node_type_operation is a dict
         # which means it defines inputs.
@@ -157,7 +183,14 @@ def _merge_mixed_operation(node_name,
         }
 
     if isinstance(node_type_operation, str):
-        return node_template_operation
+
+        return {
+
+            # override implementation
+            'implementation': node_template_operation.get('implementation', ''),
+
+            'inputs': node_template_operation.get('inputs', {})
+        }
 
 
 def _merge_operations(node_name, node_template_operation,
@@ -205,9 +238,12 @@ def _merge_node_type_interface_operations(overriding_op, overridden_op):
 
     if isinstance(overriding_op, dict) and \
        isinstance(overridden_op, dict):
+        if not overriding_op:
+            # no-op overriding
+            return overriding_op
         from dsl_parser.parser import merge_sub_dicts
         return {
-            'implementation': overriding_op['implementation'],
+            'implementation': overriding_op.get('implementation', ''),
             'inputs': merge_sub_dicts(
                 overridden_dict=overridden_op,
                 overriding_dict=overriding_op,
@@ -239,7 +275,7 @@ def _merge_node_type_interface_operations(overriding_op, overridden_op):
         from dsl_parser.parser import merge_sub_dicts
 
         return {
-            'implementation': overriding_op['implementation'],
+            'implementation': overriding_op.get('implementation', ''),
             'inputs': merge_sub_dicts(
                 overridden_dict={},
                 overriding_dict=overriding_op,

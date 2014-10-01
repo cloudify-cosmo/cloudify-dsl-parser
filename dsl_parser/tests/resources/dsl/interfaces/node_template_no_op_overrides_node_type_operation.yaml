@@ -1,0 +1,27 @@
+#####################################################
+# Tested features:
+#
+#   - operation mapping of node template overrides
+#     an operation of node type
+#
+#####################################################
+
+tosca_definitions_version: cloudify_dsl_1_0
+
+plugins:
+    mock:
+        executor: central_deployment_agent
+        install: false
+
+node_types:
+    cloudify.types.base:
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: mock.tasks.create
+
+node_templates:
+    base:
+        type: cloudify.types.base
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: {}

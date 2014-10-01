@@ -1,0 +1,34 @@
+###########################################
+# Tested features:
+#
+#   - operation on node template merges
+#     with an operation of node type
+#
+###########################################
+
+tosca_definitions_version: cloudify_dsl_1_0
+
+plugins:
+    mock:
+        executor: central_deployment_agent
+        install: false
+
+node_types:
+    cloudify.types.base1:
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start:
+                    implementation: mock.tasks.start
+                    inputs:
+                        key:
+                            default: value
+
+    cloudify.types.base2:
+        derived_from: cloudify.types.base1
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: {}
+
+node_templates:
+    base:
+        type: cloudify.types.base2

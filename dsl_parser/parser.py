@@ -404,25 +404,25 @@ def _process_context_operations(partial_error_message, interfaces, plugins,
                                           interface_name, node['id'],
                                           node['type'])
         for op_descriptor in operation_mapping_context:
-            if op_descriptor.plugin is not None:
-                op_struct = op_descriptor.op_struct
-                plugin_name = op_descriptor.op_struct['plugin']
-                operation_name = op_descriptor.name
-                operation_properties = op_descriptor.op_struct.get(
-                    'properties')
+            op_struct = op_descriptor.op_struct
+            plugin_name = op_descriptor.op_struct['plugin']
+            operation_name = op_descriptor.name
+            operation_properties = op_descriptor.op_struct.get(
+                'properties')
+            if op_descriptor.plugin:
                 node[PLUGINS][plugin_name] = op_descriptor.plugin
-                op_struct = op_struct.copy()
-                if operation_properties is not None:
-                    op_struct['properties'] = operation_properties
-                if operation_name in operations:
-                    # Indicate this implicit operation name needs to be
-                    # removed as we can only
-                    # support explicit implementation in this case
-                    operations[operation_name] = None
-                else:
-                    operations[operation_name] = op_struct
-                operations['{0}.{1}'.format(interface_name,
-                                            operation_name)] = op_struct
+            op_struct = op_struct.copy()
+            if operation_properties is not None:
+                op_struct['properties'] = operation_properties
+            if operation_name in operations:
+                # Indicate this implicit operation name needs to be
+                # removed as we can only
+                # support explicit implementation in this case
+                operations[operation_name] = None
+            else:
+                operations[operation_name] = op_struct
+            operations['{0}.{1}'.format(interface_name,
+                                        operation_name)] = op_struct
 
     return dict((operation, op_struct) for operation, op_struct in
                 operations.iteritems() if op_struct is not None)
@@ -695,20 +695,21 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         resource_base,
         is_workflows=False):
     payload_field_name = 'parameters' if is_workflows else 'inputs'
-    if not operation_content:
-        return OpDescriptor(name=operation_name,
-                            plugin=None,
-                            op_struct=_operation_struct(
-                                None,
-                                None,
-                                None,
-                                payload_field_name))
     operation_payload = None
     if type(operation_content) == str:
         operation_mapping = operation_content
     else:
         operation_mapping = operation_content['implementation']
         operation_payload = operation_content[payload_field_name]
+
+    if not operation_mapping:
+        return OpDescriptor(name=operation_name,
+                            plugin='',
+                            op_struct=_operation_struct(
+                                '',
+                                '',
+                                {},
+                                payload_field_name))
 
     longest_prefix = 0
     longest_prefix_plugin_name = None

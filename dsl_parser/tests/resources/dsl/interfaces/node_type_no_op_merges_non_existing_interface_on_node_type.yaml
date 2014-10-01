@@ -1,0 +1,31 @@
+###########################################
+# Tested features:
+#
+#   - operation on node template merges
+#     with a node type that doesn't have
+#     this interface (but has others)
+#
+###########################################
+
+tosca_definitions_version: cloudify_dsl_1_0
+
+plugins:
+    mock:
+        executor: central_deployment_agent
+        install: false
+
+node_types:
+    cloudify.types.base:
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: mock.tasks.create
+    cloudify.types.base2:
+        derived_from: cloudify.types.base
+        interfaces:
+            cloudify.interfaces.lifecycle2:
+                create2: {}
+
+
+node_templates:
+    base:
+        type: cloudify.types.base2
