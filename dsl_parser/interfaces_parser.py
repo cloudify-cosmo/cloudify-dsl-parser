@@ -209,8 +209,7 @@ def _merge_operation_dicts(node_name,
     }
 
 
-def _merge_operation_strings(node_name,
-                             node_template_operation,
+def _merge_operation_strings(node_template_operation,
                              node_type_operation):
     return {
         'implementation': node_template_operation or node_type_operation,
@@ -302,7 +301,7 @@ def _merge_operations(node_name, node_template_operation,
     # 2. both operations are strings
     if isinstance(node_type_operation, str) and \
        isinstance(node_template_operation, str):
-        return _merge_operation_strings(node_name, node_template_operation,
+        return _merge_operation_strings(node_template_operation,
                                         node_type_operation)
 
     # 3. mixed
