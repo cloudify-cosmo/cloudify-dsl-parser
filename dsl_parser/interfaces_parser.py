@@ -17,6 +17,31 @@ import copy
 from collections import OrderedDict
 
 
+def merge_type_operation_complete_node(operation_name,
+                                       operation,
+                                       node,
+                                       interface_name,
+                                       complete_node,
+                                       node_name):
+
+    from dsl_parser.parser import INTERFACES
+
+    if operation_name not in node[INTERFACES][interface_name]:
+        if isinstance(operation, str):
+            node[INTERFACES][interface_name][operation_name] = ''
+        if isinstance(operation, dict):
+            node[INTERFACES][interface_name][operation_name] = None
+
+    complete_node[
+        INTERFACES][interface_name][operation_name] = \
+        _merge_operations(
+            node_name=node_name,
+            node_type_operation=operation,
+            node_template_operation=node[
+                INTERFACES][interface_name][operation_name]
+        )
+
+
 def merge_type_interface_to_complete_node(interface_name,
                                           interface,
                                           node,
@@ -30,20 +55,14 @@ def merge_type_interface_to_complete_node(interface_name,
         node[INTERFACES][interface_name] = {}
 
     for operation_name, operation in interface.items():
-        if operation_name not in node[INTERFACES][interface_name]:
-            if isinstance(operation, str):
-                node[INTERFACES][interface_name][operation_name] = ''
-            if isinstance(operation, dict):
-                node[INTERFACES][interface_name][operation_name] = None
-
-        complete_node[
-            INTERFACES][interface_name][operation_name] = \
-            _merge_operations(
-                node_name=node_name,
-                node_type_operation=operation,
-                node_template_operation=node[
-                    INTERFACES][interface_name][operation_name]
-            )
+        merge_type_operation_complete_node(
+            operation_name,
+            operation,
+            node,
+            interface_name,
+            complete_node,
+            node_name
+        )
 
 
 def merge_type_interfaces_to_complete_node(
