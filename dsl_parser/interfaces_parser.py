@@ -17,96 +17,211 @@ import copy
 from collections import OrderedDict
 
 from dsl_parser.constants import INTERFACES
-
-def merge_type_operation_to_complete_node(operation_name,
-                                          operation,
-                                          node,
-                                          interface_name,
-                                          complete_node,
-                                          node_name):
-
-    if operation_name not in node[INTERFACES][interface_name]:
-
-        # operation is defined in the type but
-        # is not defined in the template
-        # set the operation on the node as None,
-        # indicating that it doesn't really exist.
-        node[INTERFACES][interface_name][operation_name] = None
-
-    complete_node[
-        INTERFACES][interface_name][operation_name] = \
-        _merge_operations(
-            node_name=node_name,
-            node_type_operation=operation,
-            node_template_operation=node[
-                INTERFACES][interface_name][operation_name]
-        )
+from dsl_parser.utils import merge_sub_dicts
 
 
-def merge_type_interface_to_complete_node(interface_name,
-                                          interface,
-                                          node,
-                                          node_name,
-                                          complete_node):
-
-    if interface_name not in node[INTERFACES]:
-
-        # interface exists in the type but doesnt
-        # exist in the template.
-        # the complete node will have this interface
-        # so we can treat the complete node as if
-        # it defined this interface empty.
-
-        node[INTERFACES][interface_name] = {}
-
-    for operation_name, operation in interface.items():
-        merge_type_operation_to_complete_node(
-            operation_name,
-            operation,
-            node,
-            interface_name,
-            complete_node,
-            node_name
-        )
+def _operation(implementation=None,
+               inputs=None):
+    return {
+        'implementation': implementation or '',
+        'inputs': inputs or {}
+    }
 
 
-def merge_type_interfaces_to_complete_node(
-        complete_node,
-        complete_type,
-        node,
-        node_name):
+class NodeTemplateNodeTypeOperationMerger(object):
 
-    for interface_name, interface in complete_type[INTERFACES].items():
+    def __init__(self, node_name, node_type_operation, node_template_operation):
 
-        # initialize interface on complete node.
-        complete_node[INTERFACES][interface_name] = {}
+        """
+        :param node_name: The node name.
+        :param node_type_operation: The node type operation.
+        :param node_template_operation: The node template operation.
+        """
 
-        merge_type_interface_to_complete_node(
-            interface_name,
-            interface,
-            node,
-            node_name,
-            complete_node)
+        self.node_type_operation = node_type_operation
+        self.node_template_operation = node_template_operation
+        self.node_name = node_name
 
+        self._merge_operation = {}
 
-def merge_template_interfaces_to_complete_node(complete_node, node):
+    def merge(self):
 
-    for interface_name, interface in node[INTERFACES].items():
-        if interface_name not in complete_node[INTERFACES]:
-            complete_node[INTERFACES][interface_name] = {}
-            for operation_name, operation in interface.items():
-                complete_node[
-                    INTERFACES][interface_name][operation_name] \
-                    = augment_operation(operation)
+        """
+        Merges a node template operation with
+        a node type operation.
+
+        :return The merged operation.
+        :rtype dict
+        """
+
+        # 1. both operations are dicts
+        if isinstance(self.node_type_operation, dict) and \
+                isinstance(self.node_template_operation, dict):
+            self._merge_operation = _merge_operation_dicts(
+                self.node_name,
+                self.node_template_operation,
+                self.node_type_operation)
+
+        # 2. both operations are strings
+        elif isinstance(self.node_type_operation, str) and \
+                isinstance(self.node_template_operation, str):
+            self._merge_operation = _merge_operation_strings(
+                self.node_template_operation,
+                self.node_type_operation)
+
+        # 3. mixed
         else:
-            # interface exists
-            # check per operation
-            for operation_name, operation in interface.items():
-                if operation_name not in \
-                        complete_node[INTERFACES][interface_name]:
-                    complete_node[
-                        INTERFACES][interface_name][operation_name] \
+            self._merge_operation = _merge_mixed_operation(self.node_name,
+                                                           self.node_template_operation,
+                                                           self.node_type_operation)
+
+        return self._merge_operation
+
+
+class NodeTemplateNodeTypeInterfaceMerger(object):
+
+    def __init__(self, node_name, interface_name, interface, node_template):
+
+        """
+        :param node_name: The node name.
+        :param interface_name: The interface name.
+        :param interface: The interface.
+        :param node_template: The node template.
+        """
+
+        self.node_name = node_name
+        self.node_template = node_template
+        self.interface = interface
+        self.interface_name = interface_name
+
+        self._merged_interface = {}
+
+    def _merge_node_type_operation(self,
+                                   operation_name,
+                                   node_type_operation,
+                                   interface_name):
+
+        if operation_name not in self.node_template[INTERFACES][interface_name]:
+
+            # operation is defined in the type but
+            # is not defined in the template
+            # set the operation on the node as None,
+            # indicating that it doesn't really exist.
+            self.node_template[INTERFACES][interface_name][operation_name] = None
+
+        node_template_operation = self.node_template[INTERFACES][interface_name][operation_name]
+
+        operation_merger = NodeTemplateNodeTypeOperationMerger(
+            self.node_name,
+            node_type_operation,
+            node_template_operation)
+        merged_operation = operation_merger.merge()
+        return merged_operation
+
+    def merge(self):
+
+        """
+        Merges a node template interface with
+        a node type interface.
+
+        :return: The merged interface.
+        :rtype dict
+        """
+
+        if self.interface_name not in self.node_template[INTERFACES]:
+
+            # interface exists in the type but doesnt
+            # exist in the template.
+            # the complete node will have this interface
+            # so we can treat the complete node as if
+            # it defined this interface empty.
+
+            self.node_template[INTERFACES][self.interface_name] = {}
+
+        for operation_name, operation in self.interface.items():
+            self._merged_interface[operation_name] = self._merge_node_type_operation(
+                operation_name,
+                operation,
+                self.interface_name)
+
+        return self._merged_interface
+
+
+class NodeTemplateNodeTypeInterfacesMerger(object):
+
+    def __init__(self, node_type, node_template, node_name):
+
+        """
+        :param node_name: The node name.
+        :param node_type: The node type.
+        :param node_template: The node template.
+        """
+
+        self.node_template = copy.deepcopy(node_template)
+        self.node_template.setdefault(INTERFACES, {})
+        self.node_type = copy.deepcopy(node_type)
+        self.node_type.setdefault(INTERFACES, {})
+        self.node_name = node_name
+
+        self._merged_interfaces = {}
+
+    def _merge_type_interfaces_to_complete_node(self):
+
+        for interface_name, interface in self.node_type[INTERFACES].items():
+            interface_merger = NodeTemplateNodeTypeInterfaceMerger(
+                self.node_name, interface_name, interface, self.node_template
+            )
+            merged_interface = interface_merger.merge()
+            self._merged_interfaces[interface_name] = merged_interface
+
+    def _merge_template_interfaces_to_complete_node(self):
+
+        def augment_operation(op):
+            if isinstance(op, str):
+                return _operation(
+                    implementation=op,
+                    inputs={}
+                )
+            if isinstance(op, dict):
+                return _operation(
+                    implementation=op.get('implementation', ''),
+                    inputs=op.get('inputs', {})
+                )
+
+        for interface_name, interface in self.node_template[INTERFACES].items():
+            if interface_name not in self._merged_interfaces:
+                self._merged_interfaces[interface_name] = {}
+                for operation_name, operation in interface.items():
+                    self._merged_interfaces[interface_name][operation_name] \
                         = augment_operation(operation)
+            else:
+                # interface exists
+                # check per operation
+                for operation_name, operation in interface.items():
+                    if operation_name not in \
+                            self._merged_interfaces[interface_name]:
+                        self._merged_interfaces[interface_name][operation_name] \
+                            = augment_operation(operation)
+
+    def merge(self):
+
+        """
+        Merges node template interfaces with
+        a node type operation interfaces.
+
+        :return: The merged interfaces.
+        :rtype dict
+        """
+
+        # iterate over the type interfaces and merge
+        # them to the result (complete_node)
+        self._merge_type_interfaces_to_complete_node()
+
+        # iterate over the template interfaces and merge
+        # them to the result (complete_node)
+        self._merge_template_interfaces_to_complete_node()
+
+        return self._merged_interfaces
 
 
 def merge_node_type_and_node_template_interfaces(
@@ -114,57 +229,14 @@ def merge_node_type_and_node_template_interfaces(
         complete_type,
         node):
 
-    """
-    Merges a node template with a node type.
-    Node template values always override
-    the node type values or merges with it.
-    Never the other way around.
+    merger = NodeTemplateNodeTypeInterfacesMerger(
+        node_type=complete_type,
+        node_template=node,
+        node_name=node_name)
 
-    :param node_name: The node name.
-    :param complete_type: The node complete type
-                          including all derived types.
-    :param node: The actual node template.
-    :return: The node augmented with the 'interfaces' key
-             The return value is a copy of the original value.
-             It does not mutate the original 'node'.
-    :rtype dict
-    """
-
-    complete_node = copy.deepcopy(node)
-    complete_node[INTERFACES] = {}
-
-    if INTERFACES not in node:
-        # node templates doesn't define
-        # interfaces
-        node[INTERFACES] = {}
-
-    if INTERFACES not in complete_type:
-        # node type doesn't define
-        # interfaces
-        complete_type[INTERFACES] = {}
-
-    # iterate over the type interfaces and merge
-    # them to the result (complete_node)
-    merge_type_interfaces_to_complete_node(complete_node, complete_type, node, node_name)
-
-    # iterate over the template interfaces and merge
-    # them to the result (complete_node)
-    merge_template_interfaces_to_complete_node(complete_node, node)
-
-    return complete_node
-
-
-def augment_operation(operation):
-    if isinstance(operation, str):
-        return {
-            'implementation': operation,
-            'inputs': {}
-        }
-    if isinstance(operation, dict):
-        return {
-            'implementation': operation.get('implementation', ''),
-            'inputs': operation.get('inputs', {})
-        }
+    node_with_interfaces = copy.deepcopy(node)
+    node_with_interfaces[INTERFACES] = merger.merge()
+    return node_with_interfaces
 
 
 def _merge_operation_dicts(node_name,
@@ -175,10 +247,7 @@ def _merge_operation_dicts(node_name,
 
     if not node_template_operation:
         # no-op mapping
-        return {
-            'implementation': '',
-            'inputs': {}
-        }
+        return _operation()
 
     return {
 
@@ -281,26 +350,6 @@ def _merge_mixed_operation(node_name,
         }
 
 
-def _merge_operations(node_name, node_template_operation,
-                      node_type_operation):
-
-    # 1. both operations are dicts
-    if isinstance(node_type_operation, dict) and \
-       isinstance(node_template_operation, dict):
-        return _merge_operation_dicts(node_name, node_template_operation,
-                                      node_type_operation)
-
-    # 2. both operations are strings
-    if isinstance(node_type_operation, str) and \
-       isinstance(node_template_operation, str):
-        return _merge_operation_strings(node_template_operation,
-                                        node_type_operation)
-
-    # 3. mixed
-    return _merge_mixed_operation(node_name, node_template_operation,
-                                  node_type_operation)
-
-
 def merge_interface_dicts(overridden, overriding, interfaces_attribute):
     if interfaces_attribute not in overridden and \
        interfaces_attribute not in overriding:
@@ -329,7 +378,6 @@ def _merge_node_type_interface_operations(overriding_op, overridden_op):
         if not overriding_op:
             # no-op overriding
             return overriding_op
-        from dsl_parser.parser import merge_sub_dicts
         return {
             'implementation': overriding_op.get('implementation', ''),
             'inputs': merge_sub_dicts(
@@ -347,8 +395,6 @@ def _merge_node_type_interface_operations(overriding_op, overridden_op):
 
     if isinstance(overriding_op, str):
 
-        from dsl_parser.parser import merge_sub_dicts
-
         return {
             'implementation': overriding_op,
             'inputs': merge_sub_dicts(
@@ -359,8 +405,6 @@ def _merge_node_type_interface_operations(overriding_op, overridden_op):
         }
 
     if isinstance(overridden_op, str):
-
-        from dsl_parser.parser import merge_sub_dicts
 
         return {
             'implementation': overriding_op.get('implementation', ''),
