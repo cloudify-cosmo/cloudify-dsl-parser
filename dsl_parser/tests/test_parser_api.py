@@ -1304,29 +1304,30 @@ plugins:
                 target: test_node
                 target_interfaces:
                     test_interface:
-                        - destroy: test_plugin.destroy1
+                        destroy: test_plugin.destroy1
                 source_interfaces:
                     test_interface:
-                        - install2: test_plugin.install2
-                        - destroy2: test_plugin.destroy2
+                        install2: test_plugin.install2
+                        destroy2: test_plugin.destroy2
 relationships:
-    relationship:
-        derived_from: "parent_relationship"
-        target_interfaces:
-            test_interface:
-                -   install: test_plugin.install
-                -   terminate: test_plugin.terminate
-        source_interfaces:
-            test_interface:
-                -   install2: test_plugin.install
-                -   terminate2: test_plugin.terminate
     parent_relationship:
         target_interfaces:
             test_interface:
-                - install
+                install: {}
         source_interfaces:
             test_interface:
-                - install2
+                install2: {}
+    relationship:
+        derived_from: parent_relationship
+        target_interfaces:
+            test_interface:
+                install: test_plugin.install
+                terminate: test_plugin.terminate
+        source_interfaces:
+            test_interface:
+                install2: test_plugin.install
+                terminate2: test_plugin.terminate
+
 plugins:
     test_plugin:
         executor: central_deployment_agent
