@@ -40,6 +40,11 @@ PLAIN_INTERFACES_SCHEMA = {
                 '^': {
                     'oneOf': [
                         {'type': 'string'},
+                        {
+                            'type': 'object',
+                            'minProperties': 0,
+                            'maxProperties': 0
+                        },
                         PLAIN_OPERATION_MAPPING_SCHEMA
                     ]
                 }
