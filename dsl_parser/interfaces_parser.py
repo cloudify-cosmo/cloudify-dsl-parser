@@ -17,7 +17,26 @@ import copy
 from collections import OrderedDict
 
 
-def merge_type_and_node_interfaces(node_name, complete_type, node):
+def merge_node_type_and_node_template_interfaces(
+        node_name,
+        complete_type,
+        node):
+
+    """
+    Merges a node template with a node type.
+    Node template values always override
+    the node type values or merges with it.
+    Never the other way around.
+
+    :param node_name: The node name.
+    :param complete_type: The node complete type
+                          including all derived types.
+    :param node: The actual node template.
+    :return: The node augmented with the 'interfaces' key
+             The return value is a copy of the original value.
+             It does not mutate the original 'node'.
+    :rtype dict
+    """
 
     from dsl_parser.parser import INTERFACES
 
@@ -25,16 +44,15 @@ def merge_type_and_node_interfaces(node_name, complete_type, node):
     complete_node[INTERFACES] = {}
 
     if INTERFACES not in node:
+        # node templates doesn't define
+        # interfaces
         node[INTERFACES] = {}
+
     if INTERFACES not in complete_type:
-        complete_node[INTERFACES] = {}
-        for interface_name, interface in node[INTERFACES].items():
-            complete_node[INTERFACES][interface_name] = {}
-            for operation_name, operation in interface.items():
-                complete_node[
-                    INTERFACES][interface_name][operation_name] \
-                    = augment_operation(operation)
-        return complete_node
+        # node type doesn't define
+        # interfaces
+        complete_type[INTERFACES] = {}
+
     for interface_name, interface in complete_type[INTERFACES].items():
         complete_node[INTERFACES][interface_name] = {}
         if interface_name not in node[INTERFACES]:

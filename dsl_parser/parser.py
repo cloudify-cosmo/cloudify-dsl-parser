@@ -1200,7 +1200,7 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl,
         types_inheritance_merging_func, [], False)
 
     # merge schema and instance interfaces inputs
-    complete_node = interfaces_parser.merge_type_and_node_interfaces(
+    complete_node = interfaces_parser.merge_node_type_and_node_template_interfaces(
         node_name, complete_type, node)
 
     # merge schema and instance node properties
