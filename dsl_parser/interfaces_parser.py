@@ -253,9 +253,6 @@ def _merge_interface_dict(overridden_interface, overriding_interface):
     def op_and_op_name(op):
         key = op[0]
         value = op[1]
-        if not value:
-            # no-op mapping
-            return key, key
         return key, value
 
     # OrderedDict for easier testability
