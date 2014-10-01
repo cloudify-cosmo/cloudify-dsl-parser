@@ -17,6 +17,57 @@ import copy
 from collections import OrderedDict
 
 
+def merge_type_interfaces_to_complete_node(
+        complete_node,
+        complete_type,
+        node,
+        node_name):
+
+    from dsl_parser.parser import INTERFACES
+
+    for interface_name, interface in complete_type[INTERFACES].items():
+        complete_node[INTERFACES][interface_name] = {}
+        if interface_name not in node[INTERFACES]:
+            node[INTERFACES][interface_name] = {}
+        for operation_name, operation in interface.items():
+            if operation_name not in node[INTERFACES][interface_name]:
+                if isinstance(operation, str):
+                    node[INTERFACES][interface_name][operation_name] = ''
+                if isinstance(operation, dict):
+                    node[INTERFACES][interface_name][operation_name] = None
+
+            complete_node[
+                INTERFACES][interface_name][operation_name] = \
+                _merge_operations(
+                    node_name=node_name,
+                    node_type_operation=operation,
+                    node_template_operation=node[
+                        INTERFACES][interface_name][operation_name]
+                )
+
+
+def merge_template_interfaces_to_complete_node(complete_node, node):
+
+    from dsl_parser.parser import INTERFACES
+
+    for interface_name, interface in node[INTERFACES].items():
+        if interface_name not in complete_node[INTERFACES]:
+            complete_node[INTERFACES][interface_name] = {}
+            for operation_name, operation in interface.items():
+                complete_node[
+                    INTERFACES][interface_name][operation_name] \
+                    = augment_operation(operation)
+        else:
+            # interface exists
+            # check per operation
+            for operation_name, operation in interface.items():
+                if operation_name not in \
+                        complete_node[INTERFACES][interface_name]:
+                    complete_node[
+                        INTERFACES][interface_name][operation_name] \
+                        = augment_operation(operation)
+
+
 def merge_node_type_and_node_template_interfaces(
         node_name,
         complete_type,
@@ -53,45 +104,13 @@ def merge_node_type_and_node_template_interfaces(
         # interfaces
         complete_type[INTERFACES] = {}
 
-    for interface_name, interface in complete_type[INTERFACES].items():
-        complete_node[INTERFACES][interface_name] = {}
-        if interface_name not in node[INTERFACES]:
-            node[INTERFACES][interface_name] = {}
-        for operation_name, operation in interface.items():
-            if operation_name not in node[INTERFACES][interface_name]:
-                if isinstance(operation, str):
-                    node[INTERFACES][interface_name][operation_name] = ''
-                if isinstance(operation, dict):
-                    node[INTERFACES][interface_name][operation_name] = None
+    # iterate over the type interfaces and merge
+    # them to the result (complete_node)
+    merge_type_interfaces_to_complete_node(complete_node, complete_type, node, node_name)
 
-            complete_node[
-                INTERFACES][interface_name][operation_name] = \
-                _merge_operations(
-                    node_name=node_name,
-                    node_type_operation=operation,
-                    node_template_operation=node[
-                        INTERFACES][interface_name][operation_name]
-                )
-
-    # process operations that exist
-    # on the node template but do not
-    # exist on the node type
-    for interface_name, interface in node[INTERFACES].items():
-        if interface_name not in complete_node[INTERFACES]:
-            complete_node[INTERFACES][interface_name] = {}
-            for operation_name, operation in interface.items():
-                complete_node[
-                    INTERFACES][interface_name][operation_name] \
-                    = augment_operation(operation)
-        else:
-            # interface exists
-            # check per operation
-            for operation_name, operation in interface.items():
-                if operation_name not in \
-                        complete_node[INTERFACES][interface_name]:
-                    complete_node[
-                        INTERFACES][interface_name][operation_name] \
-                        = augment_operation(operation)
+    # iterate over the template interfaces and merge
+    # them to the result (complete_node)
+    merge_template_interfaces_to_complete_node(complete_node, node)
 
     return complete_node
 
