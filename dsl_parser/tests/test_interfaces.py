@@ -50,6 +50,36 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
 
+    def test_node_template_no_op_merges_node_type_non_existing_interface(self):
+        dsl = parse('node_template_no_op_merges_node_type_non_existing_interface.yaml')
+
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': '',
+            'plugin': '',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
+        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
+        expected_create2_operation = {
+            'operation': 'tasks.create2',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create2_operation, expected_create2_operation)
+
+    def test_node_template_no_op_merges_node_type_non_existing_interfaces(self):
+        dsl = parse('node_template_no_op_merges_node_type_non_existing_interfaces.yaml')
+
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': '',
+            'plugin': '',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
     def test_node_template_no_op_merges_node_type_operation(self):
         dsl = parse('node_template_no_op_merges_node_type_operation.yaml')
 
@@ -90,37 +120,7 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
 
-    def test_node_template_no_op_merges_non_existing_interface_on_node_type(self):
-        dsl = parse('node_template_no_op_merges_non_existing_interface_on_node_type.yaml')
-
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': '',
-            'plugin': '',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
-        expected_create2_operation = {
-            'operation': 'tasks.create2',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create2_operation, expected_create2_operation)
-
-    def test_node_template_no_op_merges_non_existing_interfaces_on_node_type(self):
-        dsl = parse('node_template_no_op_merges_non_existing_interfaces_on_node_type.yaml')
-
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': '',
-            'plugin': '',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-    def test_node_template_no_op_overrides_no_op_node_type(self):
+    def test_node_template_no_op_overrides_node_type_no_op(self):
         dsl = parse('node_template_no_op_overrides_node_type_no_op.yaml')
 
         actual_create_operation = dsl['nodes'][0]['operations']['create']
@@ -178,6 +178,44 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
 
+    def test_node_template_operation_mapping_merges_node_type_non_existing_interface(self):  # NOQA
+
+        dsl = parse(
+            'node_template_operation_mapping_merges_node_type_non_existing_interface.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': 'tasks.create',
+            'plugin': 'mock',
+            'inputs': {
+                'key': 'value'
+            }
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
+        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
+        expected_create2_operation = {
+            'operation': 'tasks.create2',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create2_operation, expected_create2_operation)
+
+    def test_node_template_operation_mapping_merges_node_type_non_existing_interfaces(self):  # NOQA
+
+        dsl = parse(
+            'node_template_operation_mapping_merges_node_type_non_existing_interfaces.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': 'tasks.create',
+            'plugin': 'mock',
+            'inputs': {
+                'key': 'value'
+            }
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
     def test_node_template_operation_mapping_merges_node_type_operation(self):  # NOQA
 
         dsl = parse(
@@ -218,44 +256,6 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_start_operation, expected_start_operation)
 
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': 'tasks.create',
-            'plugin': 'mock',
-            'inputs': {
-                'key': 'value'
-            }
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-    def test_node_template_operation_mapping_merges_non_existing_interface_on_node_type(self):  # NOQA
-
-        dsl = parse(
-            'node_template_operation_mapping_merges_non_existing_interface_on_node_type.yaml'  # NOQA
-        )
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': 'tasks.create',
-            'plugin': 'mock',
-            'inputs': {
-                'key': 'value'
-            }
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
-        expected_create2_operation = {
-            'operation': 'tasks.create2',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create2_operation, expected_create2_operation)
-
-    def test_node_template_operation_mapping_merges_non_existing_interfaces_on_node_type(self):  # NOQA
-
-        dsl = parse(
-            'node_template_operation_mapping_merges_non_existing_interfaces_on_node_type.yaml'  # NOQA
-        )
         actual_create_operation = dsl['nodes'][0]['operations']['create']
         expected_create_operation = {
             'operation': 'tasks.create',
@@ -336,6 +336,40 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
 
+    def test_node_template_operation_merges_node_type_non_existing_interface(self):  # NOQA
+
+        dsl = parse(
+            'node_template_operation_merges_node_type_non_existing_interface.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': 'tasks.create',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
+        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
+        expected_create2_operation = {
+            'operation': 'tasks.create2',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create2_operation, expected_create2_operation)
+
+    def test_node_template_operation_merges_node_type_non_existing_interfaces(self):  # NOQA
+
+        dsl = parse(
+            'node_template_operation_merges_node_type_non_existing_interfaces.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': 'tasks.create',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
     def test_node_template_operation_merges_node_type_operation(self):  # NOQA
 
         dsl = parse(
@@ -372,40 +406,6 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_start_operation, expected_start_operation)
 
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': 'tasks.create',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-    def test_node_template_operation_merges_non_existing_interface_on_node_type(self):  # NOQA
-
-        dsl = parse(
-            'node_template_operation_merges_non_existing_interface_on_node_type.yaml'  # NOQA
-        )
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': 'tasks.create',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
-        expected_create2_operation = {
-            'operation': 'tasks.create2',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create2_operation, expected_create2_operation)
-
-    def test_node_template_operation_merges_non_existing_interfaces_on_node_type(self):  # NOQA
-
-        dsl = parse(
-            'node_template_operation_merges_non_existing_interfaces_on_node_type.yaml'  # NOQA
-        )
         actual_create_operation = dsl['nodes'][0]['operations']['create']
         expected_create_operation = {
             'operation': 'tasks.create',
@@ -479,6 +479,38 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
 
+    def test_node_type_no_op_merges_node_type_non_existing_interface(self):
+        dsl = parse(
+            'node_type_no_op_merges_node_type_non_existing_interface.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': 'tasks.create',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
+        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
+        expected_create2_operation = {
+            'operation': '',
+            'plugin': '',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create2_operation, expected_create2_operation)
+
+    def test_node_type_no_op_merges_node_type_non_existing_interfaces(self):
+        dsl = parse(
+            'node_type_no_op_merges_node_type_non_existing_interfaces.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': '',
+            'plugin': '',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
     def test_node_type_no_op_merges_node_type_operation(self):
         dsl = parse(
             'node_type_no_op_merges_node_type_operation.yaml'  # NOQA
@@ -513,38 +545,6 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_start_operation, expected_start_operation)
 
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': '',
-            'plugin': '',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-    def test_node_type_no_op_merges_non_existing_interface_on_node_type(self):
-        dsl = parse(
-            'node_type_no_op_merges_non_existing_interface_on_node_type.yaml'  # NOQA
-        )
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': 'tasks.create',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
-        expected_create2_operation = {
-            'operation': '',
-            'plugin': '',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create2_operation, expected_create2_operation)
-
-    def test_node_type_no_op_merges_non_existing_interfaces_on_node_type(self):
-        dsl = parse(
-            'node_type_no_op_merges_non_existing_interfaces_on_node_type.yaml'  # NOQA
-        )
         actual_create_operation = dsl['nodes'][0]['operations']['create']
         expected_create_operation = {
             'operation': '',
@@ -614,6 +614,44 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
 
+    def test_node_type_operation_mapping_merges_node_type_non_existing_interface(self):  # NOQA
+
+        dsl = parse(
+            'node_type_operation_mapping_merges_node_type_non_existing_interface.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': 'tasks.create',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
+        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
+        expected_create2_operation = {
+            'operation': 'tasks.create2',
+            'plugin': 'mock',
+            'inputs': {
+                'key': 'value'
+            }
+        }
+        self.assertEqual(actual_create2_operation, expected_create2_operation)
+
+    def test_node_type_operation_mapping_merges_node_type_non_existing_interfaces(self):  # NOQA
+
+        dsl = parse(
+            'node_type_operation_mapping_merges_node_type_non_existing_interfaces.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': 'tasks.create',
+            'plugin': 'mock',
+            'inputs': {
+                'key': 'value'
+            }
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
     def test_node_type_operation_mapping_merges_node_type_operation(self):  # NOQA
 
         dsl = parse(
@@ -654,44 +692,6 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_start_operation, expected_start_operation)
 
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': 'tasks.create',
-            'plugin': 'mock',
-            'inputs': {
-                'key': 'value'
-            }
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-    def test_node_type_operation_mapping_merges_non_existing_interface_on_node_type(self):  # NOQA
-
-        dsl = parse(
-            'node_type_operation_mapping_merges_non_existing_interface_on_node_type.yaml'  # NOQA
-        )
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': 'tasks.create',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
-        expected_create2_operation = {
-            'operation': 'tasks.create2',
-            'plugin': 'mock',
-            'inputs': {
-                'key': 'value'
-            }
-        }
-        self.assertEqual(actual_create2_operation, expected_create2_operation)
-
-    def test_node_type_operation_mapping_merges_non_existing_interfaces_on_node_type(self):  # NOQA
-
-        dsl = parse(
-            'node_type_operation_mapping_merges_non_existing_interfaces_on_node_type.yaml'  # NOQA
-        )
         actual_create_operation = dsl['nodes'][0]['operations']['create']
         expected_create_operation = {
             'operation': 'tasks.create',
@@ -772,6 +772,40 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_start_operation, expected_start_operation)
 
+    def test_node_type_operation_merges_node_type_non_existing_interface(self):  # NOQA
+
+        dsl = parse(
+            'node_type_operation_merges_node_type_non_existing_interface.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': 'tasks.create',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
+        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
+        expected_create2_operation = {
+            'operation': 'tasks.create2',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create2_operation, expected_create2_operation)
+
+    def test_node_type_operation_merges_node_type_non_existing_interfaces(self):  # NOQA
+
+        dsl = parse(
+            'node_type_operation_merges_node_type_non_existing_interfaces.yaml'  # NOQA
+        )
+        actual_create_operation = dsl['nodes'][0]['operations']['create']
+        expected_create_operation = {
+            'operation': 'tasks.create',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_create_operation, expected_create_operation)
+
     def test_node_type_operation_merges_node_type_operation(self):  # NOQA
 
         dsl = parse(
@@ -815,40 +849,6 @@ class TestInterfaces(unittest.TestCase):
             }
         }
         self.assertEqual(actual_start_operation, expected_start_operation)
-
-    def test_node_type_operation_merges_non_existing_interface_on_node_type(self):  # NOQA
-
-        dsl = parse(
-            'node_type_operation_merges_non_existing_interface_on_node_type.yaml'  # NOQA
-        )
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': 'tasks.create',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
-
-        actual_create2_operation = dsl['nodes'][0]['operations']['create2']
-        expected_create2_operation = {
-            'operation': 'tasks.create2',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create2_operation, expected_create2_operation)
-
-    def test_node_type_operation_merges_non_existing_interfaces_on_node_type(self):  # NOQA
-
-        dsl = parse(
-            'node_type_operation_merges_non_existing_interfaces_on_node_type.yaml'  # NOQA
-        )
-        actual_create_operation = dsl['nodes'][0]['operations']['create']
-        expected_create_operation = {
-            'operation': 'tasks.create',
-            'plugin': 'mock',
-            'inputs': {}
-        }
-        self.assertEqual(actual_create_operation, expected_create_operation)
 
     def test_node_type_operation_overrides_no_op_node_type(self):  # NOQA
 
