@@ -17,20 +17,22 @@ import copy
 from collections import OrderedDict
 
 
-def merge_type_operation_complete_node(operation_name,
-                                       operation,
-                                       node,
-                                       interface_name,
-                                       complete_node,
-                                       node_name):
+def merge_type_operation_to_complete_node(operation_name,
+                                          operation,
+                                          node,
+                                          interface_name,
+                                          complete_node,
+                                          node_name):
 
     from dsl_parser.parser import INTERFACES
 
     if operation_name not in node[INTERFACES][interface_name]:
-        if isinstance(operation, str):
-            node[INTERFACES][interface_name][operation_name] = ''
-        if isinstance(operation, dict):
-            node[INTERFACES][interface_name][operation_name] = None
+
+        # operation is defined in the type but
+        # is not defined in the template
+        # set the operation on the node as None,
+        # indicating that it doesn't really exist.
+        node[INTERFACES][interface_name][operation_name] = None
 
     complete_node[
         INTERFACES][interface_name][operation_name] = \
@@ -50,12 +52,17 @@ def merge_type_interface_to_complete_node(interface_name,
     from dsl_parser.parser import INTERFACES
 
     if interface_name not in node[INTERFACES]:
-        # interface is not defined
-        # in the node template
+
+        # interface exists in the type but doesnt
+        # exist in the template.
+        # the complete node will have this interface
+        # so we can treat the complete node as if
+        # it defined this interface empty.
+
         node[INTERFACES][interface_name] = {}
 
     for operation_name, operation in interface.items():
-        merge_type_operation_complete_node(
+        merge_type_operation_to_complete_node(
             operation_name,
             operation,
             node,
@@ -215,7 +222,7 @@ def _merge_mixed_operation(node_name,
                            node_template_operation,
                            node_type_operation):
 
-    if node_template_operation is None:
+    if node_template_operation is None and isinstance(node_type_operation, dict):
 
         from dsl_parser.parser import merge_schema_and_instance_properties
 
@@ -234,6 +241,19 @@ def _merge_mixed_operation(node_name,
                 node_name=node_name,
                 is_interface_inputs=True
             )
+        }
+
+    if node_template_operation is None and isinstance(node_type_operation, str):
+
+        from dsl_parser.parser import merge_schema_and_instance_properties
+
+        return {
+
+            # override implementation
+            'implementation': node_type_operation,
+
+            # no inputs since its a string mapping
+            'inputs': {}
         }
 
     if isinstance(node_template_operation, str):
