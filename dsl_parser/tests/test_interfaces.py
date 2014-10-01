@@ -589,6 +589,24 @@ class TestInterfaces(unittest.TestCase):
         }
         self.assertEqual(actual_create_operation, expected_create_operation)
 
+    def test_node_type_non_existing_interfaces_merges_node_type_existing_interfaces(self):
+        dsl = parse(
+            'node_type_non_existing_interfaces_merges_node_type_existing_interfaces.yaml'  # NOQA
+        )
+        actual_start_operation = dsl['nodes'][0]['operations']['start']
+        expected_start_operation = {
+            'operation': 'tasks.start',
+            'plugin': 'mock',
+            'inputs': {}
+        }
+        self.assertEqual(actual_start_operation, expected_start_operation)
+
+    def test_node_type_non_existing_interfaces_merges_node_type_non_existing_interfaces(self):
+        dsl = parse(
+            'node_type_non_existing_interfaces_merges_node_type_non_existing_interfaces.yaml'  # NOQA
+        )
+        operations = dsl['nodes'][0]['operations']
+        self.assertEqual(operations, {})
 
 
     def test_node_type_operation_mapping_merges_node_type_no_op(self):
