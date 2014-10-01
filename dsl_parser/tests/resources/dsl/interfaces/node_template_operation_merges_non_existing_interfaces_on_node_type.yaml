@@ -1,12 +1,3 @@
-###########################################
-# Tested features:
-#
-#   - operation on node template merges
-#     with a node type that doesn't have
-#     any interface
-#
-###########################################
-
 tosca_definitions_version: cloudify_dsl_1_0
 
 plugins:

@@ -1,11 +1,3 @@
-###########################################
-# Tested features:
-#
-#   - operation on node template overrides
-#     operation mapping of node type
-#
-###########################################
-
 tosca_definitions_version: cloudify_dsl_1_0
 
 plugins:
