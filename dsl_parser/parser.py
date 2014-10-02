@@ -31,6 +31,9 @@ from dsl_parser import models
 from dsl_parser import scan
 from dsl_parser import schemas
 from dsl_parser import interfaces_parser
+from dsl_parser.exceptions import DSLParsingFormatException
+from dsl_parser.exceptions import DSLParsingLogicException
+from dsl_parser.utils import merge_schema_and_instance_properties
 
 SUPPORTED_VERSIONS = ['cloudify_dsl_1_0']
 
@@ -1220,86 +1223,6 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl,
     return complete_node
 
 
-def merge_schema_and_instance_properties(
-        instance_properties,
-        impl_properties,
-        schema_properties,
-        undefined_property_error_message,
-        missing_property_error_message,
-        node_name, is_interface_inputs=False):
-    instance_properties = dict(instance_properties.items() +
-                               impl_properties.items())
-
-    flattened_schema_props = {}
-    for prop_key, prop in schema_properties.iteritems():
-        flattened_schema_props[prop_key] = \
-            prop['default'] if 'default' in prop else None
-
-    if not is_interface_inputs:
-
-        # validate instance properties don't
-        # contain properties that are not defined
-        # in the schema.
-
-        for key in instance_properties.iterkeys():
-            if key not in flattened_schema_props:
-                ex = DSLParsingLogicException(
-                    106,
-                    undefined_property_error_message.format(node_name, key))
-                ex.property = key
-                raise ex
-
-    merged_properties = dict(flattened_schema_props.items() +
-                             instance_properties.items())
-
-    for key, value in merged_properties.iteritems():
-        if value is None:
-            ex = DSLParsingLogicException(
-                107,
-                missing_property_error_message.format(node_name, key))
-            ex.property = key
-            raise ex
-
-    _validate_properties_types(merged_properties, schema_properties)
-
-    return merged_properties
-
-
-def _validate_properties_types(properties, properties_schema):
-    for prop_key, prop in properties_schema.iteritems():
-        prop_type = prop.get('type')
-        if prop_type is None:
-            continue
-        prop_val = properties[prop_key]
-
-        if functions.parse(prop_val) != prop_val:
-            # intrinsic function - not validated at the moment
-            continue
-
-        if prop_type == 'integer':
-            if isinstance(prop_val, (int, long)) and not isinstance(
-                    prop_val, bool):
-                continue
-        elif prop_type == 'float':
-            if isinstance(prop_val, (int, float, long)) and not isinstance(
-                    prop_val, bool):
-                continue
-        elif prop_type == 'boolean':
-            if isinstance(prop_val, bool):
-                continue
-        elif prop_type == 'string':
-            continue
-        else:
-            raise RuntimeError(
-                'Unexpected type defined in property schema for property {0} -'
-                ' unknown type is {1}'.format(prop_key, prop_type))
-
-        raise DSLParsingLogicException(
-            50, 'Property type validation failed: Property {0} type '
-                'is {1}, yet it was assigned with the value {2}'.format(
-                    prop_key, prop_type, prop_val))
-
-
 def _apply_ref(filename, path_context, alias_mapping, resources_base_url):
     filename = _apply_alias_mapping_if_available(filename, alias_mapping)
     ref_url = _get_resource_location(filename, resources_base_url,
@@ -1572,17 +1495,3 @@ def _validate_imports_section(imports_section, dsl_location):
 
 def _apply_alias_mapping_if_available(name, alias_mapping):
     return alias_mapping[name] if name in alias_mapping else name
-
-
-class DSLParsingException(Exception):
-    def __init__(self, err_code, *args):
-        super(DSLParsingException, self).__init__(*args)
-        self.err_code = err_code
-
-
-class DSLParsingLogicException(DSLParsingException):
-    pass
-
-
-class DSLParsingFormatException(DSLParsingException):
-    pass

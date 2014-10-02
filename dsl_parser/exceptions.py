@@ -40,3 +40,18 @@ class FunctionEvaluationError(Exception):
         if message:
             msg = '{0}: {1}'.format(msg, message)
         super(FunctionEvaluationError, self).__init__(msg)
+
+
+class DSLParsingException(Exception):
+    def __init__(self, err_code, *args):
+        super(DSLParsingException, self).__init__(*args)
+        self.err_code = err_code
+
+
+class DSLParsingLogicException(DSLParsingException):
+    pass
+
+
+class DSLParsingFormatException(DSLParsingException):
+    pass
+

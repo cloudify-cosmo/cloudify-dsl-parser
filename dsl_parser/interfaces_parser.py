@@ -95,14 +95,10 @@ class NodeTemplateNodeTypeOperationMerger(object):
 
             from dsl_parser.parser import merge_schema_and_instance_properties
 
-            return {
-
-                # override implementation
-                'implementation': self.node_type_operation,
-
-                # no inputs since its a string mapping
-                'inputs': {}
-            }
+            return _operation(
+                implementation=self.node_type_operation,
+                inputs={}
+            )
 
         if isinstance(self.node_template_operation, str):
             # this means the node_type_operation is a dict
@@ -110,13 +106,9 @@ class NodeTemplateNodeTypeOperationMerger(object):
 
             from dsl_parser.parser import merge_schema_and_instance_properties
 
-            return {
-
-                # override implementation
-                'implementation': self.node_template_operation,
-
-                # validate and merge with inputs schema
-                'inputs': merge_schema_and_instance_properties(
+            return _operation(
+                implementation=self.node_template_operation,
+                inputs=merge_schema_and_instance_properties(
                     instance_properties={},
                     impl_properties={},
                     schema_properties=self.node_type_operation.get('inputs', {}),
@@ -125,17 +117,14 @@ class NodeTemplateNodeTypeOperationMerger(object):
                     node_name=self.node_name,
                     is_interface_inputs=True
                 )
-            }
+            )
 
         if isinstance(self.node_type_operation, str):
 
-            return {
-
-                # override implementation
-                'implementation': self.node_template_operation.get('implementation', ''),
-
-                'inputs': self.node_template_operation.get('inputs', {})
-            }
+            return _operation(
+                implementation=self.node_template_operation.get('implementation', ''),
+                inputs=self.node_template_operation.get('inputs', {})
+            )
 
     def merge(self):
 
