@@ -18,7 +18,7 @@ from collections import OrderedDict
 
 from dsl_parser.constants import INTERFACES
 from dsl_parser.utils import merge_sub_dicts
-
+from dsl_parser.utils import merge_schema_and_instance_properties
 
 def _operation(implementation=None,
                inputs=None):
@@ -43,8 +43,6 @@ class NodeTemplateNodeTypeOperationMerger(object):
         self.node_name = node_name
 
     def _merge_operation_mappings(self):
-
-        from dsl_parser.parser import merge_schema_and_instance_properties
 
         if not self.node_template_operation:
             # no-op overrides
@@ -76,8 +74,6 @@ class NodeTemplateNodeTypeOperationMerger(object):
 
         if self.node_template_operation is None and isinstance(self.node_type_operation, dict):
 
-            from dsl_parser.parser import merge_schema_and_instance_properties
-
             return _operation(
                 implementation=self.node_type_operation.get('implementation', ''),
                 inputs=merge_schema_and_instance_properties(
@@ -93,8 +89,6 @@ class NodeTemplateNodeTypeOperationMerger(object):
 
         if self.node_template_operation is None and isinstance(self.node_type_operation, str):
 
-            from dsl_parser.parser import merge_schema_and_instance_properties
-
             return _operation(
                 implementation=self.node_type_operation,
                 inputs={}
@@ -103,8 +97,6 @@ class NodeTemplateNodeTypeOperationMerger(object):
         if isinstance(self.node_template_operation, str):
             # this means the node_type_operation is a dict
             # which means it defines inputs.
-
-            from dsl_parser.parser import merge_schema_and_instance_properties
 
             return _operation(
                 implementation=self.node_template_operation,
