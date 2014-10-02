@@ -42,7 +42,100 @@ class NodeTemplateNodeTypeOperationMerger(object):
         self.node_template_operation = node_template_operation
         self.node_name = node_name
 
-        self._merge_operation = {}
+    def _merge_operation_mappings(self):
+
+        from dsl_parser.parser import merge_schema_and_instance_properties
+
+        if not self.node_template_operation:
+            # no-op overrides
+            return _operation()
+        if not self.node_type_operation:
+            # no-op overridden
+            return self.node_template_operation
+
+        return _operation(
+            implementation=self.node_template_operation['implementation'],
+            inputs=merge_schema_and_instance_properties(
+                instance_properties=self.node_template_operation['inputs'],
+                impl_properties={},
+                schema_properties=self.node_type_operation['inputs'],
+                undefined_property_error_message=None,
+                missing_property_error_message=None,
+                node_name=self.node_name,
+                is_interface_inputs=True
+            )
+        )
+
+    def _merge_operations(self):
+        return _operation(
+            implementation=self.node_template_operation,
+            inputs={}
+        )
+
+    def _merge_mixed_operation(self):
+
+        if self.node_template_operation is None and isinstance(self.node_type_operation, dict):
+
+            from dsl_parser.parser import merge_schema_and_instance_properties
+
+            return _operation(
+                implementation=self.node_type_operation.get('implementation', ''),
+                inputs=merge_schema_and_instance_properties(
+                    instance_properties={},
+                    impl_properties={},
+                    schema_properties=self.node_type_operation.get('inputs', {}),
+                    undefined_property_error_message=None,
+                    missing_property_error_message=None,
+                    node_name=self.node_name,
+                    is_interface_inputs=True
+                )
+            )
+
+        if self.node_template_operation is None and isinstance(self.node_type_operation, str):
+
+            from dsl_parser.parser import merge_schema_and_instance_properties
+
+            return {
+
+                # override implementation
+                'implementation': self.node_type_operation,
+
+                # no inputs since its a string mapping
+                'inputs': {}
+            }
+
+        if isinstance(self.node_template_operation, str):
+            # this means the node_type_operation is a dict
+            # which means it defines inputs.
+
+            from dsl_parser.parser import merge_schema_and_instance_properties
+
+            return {
+
+                # override implementation
+                'implementation': self.node_template_operation,
+
+                # validate and merge with inputs schema
+                'inputs': merge_schema_and_instance_properties(
+                    instance_properties={},
+                    impl_properties={},
+                    schema_properties=self.node_type_operation.get('inputs', {}),
+                    undefined_property_error_message=None,
+                    missing_property_error_message=None,
+                    node_name=self.node_name,
+                    is_interface_inputs=True
+                )
+            }
+
+        if isinstance(self.node_type_operation, str):
+
+            return {
+
+                # override implementation
+                'implementation': self.node_template_operation.get('implementation', ''),
+
+                'inputs': self.node_template_operation.get('inputs', {})
+            }
 
     def merge(self):
 
@@ -54,28 +147,18 @@ class NodeTemplateNodeTypeOperationMerger(object):
         :rtype dict
         """
 
-        # 1. both operations are dicts
+        # 1. both operations are operation mappings
         if isinstance(self.node_type_operation, dict) and \
                 isinstance(self.node_template_operation, dict):
-            self._merge_operation = _merge_operation_dicts(
-                self.node_name,
-                self.node_template_operation,
-                self.node_type_operation)
+            return self._merge_operation_mappings()
 
-        # 2. both operations are strings
-        elif isinstance(self.node_type_operation, str) and \
+        # 2. both operations are operations
+        if isinstance(self.node_type_operation, str) and \
                 isinstance(self.node_template_operation, str):
-            self._merge_operation = _merge_operation_strings(
-                self.node_template_operation,
-                self.node_type_operation)
+            return self._merge_operations()
 
         # 3. mixed
-        else:
-            self._merge_operation = _merge_mixed_operation(self.node_name,
-                                                           self.node_template_operation,
-                                                           self.node_type_operation)
-
-        return self._merge_operation
+        return self._merge_mixed_operation()
 
 
 class NodeTemplateNodeTypeInterfaceMerger(object):
@@ -237,117 +320,6 @@ def merge_node_type_and_node_template_interfaces(
     node_with_interfaces = copy.deepcopy(node)
     node_with_interfaces[INTERFACES] = merger.merge()
     return node_with_interfaces
-
-
-def _merge_operation_dicts(node_name,
-                           node_template_operation,
-                           node_type_operation):
-
-    from dsl_parser.parser import merge_schema_and_instance_properties
-
-    if not node_template_operation:
-        # no-op mapping
-        return _operation()
-
-    return {
-
-        # override implementation
-        'implementation': node_template_operation.get(
-            'implementation',
-            node_type_operation.get('implementation', '')
-        ),
-
-        # validate and merge with inputs schema
-        'inputs': merge_schema_and_instance_properties(
-            instance_properties=node_template_operation.get('inputs', {}),
-            impl_properties={},
-            schema_properties=node_type_operation.get('inputs', {}),
-            undefined_property_error_message=None,
-            missing_property_error_message=None,
-            node_name=node_name,
-            is_interface_inputs=True
-        )
-    }
-
-
-def _merge_operation_strings(node_template_operation,
-                             node_type_operation):
-    return {
-        'implementation': node_template_operation or node_type_operation,
-        'inputs': {}
-    }
-
-
-def _merge_mixed_operation(node_name,
-                           node_template_operation,
-                           node_type_operation):
-
-    if node_template_operation is None and isinstance(node_type_operation, dict):
-
-        from dsl_parser.parser import merge_schema_and_instance_properties
-
-        return {
-
-            # override implementation
-            'implementation': node_type_operation.get('implementation', ''),
-
-            # validate and merge with inputs schema
-            'inputs': merge_schema_and_instance_properties(
-                instance_properties={},
-                impl_properties={},
-                schema_properties=node_type_operation.get('inputs', {}),
-                undefined_property_error_message=None,
-                missing_property_error_message=None,
-                node_name=node_name,
-                is_interface_inputs=True
-            )
-        }
-
-    if node_template_operation is None and isinstance(node_type_operation, str):
-
-        from dsl_parser.parser import merge_schema_and_instance_properties
-
-        return {
-
-            # override implementation
-            'implementation': node_type_operation,
-
-            # no inputs since its a string mapping
-            'inputs': {}
-        }
-
-    if isinstance(node_template_operation, str):
-        # this means the node_type_operation is a dict
-        # which means it defines inputs.
-
-        from dsl_parser.parser import merge_schema_and_instance_properties
-
-        return {
-
-            # override implementation
-            'implementation': node_template_operation,
-
-            # validate and merge with inputs schema
-            'inputs': merge_schema_and_instance_properties(
-                instance_properties={},
-                impl_properties={},
-                schema_properties=node_type_operation.get('inputs', {}),
-                undefined_property_error_message=None,
-                missing_property_error_message=None,
-                node_name=node_name,
-                is_interface_inputs=True
-            )
-        }
-
-    if isinstance(node_type_operation, str):
-
-        return {
-
-            # override implementation
-            'implementation': node_template_operation.get('implementation', ''),
-
-            'inputs': node_template_operation.get('inputs', {})
-        }
 
 
 def merge_interface_dicts(overridden, overriding, interfaces_attribute):
