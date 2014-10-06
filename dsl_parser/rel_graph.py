@@ -15,6 +15,7 @@
 
 import copy
 import random
+from collections import namedtuple
 
 import networkx as nx
 
@@ -56,6 +57,10 @@ class GraphContext(object):
 
     def get_node_instance_ids_by_node_id(self, node_id):
         return self.node_ids_to_node_instance_ids.get(node_id, [])
+
+Container = namedtuple('Container', 'node_instance '
+                                    'relationship_instance '
+                                    'current_host_instance_id')
 
 
 def build_plan_node_graph(plan):
@@ -132,22 +137,20 @@ def _build_multi_instance_node_tree_rec(node_id,
                                         parent_node_instance_id=None,
                                         current_host_instance_id=None):
     node = contained_tree.node[node_id]['node']
-    instances_num = node['instances']['deploy']
-    for _ in range(instances_num):
-        node_instance_id = _node_instance_id(node_id, _generate_suffix())
-        node_instance = _node_instance_copy(node, node_instance_id)
-        new_current_host_instance_id = _handle_host_instance_id(
-            current_host_instance_id=current_host_instance_id,
-            node_id=node_id,
-            node_instance_id=node_instance_id,
-            node_instance=node_instance)
-        ctx.add_node_id_to_node_instance_id_mapping(node_id, node_instance_id)
+    containers = _build_and_update_node_instances(
+        ctx=ctx,
+        node=node,
+        parent_node_instance_id=parent_node_instance_id,
+        parent_relationship=parent_relationship,
+        current_host_instance_id=current_host_instance_id)
+    for container in containers:
+        node_instance = container.node_instance
+        node_instance_id = node_instance['id']
+        relationship_instance = container.relationship_instance
+        new_current_host_instance_id = container.current_host_instance_id
         ctx.deployment_node_graph.add_node(node_instance_id,
                                            node=node_instance)
         if parent_node_instance_id is not None:
-            relationship_instance = _relationship_instance_copy(
-                parent_relationship,
-                target_node_instance_id=parent_node_instance_id)
             ctx.deployment_node_graph.add_edge(
                 node_instance_id, parent_node_instance_id,
                 relationship=relationship_instance)
@@ -163,6 +166,65 @@ def _build_multi_instance_node_tree_rec(node_id,
                     child_node_id][node_id]['relationship'],
                 parent_node_instance_id=node_instance_id,
                 current_host_instance_id=new_current_host_instance_id)
+
+
+def _build_and_update_node_instances(ctx,
+                                     node,
+                                     parent_node_instance_id,
+                                     parent_relationship,
+                                     current_host_instance_id):
+    node_id = node['id']
+    new_instances_num = 0
+    previous_containers = []
+    if ctx.modification:
+        previous_node_instances = ctx.get_node_instance_ids_by_node_id(node_id)
+        previous_instances_num = len(previous_node_instances)
+        if node_id in ctx.modified_nodes:
+            total_instances_num = ctx.modified_nodes[node_id]['instances']
+            if total_instances_num > previous_instances_num:
+                new_instances_num = (total_instances_num -
+                                     previous_instances_num)
+            else:
+                removed_instances_num = (previous_instances_num -
+                                         total_instances_num)
+                removed_instance_ids = previous_instances_num[
+                    :removed_instances_num]
+                for removed_instance_id in removed_instance_ids:
+                    previous_node_instances.remove(removed_instance_id)
+        previous_containers = [Container(node_instance,
+                                         _extract_contained(node_instance),
+                                         node_instance.get('host_id'))
+                               for node_instance in previous_node_instances]
+    else:
+        new_instances_num = node['instances']['deploy']
+
+    new_containers = []
+    for _ in range(new_instances_num):
+        node_instance_id = _node_instance_id(node_id)
+        node_instance = _node_instance_copy(node, node_instance_id)
+        new_current_host_instance_id = _handle_host_instance_id(
+            current_host_instance_id=current_host_instance_id,
+            node_id=node_id,
+            node_instance_id=node_instance_id,
+            node_instance=node_instance)
+        ctx.add_node_id_to_node_instance_id_mapping(node_id, node_instance_id)
+        if parent_node_instance_id is not None:
+            relationship_instance = _relationship_instance_copy(
+                parent_relationship,
+                target_node_instance_id=parent_node_instance_id)
+        else:
+            relationship_instance = None
+        new_containers.append(Container(node_instance,
+                                        relationship_instance,
+                                        new_current_host_instance_id))
+    return previous_containers + new_containers
+
+
+def _extract_contained(node_instance):
+    for relationship in node_instance['relationships']:
+        if CONTAINED_IN_REL_TYPE in relationship['type_hierarchy']:
+            return relationship
+    return None
 
 
 def _handle_host_instance_id(current_host_instance_id,
@@ -232,8 +294,8 @@ def _build_graph_by_relationship_types(graph,
     return relationship_base_graph
 
 
-def _node_instance_id(node_id, node_instance_id_suffix):
-    return node_id + node_instance_id_suffix
+def _node_instance_id(node_id):
+    return node_id + _generate_suffix()
 
 
 def _generate_suffix():
