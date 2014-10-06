@@ -33,10 +33,20 @@ ALL_TO_ONE = 'all_to_one'
 
 class GraphContext(object):
 
-    def __init__(self, plan_node_graph, deployment_node_graph):
+    def __init__(self,
+                 plan_node_graph,
+                 deployment_node_graph,
+                 previous_deployment_node_graph=None,
+                 modified_nodes=None):
         self.plan_node_graph = plan_node_graph
         self.deployment_node_graph = deployment_node_graph
+        self.previous_deployment_node_graph = previous_deployment_node_graph
+        self.modified_nodes = modified_nodes
         self.node_ids_to_node_instance_ids = {}
+
+    @property
+    def modification(self):
+        return self.previous_deployment_node_graph is not None
 
     def add_node_id_to_node_instance_id_mapping(
             self, node_id, node_instance_id):
