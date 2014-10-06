@@ -18,13 +18,16 @@ from dsl_parser import models
 from dsl_parser import rel_graph
 
 
-def create_multi_instance_plan(plan):
+def create_deployment_plan(plan):
     """
     Expand node instances based on number of instances to deploy and
     defined relationships
     """
-    graph = rel_graph.build_initial_node_graph(plan)
-    m_graph = rel_graph.build_multi_instance_node_graph(graph)
-    m_plan = rel_graph.create_multi_instance_plan_from_multi_instance_graph(
-        plan, m_graph)
-    return models.Plan(m_plan)
+    plan_node_graph = rel_graph.build_plan_node_graph(plan)
+    deployment_node_graph = rel_graph.build_deployment_node_graph(
+        plan_node_graph=plan_node_graph)
+    deployment_plan = \
+        rel_graph.create_deployment_plan_from_deployment_node_graph(
+            plan=plan,
+            deployment_node_graph=deployment_node_graph)
+    return models.Plan(deployment_plan)

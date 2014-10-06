@@ -27,19 +27,23 @@ ALL_TO_ONE = 'all_to_one'
 
 
 class GraphContext(object):
-    def __init__(self):
-        self.name_to_ids = {}
 
-    def add_name_to_id_mapping(self, name, node_id):
-        if name not in self.name_to_ids:
-            self.name_to_ids[name] = set()
-        self.name_to_ids[name].add(node_id)
+    def __init__(self, plan_node_graph, deployment_node_graph):
+        self.plan_node_graph = plan_node_graph
+        self.deployment_node_graph = deployment_node_graph
+        self.node_ids_to_node_instance_ids = {}
 
-    def get_ids_by_name(self, name):
-        return self.name_to_ids.get(name, [])
+    def add_node_id_to_node_instance_id_mapping(
+            self, node_id, node_instance_id):
+        if node_id not in self.node_ids_to_node_instance_ids:
+            self.node_ids_to_node_instance_ids[node_id] = set()
+        self.node_ids_to_node_instance_ids[node_id].add(node_instance_id)
+
+    def get_node_instance_ids_by_node_id(self, node_id):
+        return self.node_ids_to_node_instance_ids.get(node_id, [])
 
 
-def build_initial_node_graph(plan):
+def build_plan_node_graph(plan):
     graph = nx.DiGraph()
     for node in plan['nodes']:
         node_id = node['id']
@@ -51,46 +55,45 @@ def build_initial_node_graph(plan):
     return graph
 
 
-def build_multi_instance_node_graph(initial_graph):
+def build_deployment_node_graph(plan_node_graph):
 
-    _verify_no_undefined_relationships(initial_graph)
+    _verify_no_undefined_relationships(plan_node_graph)
 
-    new_graph = nx.DiGraph()
-    ctx = GraphContext()
+    deployment_node_graph = nx.DiGraph()
+    ctx = GraphContext(plan_node_graph=plan_node_graph,
+                       deployment_node_graph=deployment_node_graph)
 
-    _handle_contained_in(initial_graph, new_graph, ctx)
-    _handle_connected_to_and_depends_on(initial_graph, new_graph, ctx)
+    _handle_contained_in(ctx)
+    _handle_connected_to_and_depends_on(ctx)
 
-    return new_graph
+    return deployment_node_graph
 
 
-def create_multi_instance_plan_from_multi_instance_graph(
+def create_deployment_plan_from_deployment_node_graph(
         plan,
-        multi_instance_graph):
-    plan = copy.deepcopy(plan)
+        deployment_node_graph):
+    deployment_plan = copy.deepcopy(plan)
     nodes_instances = []
-    for g_node, node_data in multi_instance_graph.nodes(data=True):
+    for g_node, node_data in deployment_node_graph.nodes(data=True):
         node_instance = node_data['node']
         relationship_instances = []
-        for neighbor in multi_instance_graph.neighbors(g_node):
+        for neighbor in deployment_node_graph.neighbors(g_node):
             relationship_instance = \
-                multi_instance_graph[g_node][neighbor]['relationship']
+                deployment_node_graph[g_node][neighbor]['relationship']
             relationship_instances.append(relationship_instance)
         node_instance[RELATIONSHIPS] = relationship_instances
         nodes_instances.append(node_instance)
-    plan[NODE_INSTANCES] = nodes_instances
-    return plan
+    deployment_plan[NODE_INSTANCES] = nodes_instances
+    return deployment_plan
 
 
-def _handle_contained_in(initial_graph,
-                         new_graph,
-                         ctx):
+def _handle_contained_in(ctx):
     # build graph based only on connected_to relationships
-    contained_graph = _build_contained_in_graph(initial_graph)
+    contained_graph = _build_contained_in_graph(ctx.plan_node_graph)
 
     # don't forget to include nodes in this graph than no one is contained
     # in them (these will be considered 1 node trees)
-    no_containment_graph = initial_graph.copy()
+    no_containment_graph = ctx.plan_node_graph.copy()
     no_containment_graph.remove_nodes_from(contained_graph.nodes_iter())
     contained_graph.add_nodes_from(no_containment_graph.nodes_iter(data=True))
 
@@ -99,81 +102,86 @@ def _handle_contained_in(initial_graph,
     for contained_tree in nx.weakly_connected_component_subgraphs(
             contained_graph.reverse(copy=True)):
         _verify_tree(contained_tree)
-        root = nx.topological_sort(contained_tree)[0]
-        _build_multi_instance_node_tree_rec(root,
-                                            contained_tree,
-                                            new_graph,
-                                            initial_graph,
-                                            ctx)
+        node_id = nx.topological_sort(contained_tree)[0]
+        _build_multi_instance_node_tree_rec(
+            node_id=node_id,
+            contained_tree=contained_tree,
+            ctx=ctx)
 
 
-def _build_multi_instance_node_tree_rec(root,
+def _build_multi_instance_node_tree_rec(node_id,
                                         contained_tree,
-                                        master_graph,
-                                        initial_graph,
                                         ctx,
-                                        target_relationship=None,
-                                        parent_id=None,
-                                        current_host_id=None):
-    instances_num = contained_tree.node[root]['node']['instances']['deploy']
-    root_node = contained_tree.node[root]['node']
+                                        parent_relationship=None,
+                                        parent_node_instance_id=None,
+                                        current_host_instance_id=None):
+    node = contained_tree.node[node_id]['node']
+    instances_num = node['instances']['deploy']
     for _ in range(instances_num):
-        node_id = _instance_id(root, _generate_suffix())
-        node = _node_instance_copy(root_node, node_id)
-
-        new_current_host_id = _handle_host_id(current_host_id,
-                                              root, node_id, node)
-
-        ctx.add_name_to_id_mapping(root, node_id)
-        master_graph.add_node(node_id, node=node)
-        if parent_id is not None:
-            relationship = _relationship_instance_copy(target_relationship,
-                                                       target_id=parent_id)
-            master_graph.add_edge(node_id, parent_id,
-                                  relationship=relationship)
-        for neighbor in contained_tree.neighbors(root):
-            descendants = nx.descendants(contained_tree, neighbor)
-            descendants.add(neighbor)
-            sub_tree = contained_tree.subgraph(descendants)
+        node_instance_id = _node_instance_id(node_id, _generate_suffix())
+        node_instance = _node_instance_copy(node, node_instance_id)
+        new_current_host_instance_id = _handle_host_instance_id(
+            current_host_instance_id=current_host_instance_id,
+            node_id=node_id,
+            node_instance_id=node_instance_id,
+            node_instance=node_instance)
+        ctx.add_node_id_to_node_instance_id_mapping(node_id, node_instance_id)
+        ctx.deployment_node_graph.add_node(node_instance_id,
+                                           node=node_instance)
+        if parent_node_instance_id is not None:
+            relationship_instance = _relationship_instance_copy(
+                parent_relationship,
+                target_node_instance_id=parent_node_instance_id)
+            ctx.deployment_node_graph.add_edge(
+                node_instance_id, parent_node_instance_id,
+                relationship=relationship_instance)
+        for child_node_id in contained_tree.neighbors(node_id):
+            descendants = nx.descendants(contained_tree, child_node_id)
+            descendants.add(child_node_id)
+            child_contained_tree = contained_tree.subgraph(descendants)
             _build_multi_instance_node_tree_rec(
-                neighbor,
-                sub_tree,
-                master_graph,
-                initial_graph,
-                ctx,
-                initial_graph[neighbor][root]['relationship'],
-                node_id,
-                current_host_id=new_current_host_id)
+                node_id=child_node_id,
+                contained_tree=child_contained_tree,
+                ctx=ctx,
+                parent_relationship=ctx.plan_node_graph[
+                    child_node_id][node_id]['relationship'],
+                parent_node_instance_id=node_instance_id,
+                current_host_instance_id=new_current_host_instance_id)
 
 
-def _handle_host_id(current_host_id, node_name, node_id, node):
+def _handle_host_instance_id(current_host_instance_id,
+                             node_id,
+                             node_instance_id,
+                             node_instance):
     # If this condition applies, we assume current root is a host node
-    if current_host_id is None and \
-       'host_id' in node and node['host_id'] == node_name:
-        current_host_id = node_id
-    if current_host_id is not None:
-        node['host_id'] = current_host_id
-    return current_host_id
+    if current_host_instance_id is None and \
+       'host_id' in node_instance and node_instance['host_id'] == node_id:
+        current_host_instance_id = node_instance_id
+    if current_host_instance_id is not None:
+        node_instance['host_id'] = current_host_instance_id
+    return current_host_instance_id
 
 
-def _handle_connected_to_and_depends_on(initial_graph,
-                                        new_graph,
-                                        ctx):
+def _handle_connected_to_and_depends_on(ctx):
     connected_and_depends_graph = \
-        _build_connected_to_and_depends_on_graph(initial_graph)
-    for node, neighbor, e_data in \
+        _build_connected_to_and_depends_on_graph(ctx.plan_node_graph)
+    for source_node_id, target_node_id, edge_data in \
             connected_and_depends_graph.edges(data=True):
-        relationship = e_data['relationship']
+        relationship = edge_data['relationship']
         connection_type = _verify_and_get_connection_type(relationship)
-        for multi_instance_node in ctx.get_ids_by_name(node):
-            targets = list(ctx.get_ids_by_name(neighbor))
+        for source_node_instance_id in ctx.get_node_instance_ids_by_node_id(
+                source_node_id):
+            target_node_instance_ids = list(
+                ctx.get_node_instance_ids_by_node_id(target_node_id))
             if connection_type == ALL_TO_ONE:
-                targets = targets[:1]
-            for target_node in targets:
-                relationship_copy = _relationship_instance_copy(
-                    relationship, target_id=target_node)
-                new_graph.add_edge(multi_instance_node, target_node,
-                                   relationship=relationship_copy)
+                target_node_instance_ids = target_node_instance_ids[:1]
+            for target_node_instance_id in target_node_instance_ids:
+                relationship_instance = _relationship_instance_copy(
+                    relationship,
+                    target_node_instance_id=target_node_instance_id)
+                ctx.deployment_node_graph.add_edge(
+                    source_node_instance_id, target_node_instance_id,
+                    relationship=relationship_instance)
 
 
 def _build_connected_to_and_depends_on_graph(graph):
@@ -186,17 +194,17 @@ def _build_contained_in_graph(graph):
 
 
 def _build_graph_from_by_relationship_base(graph, bases):
-    new_graph = nx.DiGraph()
-    for node, neighbor, e_data in graph.edges_iter(data=True):
-        if e_data['relationship']['base'] in bases:
-            new_graph.add_node(node, graph.node[node])
-            new_graph.add_node(neighbor, graph.node[neighbor])
-            new_graph.add_edge(node, neighbor, e_data)
-    return new_graph
+    relationship_base_graph = nx.DiGraph()
+    for source, target, edge_data in graph.edges_iter(data=True):
+        if edge_data['relationship']['base'] in bases:
+            relationship_base_graph.add_node(source, graph.node[source])
+            relationship_base_graph.add_node(target, graph.node[target])
+            relationship_base_graph.add_edge(source, target, edge_data)
+    return relationship_base_graph
 
 
-def _instance_id(node_id, node_suffix):
-    return node_id + node_suffix
+def _node_instance_id(node_id, node_instance_id_suffix):
+    return node_id + node_instance_id_suffix
 
 
 def _generate_suffix():
@@ -213,11 +221,12 @@ def _node_instance_copy(node, node_instance_id):
     return result
 
 
-def _relationship_instance_copy(relationship, target_id):
+def _relationship_instance_copy(relationship,
+                                target_node_instance_id):
     return {
         'type': relationship['type'],
         'target_name': relationship['target_id'],
-        'target_id': target_id
+        'target_id': target_node_instance_id
     }
 
 

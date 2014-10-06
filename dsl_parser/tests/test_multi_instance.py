@@ -18,7 +18,7 @@ __author__ = 'dank'
 import random
 
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.multi_instance import create_multi_instance_plan
+from dsl_parser.multi_instance import create_deployment_plan
 
 
 class TestMultiInstance(AbstractTestParser):
@@ -48,7 +48,7 @@ node_templates:
     """
 
     def parse_multi(self, yaml):
-        return create_multi_instance_plan(self.parse(yaml))
+        return create_deployment_plan(self.parse(yaml))
 
     def setUp(self):
         random.seed(0)
