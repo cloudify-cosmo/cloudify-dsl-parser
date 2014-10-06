@@ -12,11 +12,10 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-__author__ = 'dan'
 
-import rel_graph
 
 from dsl_parser import models
+from dsl_parser import rel_graph
 
 
 def create_multi_instance_plan(plan):

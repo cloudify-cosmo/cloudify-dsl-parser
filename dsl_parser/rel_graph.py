@@ -12,11 +12,11 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-__author__ = 'dan'
 
 import copy
-import networkx as nx
 import random
+
+import networkx as nx
 
 NODES = 'nodes'
 NODE_INSTANCES = 'node_instances'
@@ -221,13 +221,9 @@ def _relationship_instance_copy(relationship, target_id):
     }
 
 
-def _is_valid_acyclic_plan(graph):
-    return nx.is_directed_acyclic_graph(graph)
-
-
 def _verify_tree(graph):
     if not _is_tree(graph):
-        raise IllegalContainedInState
+        raise IllegalContainedInState()
 
 
 # currently we have decided not to support such relationships
@@ -236,14 +232,14 @@ def _verify_tree(graph):
 def _verify_no_undefined_relationships(graph):
     g = _build_graph_from_by_relationship_base(graph, 'undefined')
     if len(g.nodes()) > 0:
-        raise UnsupportedRelationship
+        raise UnsupportedRelationship()
 
 
 def _verify_and_get_connection_type(relationship):
     if CONNECTION_TYPE not in relationship['properties'] or \
        relationship['properties'][CONNECTION_TYPE] not in [ALL_TO_ALL,
                                                            ALL_TO_ONE]:
-        raise IllegalConnectedToConnectionType
+        raise IllegalConnectedToConnectionType()
     return relationship['properties'][CONNECTION_TYPE]
 
 
