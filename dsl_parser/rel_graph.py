@@ -102,6 +102,7 @@ def _handle_contained_in(ctx):
     for contained_tree in nx.weakly_connected_component_subgraphs(
             contained_graph.reverse(copy=True)):
         _verify_tree(contained_tree)
+        # extract tree root node id
         node_id = nx.topological_sort(contained_tree)[0]
         _build_multi_instance_node_tree_rec(
             node_id=node_id,
