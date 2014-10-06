@@ -18,9 +18,14 @@ import random
 
 import networkx as nx
 
+from dsl_parser import parser
+
 NODES = 'nodes'
 NODE_INSTANCES = 'node_instances'
 RELATIONSHIPS = 'relationships'
+DEPENDS_ON_REL_TYPE = parser.DEPENDS_ON_REL_TYPE
+CONNECTED_TO_REL_TYPE = parser.CONNECTED_TO_REL_TYPE
+CONTAINED_IN_REL_TYPE = parser.CONTAINED_IN_REL_TYPE
 CONNECTION_TYPE = 'connection_type'
 ALL_TO_ALL = 'all_to_all'
 ALL_TO_ONE = 'all_to_one'
@@ -57,7 +62,7 @@ def build_plan_node_graph(plan):
 
 def build_deployment_node_graph(plan_node_graph):
 
-    _verify_no_undefined_relationships(plan_node_graph)
+    _verify_no_unsupported_relationships(plan_node_graph)
 
     deployment_node_graph = nx.DiGraph()
     ctx = GraphContext(plan_node_graph=plan_node_graph,
@@ -186,18 +191,31 @@ def _handle_connected_to_and_depends_on(ctx):
 
 
 def _build_connected_to_and_depends_on_graph(graph):
-    return _build_graph_from_by_relationship_base(graph, ['connected',
-                                                          'depends'])
+    return _build_graph_by_relationship_types(
+        graph,
+        build_from_types=[CONNECTED_TO_REL_TYPE, DEPENDS_ON_REL_TYPE],
+        # because contained_in derived from depends_on
+        exclude_types=[CONTAINED_IN_REL_TYPE])
 
 
 def _build_contained_in_graph(graph):
-    return _build_graph_from_by_relationship_base(graph, ['contained'])
+    return _build_graph_by_relationship_types(
+        graph,
+        build_from_types=[CONTAINED_IN_REL_TYPE],
+        exclude_types=[])
 
 
-def _build_graph_from_by_relationship_base(graph, bases):
+def _build_graph_by_relationship_types(graph,
+                                       build_from_types,
+                                       exclude_types):
     relationship_base_graph = nx.DiGraph()
     for source, target, edge_data in graph.edges_iter(data=True):
-        if edge_data['relationship']['base'] in bases:
+        include_edge = (
+            _relationship_type_hierarchy_includes_one_of(
+                edge_data['relationship'], build_from_types) and not
+            _relationship_type_hierarchy_includes_one_of(
+                edge_data['relationship'], exclude_types))
+        if include_edge:
             relationship_base_graph.add_node(source, graph.node[source])
             relationship_base_graph.add_node(target, graph.node[target])
             relationship_base_graph.add_edge(source, target, edge_data)
@@ -239,10 +257,11 @@ def _verify_tree(graph):
 # currently we have decided not to support such relationships
 # until we better understand what semantics are required for such
 # relationships
-def _verify_no_undefined_relationships(graph):
-    g = _build_graph_from_by_relationship_base(graph, 'undefined')
-    if len(g.nodes()) > 0:
-        raise UnsupportedRelationship()
+def _verify_no_unsupported_relationships(graph):
+    for s, t, edge in graph.edges_iter(data=True):
+        if not _relationship_type_hierarchy_includes_one_of(
+                edge['relationship'], [DEPENDS_ON_REL_TYPE]):
+            raise UnsupportedRelationship()
 
 
 def _verify_and_get_connection_type(relationship):
@@ -251,6 +270,12 @@ def _verify_and_get_connection_type(relationship):
                                                            ALL_TO_ONE]:
         raise IllegalConnectedToConnectionType()
     return relationship['properties'][CONNECTION_TYPE]
+
+
+def _relationship_type_hierarchy_includes_one_of(relationship, expected_types):
+    relationship_type_hierarchy = relationship['type_hierarchy']
+    return any([relationship_type in expected_types
+                for relationship_type in relationship_type_hierarchy])
 
 
 def _is_tree(graph):
