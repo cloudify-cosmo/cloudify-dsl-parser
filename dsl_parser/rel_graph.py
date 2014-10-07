@@ -56,7 +56,7 @@ class GraphContext(object):
         self.node_ids_to_node_instance_ids[node_id].add(node_instance_id)
 
     def get_node_instance_ids_by_node_id(self, node_id):
-        return self.node_ids_to_node_instance_ids.get(node_id, [])
+        return self.node_ids_to_node_instance_ids.get(node_id, set())
 
 Container = namedtuple('Container', 'node_instance '
                                     'relationship_instance '
@@ -121,7 +121,6 @@ def _handle_contained_in(ctx):
     # instances.deploy value with generated ids
     for contained_tree in nx.weakly_connected_component_subgraphs(
             contained_graph.reverse(copy=True)):
-        _verify_tree(contained_tree)
         # extract tree root node id
         node_id = nx.topological_sort(contained_tree)[0]
         _build_multi_instance_node_tree_rec(
@@ -190,6 +189,8 @@ def _build_and_update_node_instances(ctx,
                 removed_instance_ids = previous_instances_num[
                     :removed_instances_num]
                 for removed_instance_id in removed_instance_ids:
+                    ctx.previous_deployment_node_graph.remove_node(
+                        removed_instance_id)
                     previous_node_instances.remove(removed_instance_id)
         previous_containers = [Container(node_instance,
                                          _extract_contained(node_instance),
@@ -227,6 +228,14 @@ def _extract_contained(node_instance):
     return None
 
 
+def _extract_relationship(node_instance, target_instance_id):
+    for relationship in node_instance['relationships']:
+        if relationship['target_id'] == target_instance_id:
+            return relationship
+    raise ValueError('No relationship for {0} has target_id {1}'
+                     .format(node_instance['id'], target_instance_id))
+
+
 def _handle_host_instance_id(current_host_instance_id,
                              node_id,
                              node_instance_id,
@@ -241,10 +250,10 @@ def _handle_host_instance_id(current_host_instance_id,
 
 
 def _handle_connected_to_and_depends_on(ctx):
-    connected_and_depends_graph = \
-        _build_connected_to_and_depends_on_graph(ctx.plan_node_graph)
-    for source_node_id, target_node_id, edge_data in \
-            connected_and_depends_graph.edges(data=True):
+    connected_graph = _build_connected_to_and_depends_on_graph(
+        ctx.plan_node_graph)
+    for source_node_id, target_node_id, edge_data in connected_graph.edges(
+            data=True):
         relationship = edge_data['relationship']
         connection_type = _verify_and_get_connection_type(relationship)
         for source_node_instance_id in ctx.get_node_instance_ids_by_node_id(
@@ -254,12 +263,31 @@ def _handle_connected_to_and_depends_on(ctx):
             if connection_type == ALL_TO_ONE:
                 target_node_instance_ids = target_node_instance_ids[:1]
             for target_node_instance_id in target_node_instance_ids:
-                relationship_instance = _relationship_instance_copy(
-                    relationship,
-                    target_node_instance_id=target_node_instance_id)
+                relationship_instance = _get_instance_relationship(
+                    ctx=ctx,
+                    source_node_instance_id=source_node_instance_id,
+                    target_node_instance_id=target_node_instance_id,
+                    relationship=relationship)
                 ctx.deployment_node_graph.add_edge(
                     source_node_instance_id, target_node_instance_id,
                     relationship=relationship_instance)
+
+
+def _get_instance_relationship(ctx,
+                               source_node_instance_id,
+                               target_node_instance_id,
+                               relationship):
+    if (ctx.modification and
+        source_node_instance_id in
+            ctx.previous_deployment_node_graph.node and
+        target_node_instance_id in
+            ctx.previous_deployment_node_graph.node):
+        return copy.deepcopy(ctx.plan_node_graph[
+            source_node_instance_id][target_node_instance_id]['relationship'])
+    else:
+        return _relationship_instance_copy(
+            relationship,
+            target_node_instance_id=target_node_instance_id)
 
 
 def _build_connected_to_and_depends_on_graph(graph):
@@ -321,11 +349,6 @@ def _relationship_instance_copy(relationship,
     }
 
 
-def _verify_tree(graph):
-    if not _is_tree(graph):
-        raise IllegalContainedInState()
-
-
 # currently we have decided not to support such relationships
 # until we better understand what semantics are required for such
 # relationships
@@ -348,13 +371,6 @@ def _relationship_type_hierarchy_includes_one_of(relationship, expected_types):
     relationship_type_hierarchy = relationship['type_hierarchy']
     return any([relationship_type in expected_types
                 for relationship_type in relationship_type_hierarchy])
-
-
-def _is_tree(graph):
-    # we are not testing 'nx.is_weakly_connected(graph)' because we have
-    # called this method after breaking the initial graph into weakly connected
-    # components
-    return nx.number_of_nodes(graph) == nx.number_of_edges(graph) + 1
 
 
 class IllegalContainedInState(Exception):

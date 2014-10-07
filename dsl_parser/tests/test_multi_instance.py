@@ -20,7 +20,7 @@ import itertools
 
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.multi_instance import create_deployment_plan
-
+from dsl_parser import rel_graph
 
 class TestMultiInstance(AbstractTestParser):
 
@@ -36,6 +36,7 @@ node_types:
     type: {}
     network: {}
 relationships:
+    test_relationship: {}
     cloudify.relationships.depends_on:
         properties:
             connection_type:
@@ -466,3 +467,31 @@ node_templates:
                 source_relationships, target_name)
             target_ids = [rel['target_id'] for rel in relationships]
             self.assertSetEqual(set(node_ids), set(target_ids))
+
+    def test_illegal_connection_type(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host:
+        type: cloudify.types.host
+    db:
+        type: db
+        relationships:
+            -   type: cloudify.relationships.connected_to
+                target: host
+                properties:
+                    connection_type: invalid
+"""
+        self.assertRaises(rel_graph.IllegalConnectedToConnectionType,
+                          self.parse_multi, yaml)
+
+    def test_unsupported_relationship(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host:
+        type: cloudify.types.host
+    db:
+        type: db
+        relationships:
+            -   type: test_relationship
+                target: host
+"""
+        self.assertRaises(rel_graph.UnsupportedRelationship,
+                          self.parse_multi, yaml)
