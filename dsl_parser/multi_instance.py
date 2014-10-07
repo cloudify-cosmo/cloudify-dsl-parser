@@ -27,7 +27,7 @@ def create_deployment_plan(plan):
     defined relationships
     """
     plan_node_graph = rel_graph.build_node_graph(plan['nodes'])
-    deployment_node_graph = rel_graph.build_deployment_node_graph(
+    deployment_node_graph, _ = rel_graph.build_deployment_node_graph(
         plan_node_graph=plan_node_graph)
     node_instances = \
         rel_graph.extract_node_instances_from_deployment_node_graph(
@@ -41,11 +41,12 @@ def modify_deployment(nodes, previous_node_instances, modified_nodes):
     plan_node_graph = rel_graph.build_node_graph(nodes)
     previous_deployment_node_graph = rel_graph.build_node_graph(
         previous_node_instances)
-    modified_deployment_node_graph = rel_graph.build_deployment_node_graph(
+    new_deployment_node_graph, ctx = rel_graph.build_deployment_node_graph(
         plan_node_graph=plan_node_graph,
         previous_deployment_node_graph=previous_deployment_node_graph,
         modified_nodes=modified_nodes)
     node_instances = \
         rel_graph.extract_node_instances_from_deployment_node_graph(
-            deployment_node_graph=modified_deployment_node_graph)
+            deployment_node_graph=new_deployment_node_graph,
+            ctx=ctx)
     return node_instances
