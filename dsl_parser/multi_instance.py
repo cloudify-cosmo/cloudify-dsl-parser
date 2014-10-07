@@ -26,11 +26,11 @@ def create_deployment_plan(plan):
     Expand node instances based on number of instances to deploy and
     defined relationships
     """
-    plan_node_graph = rel_graph.build_plan_node_graph(plan['nodes'])
+    plan_node_graph = rel_graph.build_node_graph(plan['nodes'])
     deployment_node_graph = rel_graph.build_deployment_node_graph(
         plan_node_graph=plan_node_graph)
     node_instances = \
-        rel_graph.create_deployment_plan_from_deployment_node_graph(
+        rel_graph.extract_node_instances_from_deployment_node_graph(
             deployment_node_graph=deployment_node_graph)
     deployment_plan = copy.deepcopy(plan)
     deployment_plan[constants.NODE_INSTANCES] = node_instances
@@ -38,4 +38,14 @@ def create_deployment_plan(plan):
 
 
 def modify_deployment(nodes, previous_node_instances, modified_nodes):
-    pass
+    plan_node_graph = rel_graph.build_node_graph(nodes)
+    previous_deployment_node_graph = rel_graph.build_node_graph(
+        previous_node_instances)
+    modified_deployment_node_graph = rel_graph.build_deployment_node_graph(
+        plan_node_graph=plan_node_graph,
+        previous_deployment_node_graph=previous_deployment_node_graph,
+        modified_nodes=modified_nodes)
+    node_instances = \
+        rel_graph.extract_node_instances_from_deployment_node_graph(
+            deployment_node_graph=modified_deployment_node_graph)
+    return node_instances

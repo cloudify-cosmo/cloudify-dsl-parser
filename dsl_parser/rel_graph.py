@@ -43,6 +43,12 @@ class GraphContext(object):
         self.previous_deployment_node_graph = previous_deployment_node_graph
         self.modified_nodes = modified_nodes
         self.node_ids_to_node_instance_ids = {}
+        if previous_deployment_node_graph is not None:
+            for node_instance_id, data in \
+                    previous_deployment_node_graph.nodes_iter(data=True):
+                node_instance = data['node']
+                self.add_node_id_to_node_instance_id_mapping(
+                    node_instance['name'], node_instance_id)
 
     @property
     def modification(self):
@@ -62,7 +68,7 @@ Container = namedtuple('Container', 'node_instance '
                                     'current_host_instance_id')
 
 
-def build_plan_node_graph(nodes):
+def build_node_graph(nodes):
     graph = nx.DiGraph()
     for node in nodes:
         node_id = node['id']
@@ -74,13 +80,18 @@ def build_plan_node_graph(nodes):
     return graph
 
 
-def build_deployment_node_graph(plan_node_graph):
+def build_deployment_node_graph(plan_node_graph,
+                                previous_deployment_node_graph=None,
+                                modified_nodes=None):
 
     _verify_no_unsupported_relationships(plan_node_graph)
 
     deployment_node_graph = nx.DiGraph()
-    ctx = GraphContext(plan_node_graph=plan_node_graph,
-                       deployment_node_graph=deployment_node_graph)
+    ctx = GraphContext(
+        plan_node_graph=plan_node_graph,
+        deployment_node_graph=deployment_node_graph,
+        previous_deployment_node_graph=previous_deployment_node_graph,
+        modified_nodes=modified_nodes)
 
     _handle_contained_in(ctx)
     _handle_connected_to_and_depends_on(ctx)
@@ -88,7 +99,7 @@ def build_deployment_node_graph(plan_node_graph):
     return deployment_node_graph
 
 
-def create_deployment_plan_from_deployment_node_graph(
+def extract_node_instances_from_deployment_node_graph(
         deployment_node_graph):
     nodes_instances = []
     for g_node, node_data in deployment_node_graph.nodes(data=True):
