@@ -22,6 +22,7 @@ from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.multi_instance import create_deployment_plan
 from dsl_parser import rel_graph
 
+
 class TestMultiInstance(AbstractTestParser):
 
     BASE_BLUEPRINT = """

@@ -87,6 +87,6 @@ def prepare_deployment_plan(plan, inputs=None, **kwargs):
 
 
 def modify_deployment(nodes, previous_node_instances, modified_nodes):
-    result = multi_instance.modify_deployment(nodes,
-                                              previous_node_instances,
-                                              modified_nodes)
+    return multi_instance.modify_deployment(nodes,
+                                            previous_node_instances,
+                                            modified_nodes)
