@@ -43,8 +43,6 @@ class GraphContext(object):
         self.previous_deployment_node_graph = previous_deployment_node_graph
         self.modified_nodes = modified_nodes
         self.node_ids_to_node_instance_ids = {}
-        self.added_node_instance_ids = []
-        self.removed_node_instance_ids = []
         if previous_deployment_node_graph is not None:
             for node_instance_id, data in \
                     previous_deployment_node_graph.nodes_iter(data=True):
@@ -64,12 +62,6 @@ class GraphContext(object):
 
     def get_node_instance_ids_by_node_id(self, node_id):
         return self.node_ids_to_node_instance_ids.get(node_id, set())
-
-    def add_added_node_instance_id(self, node_instance_id):
-        self.added_node_instance_ids.append(node_instance_id)
-
-    def add_removed_node_instance_id(self, node_instance_id):
-        self.removed_node_instance_ids.append(node_instance_id)
 
 Container = namedtuple('Container', 'node_instance '
                                     'relationship_instance '
@@ -108,8 +100,7 @@ def build_deployment_node_graph(plan_node_graph,
 
 
 def extract_node_instances_from_deployment_node_graph(
-        deployment_node_graph,
-        ctx=None):
+        deployment_node_graph):
     nodes_instances = []
     for g_node, node_data in deployment_node_graph.nodes_iter(data=True):
         node_instance = node_data['node']
@@ -208,7 +199,6 @@ def _build_and_update_node_instances(ctx,
                     ctx.previous_deployment_node_graph.remove_node(
                         removed_instance_id)
                     previous_node_instances.remove(removed_instance_id)
-                    ctx.add_removed_node_instance_id(removed_instance_id)
         previous_containers = [Container(node_instance,
                                          _extract_contained(node_instance),
                                          node_instance.get('host_id'))
@@ -226,7 +216,6 @@ def _build_and_update_node_instances(ctx,
             node_instance_id=node_instance_id,
             node_instance=node_instance)
         ctx.add_node_id_to_node_instance_id_mapping(node_id, node_instance_id)
-        ctx.add_added_node_instance_id(node_instance_id)
         if parent_node_instance_id is not None:
             relationship_instance = _relationship_instance_copy(
                 parent_relationship,

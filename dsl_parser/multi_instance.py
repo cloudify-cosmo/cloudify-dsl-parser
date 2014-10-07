@@ -47,6 +47,11 @@ def modify_deployment(nodes, previous_node_instances, modified_nodes):
         modified_nodes=modified_nodes)
     node_instances = \
         rel_graph.extract_node_instances_from_deployment_node_graph(
-            deployment_node_graph=new_deployment_node_graph,
-            ctx=ctx)
-    return node_instances
+            deployment_node_graph=new_deployment_node_graph)
+    node_instance_ids = set([node_instance['id'] for node_instance
+                             in node_instances])
+    removed_node_instance_ids = [node_instance['id'] for node_instance
+                                 in previous_node_instances
+                                 if node_instance['id'] not in
+                                 node_instance_ids]
+    return node_instances, removed_node_instance_ids
