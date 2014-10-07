@@ -94,6 +94,13 @@ def build_deployment_node_graph(plan_node_graph,
         modified_nodes=modified_nodes)
 
     _handle_contained_in(ctx)
+    ctx.node_ids_to_node_instance_ids.clear()
+    if ctx.modification:
+        for node_instance_id, data in deployment_node_graph.nodes_iter(
+                data=True):
+            node_id = data['node']['name']
+            ctx.add_node_id_to_node_instance_id_mapping(node_id,
+                                                        node_instance_id)
     _handle_connected_to_and_depends_on(ctx)
 
     return deployment_node_graph, ctx
@@ -196,8 +203,6 @@ def _build_and_update_node_instances(ctx,
                 removed_instance_ids = previous_instances_num[
                     :removed_instances_num]
                 for removed_instance_id in removed_instance_ids:
-                    ctx.previous_deployment_node_graph.remove_node(
-                        removed_instance_id)
                     previous_node_instances.remove(removed_instance_id)
         previous_containers = [Container(node_instance,
                                          _extract_contained(node_instance),
@@ -270,31 +275,12 @@ def _handle_connected_to_and_depends_on(ctx):
             if connection_type == ALL_TO_ONE:
                 target_node_instance_ids = [min(target_node_instance_ids)]
             for target_node_instance_id in target_node_instance_ids:
-                relationship_instance = _get_instance_relationship(
-                    ctx=ctx,
-                    source_node_instance_id=source_node_instance_id,
-                    target_node_instance_id=target_node_instance_id,
-                    relationship=relationship)
+                relationship_instance = _relationship_instance_copy(
+                    relationship,
+                    target_node_instance_id=target_node_instance_id)
                 ctx.deployment_node_graph.add_edge(
                     source_node_instance_id, target_node_instance_id,
                     relationship=relationship_instance)
-
-
-def _get_instance_relationship(ctx,
-                               source_node_instance_id,
-                               target_node_instance_id,
-                               relationship):
-    if (ctx.modification and
-        source_node_instance_id in
-            ctx.previous_deployment_node_graph.node and
-        target_node_instance_id in
-            ctx.previous_deployment_node_graph.node):
-        return copy.deepcopy(ctx.plan_node_graph[
-            source_node_instance_id][target_node_instance_id]['relationship'])
-    else:
-        return _relationship_instance_copy(
-            relationship,
-            target_node_instance_id=target_node_instance_id)
 
 
 def _build_connected_to_and_depends_on_graph(graph):
