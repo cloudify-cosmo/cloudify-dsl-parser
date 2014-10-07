@@ -362,7 +362,10 @@ def _relationship_instance_copy(relationship,
 def _verify_no_unsupported_relationships(graph):
     for s, t, edge in graph.edges_iter(data=True):
         if not _relationship_type_hierarchy_includes_one_of(
-                edge['relationship'], [DEPENDS_ON_REL_TYPE]):
+                edge['relationship'], [
+                    DEPENDS_ON_REL_TYPE,
+                    CONTAINED_IN_REL_TYPE,
+                    CONNECTED_TO_REL_TYPE]):
             raise UnsupportedRelationship()
 
 
