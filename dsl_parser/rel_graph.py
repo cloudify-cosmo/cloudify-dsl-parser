@@ -265,10 +265,10 @@ def _handle_connected_to_and_depends_on(ctx):
         connection_type = _verify_and_get_connection_type(relationship)
         for source_node_instance_id in ctx.get_node_instance_ids_by_node_id(
                 source_node_id):
-            target_node_instance_ids = list(
-                ctx.get_node_instance_ids_by_node_id(target_node_id))
+            target_node_instance_ids = ctx.get_node_instance_ids_by_node_id(
+                target_node_id)
             if connection_type == ALL_TO_ONE:
-                target_node_instance_ids = target_node_instance_ids[:1]
+                target_node_instance_ids = [min(target_node_instance_ids)]
             for target_node_instance_id in target_node_instance_ids:
                 relationship_instance = _get_instance_relationship(
                     ctx=ctx,
