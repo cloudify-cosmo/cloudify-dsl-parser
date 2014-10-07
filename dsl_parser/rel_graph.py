@@ -22,7 +22,6 @@ import networkx as nx
 from dsl_parser import parser
 
 NODES = 'nodes'
-NODE_INSTANCES = 'node_instances'
 RELATIONSHIPS = 'relationships'
 DEPENDS_ON_REL_TYPE = parser.DEPENDS_ON_REL_TYPE
 CONNECTED_TO_REL_TYPE = parser.CONNECTED_TO_REL_TYPE
@@ -63,9 +62,9 @@ Container = namedtuple('Container', 'node_instance '
                                     'current_host_instance_id')
 
 
-def build_plan_node_graph(plan):
+def build_plan_node_graph(nodes):
     graph = nx.DiGraph()
-    for node in plan['nodes']:
+    for node in nodes:
         node_id = node['id']
         graph.add_node(node_id, node=node)
         for relationship in node.get(RELATIONSHIPS, []):
@@ -90,9 +89,7 @@ def build_deployment_node_graph(plan_node_graph):
 
 
 def create_deployment_plan_from_deployment_node_graph(
-        plan,
         deployment_node_graph):
-    deployment_plan = copy.deepcopy(plan)
     nodes_instances = []
     for g_node, node_data in deployment_node_graph.nodes(data=True):
         node_instance = node_data['node']
@@ -103,8 +100,7 @@ def create_deployment_plan_from_deployment_node_graph(
             relationship_instances.append(relationship_instance)
         node_instance[RELATIONSHIPS] = relationship_instances
         nodes_instances.append(node_instance)
-    deployment_plan[NODE_INSTANCES] = nodes_instances
-    return deployment_plan
+    return nodes_instances
 
 
 def _handle_contained_in(ctx):

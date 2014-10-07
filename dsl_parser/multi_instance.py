@@ -14,8 +14,11 @@
 #    * limitations under the License.
 
 
+import copy
+
 from dsl_parser import models
 from dsl_parser import rel_graph
+from dsl_parser import constants
 
 
 def create_deployment_plan(plan):
@@ -23,11 +26,16 @@ def create_deployment_plan(plan):
     Expand node instances based on number of instances to deploy and
     defined relationships
     """
-    plan_node_graph = rel_graph.build_plan_node_graph(plan)
+    plan_node_graph = rel_graph.build_plan_node_graph(plan['nodes'])
     deployment_node_graph = rel_graph.build_deployment_node_graph(
         plan_node_graph=plan_node_graph)
-    deployment_plan = \
+    node_instances = \
         rel_graph.create_deployment_plan_from_deployment_node_graph(
-            plan=plan,
             deployment_node_graph=deployment_node_graph)
+    deployment_plan = copy.deepcopy(plan)
+    deployment_plan[constants.NODE_INSTANCES] = node_instances
     return models.Plan(deployment_plan)
+
+
+def modify_deployment(nodes, previous_node_instances, modified_nodes):
+    pass
