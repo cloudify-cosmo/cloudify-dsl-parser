@@ -115,7 +115,7 @@ class GetProperty(Function):
                     if x['name'] == target_node][0]
         else:
             found = [
-                x for x in plan.node_templates if self.node_name in x['id']]
+                x for x in plan.node_templates if self.node_name == x['id']]
             if len(found) == 0:
                 raise KeyError(
                     "{0} function node reference '{1}' does not exist.".format(
@@ -161,7 +161,7 @@ class GetAttribute(Function):
                                            GET_ATTRIBUTE_FUNCTION,
                                            self.path))
         found = [
-            x for x in plan.node_templates if self.node_name in x['id']]
+            x for x in plan.node_templates if self.node_name == x['id']]
         if len(found) == 0:
             raise KeyError(
                 "{0} function node reference '{1}' does not exist.".format(
