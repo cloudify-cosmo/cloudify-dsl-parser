@@ -385,10 +385,6 @@ def _relationship_type_hierarchy_includes_one_of(relationship, expected_types):
                 for relationship_type in relationship_type_hierarchy])
 
 
-class IllegalContainedInState(Exception):
-    pass
-
-
 class IllegalConnectedToConnectionType(Exception):
     pass
 
