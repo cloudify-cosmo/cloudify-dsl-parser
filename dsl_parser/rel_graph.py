@@ -94,8 +94,8 @@ def build_deployment_node_graph(plan_node_graph,
         modified_nodes=modified_nodes)
 
     _handle_contained_in(ctx)
-    ctx.node_ids_to_node_instance_ids.clear()
     if ctx.modification:
+        ctx.node_ids_to_node_instance_ids.clear()
         for node_instance_id, data in deployment_node_graph.nodes_iter(
                 data=True):
             node_id = data['node']['name']

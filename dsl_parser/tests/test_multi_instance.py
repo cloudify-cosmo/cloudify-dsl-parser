@@ -533,14 +533,59 @@ node_templates:
         node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
             'host': {'instances': 2}
         })
-        from pprint import pprint
-        pprint(node_instances)
         self.assertEqual(4, len(node_instances))
         self.assertEqual(0, len(removed_instances))
-        for instance in self._nodes_by_name(node_instances, 'host'):
+        host_nodes = self._nodes_by_name(node_instances, 'host')
+        self.assertEqual(2, len(host_nodes))
+        for instance in host_nodes:
             self.assertEqual('host', instance['name'])
             self.assertIn('host_', instance['id'])
             self.assertEqual(instance['host_id'], instance['id'])
-        for instance in self._nodes_by_name(node_instances, 'db'):
+        db_nodes = self._nodes_by_name(node_instances, 'db')
+        self.assertEqual(2, len(db_nodes))
+        for instance in db_nodes:
             self.assertEqual('db', instance['name'])
             self.assertIn('db_', instance['id'])
+        self._assert_each_node_valid_hosted(db_nodes, host_nodes)
+        self._assert_contained(self._nodes_relationships(db_nodes),
+                               self._node_ids(host_nodes), 'host')
+
+    def test_modified_two_nodes_added_with_child_contained_in(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host:
+        type: cloudify.types.host
+    db:
+        type: db
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host
+"""
+        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+            'host': {'instances': 2},
+            'db': {'instances': 2}
+        })
+        self.assertEqual(6, len(node_instances))
+        self.assertEqual(0, len(removed_instances))
+        host_nodes = self._nodes_by_name(node_instances, 'host')
+        self.assertEqual(2, len(host_nodes))
+        for instance in host_nodes:
+            self.assertEqual('host', instance['name'])
+            self.assertIn('host_', instance['id'])
+            self.assertEqual(instance['host_id'], instance['id'])
+        db_nodes = self._nodes_by_name(node_instances, 'db')
+        self.assertEqual(4, len(db_nodes))
+        for instance in db_nodes:
+            self.assertEqual('db', instance['name'])
+            self.assertIn('db_', instance['id'])
+        self._assert_each_node_valid_hosted(db_nodes, host_nodes)
+        self._assert_contained(self._nodes_relationships(db_nodes),
+                               self._node_ids(host_nodes), 'host')
+
+    def _nodes_relationships(self, nodes, target_name=None):
+        relationships = []
+        for node in nodes:
+            for rel in node['relationships']:
+                if target_name and rel['target_name'] != target_name:
+                    continue
+                relationships.append(rel)
+        return relationships
