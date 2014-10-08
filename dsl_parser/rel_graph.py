@@ -256,21 +256,13 @@ def _extract_contained(node, node_instance):
             break
     else:
         return None
-    for node_instance_relationship in node_instance.get('relationships', []):
+    for node_instance_relationship in node_instance['relationships']:
         if (node_instance_relationship['type'] ==
                 contained_node_relationship['type']):
             return node_instance_relationship
     raise RuntimeError('Failed extracting contained node instance '
                        'relationships for node instance: {0}'
                        .format(node_instance['id']))
-
-
-def _extract_relationship(node_instance, target_instance_id):
-    for relationship in node_instance['relationships']:
-        if relationship['target_id'] == target_instance_id:
-            return relationship
-    raise ValueError('No relationship for {0} has target_id {1}'
-                     .format(node_instance['id'], target_instance_id))
 
 
 def _handle_host_instance_id(current_host_instance_id,
