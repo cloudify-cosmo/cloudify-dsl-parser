@@ -15,15 +15,16 @@
 
 __author__ = 'dank'
 
-from pprint import pprint
 import random
 import itertools
+import copy
 
 from dsl_parser import rel_graph
 
 from dsl_parser.multi_instance import (create_deployment_plan,
                                        modify_deployment)
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
+
 
 class TestMultiInstance(AbstractTestParser):
 
@@ -55,10 +56,9 @@ node_templates:
     def parse_multi(self, yaml):
         return create_deployment_plan(self.parse(yaml))
 
-    def parse_and_modify_multi(self, yaml, modified_nodes):
-        plan = self.parse_multi(yaml)
+    def modify_multi(self, plan, modified_nodes):
         return modify_deployment(plan['nodes'],
-                                 plan['node_instances'],
+                                 copy.deepcopy(plan['node_instances']),
                                  modified_nodes)
 
     def setUp(self):
@@ -510,7 +510,8 @@ node_templates:
     host:
         type: cloudify.types.host
 """
-        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+        plan = self.parse_multi(yaml)
+        node_instances, removed_instances = self.modify_multi(plan, {
             'host': {'instances': 2}
         })
 
@@ -520,6 +521,9 @@ node_templates:
             self.assertEqual('host', instance['name'])
             self.assertIn('host_', instance['id'])
             self.assertEqual(instance['host_id'], instance['id'])
+        self._assert_previous_contained_in_new(
+            previous_node_instances=plan['node_instances'],
+            new_node_instances=node_instances)
 
     def test_modified_single_node_added_with_child_contained_in_1(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -531,7 +535,8 @@ node_templates:
             -   type: cloudify.relationships.contained_in
                 target: host
 """
-        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+        plan = self.parse_multi(yaml)
+        node_instances, removed_instances = self.modify_multi(plan, {
             'host': {'instances': 2}
         })
         self.assertEqual(4, len(node_instances))
@@ -550,6 +555,9 @@ node_templates:
         self._assert_each_node_valid_hosted(db_nodes, host_nodes)
         self._assert_contained(self._nodes_relationships(db_nodes),
                                self._node_ids(host_nodes), 'host')
+        self._assert_previous_contained_in_new(
+            previous_node_instances=plan['node_instances'],
+            new_node_instances=node_instances)
 
     def test_modified_single_node_added_with_child_contained_in_2(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -561,7 +569,8 @@ node_templates:
             -   type: cloudify.relationships.contained_in
                 target: host
 """
-        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+        plan = self.parse_multi(yaml)
+        node_instances, removed_instances = self.modify_multi(plan, {
             'db': {'instances': 2}
         })
         self.assertEqual(3, len(node_instances))
@@ -580,6 +589,9 @@ node_templates:
         self._assert_each_node_valid_hosted(db_nodes, host_nodes)
         self._assert_contained(self._nodes_relationships(db_nodes),
                                self._node_ids(host_nodes), 'host')
+        self._assert_previous_contained_in_new(
+            previous_node_instances=plan['node_instances'],
+            new_node_instances=node_instances)
 
     def test_modified_two_nodes_added_with_child_contained_in(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -591,7 +603,8 @@ node_templates:
             -   type: cloudify.relationships.contained_in
                 target: host
 """
-        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+        plan = self.parse_multi(yaml)
+        node_instances, removed_instances = self.modify_multi(plan, {
             'host': {'instances': 2},
             'db': {'instances': 2}
         })
@@ -611,6 +624,9 @@ node_templates:
         self._assert_each_node_valid_hosted(db_nodes, host_nodes)
         self._assert_contained(self._nodes_relationships(db_nodes),
                                self._node_ids(host_nodes), 'host')
+        self._assert_previous_contained_in_new(
+            previous_node_instances=plan['node_instances'],
+            new_node_instances=node_instances)
 
     def test_modified_single_node_added_with_connected_1(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -626,7 +642,8 @@ node_templates:
             -   type: cloudify.relationships.connected_to
                 target: host2
 """
-        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+        plan = self.parse_multi(yaml)
+        node_instances, removed_instances = self.modify_multi(plan, {
             'host1': {'instances': 2}
         })
         self.assertEqual(5, len(node_instances))
@@ -650,6 +667,9 @@ node_templates:
                                self._node_ids(host1_nodes), 'host1')
         self._assert_all_to_all([node['relationships'] for node in db_nodes],
                                 self._node_ids(host2_nodes), 'host2')
+        self._assert_previous_contained_in_new(
+            previous_node_instances=plan['node_instances'],
+            new_node_instances=node_instances)
 
     def test_modified_single_node_added_with_connected_2(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -665,7 +685,8 @@ node_templates:
             -   type: cloudify.relationships.connected_to
                 target: host2
 """
-        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+        plan = self.parse_multi(yaml)
+        node_instances, removed_instances = self.modify_multi(plan, {
             'host2': {'instances': 2}
         })
         self.assertEqual(4, len(node_instances))
@@ -689,6 +710,9 @@ node_templates:
                                self._node_ids(host1_nodes), 'host1')
         self._assert_all_to_all([node['relationships'] for node in db_nodes],
                                 self._node_ids(host2_nodes), 'host2')
+        self._assert_previous_contained_in_new(
+            previous_node_instances=plan['node_instances'],
+            new_node_instances=node_instances)
 
     def test_modified_single_node_added_with_connected_3(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -704,7 +728,8 @@ node_templates:
             -   type: cloudify.relationships.connected_to
                 target: host2
 """
-        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+        plan = self.parse_multi(yaml)
+        node_instances, removed_instances = self.modify_multi(plan, {
             'db': {'instances': 2}
         })
         self.assertEqual(4, len(node_instances))
@@ -728,6 +753,9 @@ node_templates:
                                self._node_ids(host1_nodes), 'host1')
         self._assert_all_to_all([node['relationships'] for node in db_nodes],
                                 self._node_ids(host2_nodes), 'host2')
+        self._assert_previous_contained_in_new(
+            previous_node_instances=plan['node_instances'],
+            new_node_instances=node_instances)
 
     def _nodes_relationships(self, nodes, target_name=None):
         relationships = []
@@ -737,3 +765,21 @@ node_templates:
                     continue
                 relationships.append(rel)
         return relationships
+
+    def _assert_previous_contained_in_new(self,
+                                          previous_node_instances,
+                                          new_node_instances):
+        previous_graph = rel_graph.build_node_graph(previous_node_instances)
+        new_graph = rel_graph.build_node_graph(new_node_instances)
+        subgraph = new_graph.subgraph(self._node_ids(previous_node_instances))
+        for node_id in previous_graph.nodes_iter():
+            previous_node = copy.deepcopy(previous_graph.node[node_id]['node'])
+            subgraph_node = copy.deepcopy(subgraph.node[node_id]['node'])
+            del previous_node['relationships']
+            del subgraph_node['relationships']
+            self.assertDictEqual(previous_node,
+                                 subgraph_node)
+        for source, target in previous_graph.edges_iter():
+            self.assertDictEqual(
+                previous_graph[source][target]['relationship'],
+                subgraph[source][target]['relationship'])
