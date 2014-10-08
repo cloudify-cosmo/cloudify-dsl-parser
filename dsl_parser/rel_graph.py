@@ -190,8 +190,17 @@ def _build_and_update_node_instances(ctx,
     new_instances_num = 0
     previous_containers = []
     if ctx.modification:
-        previous_node_instances = ctx.get_node_instance_ids_by_node_id(node_id)
-        previous_instances_num = len(previous_node_instances)
+        all_previous_node_instance_ids = ctx.get_node_instance_ids_by_node_id(
+            node_id)
+        previous_node_instance_ids = [
+            instance_id for instance_id in all_previous_node_instance_ids
+            if not parent_node_instance_id or
+            (instance_id in ctx.previous_deployment_node_graph and
+             ctx.previous_deployment_node_graph[instance_id].get(
+                 parent_node_instance_id))
+        ]
+
+        previous_instances_num = len(previous_node_instance_ids)
         if node_id in ctx.modified_nodes:
             total_instances_num = ctx.modified_nodes[node_id]['instances']
             if total_instances_num > previous_instances_num:
@@ -203,9 +212,16 @@ def _build_and_update_node_instances(ctx,
                 removed_instance_ids = previous_instances_num[
                     :removed_instances_num]
                 for removed_instance_id in removed_instance_ids:
-                    previous_node_instances.remove(removed_instance_id)
+                    previous_node_instance_ids.remove(removed_instance_id)
+        else:
+            new_instances_num = (node['instances']['deploy'] -
+                                 previous_instances_num)
+        previous_node_instances = [
+            ctx.previous_deployment_node_graph.node[node_instance_id]['node']
+            for node_instance_id in previous_node_instance_ids]
         previous_containers = [Container(node_instance,
-                                         _extract_contained(node_instance),
+                                         _extract_contained(node,
+                                                            node_instance),
                                          node_instance.get('host_id'))
                                for node_instance in previous_node_instances]
     else:
@@ -233,11 +249,20 @@ def _build_and_update_node_instances(ctx,
     return previous_containers + new_containers
 
 
-def _extract_contained(node_instance):
-    for relationship in node_instance['relationships']:
-        if CONTAINED_IN_REL_TYPE in relationship['type_hierarchy']:
-            return relationship
-    return None
+def _extract_contained(node, node_instance):
+    for node_relationship in node.get('relationships', []):
+        if CONTAINED_IN_REL_TYPE in node_relationship['type_hierarchy']:
+            contained_node_relationship = node_relationship
+            break
+    else:
+        return None
+    for node_instance_relationship in node_instance.get('relationships', []):
+        if (node_instance_relationship['type'] ==
+                contained_node_relationship['type']):
+            return node_instance_relationship
+    raise RuntimeError('Failed extracting contained node instance '
+                       'relationships for node instance: {0}'
+                       .format(node_instance['id']))
 
 
 def _extract_relationship(node_instance, target_instance_id):

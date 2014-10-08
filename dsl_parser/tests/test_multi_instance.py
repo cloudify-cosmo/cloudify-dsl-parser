@@ -18,10 +18,11 @@ __author__ = 'dank'
 import random
 import itertools
 
-from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.multi_instance import create_deployment_plan
 from dsl_parser import rel_graph
 
+from dsl_parser.multi_instance import (create_deployment_plan,
+                                       modify_deployment)
+from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 class TestMultiInstance(AbstractTestParser):
 
@@ -52,6 +53,12 @@ node_templates:
 
     def parse_multi(self, yaml):
         return create_deployment_plan(self.parse(yaml))
+
+    def parse_and_modify_multi(self, yaml, modified_nodes):
+        plan = self.parse_multi(yaml)
+        return modify_deployment(plan['nodes'],
+                                 plan['node_instances'],
+                                 modified_nodes)
 
     def setUp(self):
         random.seed(0)
@@ -496,3 +503,44 @@ node_templates:
 """
         self.assertRaises(rel_graph.UnsupportedRelationship,
                           self.parse_multi, yaml)
+
+    def test_modified_single_node_added(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host:
+        type: cloudify.types.host
+"""
+        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+            'host': {'instances': 2}
+        })
+
+        self.assertEqual(2, len(node_instances))
+        self.assertEqual(0, len(removed_instances))
+        for instance in node_instances:
+            self.assertEqual('host', instance['name'])
+            self.assertIn('host_', instance['id'])
+            self.assertEqual(instance['host_id'], instance['id'])
+
+    def test_modified_single_node_added_with_child_contained_in(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host:
+        type: cloudify.types.host
+    db:
+        type: db
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host
+"""
+        node_instances, removed_instances = self.parse_and_modify_multi(yaml, {
+            'host': {'instances': 2}
+        })
+        from pprint import pprint
+        pprint(node_instances)
+        self.assertEqual(4, len(node_instances))
+        self.assertEqual(0, len(removed_instances))
+        for instance in self._nodes_by_name(node_instances, 'host'):
+            self.assertEqual('host', instance['name'])
+            self.assertIn('host_', instance['id'])
+            self.assertEqual(instance['host_id'], instance['id'])
+        for instance in self._nodes_by_name(node_instances, 'db'):
+            self.assertEqual('db', instance['name'])
+            self.assertIn('db_', instance['id'])
