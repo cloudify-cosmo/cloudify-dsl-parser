@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import random
+import copy
 from collections import namedtuple
 
 import networkx as nx
@@ -105,21 +106,53 @@ def build_deployment_node_graph(plan_node_graph,
     return deployment_node_graph
 
 
-def extract_node_instances_from_deployment_node_graph(
-        deployment_node_graph):
+def extract_node_instances(node_instances_graph, copy_instances=False):
     nodes_instances = []
-    for node_instance_id, data in deployment_node_graph.nodes_iter(data=True):
+    for node_instance_id, data in node_instances_graph.nodes_iter(data=True):
         node_instance = data['node']
+        if copy_instances:
+            node_instance = copy.deepcopy(node_instance)
         relationship_instances = []
-        for target_node_instance_id in deployment_node_graph.neighbors(
+        for target_node_instance_id in node_instances_graph.neighbors_iter(
                 node_instance_id):
             relationship_instance = \
-                deployment_node_graph[node_instance_id][
+                node_instances_graph[node_instance_id][
                     target_node_instance_id]['relationship']
+            if copy_instances:
+                relationship_instance = copy.deepcopy(relationship_instance)
             relationship_instances.append(relationship_instance)
         node_instance[RELATIONSHIPS] = relationship_instances
         nodes_instances.append(node_instance)
     return nodes_instances
+
+
+def extract_added_node_instances(previous_deployment_node_graph,
+                                 new_deployment_node_graph):
+    added_instances_graph = _graph_diff(new_deployment_node_graph,
+                                        previous_deployment_node_graph)
+    return extract_node_instances(added_instances_graph, copy_instances=True)
+
+
+def extract_removed_node_instances(previous_deployment_node_graph,
+                                   new_deployment_node_graph):
+    removed_instances_graph = _graph_diff(previous_deployment_node_graph,
+                                          new_deployment_node_graph)
+    return extract_node_instances(removed_instances_graph, copy_instances=True)
+
+
+def _graph_diff(G, H):
+    result = nx.DiGraph()
+    for n1, data in G.nodes_iter(data=True):
+        if n1 in H:
+            continue
+        result.add_node(n1, data)
+        for n2 in G.neighbors_iter(n1):
+            result.add_node(n2, G.node[n2])
+            result.add_edge(n1, n2, G[n1][n2])
+        for n2 in G.predecessors_iter(n1):
+            result.add_node(n2, G.node[n2])
+            result.add_edge(n2, n1, G[n2][n1])
+    return result
 
 
 def _handle_contained_in(ctx):
@@ -168,7 +201,7 @@ def _build_multi_instance_node_tree_rec(node_id,
             ctx.deployment_node_graph.add_edge(
                 node_instance_id, parent_node_instance_id,
                 relationship=relationship_instance)
-        for child_node_id in contained_tree.neighbors(node_id):
+        for child_node_id in contained_tree.neighbors_iter(node_id):
             descendants = nx.descendants(contained_tree, child_node_id)
             descendants.add(child_node_id)
             child_contained_tree = contained_tree.subgraph(descendants)

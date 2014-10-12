@@ -27,11 +27,10 @@ def create_deployment_plan(plan):
     defined relationships
     """
     plan_node_graph = rel_graph.build_node_graph(plan['nodes'])
-    deployment_node_graph, _ = rel_graph.build_deployment_node_graph(
-        plan_node_graph=plan_node_graph)
-    node_instances = \
-        rel_graph.extract_node_instances_from_deployment_node_graph(
-            deployment_node_graph=deployment_node_graph)
+    deployment_node_graph = rel_graph.build_deployment_node_graph(
+        plan_node_graph)
+    node_instances = rel_graph.extract_node_instances(
+        node_instances_graph=deployment_node_graph)
     deployment_plan = copy.deepcopy(plan)
     deployment_plan[constants.NODE_INSTANCES] = node_instances
     return models.Plan(deployment_plan)
@@ -42,15 +41,15 @@ def modify_deployment(nodes, previous_node_instances, modified_nodes):
     previous_deployment_node_graph = rel_graph.build_node_graph(
         previous_node_instances)
     new_deployment_node_graph = rel_graph.build_deployment_node_graph(
-        plan_node_graph=plan_node_graph,
-        previous_deployment_node_graph=previous_deployment_node_graph,
-        modified_nodes=modified_nodes)
-    node_instances = \
-        rel_graph.extract_node_instances_from_deployment_node_graph(
-            deployment_node_graph=new_deployment_node_graph)
-    node_instance_ids = set([node_instance['id'] for node_instance
-                             in node_instances])
-    removed_node_instance_ids = [
-        node_instance['id'] for node_instance in previous_node_instances
-        if node_instance['id'] not in node_instance_ids]
-    return node_instances, removed_node_instance_ids
+        plan_node_graph,
+        previous_deployment_node_graph,
+        modified_nodes)
+
+    node_instances = rel_graph.extract_node_instances(
+        node_instances_graph=new_deployment_node_graph, copy_instances=True)
+    added_node_instances = rel_graph.extract_added_node_instances(
+        previous_deployment_node_graph, new_deployment_node_graph)
+    removed_node_instances = rel_graph.extract_removed_node_instances(
+        previous_deployment_node_graph, new_deployment_node_graph)
+
+    return node_instances
