@@ -41,7 +41,7 @@ def modify_deployment(nodes, previous_node_instances, modified_nodes):
     plan_node_graph = rel_graph.build_node_graph(nodes)
     previous_deployment_node_graph = rel_graph.build_node_graph(
         previous_node_instances)
-    new_deployment_node_graph, ctx = rel_graph.build_deployment_node_graph(
+    new_deployment_node_graph = rel_graph.build_deployment_node_graph(
         plan_node_graph=plan_node_graph,
         previous_deployment_node_graph=previous_deployment_node_graph,
         modified_nodes=modified_nodes)
@@ -50,8 +50,7 @@ def modify_deployment(nodes, previous_node_instances, modified_nodes):
             deployment_node_graph=new_deployment_node_graph)
     node_instance_ids = set([node_instance['id'] for node_instance
                              in node_instances])
-    removed_node_instance_ids = [node_instance['id'] for node_instance
-                                 in previous_node_instances
-                                 if node_instance['id'] not in
-                                 node_instance_ids]
+    removed_node_instance_ids = [
+        node_instance['id'] for node_instance in previous_node_instances
+        if node_instance['id'] not in node_instance_ids]
     return node_instances, removed_node_instance_ids

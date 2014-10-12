@@ -102,18 +102,20 @@ def build_deployment_node_graph(plan_node_graph,
                                                         node_instance_id)
     _handle_connected_to_and_depends_on(ctx)
 
-    return deployment_node_graph, ctx
+    return deployment_node_graph
 
 
 def extract_node_instances_from_deployment_node_graph(
         deployment_node_graph):
     nodes_instances = []
-    for g_node, node_data in deployment_node_graph.nodes_iter(data=True):
-        node_instance = node_data['node']
+    for node_instance_id, data in deployment_node_graph.nodes_iter(data=True):
+        node_instance = data['node']
         relationship_instances = []
-        for neighbor in deployment_node_graph.neighbors(g_node):
+        for target_node_instance_id in deployment_node_graph.neighbors(
+                node_instance_id):
             relationship_instance = \
-                deployment_node_graph[g_node][neighbor]['relationship']
+                deployment_node_graph[node_instance_id][
+                    target_node_instance_id]['relationship']
             relationship_instances.append(relationship_instance)
         node_instance[RELATIONSHIPS] = relationship_instances
         nodes_instances.append(node_instance)
