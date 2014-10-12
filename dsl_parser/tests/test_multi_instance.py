@@ -62,7 +62,6 @@ node_templates:
                                  modified_nodes)
 
     def setUp(self):
-        random.seed(0)
         AbstractTestParser.setUp(self)
 
     def tearDown(self):
