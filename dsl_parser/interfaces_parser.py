@@ -17,8 +17,7 @@ import copy
 from collections import OrderedDict
 
 from dsl_parser.constants import INTERFACES
-from dsl_parser.utils import merge_sub_dicts
-from dsl_parser.utils import merge_schema_and_instance_properties
+from dsl_parser import utils
 
 
 def _operation(implementation=None,
@@ -29,7 +28,7 @@ def _operation(implementation=None,
     }
 
 
-class NodeTemplateNodeTypeOperationMerger(object):
+class NodeTemplateNodeTypeInterfaceOperationMerger(object):
 
     def __init__(self,
                  node_name,
@@ -48,6 +47,31 @@ class NodeTemplateNodeTypeOperationMerger(object):
         self.node_type_operation = node_type_operation
         self.node_template_operation = node_template_operation
 
+    def merge(self):
+
+        """
+        Merges a node template interface operation with
+        a node type interface operation.
+        Node template operation will override in case
+        of conflict.
+
+        :return The merged operation.
+        :rtype dict
+        """
+
+        # 1. both operations are operation mappings or no-ops
+        if isinstance(self.node_type_operation, dict) and \
+                isinstance(self.node_template_operation, dict):
+            return self._merge_operation_mappings()
+
+        # 2. both operations are operations
+        if isinstance(self.node_type_operation, str) and \
+                isinstance(self.node_template_operation, str):
+            return self._merge_operations()
+
+        # 3. mixed
+        return self._merge_mixed_operation()
+
     def _merge_operation_mappings(self):
 
         if not self.node_template_operation:
@@ -58,8 +82,12 @@ class NodeTemplateNodeTypeOperationMerger(object):
             return self.node_template_operation
 
         return _operation(
+
+            # node template implementation always overrides
             implementation=self.node_template_operation['implementation'],
-            inputs=merge_schema_and_instance_properties(
+
+            # inputs should be merged and schema validated
+            inputs=utils.merge_schema_and_instance_properties(
                 instance_properties=self.node_template_operation['inputs'],
                 impl_properties={},
                 schema_properties=self.node_type_operation['inputs'],
@@ -78,35 +106,50 @@ class NodeTemplateNodeTypeOperationMerger(object):
 
     def _merge_mixed_operation(self):
 
-        if self.node_template_operation is None and isinstance(self.node_type_operation, dict):
+        if self.node_template_operation is None:
 
-            return _operation(
-                implementation=self.node_type_operation.get('implementation', ''),
-                inputs=merge_schema_and_instance_properties(
-                    instance_properties={},
-                    impl_properties={},
-                    schema_properties=self.node_type_operation.get('inputs', {}),
-                    undefined_property_error_message=None,
-                    missing_property_error_message=None,
-                    node_name=self.node_name,
-                    is_interface_inputs=True
+            # the node template operation is not defined.
+
+            if isinstance(self.node_type_operation, dict):
+
+                # the node type operation is an operation mapping (or no-op)
+
+                return _operation(
+
+                    # node template implementation always overrides.
+                    implementation=self.node_type_operation.get('implementation', ''),
+
+                    # since the node template operation is not defined,
+                    # this will effectively just validate that
+                    # every input on the schema has a default value.
+                    inputs=utils.merge_schema_and_instance_properties(
+                        instance_properties={},
+                        impl_properties={},
+                        schema_properties=self.node_type_operation.get('inputs', {}),
+                        undefined_property_error_message=None,
+                        missing_property_error_message=None,
+                        node_name=self.node_name,
+                        is_interface_inputs=True
+                    )
                 )
-            )
 
-        if self.node_template_operation is None and isinstance(self.node_type_operation, str):
+            if isinstance(self.node_type_operation, str):
 
-            return _operation(
-                implementation=self.node_type_operation,
-                inputs={}
-            )
+                # the node type operation is an operation
+
+                return _operation(
+                    implementation=self.node_type_operation,
+                    inputs={}
+                )
 
         if isinstance(self.node_template_operation, str):
+
             # this means the node_type_operation is a dict
             # which means it defines inputs.
 
             return _operation(
                 implementation=self.node_template_operation,
-                inputs=merge_schema_and_instance_properties(
+                inputs=utils.merge_schema_and_instance_properties(
                     instance_properties={},
                     impl_properties={},
                     schema_properties=self.node_type_operation.get('inputs', {}),
@@ -123,31 +166,6 @@ class NodeTemplateNodeTypeOperationMerger(object):
                 implementation=self.node_template_operation.get('implementation', ''),
                 inputs=self.node_template_operation.get('inputs', {})
             )
-
-    def merge(self):
-
-        """
-        Merges a node template operation with
-        a node type operation.
-        Node template operation will override in case
-        of conflict.
-
-        :return The merged operation.
-        :rtype dict
-        """
-
-        # 1. both operations are operation mappings
-        if isinstance(self.node_type_operation, dict) and \
-                isinstance(self.node_template_operation, dict):
-            return self._merge_operation_mappings()
-
-        # 2. both operations are operations
-        if isinstance(self.node_type_operation, str) and \
-                isinstance(self.node_template_operation, str):
-            return self._merge_operations()
-
-        # 3. mixed
-        return self._merge_mixed_operation()
 
 
 class NodeTemplateNodeTypeInterfaceMerger(object):
@@ -196,7 +214,7 @@ class NodeTemplateNodeTypeInterfaceMerger(object):
 
             node_template_operation = self.node_template_interface[node_type_operation_name]
 
-            operation_merger = NodeTemplateNodeTypeOperationMerger(
+            operation_merger = NodeTemplateNodeTypeInterfaceOperationMerger(
                 node_name=self.node_name,
                 operation_name=node_type_operation_name,
                 node_type_operation=node_type_operation,
@@ -239,7 +257,7 @@ class NodeTemplateNodeTypeInterfacesMerger(object):
                 # it defined this interface empty.
 
                 self.node_template[INTERFACES][node_type_interface_name] = {}
-                
+
             node_template_interface = self.node_template[
                 INTERFACES][node_type_interface_name]
 
@@ -347,7 +365,7 @@ def _merge_node_type_interface_operations(overriding_op, overridden_op):
             return overriding_op
         return {
             'implementation': overriding_op.get('implementation', ''),
-            'inputs': merge_sub_dicts(
+            'inputs': utils.merge_sub_dicts(
                 overridden_dict=overridden_op,
                 overriding_dict=overriding_op,
                 sub_dict_key='inputs'
@@ -364,7 +382,7 @@ def _merge_node_type_interface_operations(overriding_op, overridden_op):
 
         return {
             'implementation': overriding_op,
-            'inputs': merge_sub_dicts(
+            'inputs': utils.merge_sub_dicts(
                 overridden_dict=overridden_op,
                 overriding_dict={},
                 sub_dict_key='inputs'
@@ -375,7 +393,7 @@ def _merge_node_type_interface_operations(overriding_op, overridden_op):
 
         return {
             'implementation': overriding_op.get('implementation', ''),
-            'inputs': merge_sub_dicts(
+            'inputs': utils.merge_sub_dicts(
                 overridden_dict={},
                 overriding_dict=overriding_op,
                 sub_dict_key='inputs'
