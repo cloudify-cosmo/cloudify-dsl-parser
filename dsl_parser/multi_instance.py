@@ -47,9 +47,19 @@ def modify_deployment(nodes, previous_node_instances, modified_nodes):
 
     node_instances = rel_graph.extract_node_instances(
         node_instances_graph=new_deployment_node_graph, copy_instances=True)
-    added_node_instances = rel_graph.extract_added_node_instances(
+
+    workflow_added_node_instances = rel_graph.extract_added_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
-    removed_node_instances = rel_graph.extract_removed_node_instances(
+    workflow_removed_node_instances = rel_graph.extract_removed_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
 
-    return node_instances
+    removed_node_instance_ids = [
+        instance['id'] for instance in workflow_removed_node_instances
+        if instance.get('modification') == 'removed']
+
+    return {
+        'node_instances': node_instances,
+        'removed_node_instance_ids': removed_node_instance_ids,
+        'workflow_added': workflow_added_node_instances,
+        'workflow_removed': workflow_removed_node_instances
+    }

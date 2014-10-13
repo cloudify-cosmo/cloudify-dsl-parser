@@ -510,11 +510,11 @@ node_templates:
         type: cloudify.types.host
 """
         plan = self.parse_multi(yaml)
-        node_instances = self.modify_multi(plan, {
+        modification = self.modify_multi(plan, {
             'host': {'instances': 2}
         })
-
-        self.assertEqual(2, len(node_instances))
+        self._assert_modification(modification, 2, 0, 1, 0)
+        node_instances = modification['node_instances']
         for instance in node_instances:
             self.assertEqual('host', instance['name'])
             self.assertIn('host_', instance['id'])
@@ -534,10 +534,11 @@ node_templates:
                 target: host
 """
         plan = self.parse_multi(yaml)
-        node_instances = self.modify_multi(plan, {
+        modification = self.modify_multi(plan, {
             'host': {'instances': 2}
         })
-        self.assertEqual(4, len(node_instances))
+        self._assert_modification(modification, 4, 0, 2, 0)
+        node_instances = modification['node_instances']
         host_nodes = self._nodes_by_name(node_instances, 'host')
         self.assertEqual(2, len(host_nodes))
         for instance in host_nodes:
@@ -567,10 +568,11 @@ node_templates:
                 target: host
 """
         plan = self.parse_multi(yaml)
-        node_instances = self.modify_multi(plan, {
+        modification = self.modify_multi(plan, {
             'db': {'instances': 2}
         })
-        self.assertEqual(3, len(node_instances))
+        self._assert_modification(modification, 3, 0, 2, 0)
+        node_instances = modification['node_instances']
         host_nodes = self._nodes_by_name(node_instances, 'host')
         self.assertEqual(1, len(host_nodes))
         for instance in host_nodes:
@@ -600,11 +602,12 @@ node_templates:
                 target: host
 """
         plan = self.parse_multi(yaml)
-        node_instances = self.modify_multi(plan, {
+        modification = self.modify_multi(plan, {
             'host': {'instances': 2},
             'db': {'instances': 2}
         })
-        self.assertEqual(6, len(node_instances))
+        self._assert_modification(modification, 6, 0, 5, 0)
+        node_instances = modification['node_instances']
         host_nodes = self._nodes_by_name(node_instances, 'host')
         self.assertEqual(2, len(host_nodes))
         for instance in host_nodes:
@@ -638,10 +641,11 @@ node_templates:
                 target: host2
 """
         plan = self.parse_multi(yaml)
-        node_instances = self.modify_multi(plan, {
+        modification = self.modify_multi(plan, {
             'host1': {'instances': 2}
         })
-        self.assertEqual(5, len(node_instances))
+        self._assert_modification(modification, 5, 0, 3, 0)
+        node_instances = modification['node_instances']
         host1_nodes = self._nodes_by_name(node_instances, 'host1')
         host2_nodes = self._nodes_by_name(node_instances, 'host2')
         self.assertEqual(2, len(host1_nodes))
@@ -680,10 +684,11 @@ node_templates:
                 target: host2
 """
         plan = self.parse_multi(yaml)
-        node_instances = self.modify_multi(plan, {
+        modification = self.modify_multi(plan, {
             'host2': {'instances': 2}
         })
-        self.assertEqual(4, len(node_instances))
+        self._assert_modification(modification, 4, 0, 2, 0)
+        node_instances = modification['node_instances']
         host1_nodes = self._nodes_by_name(node_instances, 'host1')
         host2_nodes = self._nodes_by_name(node_instances, 'host2')
         self.assertEqual(1, len(host1_nodes))
@@ -722,10 +727,11 @@ node_templates:
                 target: host2
 """
         plan = self.parse_multi(yaml)
-        node_instances = self.modify_multi(plan, {
+        modification = self.modify_multi(plan, {
             'db': {'instances': 2}
         })
-        self.assertEqual(4, len(node_instances))
+        self._assert_modification(modification, 4, 0, 3, 0)
+        node_instances = modification['node_instances']
         host1_nodes = self._nodes_by_name(node_instances, 'host1')
         host2_nodes = self._nodes_by_name(node_instances, 'host2')
         self.assertEqual(1, len(host1_nodes))
@@ -775,3 +781,18 @@ node_templates:
             self.assertDictEqual(
                 previous_graph[source][target]['relationship'],
                 subgraph[source][target]['relationship'])
+
+    def _assert_modification(self,
+                             modification,
+                             expected_node_instances_count,
+                             expected_removed_node_instance_id_count,
+                             expected_workflow_added_count,
+                             expected_workflow_removed_count):
+        self.assertEqual(expected_node_instances_count,
+                         len(modification['node_instances']))
+        self.assertEqual(expected_removed_node_instance_id_count,
+                         len(modification['removed_node_instance_ids']))
+        self.assertEqual(expected_workflow_added_count,
+                         len(modification['workflow_added']))
+        self.assertEqual(expected_workflow_removed_count,
+                         len(modification['workflow_removed']))

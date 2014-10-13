@@ -110,8 +110,11 @@ def extract_node_instances(node_instances_graph, copy_instances=False):
     nodes_instances = []
     for node_instance_id, data in node_instances_graph.nodes_iter(data=True):
         node_instance = data['node']
+        node_instance_attributes = data.get('node_instance_attributes')
         if copy_instances:
             node_instance = copy.deepcopy(node_instance)
+        if node_instance_attributes:
+            node_instance.update(node_instance_attributes)
         relationship_instances = []
         for target_node_instance_id in node_instances_graph.neighbors_iter(
                 node_instance_id):
@@ -128,24 +131,29 @@ def extract_node_instances(node_instances_graph, copy_instances=False):
 
 def extract_added_node_instances(previous_deployment_node_graph,
                                  new_deployment_node_graph):
-    added_instances_graph = _graph_diff(new_deployment_node_graph,
-                                        previous_deployment_node_graph)
+    added_instances_graph = _graph_diff(
+        new_deployment_node_graph,
+        previous_deployment_node_graph,
+        node_instance_attributes={'modification': 'added'})
     return extract_node_instances(added_instances_graph, copy_instances=True)
 
 
 def extract_removed_node_instances(previous_deployment_node_graph,
                                    new_deployment_node_graph):
-    removed_instances_graph = _graph_diff(previous_deployment_node_graph,
-                                          new_deployment_node_graph)
+    removed_instances_graph = _graph_diff(
+        previous_deployment_node_graph,
+        new_deployment_node_graph,
+        node_instance_attributes={'modification': 'removed'})
     return extract_node_instances(removed_instances_graph, copy_instances=True)
 
 
-def _graph_diff(G, H):
+def _graph_diff(G, H, node_instance_attributes):
     result = nx.DiGraph()
     for n1, data in G.nodes_iter(data=True):
         if n1 in H:
             continue
-        result.add_node(n1, data)
+        result.add_node(n1, data,
+                        node_instance_attributes=node_instance_attributes)
         for n2 in G.neighbors_iter(n1):
             result.add_node(n2, G.node[n2])
             result.add_edge(n1, n2, G[n1][n2])
