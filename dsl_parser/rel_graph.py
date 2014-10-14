@@ -43,9 +43,11 @@ class GraphContext(object):
         self.previous_deployment_node_graph = previous_deployment_node_graph
         self.modified_nodes = modified_nodes
         self.node_ids_to_node_instance_ids = {}
+        self.node_instance_ids = set()
         if previous_deployment_node_graph is not None:
             for node_instance_id, data in \
                     previous_deployment_node_graph.nodes_iter(data=True):
+                self.node_instance_ids.add(node_instance_id)
                 node_instance = data['node']
                 self.add_node_id_to_node_instance_id_mapping(
                     node_instance['name'], node_instance_id)
@@ -95,9 +97,11 @@ def build_deployment_node_graph(plan_node_graph,
 
     _handle_contained_in(ctx)
     if ctx.modification:
+        ctx.node_instance_ids.clear()
         ctx.node_ids_to_node_instance_ids.clear()
         for node_instance_id, data in deployment_node_graph.nodes_iter(
                 data=True):
+            ctx.node_instance_ids.add(node_instance_id)
             node_id = data['node']['name']
             ctx.add_node_id_to_node_instance_id_mapping(node_id,
                                                         node_instance_id)
@@ -271,7 +275,7 @@ def _build_and_update_node_instances(ctx,
 
     new_containers = []
     for _ in range(new_instances_num):
-        node_instance_id = _node_instance_id(node_id)
+        node_instance_id = _node_instance_id(node_id, ctx)
         node_instance = _node_instance_copy(node, node_instance_id)
         new_current_host_instance_id = _handle_host_instance_id(
             current_host_instance_id=current_host_instance_id,
@@ -374,12 +378,17 @@ def _build_graph_by_relationship_types(graph,
     return relationship_base_graph
 
 
-def _node_instance_id(node_id):
-    return node_id + _generate_suffix()
+def _node_instance_id(node_id, ctx):
+    generated_id = _generate_id()
+    new_node_instance_id = '{0}_{1}'.format(node_id, generated_id)
+    while new_node_instance_id in ctx.node_instance_ids:
+        generated_id = _generate_id()
+        new_node_instance_id = '{0}_{1}'.format(node_id, generated_id)
+    return new_node_instance_id
 
 
-def _generate_suffix():
-    return '_%05x' % random.randrange(16 ** 5)
+def _generate_id():
+    return '%05x' % random.randrange(16 ** 5)
 
 
 def _node_instance_copy(node, node_instance_id):
