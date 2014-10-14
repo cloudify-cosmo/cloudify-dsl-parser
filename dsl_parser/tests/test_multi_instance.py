@@ -527,6 +527,19 @@ node_templates:
             previous_node_instances=plan['node_instances'],
             added_node_instances=workflow_added)
 
+    def test_modified_single_node_removed(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host:
+        type: cloudify.types.host
+        instances:
+            deploy: 2
+"""
+        plan = self.parse_multi(yaml)
+        modification = self.modify_multi(plan, {
+            'host': {'instances': 1}
+        })
+        self._assert_modification(modification, 1, 1, 0, 1)
+
     def test_modified_single_node_added_with_child_contained_in_1(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
@@ -838,3 +851,9 @@ node_templates:
                          len(modification['workflow_added']))
         self.assertEqual(expected_workflow_removed_count,
                          len(modification['workflow_removed']))
+        removed_node_instance_ids_from_workflow_removed = [
+            instance['id'] for instance in modification['workflow_removed']
+            if instance.get('modification') == 'removed']
+        self.assertSetEqual(
+            set(removed_node_instance_ids_from_workflow_removed),
+            set(modification['removed_node_instance_ids']))

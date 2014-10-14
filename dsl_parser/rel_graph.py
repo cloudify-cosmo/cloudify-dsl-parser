@@ -251,7 +251,7 @@ def _build_and_update_node_instances(ctx,
             else:
                 removed_instances_num = (previous_instances_num -
                                          total_instances_num)
-                removed_instance_ids = previous_instances_num[
+                removed_instance_ids = previous_node_instance_ids[
                     :removed_instances_num]
                 for removed_instance_id in removed_instance_ids:
                     previous_node_instance_ids.remove(removed_instance_id)
