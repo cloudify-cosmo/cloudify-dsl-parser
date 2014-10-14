@@ -458,7 +458,7 @@ node_templates:
         relationships = self._relationships_by_target_name(
             source_relationships, target_name)
         target_ids = [rel['target_id'] for rel in relationships]
-        self.assertSetEqual(set(node_ids), set(target_ids))
+        self.assertEqual(set(node_ids), set(target_ids))
 
     def _assert_all_to_one(self, source_relationships, node_ids, target_name):
         relationships = self._relationships_by_target_name(
@@ -473,7 +473,7 @@ node_templates:
             relationships = self._relationships_by_target_name(
                 source_relationships, target_name)
             target_ids = [rel['target_id'] for rel in relationships]
-            self.assertSetEqual(set(node_ids), set(target_ids))
+            self.assertEqual(set(node_ids), set(target_ids))
 
     def test_illegal_connection_type(self):
         yaml = self.BASE_BLUEPRINT + """
