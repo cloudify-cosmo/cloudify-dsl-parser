@@ -815,10 +815,10 @@ node_templates:
             subgraph_node = copy.deepcopy(subgraph.node[node_id]['node'])
             del previous_node['relationships']
             del subgraph_node['relationships']
-            self.assertDictEqual(previous_node,
-                                 subgraph_node)
+            self.assertEqual(previous_node,
+                             subgraph_node)
         for source, target in previous_graph.edges_iter():
-            self.assertDictEqual(
+            self.assertEqual(
                 previous_graph[source][target]['relationship'],
                 subgraph[source][target]['relationship'])
 
