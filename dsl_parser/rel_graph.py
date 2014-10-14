@@ -173,9 +173,7 @@ def _handle_contained_in(ctx):
 
     # don't forget to include nodes in this graph than no one is contained
     # in them (these will be considered 1 node trees)
-    no_containment_graph = ctx.plan_node_graph.copy()
-    no_containment_graph.remove_nodes_from(contained_graph.nodes_iter())
-    contained_graph.add_nodes_from(no_containment_graph.nodes_iter(data=True))
+    contained_graph.add_nodes_from(ctx.plan_node_graph.nodes_iter(data=True))
 
     # for each 'contained' tree, recursively build new tree based on
     # instances.deploy value with generated ids
