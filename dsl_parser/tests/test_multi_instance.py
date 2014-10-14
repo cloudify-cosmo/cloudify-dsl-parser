@@ -15,7 +15,6 @@
 
 __author__ = 'dank'
 
-import random
 import itertools
 import copy
 
