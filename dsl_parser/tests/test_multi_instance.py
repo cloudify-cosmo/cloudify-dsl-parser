@@ -853,6 +853,6 @@ node_templates:
         removed_node_instance_ids_from_workflow_removed = [
             instance['id'] for instance in modification['workflow_removed']
             if instance.get('modification') == 'removed']
-        self.assertSetEqual(
+        self.assertEqual(
             set(removed_node_instance_ids_from_workflow_removed),
             set(modification['removed_node_instance_ids']))
