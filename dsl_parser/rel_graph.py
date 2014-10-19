@@ -457,5 +457,3 @@ class IllegalConnectedToConnectionType(Exception):
 
 class UnsupportedRelationship(Exception):
     pass
-
-
