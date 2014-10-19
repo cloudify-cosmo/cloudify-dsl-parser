@@ -50,7 +50,8 @@ class GraphContext(object):
                 self.node_instance_ids.add(node_instance_id)
                 node_instance = data['node']
                 self.add_node_id_to_node_instance_id_mapping(
-                    node_instance['name'], node_instance_id)
+                    _node_id_from_node_instance(node_instance),
+                    node_instance_id)
 
     @property
     def modification(self):
@@ -102,7 +103,7 @@ def build_deployment_node_graph(plan_node_graph,
         for node_instance_id, data in deployment_node_graph.nodes_iter(
                 data=True):
             ctx.node_instance_ids.add(node_instance_id)
-            node_id = data['node']['name']
+            node_id = _node_id_from_node_instance(data['node'])
             ctx.add_node_id_to_node_instance_id_mapping(node_id,
                                                         node_instance_id)
     _handle_connected_to_and_depends_on(ctx)
@@ -111,7 +112,7 @@ def build_deployment_node_graph(plan_node_graph,
 
 
 def extract_node_instances(node_instances_graph, copy_instances=False):
-    nodes_instances = []
+    node_instances = []
     for node_instance_id, data in node_instances_graph.nodes_iter(data=True):
         node_instance = data['node']
         node_instance_attributes = data.get('node_instance_attributes')
@@ -129,8 +130,8 @@ def extract_node_instances(node_instances_graph, copy_instances=False):
                 relationship_instance = copy.deepcopy(relationship_instance)
             relationship_instances.append(relationship_instance)
         node_instance[RELATIONSHIPS] = relationship_instances
-        nodes_instances.append(node_instance)
-    return nodes_instances
+        node_instances.append(node_instance)
+    return node_instances
 
 
 def extract_added_node_instances(previous_deployment_node_graph,
@@ -231,6 +232,7 @@ def _build_and_update_node_instances(ctx,
                                      parent_relationship,
                                      current_host_instance_id):
     node_id = node['id']
+    current_instances_num = _number_of_instances(node)
     new_instances_num = 0
     previous_containers = []
     if ctx.modification:
@@ -258,7 +260,7 @@ def _build_and_update_node_instances(ctx,
                 for removed_instance_id in removed_instance_ids:
                     previous_node_instance_ids.remove(removed_instance_id)
         else:
-            new_instances_num = (node['instances']['deploy'] -
+            new_instances_num = (current_instances_num -
                                  previous_instances_num)
         previous_node_instances = [
             ctx.previous_deployment_node_graph.node[node_instance_id]['node']
@@ -269,7 +271,7 @@ def _build_and_update_node_instances(ctx,
                                          node_instance.get('host_id'))
                                for node_instance in previous_node_instances]
     else:
-        new_instances_num = node['instances']['deploy']
+        new_instances_num = current_instances_num
 
     new_containers = []
     for _ in range(new_instances_num):
@@ -391,7 +393,8 @@ def _generate_id():
 
 def _node_instance_copy(node, node_instance_id):
     result = {
-        'name': node['name'],
+        'name': _node_id_from_node(node),
+        'node_id': _node_id_from_node(node),
         'id': node_instance_id
     }
     if 'host_id' in node:
@@ -435,9 +438,24 @@ def _relationship_type_hierarchy_includes_one_of(relationship, expected_types):
                 for relationship_type in relationship_type_hierarchy])
 
 
+def _node_id_from_node(node):
+    return node.get('name') or node.get('id')
+
+
+def _node_id_from_node_instance(instance):
+    return instance.get('name') or instance.get('node_id')
+
+
+def _number_of_instances(node):
+    return (node.get('instances', {}).get('deploy') or
+            node.get('number_of_instances'))
+
+
 class IllegalConnectedToConnectionType(Exception):
     pass
 
 
 class UnsupportedRelationship(Exception):
     pass
+
+

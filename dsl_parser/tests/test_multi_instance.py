@@ -513,8 +513,8 @@ node_templates:
             'host': {'instances': 2}
         })
         self._assert_modification(modification, 2, 0, 1, 0)
-        node_instances = modification['node_instances']
-        workflow_added = modification['workflow_added']
+        node_instances = modification['current']
+        workflow_added = modification['added_and_related']
         for instance in node_instances:
             self.assertEqual('host', instance['name'])
             self.assertIn('host_', instance['id'])
@@ -554,8 +554,8 @@ node_templates:
             'host': {'instances': 2}
         })
         self._assert_modification(modification, 4, 0, 2, 0)
-        node_instances = modification['node_instances']
-        workflow_added = modification['workflow_added']
+        node_instances = modification['current']
+        workflow_added = modification['added_and_related']
         host_nodes = self._nodes_by_name(node_instances, 'host')
         self.assertEqual(2, len(host_nodes))
         for instance in host_nodes:
@@ -592,8 +592,8 @@ node_templates:
             'db': {'instances': 2}
         })
         self._assert_modification(modification, 3, 0, 2, 0)
-        node_instances = modification['node_instances']
-        workflow_added = modification['workflow_added']
+        node_instances = modification['current']
+        workflow_added = modification['added_and_related']
         host_nodes = self._nodes_by_name(node_instances, 'host')
         self.assertEqual(1, len(host_nodes))
         for instance in host_nodes:
@@ -631,8 +631,8 @@ node_templates:
             'db': {'instances': 2}
         })
         self._assert_modification(modification, 6, 0, 5, 0)
-        node_instances = modification['node_instances']
-        workflow_added = modification['workflow_added']
+        node_instances = modification['current']
+        workflow_added = modification['added_and_related']
         host_nodes = self._nodes_by_name(node_instances, 'host')
         self.assertEqual(2, len(host_nodes))
         for instance in host_nodes:
@@ -673,8 +673,8 @@ node_templates:
             'host1': {'instances': 2}
         })
         self._assert_modification(modification, 5, 0, 3, 0)
-        node_instances = modification['node_instances']
-        workflow_added = modification['workflow_added']
+        node_instances = modification['current']
+        workflow_added = modification['added_and_related']
         host1_nodes = self._nodes_by_name(node_instances, 'host1')
         host2_nodes = self._nodes_by_name(node_instances, 'host2')
         self.assertEqual(2, len(host1_nodes))
@@ -720,8 +720,8 @@ node_templates:
             'host2': {'instances': 2}
         })
         self._assert_modification(modification, 4, 0, 2, 0)
-        node_instances = modification['node_instances']
-        workflow_added = modification['workflow_added']
+        node_instances = modification['current']
+        workflow_added = modification['added_and_related']
         host1_nodes = self._nodes_by_name(node_instances, 'host1')
         host2_nodes = self._nodes_by_name(node_instances, 'host2')
         self.assertEqual(1, len(host1_nodes))
@@ -767,8 +767,8 @@ node_templates:
             'db': {'instances': 2}
         })
         self._assert_modification(modification, 4, 0, 3, 0)
-        node_instances = modification['node_instances']
-        workflow_added = modification['workflow_added']
+        node_instances = modification['current']
+        workflow_added = modification['added_and_related']
         host1_nodes = self._nodes_by_name(node_instances, 'host1')
         host2_nodes = self._nodes_by_name(node_instances, 'host2')
         self.assertEqual(1, len(host1_nodes))
@@ -843,16 +843,16 @@ node_templates:
                              expected_workflow_added_count,
                              expected_workflow_removed_count):
         self.assertEqual(expected_node_instances_count,
-                         len(modification['node_instances']))
+                         len(modification['current']))
         self.assertEqual(expected_removed_node_instance_id_count,
-                         len(modification['removed_node_instance_ids']))
+                         len(modification['removed_ids']))
         self.assertEqual(expected_workflow_added_count,
-                         len(modification['workflow_added']))
+                         len(modification['added_and_related']))
         self.assertEqual(expected_workflow_removed_count,
-                         len(modification['workflow_removed']))
+                         len(modification['removed_and_related']))
         removed_node_instance_ids_from_workflow_removed = [
-            instance['id'] for instance in modification['workflow_removed']
+            instance['id'] for instance in modification['removed_and_related']
             if instance.get('modification') == 'removed']
         self.assertEqual(
             set(removed_node_instance_ids_from_workflow_removed),
-            set(modification['removed_node_instance_ids']))
+            set(modification['removed_ids']))

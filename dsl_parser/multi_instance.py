@@ -45,21 +45,21 @@ def modify_deployment(nodes, previous_node_instances, modified_nodes):
         previous_deployment_node_graph,
         modified_nodes)
 
-    node_instances = rel_graph.extract_node_instances(
+    current = rel_graph.extract_node_instances(
         node_instances_graph=new_deployment_node_graph, copy_instances=True)
 
-    workflow_added_node_instances = rel_graph.extract_added_node_instances(
+    added_and_related = rel_graph.extract_added_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
-    workflow_removed_node_instances = rel_graph.extract_removed_node_instances(
+    removed_and_related = rel_graph.extract_removed_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
 
-    removed_node_instance_ids = [
-        instance['id'] for instance in workflow_removed_node_instances
+    removed_ids = [
+        instance['id'] for instance in removed_and_related
         if instance.get('modification') == 'removed']
 
     return {
-        'node_instances': node_instances,
-        'removed_node_instance_ids': removed_node_instance_ids,
-        'workflow_added': workflow_added_node_instances,
-        'workflow_removed': workflow_removed_node_instances
+        'current': current,
+        'removed_ids': removed_ids,
+        'added_and_related': added_and_related,
+        'removed_and_related': removed_and_related
     }
