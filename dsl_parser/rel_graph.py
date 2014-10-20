@@ -259,7 +259,8 @@ def _build_and_update_node_instances(ctx,
                 removed_instance_ids_hint = modified_node.get(
                     'removed_ids_hint', [])
                 for removed_id_hint in removed_instance_ids_hint:
-                    if removed_id_hint in previous_node_instance_ids:
+                    if (removed_instances_num > 0 and
+                            removed_id_hint in previous_node_instance_ids):
                         previous_node_instance_ids.remove(removed_id_hint)
                         removed_instances_num -= 1
                 removed_instance_ids = previous_node_instance_ids[

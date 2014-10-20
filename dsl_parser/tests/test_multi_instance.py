@@ -1007,6 +1007,15 @@ node_templates:
                 modification['removed_and_related'], 'db'))
             self.assertIn(db_id, removed_db_ids)
 
+        # give all nodes as hint to see we only take what we want
+        modification = self.modify_multi(plan, {
+            'db': {
+                'instances': 1,
+                'removed_ids_hint': db_ids
+            }
+        })
+        self._assert_modification(modification, 0, 6, 0, 3)
+
     def _nodes_relationships(self, nodes, target_name=None):
         relationships = []
         for node in nodes:
