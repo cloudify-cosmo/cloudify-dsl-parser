@@ -45,21 +45,12 @@ def modify_deployment(nodes, previous_node_instances, modified_nodes):
         previous_deployment_node_graph,
         modified_nodes)
 
-    current = rel_graph.extract_node_instances(
-        node_instances_graph=new_deployment_node_graph, copy_instances=True)
-
     added_and_related = rel_graph.extract_added_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
     removed_and_related = rel_graph.extract_removed_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
 
-    removed_ids = [
-        instance['id'] for instance in removed_and_related
-        if instance.get('modification') == 'removed']
-
     return {
-        'current': current,
-        'removed_ids': removed_ids,
         'added_and_related': added_and_related,
         'removed_and_related': removed_and_related
     }

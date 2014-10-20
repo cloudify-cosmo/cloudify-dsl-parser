@@ -512,19 +512,15 @@ node_templates:
         modification = self.modify_multi(plan, {
             'host': {'instances': 2}
         })
-        self._assert_modification(modification, 2, 0, 1, 0)
-        node_instances = modification['current']
-        workflow_added = modification['added_and_related']
-        for instance in node_instances:
+        self._assert_modification(modification, 1, 0)
+        added_and_related = modification['added_and_related']
+        for instance in added_and_related:
             self.assertEqual('host', instance['name'])
             self.assertIn('host_', instance['id'])
             self.assertEqual(instance['host_id'], instance['id'])
-        self._assert_previous_contained_in_new(
-            previous_node_instances=plan['node_instances'],
-            new_node_instances=node_instances)
         self._assert_added_not_in_previous(
             previous_node_instances=plan['node_instances'],
-            added_node_instances=workflow_added)
+            added_and_related=added_and_related)
 
     def test_modified_single_node_removed(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -537,7 +533,7 @@ node_templates:
         modification = self.modify_multi(plan, {
             'host': {'instances': 1}
         })
-        self._assert_modification(modification, 1, 1, 0, 1)
+        self._assert_modification(modification, 0, 1)
 
     def test_modified_single_node_added_with_child_contained_in_1(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -553,29 +549,25 @@ node_templates:
         modification = self.modify_multi(plan, {
             'host': {'instances': 2}
         })
-        self._assert_modification(modification, 4, 0, 2, 0)
-        node_instances = modification['current']
-        workflow_added = modification['added_and_related']
-        host_nodes = self._nodes_by_name(node_instances, 'host')
-        self.assertEqual(2, len(host_nodes))
+        self._assert_modification(modification, 2, 0)
+        added_and_related = modification['added_and_related']
+        host_nodes = self._nodes_by_name(added_and_related, 'host')
+        self.assertEqual(1, len(host_nodes))
         for instance in host_nodes:
             self.assertEqual('host', instance['name'])
             self.assertIn('host_', instance['id'])
             self.assertEqual(instance['host_id'], instance['id'])
-        db_nodes = self._nodes_by_name(node_instances, 'db')
-        self.assertEqual(2, len(db_nodes))
+        db_nodes = self._nodes_by_name(added_and_related, 'db')
+        self.assertEqual(1, len(db_nodes))
         for instance in db_nodes:
             self.assertEqual('db', instance['name'])
             self.assertIn('db_', instance['id'])
         self._assert_each_node_valid_hosted(db_nodes, host_nodes)
         self._assert_contained(self._nodes_relationships(db_nodes),
                                self._node_ids(host_nodes), 'host')
-        self._assert_previous_contained_in_new(
-            previous_node_instances=plan['node_instances'],
-            new_node_instances=node_instances)
         self._assert_added_not_in_previous(
             previous_node_instances=plan['node_instances'],
-            added_node_instances=workflow_added)
+            added_and_related=added_and_related)
 
     def test_modified_single_node_added_with_child_contained_in_2(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -591,29 +583,25 @@ node_templates:
         modification = self.modify_multi(plan, {
             'db': {'instances': 2}
         })
-        self._assert_modification(modification, 3, 0, 2, 0)
-        node_instances = modification['current']
-        workflow_added = modification['added_and_related']
-        host_nodes = self._nodes_by_name(node_instances, 'host')
+        self._assert_modification(modification, 2, 0)
+        added_and_related = modification['added_and_related']
+        host_nodes = self._nodes_by_name(added_and_related, 'host')
         self.assertEqual(1, len(host_nodes))
         for instance in host_nodes:
             self.assertEqual('host', instance['name'])
             self.assertIn('host_', instance['id'])
             self.assertEqual(instance['host_id'], instance['id'])
-        db_nodes = self._nodes_by_name(node_instances, 'db')
-        self.assertEqual(2, len(db_nodes))
+        db_nodes = self._nodes_by_name(added_and_related, 'db')
+        self.assertEqual(1, len(db_nodes))
         for instance in db_nodes:
             self.assertEqual('db', instance['name'])
             self.assertIn('db_', instance['id'])
         self._assert_each_node_valid_hosted(db_nodes, host_nodes)
         self._assert_contained(self._nodes_relationships(db_nodes),
                                self._node_ids(host_nodes), 'host')
-        self._assert_previous_contained_in_new(
-            previous_node_instances=plan['node_instances'],
-            new_node_instances=node_instances)
         self._assert_added_not_in_previous(
             previous_node_instances=plan['node_instances'],
-            added_node_instances=workflow_added)
+            added_and_related=added_and_related)
 
     def test_modified_two_nodes_added_with_child_contained_in(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -630,29 +618,24 @@ node_templates:
             'host': {'instances': 2},
             'db': {'instances': 2}
         })
-        self._assert_modification(modification, 6, 0, 5, 0)
-        node_instances = modification['current']
-        workflow_added = modification['added_and_related']
-        host_nodes = self._nodes_by_name(node_instances, 'host')
+        self._assert_modification(modification, 5, 0)
+        added_and_related = modification['added_and_related']
+        host_nodes = self._nodes_by_name(added_and_related, 'host')
         self.assertEqual(2, len(host_nodes))
         for instance in host_nodes:
             self.assertEqual('host', instance['name'])
             self.assertIn('host_', instance['id'])
             self.assertEqual(instance['host_id'], instance['id'])
-        db_nodes = self._nodes_by_name(node_instances, 'db')
-        self.assertEqual(4, len(db_nodes))
+        db_nodes = self._nodes_by_name(added_and_related, 'db')
+        self.assertEqual(3, len(db_nodes))
         for instance in db_nodes:
             self.assertEqual('db', instance['name'])
             self.assertIn('db_', instance['id'])
-        self._assert_each_node_valid_hosted(db_nodes, host_nodes)
         self._assert_contained(self._nodes_relationships(db_nodes),
                                self._node_ids(host_nodes), 'host')
-        self._assert_previous_contained_in_new(
-            previous_node_instances=plan['node_instances'],
-            new_node_instances=node_instances)
         self._assert_added_not_in_previous(
             previous_node_instances=plan['node_instances'],
-            added_node_instances=workflow_added)
+            added_and_related=added_and_related)
 
     def test_modified_single_node_added_with_connected_1(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -672,20 +655,19 @@ node_templates:
         modification = self.modify_multi(plan, {
             'host1': {'instances': 2}
         })
-        self._assert_modification(modification, 5, 0, 3, 0)
-        node_instances = modification['current']
-        workflow_added = modification['added_and_related']
-        host1_nodes = self._nodes_by_name(node_instances, 'host1')
-        host2_nodes = self._nodes_by_name(node_instances, 'host2')
-        self.assertEqual(2, len(host1_nodes))
+        self._assert_modification(modification, 3, 0)
+        added_and_related = modification['added_and_related']
+        host1_nodes = self._nodes_by_name(added_and_related, 'host1')
+        host2_nodes = self._nodes_by_name(added_and_related, 'host2')
+        self.assertEqual(1, len(host1_nodes))
         self.assertEqual(1, len(host2_nodes))
         for i, host_nodes in enumerate([host1_nodes, host2_nodes], start=1):
             for instance in host_nodes:
                 self.assertEqual('host{0}'.format(i), instance['name'])
                 self.assertIn('host{0}_'.format(i), instance['id'])
                 self.assertEqual(instance['host_id'], instance['id'])
-        db_nodes = self._nodes_by_name(node_instances, 'db')
-        self.assertEqual(2, len(db_nodes))
+        db_nodes = self._nodes_by_name(added_and_related, 'db')
+        self.assertEqual(1, len(db_nodes))
         for instance in db_nodes:
             self.assertEqual('db', instance['name'])
             self.assertIn('db_', instance['id'])
@@ -694,12 +676,9 @@ node_templates:
                                self._node_ids(host1_nodes), 'host1')
         self._assert_all_to_all([node['relationships'] for node in db_nodes],
                                 self._node_ids(host2_nodes), 'host2')
-        self._assert_previous_contained_in_new(
-            previous_node_instances=plan['node_instances'],
-            new_node_instances=node_instances)
         self._assert_added_not_in_previous(
             previous_node_instances=plan['node_instances'],
-            added_node_instances=workflow_added)
+            added_and_related=added_and_related)
 
     def test_modified_single_node_added_with_connected_2(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -719,34 +698,24 @@ node_templates:
         modification = self.modify_multi(plan, {
             'host2': {'instances': 2}
         })
-        self._assert_modification(modification, 4, 0, 2, 0)
-        node_instances = modification['current']
-        workflow_added = modification['added_and_related']
-        host1_nodes = self._nodes_by_name(node_instances, 'host1')
-        host2_nodes = self._nodes_by_name(node_instances, 'host2')
-        self.assertEqual(1, len(host1_nodes))
-        self.assertEqual(2, len(host2_nodes))
-        for i, host_nodes in enumerate([host1_nodes, host2_nodes], start=1):
-            for instance in host_nodes:
-                self.assertEqual('host{0}'.format(i), instance['name'])
-                self.assertIn('host{0}_'.format(i), instance['id'])
-                self.assertEqual(instance['host_id'], instance['id'])
-        db_nodes = self._nodes_by_name(node_instances, 'db')
+        self._assert_modification(modification, 2, 0)
+        added_and_related = modification['added_and_related']
+        host2_nodes = self._nodes_by_name(added_and_related, 'host2')
+        self.assertEqual(1, len(host2_nodes))
+        for instance in host2_nodes:
+            self.assertEqual('host2', instance['name'])
+            self.assertIn('host2_', instance['id'])
+            self.assertEqual(instance['host_id'], instance['id'])
+        db_nodes = self._nodes_by_name(added_and_related, 'db')
         self.assertEqual(1, len(db_nodes))
         for instance in db_nodes:
             self.assertEqual('db', instance['name'])
             self.assertIn('db_', instance['id'])
-        self._assert_each_node_valid_hosted(db_nodes, host1_nodes)
-        self._assert_contained(self._nodes_relationships(db_nodes),
-                               self._node_ids(host1_nodes), 'host1')
         self._assert_all_to_all([node['relationships'] for node in db_nodes],
                                 self._node_ids(host2_nodes), 'host2')
-        self._assert_previous_contained_in_new(
-            previous_node_instances=plan['node_instances'],
-            new_node_instances=node_instances)
         self._assert_added_not_in_previous(
             previous_node_instances=plan['node_instances'],
-            added_node_instances=workflow_added)
+            added_and_related=added_and_related)
 
     def test_modified_single_node_added_with_connected_3(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -766,11 +735,10 @@ node_templates:
         modification = self.modify_multi(plan, {
             'db': {'instances': 2}
         })
-        self._assert_modification(modification, 4, 0, 3, 0)
-        node_instances = modification['current']
-        workflow_added = modification['added_and_related']
-        host1_nodes = self._nodes_by_name(node_instances, 'host1')
-        host2_nodes = self._nodes_by_name(node_instances, 'host2')
+        self._assert_modification(modification, 3, 0)
+        added_and_related = modification['added_and_related']
+        host1_nodes = self._nodes_by_name(added_and_related, 'host1')
+        host2_nodes = self._nodes_by_name(added_and_related, 'host2')
         self.assertEqual(1, len(host1_nodes))
         self.assertEqual(1, len(host2_nodes))
         for i, host_nodes in enumerate([host1_nodes, host2_nodes], start=1):
@@ -778,8 +746,8 @@ node_templates:
                 self.assertEqual('host{0}'.format(i), instance['name'])
                 self.assertIn('host{0}_'.format(i), instance['id'])
                 self.assertEqual(instance['host_id'], instance['id'])
-        db_nodes = self._nodes_by_name(node_instances, 'db')
-        self.assertEqual(2, len(db_nodes))
+        db_nodes = self._nodes_by_name(added_and_related, 'db')
+        self.assertEqual(1, len(db_nodes))
         for instance in db_nodes:
             self.assertEqual('db', instance['name'])
             self.assertIn('db_', instance['id'])
@@ -788,12 +756,9 @@ node_templates:
                                self._node_ids(host1_nodes), 'host1')
         self._assert_all_to_all([node['relationships'] for node in db_nodes],
                                 self._node_ids(host2_nodes), 'host2')
-        self._assert_previous_contained_in_new(
-            previous_node_instances=plan['node_instances'],
-            new_node_instances=node_instances)
         self._assert_added_not_in_previous(
             previous_node_instances=plan['node_instances'],
-            added_node_instances=workflow_added)
+            added_and_related=added_and_related)
 
     def _nodes_relationships(self, nodes, target_name=None):
         relationships = []
@@ -804,29 +769,11 @@ node_templates:
                 relationships.append(rel)
         return relationships
 
-    def _assert_previous_contained_in_new(self,
-                                          previous_node_instances,
-                                          new_node_instances):
-        previous_graph = rel_graph.build_node_graph(previous_node_instances)
-        new_graph = rel_graph.build_node_graph(new_node_instances)
-        subgraph = new_graph.subgraph(self._node_ids(previous_node_instances))
-        for node_id in previous_graph.nodes_iter():
-            previous_node = copy.deepcopy(previous_graph.node[node_id]['node'])
-            subgraph_node = copy.deepcopy(subgraph.node[node_id]['node'])
-            del previous_node['relationships']
-            del subgraph_node['relationships']
-            self.assertEqual(previous_node,
-                             subgraph_node)
-        for source, target in previous_graph.edges_iter():
-            self.assertEqual(
-                previous_graph[source][target]['relationship'],
-                subgraph[source][target]['relationship'])
-
     def _assert_added_not_in_previous(self,
                                       previous_node_instances,
-                                      added_node_instances):
+                                      added_and_related):
         previous_graph = rel_graph.build_node_graph(previous_node_instances)
-        added_nodes_graph = rel_graph.build_node_graph(added_node_instances)
+        added_nodes_graph = rel_graph.build_node_graph(added_and_related)
         for instance_id, data in added_nodes_graph.nodes_iter(data=True):
             instance = data['node']
             if instance.get('modification') == 'added':
@@ -838,21 +785,9 @@ node_templates:
 
     def _assert_modification(self,
                              modification,
-                             expected_node_instances_count,
-                             expected_removed_node_instance_id_count,
                              expected_workflow_added_count,
                              expected_workflow_removed_count):
-        self.assertEqual(expected_node_instances_count,
-                         len(modification['current']))
-        self.assertEqual(expected_removed_node_instance_id_count,
-                         len(modification['removed_ids']))
         self.assertEqual(expected_workflow_added_count,
                          len(modification['added_and_related']))
         self.assertEqual(expected_workflow_removed_count,
                          len(modification['removed_and_related']))
-        removed_node_instance_ids_from_workflow_removed = [
-            instance['id'] for instance in modification['removed_and_related']
-            if instance.get('modification') == 'removed']
-        self.assertEqual(
-            set(removed_node_instance_ids_from_workflow_removed),
-            set(modification['removed_ids']))
