@@ -16,7 +16,6 @@
 __author__ = 'dank'
 
 import itertools
-import copy
 
 from dsl_parser import rel_graph
 
