@@ -1174,10 +1174,9 @@ def _extract_complete_node_type(dsl_type, dsl_type_name, parsed_dsl,
     def types_and_node_inheritance_common_merging_func(complete_super_type,
                                                        merged_type):
         # derive interfaces
-        merged_type[INTERFACES] = interfaces_parser.merge_interface_dicts(
-            complete_super_type,
-            merged_type,
-            INTERFACES
+        merged_type[INTERFACES] = interfaces_parser.merge_node_type_and_node_type_interfaces(
+            overridden_node_type=complete_super_type,
+            overriding_node_type=merged_type
         )
         return merged_type
 

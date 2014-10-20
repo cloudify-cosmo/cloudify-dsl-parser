@@ -15,7 +15,3 @@ node_types:
         interfaces:
             cloudify.interfaces.lifecycle:
                 create: mock.tasks.create
-
-node_templates:
-    base:
-        type: cloudify.types.base2

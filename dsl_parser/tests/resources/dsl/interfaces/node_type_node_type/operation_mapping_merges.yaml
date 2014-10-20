@@ -9,7 +9,11 @@ node_types:
     cloudify.types.base1:
         interfaces:
             cloudify.interfaces.lifecycle:
-                start: {}
+                start:
+                    implementation: mock.tasks.start
+                    inputs:
+                        key:
+                            default: value
 
     cloudify.types.base2:
         derived_from: cloudify.types.base1
@@ -20,7 +24,3 @@ node_types:
                     inputs:
                         key:
                             default: value
-
-node_templates:
-    base:
-        type: cloudify.types.base2

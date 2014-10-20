@@ -1,0 +1,29 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+plugins:
+    mock:
+        executor: central_deployment_agent
+        install: false
+
+node_types:
+    cloudify.types.base:
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: {}
+                start:
+                    implementation: mock.tasks.start
+                    inputs:
+                        key:
+                          default: value
+                stop: mock.tasks.stop
+    cloudify.types.base2:
+        derived_from: cloudify.types.base
+        interfaces:
+            cloudify.interfaces.lifecycle2:
+                create2: {}
+                start2:
+                    implementation: mock.tasks.start2
+                    inputs:
+                        key2:
+                          default: value2
+                stop2: mock.tasks.stop2

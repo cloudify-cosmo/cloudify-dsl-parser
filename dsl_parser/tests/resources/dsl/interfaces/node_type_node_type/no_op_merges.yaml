@@ -1,10 +1,3 @@
-tosca_definitions_version: cloudify_dsl_1_0
-
-plugins:
-    mock:
-        executor: central_deployment_agent
-        install: false
-
 node_types:
     cloudify.types.base1:
         interfaces:
@@ -15,8 +8,4 @@ node_types:
         derived_from: cloudify.types.base1
         interfaces:
             cloudify.interfaces.lifecycle:
-                create: mock.tasks.create
-
-node_templates:
-    base:
-        type: cloudify.types.base2
+                create: {}

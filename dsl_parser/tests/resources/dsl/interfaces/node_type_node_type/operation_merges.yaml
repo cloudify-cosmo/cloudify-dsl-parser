@@ -6,17 +6,13 @@ plugins:
         install: false
 
 node_types:
-    cloudify.types.base:
+    cloudify.types.base1:
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start: mock.tasks.start
+
+    cloudify.types.base2:
+        derived_from: cloudify.types.base1
         interfaces:
             cloudify.interfaces.lifecycle:
                 create: mock.tasks.create
-    cloudify.types.base2:
-        derived_from: cloudify.types.base
-        interfaces:
-            cloudify.interfaces.lifecycle2:
-                create2: {}
-
-
-node_templates:
-    base:
-        type: cloudify.types.base2

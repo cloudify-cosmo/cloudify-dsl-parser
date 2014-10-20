@@ -20,7 +20,3 @@ node_types:
                     inputs:
                         key:
                             default: value
-
-node_templates:
-    base:
-        type: cloudify.types.base2

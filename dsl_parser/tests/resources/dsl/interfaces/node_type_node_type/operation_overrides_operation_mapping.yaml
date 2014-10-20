@@ -20,7 +20,3 @@ node_types:
         interfaces:
             cloudify.interfaces.lifecycle:
                 create: mock.tasks.create-overridden
-
-node_templates:
-    base:
-        type: cloudify.types.base2

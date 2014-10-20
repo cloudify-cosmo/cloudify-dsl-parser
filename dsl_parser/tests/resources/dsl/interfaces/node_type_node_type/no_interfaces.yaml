@@ -13,9 +13,11 @@ node_types:
     cloudify.types.base2:
         derived_from: cloudify.types.base
         interfaces:
-            cloudify.interfaces.lifecycle:
-                create: {}
-
-node_templates:
-    base:
-        type: cloudify.types.base2
+            cloudify.interfaces.lifecycle2:
+                create2: {}
+                start2:
+                    implementation: mock.tasks.start2
+                    inputs:
+                        key2:
+                          default: value2
+                stop2: mock.tasks.stop2
