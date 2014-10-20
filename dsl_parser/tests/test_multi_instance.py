@@ -964,6 +964,49 @@ node_templates:
         self._assert_all_to_all([node['relationships'] for node in db_nodes],
                                 self._node_ids(host2_nodes), 'host2')
 
+    def test_removed_ids_hint(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host:
+        type: cloudify.types.host
+        instances:
+            deploy: 3
+    db:
+        type: db
+        instances:
+            deploy: 2
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host
+"""
+        plan = self.parse_multi(yaml)
+        nodes = plan['node_instances']
+        host_ids = self._node_ids(self._nodes_by_name(nodes, 'host'))
+        db_ids = self._node_ids(self._nodes_by_name(nodes, 'db'))
+
+        for host_id in host_ids:
+            modification = self.modify_multi(plan, {
+                'host': {
+                    'instances': 2,
+                    'removed_ids_hint': [host_id]
+                }
+            })
+            self._assert_modification(modification, 0, 3, 0, 3)
+            removed_host_ids = self._node_ids(self._nodes_by_name(
+                modification['removed_and_related'], 'host'))
+            self.assertEqual(removed_host_ids, [host_id])
+
+        for db_id in db_ids:
+            modification = self.modify_multi(plan, {
+                'db': {
+                    'instances': 1,
+                    'removed_ids_hint': [db_id]
+                }
+            })
+            self._assert_modification(modification, 0, 6, 0, 3)
+            removed_db_ids = self._node_ids(self._nodes_by_name(
+                modification['removed_and_related'], 'db'))
+            self.assertIn(db_id, removed_db_ids)
+
     def _nodes_relationships(self, nodes, target_name=None):
         relationships = []
         for node in nodes:

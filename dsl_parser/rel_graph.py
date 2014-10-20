@@ -248,13 +248,20 @@ def _build_and_update_node_instances(ctx,
 
         previous_instances_num = len(previous_node_instance_ids)
         if node_id in ctx.modified_nodes:
-            total_instances_num = ctx.modified_nodes[node_id]['instances']
+            modified_node = ctx.modified_nodes[node_id]
+            total_instances_num = modified_node['instances']
             if total_instances_num > previous_instances_num:
                 new_instances_num = (total_instances_num -
                                      previous_instances_num)
             else:
                 removed_instances_num = (previous_instances_num -
                                          total_instances_num)
+                removed_instance_ids_hint = modified_node.get(
+                    'removed_ids_hint', [])
+                for removed_id_hint in removed_instance_ids_hint:
+                    if removed_id_hint in previous_node_instance_ids:
+                        previous_node_instance_ids.remove(removed_id_hint)
+                        removed_instances_num -= 1
                 removed_instance_ids = previous_node_instance_ids[
                     :removed_instances_num]
                 for removed_instance_id in removed_instance_ids:
