@@ -256,16 +256,27 @@ def _build_and_update_node_instances(ctx,
             else:
                 removed_instances_num = (previous_instances_num -
                                          total_instances_num)
-                removed_instance_ids_hint = modified_node.get(
-                    'removed_ids_hint', [])
-                for removed_id_hint in removed_instance_ids_hint:
-                    if (removed_instances_num > 0 and
-                            removed_id_hint in previous_node_instance_ids):
-                        previous_node_instance_ids.remove(removed_id_hint)
+                removed_ids_include_hint = modified_node.get(
+                    'removed_ids_include_hint', [])
+                removed_ids_exclude_hint = modified_node.get(
+                    'removed_ids_exclude_hint', [])
+                for removed_instance_id in removed_ids_include_hint:
+                    if removed_instances_num <= 0:
+                        break
+                    if removed_instance_id in previous_node_instance_ids:
+                        previous_node_instance_ids.remove(removed_instance_id)
                         removed_instances_num -= 1
-                removed_instance_ids = previous_node_instance_ids[
+                for removed_instance_id in copy.copy(
+                        previous_node_instance_ids):
+                    if removed_instances_num <= 0:
+                        break
+                    if removed_instance_id in removed_ids_exclude_hint:
+                        continue
+                    previous_node_instance_ids.remove(removed_instance_id)
+                    removed_instances_num -= 1
+                remaining_removed_instance_ids = previous_node_instance_ids[
                     :removed_instances_num]
-                for removed_instance_id in removed_instance_ids:
+                for removed_instance_id in remaining_removed_instance_ids:
                     previous_node_instance_ids.remove(removed_instance_id)
         else:
             new_instances_num = (current_instances_num -
@@ -325,7 +336,7 @@ def _handle_host_instance_id(current_host_instance_id,
                              node_instance):
     # If this condition applies, we assume current root is a host node
     if current_host_instance_id is None and \
-       'host_id' in node_instance and node_instance['host_id'] == node_id:
+       node_instance.get('host_id') == node_id:
         current_host_instance_id = node_instance_id
     if current_host_instance_id is not None:
         node_instance['host_id'] = current_host_instance_id
@@ -333,6 +344,22 @@ def _handle_host_instance_id(current_host_instance_id,
 
 
 def _handle_connected_to_and_depends_on(ctx):
+
+    relationship_target_ids = {}
+    if ctx.modification:
+        for s, t, e_data in ctx.previous_deployment_node_graph.edges_iter(
+                data=True):
+            s_node = ctx.previous_deployment_node_graph.node[s]['node']
+            t_node = ctx.previous_deployment_node_graph.node[t]['node']
+            rel = e_data['relationship']
+            key = (_node_id_from_node_instance(s_node),
+                   _node_id_from_node_instance(t_node),
+                   rel['type'])
+            if key not in relationship_target_ids:
+                relationship_target_ids[key] = set()
+            target_ids = relationship_target_ids[key]
+            target_ids.add(rel['target_id'])
+
     connected_graph = _build_connected_to_and_depends_on_graph(
         ctx.plan_node_graph)
     for source_node_id, target_node_id, edge_data in connected_graph.edges(
@@ -342,7 +369,19 @@ def _handle_connected_to_and_depends_on(ctx):
         target_node_instance_ids = ctx.get_node_instance_ids_by_node_id(
             target_node_id)
         if connection_type == ALL_TO_ONE:
-            target_node_instance_ids = [min(target_node_instance_ids)]
+            if ctx.modification:
+                key = (source_node_id, target_node_id, relationship['type'])
+                target_ids = relationship_target_ids[key]
+                if len(target_ids) != 1:
+                    raise IllegalAllToOneState(
+                        'Expected exactly one target id for relationship '
+                        '{0}->{1} ({2})'.format(source_node_id,
+                                                target_node_id,
+                                                relationship['type']))
+                target_node_instance_id = target_ids.copy().pop()
+            else:
+                target_node_instance_id = min(target_node_instance_ids)
+            target_node_instance_ids = [target_node_instance_id]
         for source_node_instance_id in ctx.get_node_instance_ids_by_node_id(
                 source_node_id):
             for target_node_instance_id in target_node_instance_ids:
@@ -464,4 +503,8 @@ class IllegalConnectedToConnectionType(Exception):
 
 
 class UnsupportedRelationship(Exception):
+    pass
+
+
+class IllegalAllToOneState(Exception):
     pass

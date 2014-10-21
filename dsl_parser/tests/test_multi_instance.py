@@ -465,6 +465,7 @@ node_templates:
         target_ids = [rel['target_id'] for rel in relationships]
         self.assertEqual(1, len(set(target_ids)))
         self.assertIn(target_ids[0], node_ids)
+        return target_ids[0]
 
     def _assert_all_to_all(self, source_relationships_lists,
                            node_ids, target_name):
@@ -964,6 +965,52 @@ node_templates:
         self._assert_all_to_all([node['relationships'] for node in db_nodes],
                                 self._node_ids(host2_nodes), 'host2')
 
+    def test_modified_added_with_connected_all_to_one(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host1:
+        type: cloudify.types.host
+    host2:
+        type: cloudify.types.host
+        instances:
+            deploy: 5
+    db:
+        type: db
+        instances:
+            deploy: 5
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host1
+            -   type: cloudify.relationships.connected_to
+                target: host2
+                properties:
+                    connection_type: all_to_one
+"""
+        plan = self.parse_multi(yaml)
+        node_instances = plan['node_instances']
+        db_nodes = self._nodes_by_name(node_instances, 'db')
+        host2_nodes = self._nodes_by_name(node_instances, 'host2')
+        initial_target_id = self._assert_all_to_one(
+            self._nodes_relationships(db_nodes, 'host2'),
+            self._node_ids(host2_nodes),
+            'host2')
+        modification = self.modify_multi(plan, {
+            'host2': {'instances': 10},
+            'db': {'instances': 10}
+        })
+        self._assert_modification(modification, 12, 0, 10, 0)
+        added_and_related = modification['added_and_related']
+        added_db_nodes = self._nodes_by_name(added_and_related, 'db')
+        self.assertEqual(5, len(added_db_nodes))
+        added_host1_nodes = self._nodes_by_name(added_and_related, 'host1')
+        self.assertEqual(1, len(added_host1_nodes))
+        added_host2_nodes = self._nodes_by_name(added_and_related, 'host2')
+        self.assertEqual(6, len(added_host2_nodes))
+        new_target_id = self._assert_all_to_one(
+            self._nodes_relationships(added_db_nodes, 'host2'),
+            self._node_ids(host2_nodes + added_host2_nodes),
+            'host2')
+        self.assertEqual(initial_target_id, new_target_id)
+
     def test_removed_ids_hint(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
@@ -987,7 +1034,7 @@ node_templates:
             modification = self.modify_multi(plan, {
                 'host': {
                     'instances': 2,
-                    'removed_ids_hint': [host_id]
+                    'removed_ids_include_hint': [host_id]
                 }
             })
             self._assert_modification(modification, 0, 3, 0, 3)
@@ -995,11 +1042,23 @@ node_templates:
                 modification['removed_and_related'], 'host'))
             self.assertEqual(removed_host_ids, [host_id])
 
+        for host_id in host_ids:
+            modification = self.modify_multi(plan, {
+                'host': {
+                    'instances': 2,
+                    'removed_ids_exclude_hint': [host_id]
+                }
+            })
+            self._assert_modification(modification, 0, 3, 0, 3)
+            removed_host_ids = self._node_ids(self._nodes_by_name(
+                modification['removed_and_related'], 'host'))
+            self.assertNotIn(host_id, removed_host_ids)
+
         for db_id in db_ids:
             modification = self.modify_multi(plan, {
                 'db': {
                     'instances': 1,
-                    'removed_ids_hint': [db_id]
+                    'removed_ids_include_hint': [db_id]
                 }
             })
             self._assert_modification(modification, 0, 6, 0, 3)
@@ -1007,11 +1066,32 @@ node_templates:
                 modification['removed_and_related'], 'db'))
             self.assertIn(db_id, removed_db_ids)
 
-        # give all nodes as hint to see we only take what we want
+        for db_id in db_ids:
+            modification = self.modify_multi(plan, {
+                'db': {
+                    'instances': 1,
+                    'removed_ids_exclude_hint': [db_id]
+                }
+            })
+            self._assert_modification(modification, 0, 6, 0, 3)
+            removed_db_ids = self._node_ids(self._nodes_by_name(
+                modification['removed_and_related'], 'db'))
+            self.assertNotIn(db_id, removed_db_ids)
+
+        # give all nodes as include hint to see we only take what is needed
         modification = self.modify_multi(plan, {
             'db': {
                 'instances': 1,
-                'removed_ids_hint': db_ids
+                'removed_ids_include_hint': db_ids
+            }
+        })
+        self._assert_modification(modification, 0, 6, 0, 3)
+
+        # give all nodes as exclude hint to see we still take what is needed
+        modification = self.modify_multi(plan, {
+            'db': {
+                'instances': 1,
+                'removed_ids_exclude_hint': db_ids
             }
         })
         self._assert_modification(modification, 0, 6, 0, 3)
