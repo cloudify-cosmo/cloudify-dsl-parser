@@ -563,3 +563,58 @@ DSL_SCHEMA = {
     'required': ['tosca_definitions_version', 'node_templates'],
     'additionalProperties': False
 }
+
+
+NODE_TEMPLATE_OPERATION_SCHEMA = {
+
+    'oneOf': [
+        {
+            'type': 'string'
+        },
+        {
+            'type': 'object',
+            'minProperties': 0,
+            'maxProperties': 0
+        },
+        {
+            'type': 'object',
+            'properties': {
+                'implementation': {
+                    'type': 'string'
+                },
+                'inputs': {
+                    'type': 'object',
+                    'minProperties': 1
+                }
+            },
+            'required': ['inputs'],
+            'additionalProperties': False
+        }
+    ]
+}
+
+
+NODE_TYPE_OPERATION_SCHEMA = {
+
+    'oneOf': [
+        {
+            'type': 'string'
+        },
+        {
+            'type': 'object',
+            'minProperties': 0,
+            'maxProperties': 0
+        },
+        {
+            'type': 'object',
+            'properties': {
+                'implementation': {
+                    'type': 'string'
+                },
+                'inputs': PROPERTIES_SCHEMA_SCHEMA
+            },
+            'required': ['implementation', 'inputs'],
+            'additionalProperties': False
+        }
+    ]
+}
