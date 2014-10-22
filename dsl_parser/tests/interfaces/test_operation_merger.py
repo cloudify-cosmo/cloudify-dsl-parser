@@ -587,7 +587,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             expected_merged_operation=expected_merged_operation
         )
 
-    def test_operation_mapping_no_inputs_overrides_operation_mapping_no_inputs(self):
+    def test_operation_mapping_no_inputs_overrides_operation_mapping_no_inputs(self):  # NOQA
 
         overriding_node_type_operation = operation_mapping(
             implementation='mock.tasks.create-overridden'
