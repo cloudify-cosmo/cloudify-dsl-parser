@@ -13,14 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import unittest
+import testtools
 
 from dsl_parser.interfaces.interfaces_merger import InterfaceMerger
 from dsl_parser.interfaces.interfaces_merger import InterfacesMerger
 from dsl_parser.interfaces.operation_merger import OperationMerger
 
 
-class InterfaceMergerTest(unittest.TestCase):
+class InterfaceMergerTest(testtools.TestCase):
 
     def _assert_interface(self,
                           overriding_interface,
@@ -38,7 +38,8 @@ class InterfaceMergerTest(unittest.TestCase):
             operation_merger=MockOperationMerger
         )
         actual_merged_interface_keys = set(merger.merge().keys())
-        self.assertEqual(expected_merged_interface_keys, actual_merged_interface_keys)
+        self.assertEqual(expected_merged_interface_keys,
+                         actual_merged_interface_keys)
 
     def test_merge_operations(self):
 
@@ -75,7 +76,7 @@ class InterfaceMergerTest(unittest.TestCase):
         )
 
 
-class InterfacesMergerTest(unittest.TestCase):
+class InterfacesMergerTest(testtools.TestCase):
 
     def _assert_interfaces(self,
                            overriding_interfaces,
@@ -93,7 +94,8 @@ class InterfacesMergerTest(unittest.TestCase):
             operation_merger=MockOperationMerger
         )
         actual_merged_interfaces_keys = merger.merge().keys()
-        self.assertEqual(expected_merged_interfaces_keys, actual_merged_interfaces_keys)
+        self.assertEqual(expected_merged_interfaces_keys,
+                         actual_merged_interfaces_keys)
 
     def test_merge_interfaces(self):
 

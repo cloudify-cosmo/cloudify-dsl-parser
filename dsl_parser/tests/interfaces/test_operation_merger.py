@@ -13,18 +13,20 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import unittest
+import testtools
 from jsonschema import validate
 
 from dsl_parser.interfaces.constants import NO_OP
 from dsl_parser.interfaces.utils import operation_mapping
-from dsl_parser.interfaces.operation_merger import NodeTemplateNodeTypeInterfaceOperationMerger
-from dsl_parser.interfaces.operation_merger import NodeTypeNodeTypeInterfaceOperationMerger
+from dsl_parser.interfaces.operation_merger import \
+    NodeTemplateNodeTypeOperationMerger
+from dsl_parser.interfaces.operation_merger import \
+    NodeTypeNodeTypeOperationMerger
 from dsl_parser.schemas import NODE_TEMPLATE_OPERATION_SCHEMA
 from dsl_parser.schemas import NODE_TYPE_OPERATION_SCHEMA
 
 
-class NodeTemplateNodeTypeOperationMergerTest(unittest.TestCase):
+class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
 
     def _assert_operations(self,
                            node_template_operation,
@@ -36,7 +38,7 @@ class NodeTemplateNodeTypeOperationMergerTest(unittest.TestCase):
         if node_type_operation is not None:
             validate(node_type_operation, NODE_TYPE_OPERATION_SCHEMA)
 
-        merger = NodeTemplateNodeTypeInterfaceOperationMerger(
+        merger = NodeTemplateNodeTypeOperationMerger(
             overriding_operation=node_template_operation,
             overridden_operation=node_type_operation
         )
@@ -45,7 +47,8 @@ class NodeTemplateNodeTypeOperationMergerTest(unittest.TestCase):
         if expected_merged_operation is None:
             self.assertIsNone(actual_merged_operation)
         else:
-            self.assertDictEqual(expected_merged_operation, actual_merged_operation)
+            self.assertDictEqual(expected_merged_operation,
+                                 actual_merged_operation)
 
     def test_no_op_overrides_no_op(self):
 
@@ -288,7 +291,7 @@ class NodeTemplateNodeTypeOperationMergerTest(unittest.TestCase):
         )
 
 
-class NodeTypeNodeTypeOperationMergerTest(unittest.TestCase):
+class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
 
     def _assert_operations(self,
                            overriding_node_type_operation,
@@ -296,11 +299,13 @@ class NodeTypeNodeTypeOperationMergerTest(unittest.TestCase):
                            expected_merged_operation):
 
         if overriding_node_type_operation is not None:
-            validate(overriding_node_type_operation, NODE_TYPE_OPERATION_SCHEMA)
+            validate(overriding_node_type_operation,
+                     NODE_TYPE_OPERATION_SCHEMA)
         if overridden_node_type_operation is not None:
-            validate(overridden_node_type_operation, NODE_TYPE_OPERATION_SCHEMA)
+            validate(overridden_node_type_operation,
+                     NODE_TYPE_OPERATION_SCHEMA)
 
-        merger = NodeTypeNodeTypeInterfaceOperationMerger(
+        merger = NodeTypeNodeTypeOperationMerger(
             overriding_operation=overriding_node_type_operation,
             overridden_operation=overridden_node_type_operation
         )
@@ -309,7 +314,8 @@ class NodeTypeNodeTypeOperationMergerTest(unittest.TestCase):
         if expected_merged_operation is None:
             self.assertIsNone(actual_merged_operation)
         else:
-            self.assertDictEqual(expected_merged_operation, actual_merged_operation)
+            self.assertDictEqual(expected_merged_operation,
+                                 actual_merged_operation)
 
     def test_no_op_overrides_no_op(self):
 

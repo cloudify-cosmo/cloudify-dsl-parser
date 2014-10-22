@@ -47,28 +47,33 @@ class OperationMerger(object):
         raise RuntimeError('Not implemented')
 
 
-class NodeTemplateNodeTypeInterfaceOperationMerger(OperationMerger):
+class NodeTemplateNodeTypeOperationMerger(OperationMerger):
 
     def __init__(self,
                  overriding_operation,
                  overridden_operation):
-        super(NodeTemplateNodeTypeInterfaceOperationMerger, self).__init__(
+        super(NodeTemplateNodeTypeOperationMerger, self).__init__(
             overriding_operation=overriding_operation,
             overridden_operation=overridden_operation)
-        self.node_type_operation = self._create_operation(overridden_operation)
-        self.node_template_operation = self._create_operation(overriding_operation)
+        self.node_type_operation = self._create_operation(
+            overridden_operation)
+        self.node_template_operation = self._create_operation(
+            overriding_operation)
 
     def _derive_implementation(self):
-        merged_operation_implementation = self.node_template_operation['implementation']
+        merged_operation_implementation = \
+            self.node_template_operation['implementation']
         if not merged_operation_implementation:
             # node template does not define an implementation
             # this means we want to inherit the implementation
             # from the type
-            merged_operation_implementation = self.node_type_operation['implementation']
+            merged_operation_implementation = \
+                self.node_type_operation['implementation']
         return merged_operation_implementation
 
     def _derive_inputs(self, merged_operation_implementation):
-        if merged_operation_implementation == self.node_type_operation['implementation']:
+        if merged_operation_implementation == \
+                self.node_type_operation['implementation']:
             # this means the node template inputs should adhere to
             # the node type inputs schema (since its the same implementation)
             merged_operation_inputs = merge_schema_and_instance_inputs(
@@ -79,7 +84,8 @@ class NodeTemplateNodeTypeInterfaceOperationMerger(OperationMerger):
             # the node template implementation overrides
             # the node type implementation. this means
             # we take the inputs defined in the node template
-            merged_operation_inputs = self.node_template_operation['inputs']
+            merged_operation_inputs = \
+                self.node_template_operation['inputs']
 
         return merged_operation_inputs
 
@@ -113,7 +119,8 @@ class NodeTemplateNodeTypeInterfaceOperationMerger(OperationMerger):
             return self.node_template_operation
 
         merged_operation_implementation = self._derive_implementation()
-        merged_operation_inputs = self._derive_inputs(merged_operation_implementation)
+        merged_operation_inputs = self._derive_inputs(
+            merged_operation_implementation)
 
         return operation_mapping(
             implementation=merged_operation_implementation,
@@ -121,16 +128,18 @@ class NodeTemplateNodeTypeInterfaceOperationMerger(OperationMerger):
         )
 
 
-class NodeTypeNodeTypeInterfaceOperationMerger(OperationMerger):
+class NodeTypeNodeTypeOperationMerger(OperationMerger):
 
     def __init__(self,
                  overriding_operation,
                  overridden_operation):
-        super(NodeTypeNodeTypeInterfaceOperationMerger, self).__init__(
+        super(NodeTypeNodeTypeOperationMerger, self).__init__(
             overriding_operation=overriding_operation,
             overridden_operation=overridden_operation)
-        self.overridden_node_type_operation = self._create_operation(overridden_operation)
-        self.overriding_node_type_operation = self._create_operation(overriding_operation)
+        self.overridden_node_type_operation = self._create_operation(
+            overridden_operation)
+        self.overriding_node_type_operation = self._create_operation(
+            overriding_operation)
 
     def merge(self):
 
@@ -140,13 +149,17 @@ class NodeTypeNodeTypeInterfaceOperationMerger(OperationMerger):
         if self.overriding_node_type_operation == NO_OP:
             return NO_OP
 
-        merged_operation_implementation = self.overriding_operation['implementation']
-        merged_operation_inputs = self.overriding_operation['inputs']
+        merged_operation_implementation = \
+            self.overriding_operation['implementation']
+        merged_operation_inputs = \
+            self.overriding_operation['inputs']
         return operation_mapping(
             implementation=merged_operation_implementation,
             inputs=merged_operation_inputs
         )
 
 
-RelationshipTypeRelationshipTypeInterfaceOperationMerger = NodeTypeNodeTypeInterfaceOperationMerger
-RelationshipTypeRelationshipInstanceInterfaceOperationMerger = NodeTemplateNodeTypeInterfaceOperationMerger
+RelationshipTypeRelationshipTypeOperationMerger = \
+    NodeTypeNodeTypeOperationMerger
+RelationshipTypeRelationshipInstanceOperationMerger = \
+    NodeTemplateNodeTypeOperationMerger

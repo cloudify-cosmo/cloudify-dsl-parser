@@ -105,8 +105,8 @@ def _validate_properties_types(properties, properties_schema):
 
         raise DSLParsingLogicException(
             50, 'Property type validation failed: Property {0} type '
-                'is {1}, yet it was assigned with the value {2}'.format(
-                prop_key, prop_type, prop_val))
+                'is {1}, yet it was assigned with the value {2}'
+                .format(prop_key, prop_type, prop_val))
 
 
 def extract_complete_type_recursive(dsl_type,

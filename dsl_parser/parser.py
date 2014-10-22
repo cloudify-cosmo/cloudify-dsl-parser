@@ -189,7 +189,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     nodes = combined_parsed_dsl[NODE_TEMPLATES]
     node_names_set = set(nodes.keys())
 
-    top_level_relationships = _process_relationships(combined_parsed_dsl, resource_base)
+    top_level_relationships = _process_relationships(
+        combined_parsed_dsl, resource_base)
 
     type_impls = _get_dict_prop(combined_parsed_dsl, TYPE_IMPLEMENTATIONS)\
         .copy()
@@ -604,11 +605,12 @@ def relationship_type_merging_function(overridden_relationship_type,
 
     # derived source and target interfaces
     for interfaces_attribute in [SOURCE_INTERFACES, TARGET_INTERFACES]:
-        merged_interfaces = interfaces_parser.merge_relationship_type_interfaces(
-            overridden_relationship_type=overridden_relationship_type,
-            overriding_relationship_type=merged_type,
-            interfaces_attribute=interfaces_attribute
-        )
+        merged_interfaces = \
+            interfaces_parser.merge_relationship_type_interfaces(
+                overridden_relationship_type=overridden_relationship_type,
+                overriding_relationship_type=merged_type,
+                interfaces_attribute=interfaces_attribute
+            )
         merged_type[interfaces_attribute] = merged_interfaces
 
     return merged_type
@@ -667,7 +669,8 @@ def _process_relationships(combined_parsed_dsl, resource_base):
 
     relationship_types = combined_parsed_dsl[RELATIONSHIPS]
 
-    for relationship_type_name, relationship_type in relationship_types.iteritems():
+    for relationship_type_name, relationship_type in \
+            relationship_types.iteritems():
         complete_relationship = extract_complete_relationship_type(
             relationship_type=relationship_type,
             relationship_type_name=relationship_type_name,
@@ -675,11 +678,14 @@ def _process_relationships(combined_parsed_dsl, resource_base):
         )
 
         plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
-        _validate_relationship_fields(relationship_type, plugins, relationship_type_name,
+        _validate_relationship_fields(relationship_type, plugins,
+                                      relationship_type_name,
                                       resource_base)
         complete_rel_obj_copy = copy.deepcopy(complete_relationship)
-        processed_relationships[relationship_type_name] = complete_rel_obj_copy
-        processed_relationships[relationship_type_name]['name'] = relationship_type_name
+        processed_relationships[relationship_type_name] = \
+            complete_rel_obj_copy
+        processed_relationships[relationship_type_name]['name'] = \
+            relationship_type_name
     return processed_relationships
 
 
@@ -698,8 +704,11 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
     if type(operation_content) == str:
         operation_mapping = operation_content
     else:
-        operation_mapping = operation_content.get(mapping_field_name, '')  # top level
-        operation_payload = operation_content.get(payload_field_name, {})  # top level
+        # top level types do not undergo proper merge
+        operation_mapping = operation_content.get(
+            mapping_field_name, '')
+        operation_payload = operation_content.get(
+            payload_field_name, {})
 
     if not operation_mapping:
         return OpDescriptor(name=operation_name,
@@ -912,15 +921,17 @@ def _process_node_relationships(node, node_name, node_names_set,
 
             relationship_complete_type = \
                 top_level_relationships[relationship_type]
-            source_interfaces = interfaces_parser.merge_relationship_type_and_instance_source_interfaces(
-                relationship_type=relationship_complete_type,
-                relationship_instance=relationship
-            )
+            source_interfaces = \
+                interfaces_parser.merge_relationship_type_and_instance_source_interfaces(  # NOQA
+                    relationship_type=relationship_complete_type,
+                    relationship_instance=relationship
+                )
             complete_relationship[SOURCE_INTERFACES] = source_interfaces
-            target_interfaces = interfaces_parser.merge_relationship_type_and_instance_target_interfaces(
-                relationship_type=relationship_complete_type,
-                relationship_instance=relationship
-            )
+            target_interfaces = \
+                interfaces_parser.merge_relationship_type_and_instance_target_interfaces(  # NOQA
+                    relationship_type=relationship_complete_type,
+                    relationship_instance=relationship
+                )
             complete_relationship[TARGET_INTERFACES] = target_interfaces
             complete_relationship[PROPERTIES] = \
                 merge_schema_and_instance_properties(
@@ -1169,7 +1180,8 @@ def _extract_complete_node(node_type,
     )
 
     complete_node = {
-        INTERFACES: interfaces_parser.merge_node_type_and_node_template_interfaces(
+        INTERFACES:
+        interfaces_parser.merge_node_type_and_node_template_interfaces(
             node_type=complete_type,
             node_template=node),
         PROPERTIES: merge_schema_and_instance_properties(

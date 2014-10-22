@@ -118,7 +118,7 @@ node_templates:
                         x: { get_property: [vm, notfound] }
 """
         try:
-            a = self.parse(yaml)
+            self.parse(yaml)
             self.fail()
         except KeyError, e:
             self.assertIn('Node template property', str(e))

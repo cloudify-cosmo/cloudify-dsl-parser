@@ -14,11 +14,17 @@
 #    * limitations under the License.
 
 from dsl_parser.interfaces.interfaces_merger import InterfacesMerger
-from dsl_parser.interfaces.operation_merger import NodeTypeNodeTypeInterfaceOperationMerger
-from dsl_parser.interfaces.operation_merger import RelationshipTypeRelationshipInstanceInterfaceOperationMerger
-from dsl_parser.interfaces.operation_merger import RelationshipTypeRelationshipTypeInterfaceOperationMerger
-from dsl_parser.interfaces.operation_merger import NodeTemplateNodeTypeInterfaceOperationMerger
-from dsl_parser.interfaces.constants import INTERFACES, SOURCE_INTERFACES, TARGET_INTERFACES
+from dsl_parser.interfaces.operation_merger import \
+    NodeTypeNodeTypeOperationMerger
+from dsl_parser.interfaces.operation_merger import \
+    RelationshipTypeRelationshipInstanceOperationMerger
+from dsl_parser.interfaces.operation_merger import \
+    RelationshipTypeRelationshipTypeOperationMerger
+from dsl_parser.interfaces.operation_merger import \
+    NodeTemplateNodeTypeOperationMerger
+from dsl_parser.interfaces.constants import INTERFACES
+from dsl_parser.interfaces.constants import SOURCE_INTERFACES
+from dsl_parser.interfaces.constants import TARGET_INTERFACES
 
 
 def merge_node_type_interfaces(overriding_node_type,
@@ -26,7 +32,7 @@ def merge_node_type_interfaces(overriding_node_type,
     merger = InterfacesMerger(
         overriding_interfaces=overriding_node_type.get(INTERFACES, {}),
         overridden_interfaces=overridden_node_type.get(INTERFACES, {}),
-        operation_merger=NodeTypeNodeTypeInterfaceOperationMerger
+        operation_merger=NodeTypeNodeTypeOperationMerger
     )
     return merger.merge()
 
@@ -36,7 +42,7 @@ def merge_node_type_and_node_template_interfaces(node_type,
     merger = InterfacesMerger(
         overriding_interfaces=node_template.get(INTERFACES, {}),
         overridden_interfaces=node_type.get(INTERFACES, {}),
-        operation_merger=NodeTemplateNodeTypeInterfaceOperationMerger
+        operation_merger=NodeTemplateNodeTypeOperationMerger
     )
     return merger.merge()
 
@@ -45,30 +51,38 @@ def merge_relationship_type_interfaces(overriding_relationship_type,
                                        overridden_relationship_type,
                                        interfaces_attribute):
     merger = InterfacesMerger(
-        overriding_interfaces=overriding_relationship_type.get(interfaces_attribute, {}),
-        overridden_interfaces=overridden_relationship_type.get(interfaces_attribute, {}),
-        operation_merger=RelationshipTypeRelationshipTypeInterfaceOperationMerger
+        overriding_interfaces=overriding_relationship_type.get(
+            interfaces_attribute, {}),
+        overridden_interfaces=overridden_relationship_type.get(
+            interfaces_attribute, {}),
+        operation_merger=RelationshipTypeRelationshipTypeOperationMerger
     )
     return merger.merge()
 
 
-def merge_relationship_type_and_instance_source_interfaces(relationship_type,
-                                                           relationship_instance):
+def merge_relationship_type_and_instance_source_interfaces(
+        relationship_type,
+        relationship_instance):
 
     source_interfaces_merger = InterfacesMerger(
-        overriding_interfaces=relationship_instance.get(SOURCE_INTERFACES, {}),
-        overridden_interfaces=relationship_type.get(SOURCE_INTERFACES, {}),
-        operation_merger=RelationshipTypeRelationshipInstanceInterfaceOperationMerger
+        overriding_interfaces=relationship_instance.get(
+            SOURCE_INTERFACES, {}),
+        overridden_interfaces=relationship_type.get(
+            SOURCE_INTERFACES, {}),
+        operation_merger=RelationshipTypeRelationshipInstanceOperationMerger
     )
     return source_interfaces_merger.merge()
 
 
-def merge_relationship_type_and_instance_target_interfaces(relationship_type,
-                                                           relationship_instance):
+def merge_relationship_type_and_instance_target_interfaces(
+        relationship_type,
+        relationship_instance):
 
     target_interfaces_merger = InterfacesMerger(
-        overriding_interfaces=relationship_instance.get(TARGET_INTERFACES, {}),
-        overridden_interfaces=relationship_type.get(TARGET_INTERFACES, {}),
-        operation_merger=RelationshipTypeRelationshipInstanceInterfaceOperationMerger
+        overriding_interfaces=relationship_instance.get(
+            TARGET_INTERFACES, {}),
+        overridden_interfaces=relationship_type.get(
+            TARGET_INTERFACES, {}),
+        operation_merger=RelationshipTypeRelationshipInstanceOperationMerger
     )
     return target_interfaces_merger.merge()
