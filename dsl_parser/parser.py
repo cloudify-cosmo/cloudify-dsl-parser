@@ -188,8 +188,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     nodes = combined_parsed_dsl[NODE_TEMPLATES]
     node_names_set = {node_name for node_name in nodes.keys()}
 
-    top_level_relationships = _process_relationships(combined_parsed_dsl,
-                                                     resource_base)
+    top_level_relationships = _process_relationships(combined_parsed_dsl, resource_base)
 
     type_impls = _get_dict_prop(combined_parsed_dsl, TYPE_IMPLEMENTATIONS)\
         .copy()
@@ -405,13 +404,9 @@ def _process_context_operations(partial_error_message, interfaces, plugins,
             op_struct = op_descriptor.op_struct
             plugin_name = op_descriptor.op_struct['plugin']
             operation_name = op_descriptor.name
-            operation_properties = op_descriptor.op_struct.get(
-                'properties')
             if op_descriptor.plugin:
                 node[PLUGINS][plugin_name] = op_descriptor.plugin
             op_struct = op_struct.copy()
-            if operation_properties is not None:
-                op_struct['properties'] = operation_properties
             if operation_name in operations:
                 # Indicate this implicit operation name needs to be
                 # removed as we can only
@@ -492,6 +487,18 @@ def _validate_relationship_impls(relationship_impls):
         ex.implementation = impl_name
         ex.source_node_ref = source_node_ref
         raise ex
+
+
+def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
+    for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
+        if interfaces in rel_obj:
+            for interface_name, interface in rel_obj[interfaces].items():
+                _extract_plugin_names_and_operation_mapping_from_interface(
+                    interface,
+                    plugins,
+                    19,
+                    'Relationship: {0}'.format(rel_name),
+                    resource_base=resource_base)
 
 
 def _validate_functions(plan):
@@ -587,11 +594,11 @@ def relationship_type_merging_function(overridden_relationship_type,
 
     merged_type = overriding_relationship_type
 
-    merged_props_array = merge_sub_dicts(overridden_relationship_type,
-                                         merged_type,
-                                         PROPERTIES)
+    merged_props = merge_sub_dicts(overridden_relationship_type,
+                                   merged_type,
+                                   PROPERTIES)
 
-    merged_type[PROPERTIES] = merged_props_array
+    merged_type[PROPERTIES] = merged_props
 
     # derived source and target interfaces
     for interfaces_attribute in [SOURCE_INTERFACES, TARGET_INTERFACES]:
@@ -665,6 +672,9 @@ def _process_relationships(combined_parsed_dsl, resource_base):
             relationship_types=relationship_types
         )
 
+        plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
+        _validate_relationship_fields(relationship_type, plugins, relationship_type_name,
+                                      resource_base)
         complete_rel_obj_copy = copy.deepcopy(complete_relationship)
         processed_relationships[relationship_type_name] = complete_rel_obj_copy
         processed_relationships[relationship_type_name]['name'] = relationship_type_name
@@ -686,8 +696,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
     if type(operation_content) == str:
         operation_mapping = operation_content
     else:
-        operation_mapping = operation_content[mapping_field_name]
-        operation_payload = operation_content[payload_field_name]
+        operation_mapping = operation_content.get(mapping_field_name, '')  # top level
+        operation_payload = operation_content.get(payload_field_name, {})  # top level
 
     if not operation_mapping:
         return OpDescriptor(name=operation_name,
