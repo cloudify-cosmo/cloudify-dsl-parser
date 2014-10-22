@@ -36,8 +36,12 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                install: missing_plugin.install
-                terminate: missing_plugin.terminate
+                install:
+                    implementation: missing_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: missing_plugin.terminate
+                    inputs: {}
         properties:
             install_agent:
                 default: 'false'
@@ -94,7 +98,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -118,7 +124,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -143,7 +151,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -262,7 +272,9 @@ node_types:
     test_type:
         interfaces:
             test_interface:
-                start: test_plugin.start
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
 plugins:
     test_plugin:
         executor: host_agent
@@ -750,11 +762,13 @@ node_types:
     type:
         interfaces:
             test:
-                op: stub.py
+                op:
+                    implementation: stub.py
+                    inputs: {}
 node_templates:
     node:
         type: type
-""".format(constants.SCRIPT_PLUGIN_NAME)
+"""
         self.make_file_with_name(content='content',
                                  filename='stub.py')
         yaml_path = self.make_file_with_name(content=yaml,
