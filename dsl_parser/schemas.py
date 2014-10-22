@@ -148,7 +148,7 @@ NODE_TYPE_OPERATION_SCHEMA = {
                 },
                 'inputs': PROPERTIES_SCHEMA_SCHEMA
             },
-            'required': ['implementation', 'inputs'],
+            'required': ['implementation'],
             'additionalProperties': False
         }
     ]

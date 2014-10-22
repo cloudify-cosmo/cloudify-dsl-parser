@@ -149,10 +149,15 @@ class NodeTypeNodeTypeOperationMerger(OperationMerger):
         if self.overriding_node_type_operation == NO_OP:
             return NO_OP
 
+        # operation in node type must
+        # contain 'implementation' (validated by schema)
         merged_operation_implementation = \
             self.overriding_operation['implementation']
+
+        # operation in node type doe's not
+        # have to contain 'inputs' (allowed by schema)
         merged_operation_inputs = \
-            self.overriding_operation['inputs']
+            self.overriding_operation.get('inputs', {})
         return operation_mapping(
             implementation=merged_operation_implementation,
             inputs=merged_operation_inputs
