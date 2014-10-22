@@ -19,4 +19,3 @@ INTERFACES = 'interfaces'
 SOURCE_INTERFACES = 'source_interfaces'
 TARGET_INTERFACES = 'target_interfaces'
 NO_OP = operation_mapping()
-

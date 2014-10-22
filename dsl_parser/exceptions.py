@@ -54,4 +54,3 @@ class DSLParsingLogicException(DSLParsingException):
 
 class DSLParsingFormatException(DSLParsingException):
     pass
-
