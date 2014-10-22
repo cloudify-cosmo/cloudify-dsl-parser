@@ -29,9 +29,21 @@ from dsl_parser.interfaces.constants import TARGET_INTERFACES
 
 def merge_node_type_interfaces(overriding_node_type,
                                overridden_node_type):
+
+    # using this pattern for the sake of
+    # code coverage tools
+
+    overriding_interfaces = overriding_node_type.get(INTERFACES)
+    if not overriding_interfaces:
+        overriding_interfaces = {}
+
+    overridden_interfaces = overridden_node_type.get(INTERFACES)
+    if not overridden_interfaces:
+        overridden_interfaces = {}
+
     merger = InterfacesMerger(
-        overriding_interfaces=overriding_node_type.get(INTERFACES, {}),
-        overridden_interfaces=overridden_node_type.get(INTERFACES, {}),
+        overriding_interfaces=overriding_interfaces,
+        overridden_interfaces=overridden_interfaces,
         operation_merger=NodeTypeNodeTypeOperationMerger
     )
     return merger.merge()
@@ -39,50 +51,99 @@ def merge_node_type_interfaces(overriding_node_type,
 
 def merge_node_type_and_node_template_interfaces(node_type,
                                                  node_template):
+
+    # using this pattern for the sake of
+    # code coverage tools
+
+    overriding_interfaces = node_template.get(INTERFACES)
+    if not overriding_interfaces:
+        overriding_interfaces = {}
+
+    overridden_interfaces = node_type.get(INTERFACES)
+    if not overridden_interfaces:
+        overridden_interfaces = {}
+
     merger = InterfacesMerger(
-        overriding_interfaces=node_template.get(INTERFACES, {}),
-        overridden_interfaces=node_type.get(INTERFACES, {}),
+        overriding_interfaces=overriding_interfaces,
+        overridden_interfaces=overridden_interfaces,
         operation_merger=NodeTemplateNodeTypeOperationMerger
     )
     return merger.merge()
 
 
 def merge_relationship_type_interfaces(overriding_relationship_type,
-                                       overridden_relationship_type,
-                                       interfaces_attribute):
-    merger = InterfacesMerger(
-        overriding_interfaces=overriding_relationship_type.get(
-            interfaces_attribute, {}),
-        overridden_interfaces=overridden_relationship_type.get(
-            interfaces_attribute, {}),
-        operation_merger=RelationshipTypeRelationshipTypeOperationMerger
-    )
-    return merger.merge()
+                                       overridden_relationship_type):
+    # using this pattern for the sake of
+    # code coverage tools
 
+    overriding_source_interfaces = overriding_relationship_type.get(SOURCE_INTERFACES)
+    if not overriding_source_interfaces:
+        overriding_source_interfaces = {}
 
-def merge_relationship_type_and_instance_source_interfaces(
-        relationship_type,
-        relationship_instance):
+    overridden_source_interfaces = overridden_relationship_type.get(SOURCE_INTERFACES)
+    if not overridden_source_interfaces:
+        overridden_source_interfaces = {}
+
+    overriding_target_interfaces = overriding_relationship_type.get(TARGET_INTERFACES)
+    if not overriding_target_interfaces:
+        overriding_target_interfaces = {}
+
+    overridden_target_interfaces = overridden_relationship_type.get(TARGET_INTERFACES)
+    if not overridden_target_interfaces:
+        overridden_target_interfaces = {}
 
     source_interfaces_merger = InterfacesMerger(
-        overriding_interfaces=relationship_instance.get(
-            SOURCE_INTERFACES, {}),
-        overridden_interfaces=relationship_type.get(
-            SOURCE_INTERFACES, {}),
-        operation_merger=RelationshipTypeRelationshipInstanceOperationMerger
+        overriding_interfaces=overriding_source_interfaces,
+        overridden_interfaces=overridden_source_interfaces,
+        operation_merger=RelationshipTypeRelationshipTypeOperationMerger
     )
-    return source_interfaces_merger.merge()
+    target_interfaces_merger = InterfacesMerger(
+        overriding_interfaces=overriding_target_interfaces,
+        overridden_interfaces=overridden_target_interfaces,
+        operation_merger=RelationshipTypeRelationshipTypeOperationMerger
+    )
+
+    return {
+        SOURCE_INTERFACES: source_interfaces_merger.merge(),
+        TARGET_INTERFACES: target_interfaces_merger.merge()
+    }
 
 
-def merge_relationship_type_and_instance_target_interfaces(
+def merge_relationship_type_and_instance_interfaces(
         relationship_type,
         relationship_instance):
 
-    target_interfaces_merger = InterfacesMerger(
-        overriding_interfaces=relationship_instance.get(
-            TARGET_INTERFACES, {}),
-        overridden_interfaces=relationship_type.get(
-            TARGET_INTERFACES, {}),
+    # using this pattern for the sake of
+    # code coverage tools
+
+    overriding_source_interfaces = relationship_instance.get(SOURCE_INTERFACES)
+    if not overriding_source_interfaces:
+        overriding_source_interfaces = {}
+
+    overridden_source_interfaces = relationship_type.get(SOURCE_INTERFACES)
+    if not overridden_source_interfaces:
+        overridden_source_interfaces = {}
+
+    overriding_target_interfaces = relationship_instance.get(TARGET_INTERFACES)
+    if not overriding_target_interfaces:
+        overriding_target_interfaces = {}
+
+    overridden_target_interfaces = relationship_type.get(TARGET_INTERFACES)
+    if not overridden_target_interfaces:
+        overridden_target_interfaces = {}
+
+    source_interfaces_merger = InterfacesMerger(
+        overriding_interfaces=overriding_source_interfaces,
+        overridden_interfaces=overridden_source_interfaces,
         operation_merger=RelationshipTypeRelationshipInstanceOperationMerger
     )
-    return target_interfaces_merger.merge()
+    target_interfaces_merger = InterfacesMerger(
+        overriding_interfaces=overriding_target_interfaces,
+        overridden_interfaces=overridden_target_interfaces,
+        operation_merger=RelationshipTypeRelationshipInstanceOperationMerger
+    )
+
+    return {
+        SOURCE_INTERFACES: source_interfaces_merger.merge(),
+        TARGET_INTERFACES: target_interfaces_merger.merge()
+    }

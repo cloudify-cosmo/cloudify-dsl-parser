@@ -604,14 +604,13 @@ def relationship_type_merging_function(overridden_relationship_type,
     merged_type[PROPERTIES] = merged_props
 
     # derived source and target interfaces
-    for interfaces_attribute in [SOURCE_INTERFACES, TARGET_INTERFACES]:
-        merged_interfaces = \
-            interfaces_parser.merge_relationship_type_interfaces(
-                overridden_relationship_type=overridden_relationship_type,
-                overriding_relationship_type=merged_type,
-                interfaces_attribute=interfaces_attribute
-            )
-        merged_type[interfaces_attribute] = merged_interfaces
+    merged_interfaces = \
+        interfaces_parser.merge_relationship_type_interfaces(
+            overridden_relationship_type=overridden_relationship_type,
+            overriding_relationship_type=merged_type
+        )
+    merged_type[SOURCE_INTERFACES] = merged_interfaces[SOURCE_INTERFACES]
+    merged_type[TARGET_INTERFACES] = merged_interfaces[TARGET_INTERFACES]
 
     return merged_type
 
@@ -921,17 +920,15 @@ def _process_node_relationships(node, node_name, node_names_set,
 
             relationship_complete_type = \
                 top_level_relationships[relationship_type]
-            source_interfaces = \
-                interfaces_parser.merge_relationship_type_and_instance_source_interfaces(  # NOQA
+
+            source_and_target_interfaces = \
+                interfaces_parser.merge_relationship_type_and_instance_interfaces(
                     relationship_type=relationship_complete_type,
                     relationship_instance=relationship
                 )
+            source_interfaces = source_and_target_interfaces[SOURCE_INTERFACES]
             complete_relationship[SOURCE_INTERFACES] = source_interfaces
-            target_interfaces = \
-                interfaces_parser.merge_relationship_type_and_instance_target_interfaces(  # NOQA
-                    relationship_type=relationship_complete_type,
-                    relationship_instance=relationship
-                )
+            target_interfaces = source_and_target_interfaces[TARGET_INTERFACES]
             complete_relationship[TARGET_INTERFACES] = target_interfaces
             complete_relationship[PROPERTIES] = \
                 merge_schema_and_instance_properties(
