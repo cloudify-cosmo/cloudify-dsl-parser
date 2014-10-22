@@ -87,23 +87,10 @@ class InterfacesMergerTest(unittest.TestCase):
             def merge(self):
                 return None
 
-        class MockInterfaceMerger(InterfaceMerger):
-
-            def __init__(self,
-                         overriding_interface,
-                         overridden_interface):
-                super(MockInterfaceMerger, self).__init__(
-                    overriding_interface=overriding_interface,
-                    overridden_interface=overridden_interface,
-                    operation_merger=MockOperationMerger)
-
-            def merge(self):
-                return None
-
         merger = InterfacesMerger(
             overriding_interfaces=overriding_interfaces,
             overridden_interfaces=overridden_interfaces,
-            interface_merger=MockInterfaceMerger
+            operation_merger=MockOperationMerger
         )
         actual_merged_interfaces_keys = merger.merge().keys()
         self.assertEqual(expected_merged_interfaces_keys, actual_merged_interfaces_keys)
@@ -111,10 +98,10 @@ class InterfacesMergerTest(unittest.TestCase):
     def test_merge_interfaces(self):
 
         overriding_interfaces = {
-            'interface1': None
+            'interface1': {}
         }
         overridden_interfaces = {
-            'interface2': None
+            'interface2': {}
         }
 
         expected_merged_interfaces_keys = ['interface1', 'interface2']
@@ -127,10 +114,10 @@ class InterfacesMergerTest(unittest.TestCase):
     def test_override_interface(self):
 
         overriding_interfaces = {
-            'interface1': None
+            'interface1': {}
         }
         overridden_interfaces = {
-            'interface1': None
+            'interface1': {}
         }
 
         expected_merged_interfaces_keys = ['interface1']

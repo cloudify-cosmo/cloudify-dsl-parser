@@ -401,9 +401,6 @@ def _process_context_operations(partial_error_message, interfaces, plugins,
                 'In interface {0} {1}'.format(interface_name,
                                               partial_error_message),
                 resource_base)
-        _validate_no_duplicate_operations(operation_mapping_context,
-                                          interface_name, node['id'],
-                                          node['type'])
         for op_descriptor in operation_mapping_context:
             op_struct = op_descriptor.op_struct
             plugin_name = op_descriptor.op_struct['plugin']
@@ -586,8 +583,15 @@ def _is_derived_from(type_name, types, derived_from):
 
 
 def relationship_type_merging_function(overridden_relationship_type,
-                                                  overriding_relationship_type):
+                                       overriding_relationship_type):
+
     merged_type = overriding_relationship_type
+
+    merged_props_array = merge_sub_dicts(overridden_relationship_type,
+                                         merged_type,
+                                         PROPERTIES)
+
+    merged_type[PROPERTIES] = merged_props_array
 
     # derived source and target interfaces
     for interfaces_attribute in [SOURCE_INTERFACES, TARGET_INTERFACES]:
@@ -661,32 +665,10 @@ def _process_relationships(combined_parsed_dsl, resource_base):
             relationship_types=relationship_types
         )
 
-        plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
-        _validate_relationship_fields(
-            complete_relationship,
-            plugins,
-            relationship_type_name,
-            resource_base)
         complete_rel_obj_copy = copy.deepcopy(complete_relationship)
         processed_relationships[relationship_type_name] = complete_rel_obj_copy
         processed_relationships[relationship_type_name]['name'] = relationship_type_name
     return processed_relationships
-
-
-def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
-    for interfaces in [SOURCE_INTERFACES, TARGET_INTERFACES]:
-        if interfaces in rel_obj:
-            for interface_name, interface in rel_obj[interfaces].items():
-                operation_mapping_context = \
-                    _extract_plugin_names_and_operation_mapping_from_interface(
-                        interface,
-                        plugins,
-                        19,
-                        'Relationship: {0}'.format(rel_name),
-                        resource_base=resource_base)
-                _validate_no_duplicate_operations(
-                    operation_mapping_context, interface_name,
-                    relationship_name=rel_name)
 
 
 def _extract_plugin_name_and_operation_mapping_from_operation(
@@ -914,12 +896,20 @@ def _process_node_relationships(node, node_name, node_names_set,
                         'undefined relationship type {1}'
                         .format(node_name, relationship_type))
 
+            complete_relationship = relationship
+
             relationship_complete_type = \
                 top_level_relationships[relationship_type]
-            complete_relationship = interfaces_parser.merge_relationship_type_and_instance_interfaces(
+            source_interfaces = interfaces_parser.merge_relationship_type_and_instance_source_interfaces(
                 relationship_type=relationship_complete_type,
                 relationship_instance=relationship
             )
+            complete_relationship[SOURCE_INTERFACES] = source_interfaces
+            target_interfaces = interfaces_parser.merge_relationship_type_and_instance_target_interfaces(
+                relationship_type=relationship_complete_type,
+                relationship_instance=relationship
+            )
+            complete_relationship[TARGET_INTERFACES] = target_interfaces
             complete_relationship[PROPERTIES] = \
                 merge_schema_and_instance_properties(
                     _get_dict_prop(relationship, PROPERTIES),
@@ -1029,28 +1019,6 @@ def _get_relationship_implementation_if_exists(source_node_name,
         return relationship_type, dict()
 
     return impl['type'], _get_dict_prop(impl, PROPERTIES)
-
-
-def _validate_no_duplicate_operations(interface_operation_mappings,
-                                      interface_name,
-                                      node_id=None,
-                                      node_type=None,
-                                      relationship_name=None):
-    operation_names = set()
-    for op_descriptor in interface_operation_mappings:
-        operation_name = op_descriptor.name
-        if operation_name in operation_names:
-            error_message = 'Duplicate operation {0} found in interface {1} '\
-                            .format(operation_name, interface_name)
-            if node_id is not None:
-                error_message += ' in node {0} '.format(node_id)
-            if node_type is not None:
-                error_message += ' node type {0}'.format(node_type)
-            if relationship_name is not None:
-                error_message += ' relationship name {0}'.format(
-                    relationship_name)
-            raise DSLParsingLogicException(20, error_message)
-        operation_names.add(operation_name)
 
 
 def _operation_struct(plugin_name, operation_mapping, operation_properties,

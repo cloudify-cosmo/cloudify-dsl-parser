@@ -16,8 +16,8 @@
 import unittest
 from jsonschema import validate
 
-from dsl_parser.interfaces.interfaces_parser import NO_OP
-from dsl_parser.interfaces.interfaces_parser import operation_mapping
+from dsl_parser.interfaces.constants import NO_OP
+from dsl_parser.interfaces.utils import operation_mapping
 from dsl_parser.interfaces.operation_merger import NodeTemplateNodeTypeInterfaceOperationMerger
 from dsl_parser.interfaces.operation_merger import NodeTypeNodeTypeInterfaceOperationMerger
 from dsl_parser.schemas import NODE_TEMPLATE_OPERATION_SCHEMA

@@ -211,81 +211,6 @@ RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA = {
 }
 
 
-PLAIN_OPERATION_MAPPING_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'implementation': {
-            'type': 'string'
-        },
-        'inputs': {
-            'type': 'object',
-            'minProperties': 1
-        }
-    },
-    'required': ['implementation', 'inputs'],
-    'additionalProperties': False
-}
-
-
-PLAIN_INTERFACES_SCHEMA = {
-    'type': 'object',
-    'patternProperties': {
-        '^': {
-            'type': 'object',
-            'patternProperties': {
-                '^': {
-                    'oneOf': [
-                        {'type': 'string'},
-                        {
-                            'type': 'object',
-                            'minProperties': 0,
-                            'maxProperties': 0
-                        },
-                        PLAIN_OPERATION_MAPPING_SCHEMA
-                    ]
-                }
-            },
-        }
-    },
-    'minProperties': 1
-}
-
-
-ADVANCED_OPERATION_MAPPING_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'implementation': {
-            'type': 'string'
-        },
-        'inputs': PROPERTIES_SCHEMA_SCHEMA
-    },
-    'required': ['implementation', 'inputs'],
-    'additionalProperties': False
-}
-
-NODE_TYPE_INTERFACES_SCHEMA = {
-    'type': 'object',
-    'patternProperties': {
-        '^': {
-            'type': 'object',
-            'patternProperties': {
-                '^': {
-                    'oneOf': [
-                        {'type': 'string'},
-                        {
-                            'type': 'object',
-                            'minProperties': 0,
-                            'maxProperties': 0
-                        },
-                        ADVANCED_OPERATION_MAPPING_SCHEMA
-                    ]
-                }
-            },
-            }
-    },
-    'minProperties': 1
-}
-
 WORKFLOW_MAPPING_SCHEMA = {
     'type': 'object',
     'properties': {
@@ -438,7 +363,7 @@ DSL_SCHEMA = {
                             'required': ['deploy'],
                             'additionalProperties': False
                         },
-                        'interfaces': PLAIN_INTERFACES_SCHEMA,
+                        'interfaces': NODE_TEMPLATE_INTERFACES_SCHEMA,
                         'relationships': {
                             'type': 'array',
                             'items': {

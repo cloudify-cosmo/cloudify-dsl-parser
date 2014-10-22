@@ -52,23 +52,23 @@ def merge_relationship_type_interfaces(overriding_relationship_type,
     return merger.merge()
 
 
-def merge_relationship_type_and_instance_interfaces(relationship_type,
-                                                    relationship_instance):
-
-    merged_interfaces = {}
+def merge_relationship_type_and_instance_source_interfaces(relationship_type,
+                                                           relationship_instance):
 
     source_interfaces_merger = InterfacesMerger(
         overriding_interfaces=relationship_instance.get(SOURCE_INTERFACES, {}),
         overridden_interfaces=relationship_type.get(SOURCE_INTERFACES, {}),
         operation_merger=RelationshipTypeRelationshipInstanceInterfaceOperationMerger
     )
-    merged_interfaces[SOURCE_INTERFACES] = source_interfaces_merger.merge()
+    return source_interfaces_merger.merge()
+
+
+def merge_relationship_type_and_instance_target_interfaces(relationship_type,
+                                                           relationship_instance):
 
     target_interfaces_merger = InterfacesMerger(
         overriding_interfaces=relationship_instance.get(TARGET_INTERFACES, {}),
         overridden_interfaces=relationship_type.get(TARGET_INTERFACES, {}),
         operation_merger=RelationshipTypeRelationshipInstanceInterfaceOperationMerger
     )
-    merged_interfaces[TARGET_INTERFACES] = target_interfaces_merger.merge()
-
-    return merged_interfaces
+    return target_interfaces_merger.merge()

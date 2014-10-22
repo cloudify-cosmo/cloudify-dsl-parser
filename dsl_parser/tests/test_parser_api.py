@@ -23,27 +23,28 @@ from urllib import pathname2url
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.parser import TYPE_HIERARCHY, parse_from_path, parse_from_url
 from dsl_parser.parser import parse as dsl_parse
+from dsl_parser.interfaces.utils import operation_mapping
 
 
 def op_struct(plugin_name,
-              operation_mapping,
+              mapping,
               inputs=None):
     if not inputs:
         inputs = {}
     result = {
         'plugin': plugin_name,
-        'operation': operation_mapping,
+        'operation': mapping,
         'inputs': inputs
     }
     return result
 
 
 def workflow_op_struct(plugin_name,
-                       operation_mapping,
+                       mapping,
                        parameters=None):
     result = {
         'plugin': plugin_name,
-        'operation': operation_mapping,
+        'operation': mapping,
     }
     if parameters:
         result['parameters'] = parameters
@@ -1058,9 +1059,9 @@ plugins:
         relationship = nodes[1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_node', relationship['target_id'])
-        self.assertDictEqual({'install': 'test_plugin.install'},
-                             relationship['source_interfaces']
-                             ['test_interface1'][0])
+        self.assertDictEqual(
+            operation_mapping(implementation='test_plugin.install', inputs={}),
+            relationship['source_interfaces']['test_interface1']['install'])
         self.assertEquals('reachable', relationship['state'])
         relationship_source_operations = relationship['source_operations']
         self.assertDictEqual(op_struct('test_plugin', 'install'),
@@ -1070,7 +1071,7 @@ plugins:
             relationship_source_operations['test_interface1.install'])
         self.assertEqual(2, len(relationship_source_operations))
 
-        self.assertEquals(8, len(relationship))
+        self.assertEquals(10, len(relationship))
         plugin_def = nodes[1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
 
@@ -1106,8 +1107,8 @@ relationships:
                           nodes[1]['relationships'][0]['state'])
         self.assertEquals('reachable',
                           nodes[1]['relationships'][1]['state'])
-        self.assertEquals(6, len(nodes[1]['relationships'][0]))
-        self.assertEquals(6, len(nodes[1]['relationships'][1]))
+        self.assertEquals(10, len(nodes[1]['relationships'][0]))
+        self.assertEquals(10, len(nodes[1]['relationships'][1]))
 
     def test_instance_relationships_relationship_inheritance(self):
         # possibly 'inheritance' is the wrong term to use here,
@@ -1147,12 +1148,12 @@ plugins:
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_node', relationship['target_id'])
         self.assertEquals('reachable', relationship['state'])
-        self.assertDictEqual({'op1': 'test_plugin.task_name1'},
-                             relationship['source_interfaces']
-                             ['interface1'][0])
-        self.assertDictEqual({'op2': 'test_plugin.task_name2'},
-                             relationship['target_interfaces']
-                             ['interface2'][0])
+        self.assertDictEqual(
+            operation_mapping(implementation='test_plugin.task_name1', inputs={}),
+            relationship['source_interfaces']['interface1']['op1'])
+        self.assertDictEqual(
+            operation_mapping(implementation='test_plugin.task_name2', inputs={}),
+            relationship['target_interfaces']['interface2']['op2'])
 
         rel_source_ops = relationship['source_operations']
 
@@ -1983,7 +1984,7 @@ plugins:
         self.assertDictEqual(op_struct('test_plugin1', 'install'),
                              rel1_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel1_source_ops))
-        self.assertEquals(8, len(relationship1))
+        self.assertEquals(10, len(relationship1))
         plugin1_def = nodes[1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
 
@@ -1997,7 +1998,7 @@ plugins:
         self.assertDictEqual(op_struct('test_plugin2', 'install'),
                              rel2_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel2_source_ops))
-        self.assertEquals(8, len(relationship2))
+        self.assertEquals(10, len(relationship2))
 
         # expecting the other plugin to be under test_node rather than
         # test_node2:
