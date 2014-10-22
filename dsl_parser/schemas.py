@@ -15,46 +15,6 @@
 #    * limitations under the License.
 
 
-PLAIN_OPERATION_MAPPING_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'implementation': {
-            'type': 'string'
-        },
-        'inputs': {
-            'type': 'object',
-            'minProperties': 1
-        }
-    },
-    'required': ['implementation', 'inputs'],
-    'additionalProperties': False
-}
-
-
-PLAIN_INTERFACES_SCHEMA = {
-    'type': 'object',
-    'patternProperties': {
-        '^': {
-            'type': 'object',
-            'patternProperties': {
-                '^': {
-                    'oneOf': [
-                        {'type': 'string'},
-                        {
-                            'type': 'object',
-                            'minProperties': 0,
-                            'maxProperties': 0
-                        },
-                        PLAIN_OPERATION_MAPPING_SCHEMA
-                    ]
-                }
-            },
-        }
-    },
-    'minProperties': 1
-}
-
-
 PROPERTY_TYPES_SCHEMA = {
     'enum': [
         'string',
@@ -141,6 +101,155 @@ PROPERTIES_SCHEMA_SCHEMA = {
         }
     }
 }
+
+
+NODE_TEMPLATE_OPERATION_SCHEMA = {
+
+    'oneOf': [
+        {
+            'type': 'string'
+        },
+        {
+            'type': 'object',
+            'minProperties': 0,
+            'maxProperties': 0
+        },
+        {
+            'type': 'object',
+            'properties': {
+                'implementation': {
+                    'type': 'string'
+                },
+                'inputs': {
+                    'type': 'object',
+                    'minProperties': 1
+                }
+            },
+            'required': ['inputs'],
+            'additionalProperties': False
+        }
+    ]
+}
+
+
+NODE_TYPE_OPERATION_SCHEMA = {
+
+    'oneOf': [
+        {
+            'type': 'object',
+            'minProperties': 0,
+            'maxProperties': 0
+        },
+        {
+            'type': 'object',
+            'properties': {
+                'implementation': {
+                    'type': 'string'
+                },
+                'inputs': PROPERTIES_SCHEMA_SCHEMA
+            },
+            'required': ['implementation', 'inputs'],
+            'additionalProperties': False
+        }
+    ]
+}
+
+RELATIONSHIP_TYPE_OPERATION_SCHEMA = NODE_TYPE_OPERATION_SCHEMA
+RELATIONSHIP_INSTANCE_OPERATION_SCHEMA = NODE_TEMPLATE_OPERATION_SCHEMA
+
+NODE_TEMPLATE_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': NODE_TEMPLATE_OPERATION_SCHEMA
+            },
+        }
+    },
+    'minProperties': 1
+}
+
+NODE_TYPE_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': NODE_TYPE_OPERATION_SCHEMA
+            },
+        }
+    },
+    'minProperties': 1
+}
+
+RELATIONSHIP_TYPE_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': RELATIONSHIP_TYPE_OPERATION_SCHEMA
+            },
+        }
+    },
+    'minProperties': 1
+}
+
+
+RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': RELATIONSHIP_INSTANCE_OPERATION_SCHEMA
+            },
+            }
+    },
+    'minProperties': 1
+}
+
+
+PLAIN_OPERATION_MAPPING_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'implementation': {
+            'type': 'string'
+        },
+        'inputs': {
+            'type': 'object',
+            'minProperties': 1
+        }
+    },
+    'required': ['implementation', 'inputs'],
+    'additionalProperties': False
+}
+
+
+PLAIN_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': {
+                    'oneOf': [
+                        {'type': 'string'},
+                        {
+                            'type': 'object',
+                            'minProperties': 0,
+                            'maxProperties': 0
+                        },
+                        PLAIN_OPERATION_MAPPING_SCHEMA
+                    ]
+                }
+            },
+        }
+    },
+    'minProperties': 1
+}
+
 
 ADVANCED_OPERATION_MAPPING_SCHEMA = {
     'type': 'object',
@@ -346,8 +455,8 @@ DSL_SCHEMA = {
                                     'properties': {
                                         'type': 'object'
                                     },
-                                    'source_interfaces': PLAIN_INTERFACES_SCHEMA,
-                                    'target_interfaces': PLAIN_INTERFACES_SCHEMA,
+                                    'source_interfaces': RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA,
+                                    'target_interfaces': RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA,
                                 },
                                 'required': ['type', 'target'],
                                 'additionalProperties': False
@@ -522,8 +631,8 @@ DSL_SCHEMA = {
                         'derived_from': {
                             'type': 'string'
                         },
-                        'source_interfaces': PLAIN_INTERFACES_SCHEMA,
-                        'target_interfaces': PLAIN_INTERFACES_SCHEMA,
+                        'source_interfaces': RELATIONSHIP_TYPE_INTERFACES_SCHEMA,
+                        'target_interfaces': RELATIONSHIP_TYPE_INTERFACES_SCHEMA,
                         #non-meta 'properties'
                         'properties': PROPERTIES_SCHEMA_SCHEMA
                     },
@@ -562,59 +671,4 @@ DSL_SCHEMA = {
     },
     'required': ['tosca_definitions_version', 'node_templates'],
     'additionalProperties': False
-}
-
-
-NODE_TEMPLATE_OPERATION_SCHEMA = {
-
-    'oneOf': [
-        {
-            'type': 'string'
-        },
-        {
-            'type': 'object',
-            'minProperties': 0,
-            'maxProperties': 0
-        },
-        {
-            'type': 'object',
-            'properties': {
-                'implementation': {
-                    'type': 'string'
-                },
-                'inputs': {
-                    'type': 'object',
-                    'minProperties': 1
-                }
-            },
-            'required': ['inputs'],
-            'additionalProperties': False
-        }
-    ]
-}
-
-
-NODE_TYPE_OPERATION_SCHEMA = {
-
-    'oneOf': [
-        {
-            'type': 'string'
-        },
-        {
-            'type': 'object',
-            'minProperties': 0,
-            'maxProperties': 0
-        },
-        {
-            'type': 'object',
-            'properties': {
-                'implementation': {
-                    'type': 'string'
-                },
-                'inputs': PROPERTIES_SCHEMA_SCHEMA
-            },
-            'required': ['implementation', 'inputs'],
-            'additionalProperties': False
-        }
-    ]
 }

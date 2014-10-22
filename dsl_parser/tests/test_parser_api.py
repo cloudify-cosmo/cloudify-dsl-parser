@@ -25,11 +25,28 @@ from dsl_parser.parser import TYPE_HIERARCHY, parse_from_path, parse_from_url
 from dsl_parser.parser import parse as dsl_parse
 
 
-def op_struct(plugin_name, operation_mapping, properties=None,
-              properties_field_name='properties'):
-    result = {'plugin': plugin_name, 'operation': operation_mapping}
-    if properties:
-        result[properties_field_name] = properties
+def op_struct(plugin_name,
+              operation_mapping,
+              inputs=None):
+    if not inputs:
+        inputs = {}
+    result = {
+        'plugin': plugin_name,
+        'operation': operation_mapping,
+        'inputs': inputs
+    }
+    return result
+
+
+def workflow_op_struct(plugin_name,
+                       operation_mapping,
+                       parameters=None):
+    result = {
+        'plugin': plugin_name,
+        'operation': operation_mapping,
+    }
+    if parameters:
+        result['parameters'] = parameters
     return result
 
 
@@ -92,12 +109,18 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
-                - start: test_plugin.start
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
         properties:
             install_agent:
-                default: 'false'
+                default: false
             key: {}
             number:
                 default: 80
@@ -126,49 +149,24 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
             test_interface2:
-                - start: other_test_plugin.start
-                - shutdown: other_test_plugin.shutdown
+                start:
+                    implementation: other_test_plugin.start
+                    inputs: {}
+                shutdown:
+                    implementation: other_test_plugin.shutdown
+                    inputs: {}
 
 plugins:
     other_test_plugin:
         executor: central_deployment_agent
         source: dummy
-"""
-        result = self.parse(yaml)
-        node = result['nodes'][0]
-        self._assert_blueprint(result)
-
-        operations = node['operations']
-        self.assertEquals(op_struct('other_test_plugin', 'start'),
-                          operations['start'])
-        self.assertEquals(op_struct('other_test_plugin', 'start'),
-                          operations['test_interface2.start'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
-                          operations['shutdown'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
-                          operations['test_interface2.shutdown'])
-
-    def test_merge_plugins_and_interfaces_imports(self):
-        yaml = self.create_yaml_with_imports(
-            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
-plugins:
-    other_test_plugin:
-        executor: central_deployment_agent
-        source: dummy
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
-            test_interface2:
-                - start: other_test_plugin.start
-                - shutdown: other_test_plugin.shutdown
 """
         result = self.parse(yaml)
         node = result['nodes'][0]
@@ -567,27 +565,49 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
             test_interface2:
-                - start: test_plugin2.start
-                - stop: test_plugin2.stop
+                start:
+                    implementation: test_plugin2.start
+                    inputs: {}
+                stop:
+                    implementation: test_plugin2.stop
+                    inputs: {}
             test_interface3:
-                - op1: test_plugin3.op
-        derived_from: "test_type_parent"
+                op1:
+                    implementation: test_plugin3.op
+                    inputs: {}
+        derived_from: test_type_parent
 
     test_type_parent:
         interfaces:
             test_interface1:
-                - install: nop_plugin.install
-                - terminate: nop_plugin.install
+                install:
+                    implementation: nop_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: nop_plugin.install
+                    inputs: {}
             test_interface2:
-                - start: test_plugin2.start
-                - stop: test_plugin2.stop
+                start:
+                    implementation: test_plugin2.start
+                    inputs: {}
+                stop:
+                    implementation: test_plugin2.stop
+                    inputs: {}
             test_interface3:
-                 - op1: test_plugin3.op
+                op1:
+                    implementation: test_plugin3.op
+                    inputs: {}
             test_interface4:
-                - op2: test_plugin4.op2
+                op2:
+                    implementation: test_plugin4.op2
+                    inputs: {}
 
 plugins:
     test_plugin2:
@@ -632,21 +652,33 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
-        derived_from: "test_type_parent"
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
+        derived_from: test_type_parent
 
     test_type_parent:
-        derived_from: "test_type_grandparent"
+        derived_from: test_type_grandparent
 
     test_type_grandparent:
         interfaces:
             test_interface1:
-                - install: non_plugin.install
-                - terminate: non_plugin.terminate
+                install:
+                    implementation: non_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: non_plugin.terminate
+                    inputs: {}
             test_interface2:
-                - start: test_plugin2.start
-                - stop: test_plugin2.stop
+                start:
+                    implementation: test_plugin2.start
+                    inputs: {}
+                stop:
+                    implementation: test_plugin2.stop
+                    inputs: {}
 
 plugins:
     test_plugin2:
@@ -677,11 +709,19 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
             test_interface2:
-                - install: other_test_plugin.install
-                - shutdown: other_test_plugin.shutdown
+                install:
+                    implementation: other_test_plugin.install
+                    inputs: {}
+                shutdown:
+                    implementation: other_test_plugin.shutdown
+                    inputs: {}
 plugins:
     other_test_plugin:
         executor: central_deployment_agent
@@ -763,13 +803,15 @@ relationships:
 relationships:
     empty_rel: {}
     test_relationship:
-        derived_from: "empty_rel"
+        derived_from: empty_rel
         source_interfaces:
             test_interface3:
-                - test_interface3_op1
+                test_interface3_op1: {}
         target_interfaces:
             test_interface4:
-                - test_interface4_op1: test_plugin.task_name
+                test_interface4_op1:
+                    implementation: test_plugin.task_name
+                    inputs: {}
         """
         result = self.parse(yaml)
         self._assert_blueprint(result)
@@ -791,11 +833,15 @@ relationships:
 relationships:
     empty_rel: {}
     test_relationship:
-        derived_from: "empty_rel"
+        derived_from: empty_rel
         source_interfaces:
             test_interface2:
-                -   install: test_plugin.install
-                -   terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
         """
 
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
@@ -811,8 +857,12 @@ relationships:
     test_relationship3:
         target_interfaces:
             test_interface2:
-                -   install: test_plugin.install
-                -   terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
 
 imports:
     -   {0}""".format(mid_file_name)
@@ -987,11 +1037,11 @@ relationships:
     test_node2:
         type: test_type
         relationships:
-            -   type: "test_relationship"
-                target: "test_node"
+            -   type: test_relationship
+                target: test_node
                 source_interfaces:
                     test_interface1:
-                        - install: test_plugin.install
+                        install: test_plugin.install
 relationships:
     test_relationship: {}
 plugins:
@@ -1074,14 +1124,16 @@ relationships:
                 target: test_node
                 source_interfaces:
                     interface1:
-                        - op1: test_plugin.task_name1
+                        op1: test_plugin.task_name1
 relationships:
     relationship: {}
     test_relationship:
-        derived_from: "relationship"
+        derived_from: relationship
         target_interfaces:
             interface2:
-                - op2: test_plugin.task_name2
+                op2:
+                    implementation: test_plugin.task_name2
+                    inputs: {}
 plugins:
     test_plugin:
         executor: central_deployment_agent
@@ -1190,21 +1242,25 @@ relationship_implementations:
                 target: test_node
                 source_interfaces:
                     test_interface3:
-                        - install: test_plugin.install
+                        install: test_plugin.install
                 target_interfaces:
                     test_interface1:
-                        - install: test_plugin.install
+                        install: test_plugin.install
 relationships:
     relationship:
-        derived_from: "parent_relationship"
+        derived_from: parent_relationship
         source_interfaces:
             test_interface2:
-                -   install: test_plugin.install
-                -   terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
     parent_relationship:
         target_interfaces:
             test_interface3:
-                - install
+                install: {}
 plugins:
     test_plugin:
         executor: central_deployment_agent
@@ -1591,7 +1647,9 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
 plugins:
     test_plugin:
         executor: host_agent
@@ -1621,7 +1679,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         result = self.parse(yaml)
@@ -1648,7 +1708,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         result = self.parse(yaml)
@@ -1674,7 +1736,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         result = self.parse(yaml)
@@ -1699,7 +1763,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         result = self.parse(yaml)
@@ -1739,11 +1805,15 @@ node_types:
     test_type:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
     test_type2:
         interfaces:
             test_interface2:
-                - install: test_plugin2.install
+                install:
+                    implementation: test_plugin2.install
+                    inputs: {}
 relationships:
     cloudify.relationships.contained_in: {}
 plugins:
@@ -1850,20 +1920,6 @@ imports:
         result = parse_from_path(top_file_name)
         self._assert_blueprint(result)
 
-    def test_node_interfaces_operation_mapping(self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-        interfaces:
-            test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
-node_types:
-    test_type:
-        properties:
-            key: {}
-            """
-        result = self.parse(yaml)
-        self._assert_blueprint(result)
-
     def test_node_without_host_id(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
     test_node2:
@@ -1889,16 +1945,16 @@ node_types:
     test_node2:
         type: test_type
         relationships:
-            -   type: "test_relationship"
-                target: "test_node"
+            -   type: test_relationship
+                target: test_node
                 source_interfaces:
                     test_interface1:
-                        - install: test_plugin1.install
-            -   type: "test_relationship"
-                target: "test_node"
+                        install: test_plugin1.install
+            -   type: test_relationship
+                target: test_node
                 target_interfaces:
                     test_interface1:
-                        - install: test_plugin2.install
+                        install: test_plugin2.install
 relationships:
     test_relationship: {}
 plugins:
@@ -1984,30 +2040,6 @@ node_types:
         self.assertEquals('test_type2', node2['type'])
         self.assertEquals(1, node2['instances']['deploy'])
 
-    def test_operation_mapping_with_properties_injection(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                - install:
-                    mapping: test_plugin.install
-                    properties:
-                        key: "value"
-"""
-        result = self.parse(yaml)
-        node = result['nodes'][0]
-        self.assertEquals('test_type', node['type'])
-        operations = node['operations']
-        self.assertEquals(
-            op_struct('test_plugin', 'install', {'key': 'value'}),
-            operations['install'])
-        self.assertEquals(
-            op_struct('test_plugin', 'install', {'key': 'value'}),
-            operations['test_interface1.install'])
-
     def test_relationship_operation_mapping_with_properties_injection(self):
         yaml = self.MINIMAL_BLUEPRINT + """
     test_node2:
@@ -2017,10 +2049,11 @@ node_types:
                 target: "test_node"
                 source_interfaces:
                     test_interface1:
-                        - install:
-                            mapping: test_plugin.install
+                        install:
+                            implementation: test_plugin.install
                             properties:
-                                key: "value"
+                                key:
+                                    default: value
 relationships:
     test_relationship: {}
 plugins:
@@ -2173,7 +2206,7 @@ workflows:
         result = self.parse(yaml)
         workflows = result['workflows']
         self.assertEqual(1, len(workflows))
-        self.assertEqual(op_struct('test_plugin', 'workflow1'),
+        self.assertEqual(workflow_op_struct('test_plugin', 'workflow1',),
                          workflows['workflow1'])
         workflow_plugins_to_install = result['workflow_plugins_to_install']
         self.assertEqual(1, len(workflow_plugins_to_install))
@@ -2211,8 +2244,7 @@ workflows:
                 }
             }
         }
-        self.assertEqual(op_struct('test_plugin', 'workflow1',
-                                   parameters, 'parameters'),
+        self.assertEqual(workflow_op_struct('test_plugin', 'workflow1', parameters),
                          workflows['workflow1'])
         workflow_plugins_to_install = result['workflow_plugins_to_install']
         self.assertEqual(1, len(workflow_plugins_to_install))
@@ -2239,9 +2271,9 @@ workflows:
         result = self.parse(yaml)
         workflows = result['workflows']
         self.assertEqual(2, len(workflows))
-        self.assertEqual(op_struct('test_plugin', 'workflow1'),
+        self.assertEqual(workflow_op_struct('test_plugin', 'workflow1'),
                          workflows['workflow1'])
-        self.assertEqual(op_struct('test_plugin2', 'workflow2'),
+        self.assertEqual(workflow_op_struct('test_plugin2', 'workflow2'),
                          workflows['workflow2'])
         workflow_plugins_to_install = result['workflow_plugins_to_install']
         self.assertEqual(2, len(workflow_plugins_to_install))
@@ -2717,19 +2749,26 @@ node_types:
     type:
         interfaces:
             test:
-                - op: stub.py
-                - op2:
-                    mapping: stub.py
-                    properties:
-                        key: value
+                op:
+                    implementation: stub.py
+                    inputs: {}
+                op2:
+                    implementation: stub.py
+                    inputs:
+                        key:
+                            default: value
 relationships:
     relationship:
         source_interfaces:
             test:
-                - op: stub.py
+                op:
+                    implementation: stub.py
+                    inputs: {}
         target_interfaces:
             test:
-                - op: stub.py
+                op:
+                    implementation: stub.py
+                    inputs: {}
 workflows:
     workflow: stub.py
     workflow2:
@@ -2804,8 +2843,12 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_plugin.start
-                - create: test_management_plugin.create
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
+                create:
+                    implementation: test_management_plugin.create
+                    inputs: {}
 plugins:
     test_plugin:
         executor: host_agent
@@ -2835,7 +2878,9 @@ node_types:
     cloudify.types.base:
         interfaces:
             test_interface:
-                - start: cloud.server.start
+                start:
+                    implementation: cloud.server.start
+                    inputs: {}
 plugins:
     cloud:
         executor: central_deployment_agent
@@ -2856,7 +2901,9 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_management_plugin.start
+                start:
+                    implementation: test_management_plugin.start
+                    inputs: {}
 
 plugins:
     test_management_plugin:
@@ -2886,8 +2933,12 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_management_plugin1.start
-                - create: test_management_plugin2.create
+                start:
+                    implementation: test_management_plugin1.start
+                    inputs: {}
+                create:
+                    implementation: test_management_plugin2.create
+                    inputs: {}
 
 plugins:
     test_management_plugin1:
@@ -2917,7 +2968,9 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
 
 plugins:
     test_management_plugin:
@@ -2947,8 +3000,12 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_management_plugin.start
-                - create: test_management_plugin.create
+                start:
+                    implementation: test_management_plugin.start
+                    inputs: {}
+                create:
+                    implementation: test_management_plugin.create
+                    inputs: {}
 
 plugins:
     test_management_plugin:

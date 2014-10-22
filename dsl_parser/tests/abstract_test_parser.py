@@ -24,7 +24,7 @@ from multiprocessing import Process
 
 import yaml
 
-from dsl_parser.parser import DSLParsingException
+from dsl_parser.exceptions import DSLParsingException
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.parser import parse_from_path as dsl_parse_from_path
 
@@ -70,8 +70,12 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                install: test_plugin.install
-                terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
         properties:
             install_agent:
                 default: 'false'
