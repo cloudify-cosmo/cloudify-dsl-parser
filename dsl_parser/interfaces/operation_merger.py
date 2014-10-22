@@ -42,10 +42,6 @@ class OperationMerger(object):
                 inputs=raw_operation.get('inputs', {})
             )
 
-    @abstractmethod
-    def merge(self):
-        raise RuntimeError('Not implemented')
-
 
 class NodeTemplateNodeTypeOperationMerger(OperationMerger):
 
