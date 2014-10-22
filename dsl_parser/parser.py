@@ -922,7 +922,8 @@ def _process_node_relationships(node, node_name, node_names_set,
                 top_level_relationships[relationship_type]
 
             source_and_target_interfaces = \
-                interfaces_parser.merge_relationship_type_and_instance_interfaces(
+                interfaces_parser.\
+                merge_relationship_type_and_instance_interfaces(
                     relationship_type=relationship_complete_type,
                     relationship_instance=relationship
                 )

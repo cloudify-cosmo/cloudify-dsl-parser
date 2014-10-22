@@ -76,19 +76,23 @@ def merge_relationship_type_interfaces(overriding_relationship_type,
     # using this pattern for the sake of
     # code coverage tools
 
-    overriding_source_interfaces = overriding_relationship_type.get(SOURCE_INTERFACES)
+    overriding_source_interfaces = overriding_relationship_type.get(
+        SOURCE_INTERFACES)
     if not overriding_source_interfaces:
         overriding_source_interfaces = {}
 
-    overridden_source_interfaces = overridden_relationship_type.get(SOURCE_INTERFACES)
+    overridden_source_interfaces = overridden_relationship_type.get(
+        SOURCE_INTERFACES)
     if not overridden_source_interfaces:
         overridden_source_interfaces = {}
 
-    overriding_target_interfaces = overriding_relationship_type.get(TARGET_INTERFACES)
+    overriding_target_interfaces = overriding_relationship_type.get(
+        TARGET_INTERFACES)
     if not overriding_target_interfaces:
         overriding_target_interfaces = {}
 
-    overridden_target_interfaces = overridden_relationship_type.get(TARGET_INTERFACES)
+    overridden_target_interfaces = overridden_relationship_type.get(
+        TARGET_INTERFACES)
     if not overridden_target_interfaces:
         overridden_target_interfaces = {}
 

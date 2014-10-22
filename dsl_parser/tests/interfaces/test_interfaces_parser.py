@@ -63,10 +63,12 @@ class InterfacesParserTest(testtools.TestCase):
                                       target_interfaces=None):
         result = {}
         if source_interfaces:
-            validate(source_interfaces, RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA)
+            validate(source_interfaces,
+                     RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA)
             result[SOURCE_INTERFACES] = source_interfaces
         if target_interfaces:
-            validate(target_interfaces, RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA)
+            validate(target_interfaces,
+                     RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA)
             result[TARGET_INTERFACES] = target_interfaces
         return result
 
@@ -238,10 +240,11 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
-        actual_merged_interfaces = merge_node_type_and_node_template_interfaces(
-            node_type=node_type,
-            node_template=node_template
-        )
+        actual_merged_interfaces = \
+            merge_node_type_and_node_template_interfaces(
+                node_type=node_type,
+                node_template=node_template
+            )
 
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
@@ -266,10 +269,11 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
-        actual_merged_interfaces = merge_node_type_and_node_template_interfaces(
-            node_type=node_type,
-            node_template=node_template
-        )
+        actual_merged_interfaces = \
+            merge_node_type_and_node_template_interfaces(
+                node_type=node_type,
+                node_template=node_template
+            )
 
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
@@ -296,10 +300,11 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
-        actual_merged_interfaces = merge_node_type_and_node_template_interfaces(
-            node_type=node_type,
-            node_template=node_template
-        )
+        actual_merged_interfaces = \
+            merge_node_type_and_node_template_interfaces(
+                node_type=node_type,
+                node_template=node_template
+            )
 
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
@@ -413,7 +418,7 @@ class InterfacesParserTest(testtools.TestCase):
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
 
-    def test_merge_relationship_type_interfaces_no_source_interfaces_on_overriding(self):
+    def test_merge_relationship_type_interfaces_no_source_interfaces_on_overriding(self):  # NOQA
 
         overriding_relationship_type = self._create_relationship_type(
             target_interfaces={
@@ -494,7 +499,7 @@ class InterfacesParserTest(testtools.TestCase):
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
 
-    def test_merge_relationship_type_interfaces_no_source_interfaces_on_overridden(self):
+    def test_merge_relationship_type_interfaces_no_source_interfaces_on_overridden(self):  # NOQA
 
         overriding_relationship_type = self._create_relationship_type(
             source_interfaces={
@@ -563,7 +568,7 @@ class InterfacesParserTest(testtools.TestCase):
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
 
-    def test_merge_relationship_type_interfaces_no_target_interfaces_on_overriding(self):
+    def test_merge_relationship_type_interfaces_no_target_interfaces_on_overriding(self):  # NOQA
 
         overriding_relationship_type = self._create_relationship_type(
             source_interfaces={
@@ -641,7 +646,7 @@ class InterfacesParserTest(testtools.TestCase):
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
 
-    def test_merge_relationship_type_interfaces_no_target_interfaces_on_overridden(self):
+    def test_merge_relationship_type_interfaces_no_target_interfaces_on_overridden(self):  # NOQA
 
         overriding_relationship_type = self._create_relationship_type(
             source_interfaces={
@@ -788,15 +793,16 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
-        actual_merged_interfaces = merge_relationship_type_and_instance_interfaces(
-            relationship_type=relationship_type,
-            relationship_instance=relationship_instance
-        )
+        actual_merged_interfaces = \
+            merge_relationship_type_and_instance_interfaces(
+                relationship_type=relationship_type,
+                relationship_instance=relationship_instance
+            )
 
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
 
-    def test_merge_relationship_type_no_source_interfaces_and_instance_interfaces(self):
+    def test_merge_relationship_type_no_source_interfaces_and_instance_interfaces(self):  # NOQA
 
         relationship_type = self._create_relationship_type(
             target_interfaces={
@@ -853,15 +859,16 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
-        actual_merged_interfaces = merge_relationship_type_and_instance_interfaces(
-            relationship_type=relationship_type,
-            relationship_instance=relationship_instance
-        )
+        actual_merged_interfaces = \
+            merge_relationship_type_and_instance_interfaces(
+                relationship_type=relationship_type,
+                relationship_instance=relationship_instance
+            )
 
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
 
-    def test_merge_relationship_no_target_interfaces_type_and_instance_interfaces(self):
+    def test_merge_relationship_no_target_interfaces_type_and_instance_interfaces(self):  # NOQA
 
         relationship_type = self._create_relationship_type(
             source_interfaces={
@@ -918,10 +925,11 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
-        actual_merged_interfaces = merge_relationship_type_and_instance_interfaces(
-            relationship_type=relationship_type,
-            relationship_instance=relationship_instance
-        )
+        actual_merged_interfaces = \
+            merge_relationship_type_and_instance_interfaces(
+                relationship_type=relationship_type,
+                relationship_instance=relationship_instance
+            )
 
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
@@ -999,10 +1007,11 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
-        actual_merged_interfaces = merge_relationship_type_and_instance_interfaces(
-            relationship_type=relationship_type,
-            relationship_instance=relationship_instance
-        )
+        actual_merged_interfaces = \
+            merge_relationship_type_and_instance_interfaces(
+                relationship_type=relationship_type,
+                relationship_instance=relationship_instance
+            )
 
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
@@ -1080,10 +1089,11 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
-        actual_merged_interfaces = merge_relationship_type_and_instance_interfaces(
-            relationship_type=relationship_type,
-            relationship_instance=relationship_instance
-        )
+        actual_merged_interfaces = \
+            merge_relationship_type_and_instance_interfaces(
+                relationship_type=relationship_type,
+                relationship_instance=relationship_instance
+            )
 
         self.assertDictEqual(actual_merged_interfaces,
                              expected_merged_interfaces)
