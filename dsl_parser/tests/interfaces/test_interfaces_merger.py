@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import testtools
+from sets import Set
 
 from dsl_parser.interfaces.interfaces_merger import InterfaceMerger
 from dsl_parser.interfaces.interfaces_merger import InterfacesMerger
@@ -37,7 +38,7 @@ class InterfaceMergerTest(testtools.TestCase):
             overridden_interface=overridden_interface,
             operation_merger=MockOperationMerger
         )
-        actual_merged_interface_keys = set(merger.merge().keys())
+        actual_merged_interface_keys = Set(merger.merge().keys())
         self.assertEqual(expected_merged_interface_keys,
                          actual_merged_interface_keys)
 
@@ -50,7 +51,7 @@ class InterfaceMergerTest(testtools.TestCase):
             'start': None
         }
 
-        expected_merged_interface_keys = {'stop', 'start'}
+        expected_merged_interface_keys = Set(['stop', 'start'])
 
         self._assert_interface(
             overriding_interface=overriding_interface,
@@ -67,7 +68,7 @@ class InterfaceMergerTest(testtools.TestCase):
             'stop': None
         }
 
-        expected_merged_interface_keys = {'stop'}
+        expected_merged_interface_keys = Set(['stop'])
 
         self._assert_interface(
             overriding_interface=overriding_interface,
@@ -93,7 +94,7 @@ class InterfacesMergerTest(testtools.TestCase):
             overridden_interfaces=overridden_interfaces,
             operation_merger=MockOperationMerger
         )
-        actual_merged_interfaces_keys = merger.merge().keys()
+        actual_merged_interfaces_keys = Set(merger.merge().keys())
         self.assertEqual(expected_merged_interfaces_keys,
                          actual_merged_interfaces_keys)
 
@@ -106,7 +107,7 @@ class InterfacesMergerTest(testtools.TestCase):
             'interface2': {}
         }
 
-        expected_merged_interfaces_keys = ['interface1', 'interface2']
+        expected_merged_interfaces_keys = Set(['interface1', 'interface2'])
         self._assert_interfaces(
             overriding_interfaces=overriding_interfaces,
             overridden_interfaces=overridden_interfaces,
@@ -122,7 +123,7 @@ class InterfacesMergerTest(testtools.TestCase):
             'interface1': {}
         }
 
-        expected_merged_interfaces_keys = ['interface1']
+        expected_merged_interfaces_keys = Set(['interface1'])
         self._assert_interfaces(
             overriding_interfaces=overriding_interfaces,
             overridden_interfaces=overridden_interfaces,
