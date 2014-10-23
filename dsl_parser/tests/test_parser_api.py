@@ -20,16 +20,35 @@ from dsl_parser import constants
 from dsl_parser.constants import PLUGIN_NAME_KEY
 from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 from urllib import pathname2url
+from dsl_parser.interfaces.constants import NO_OP
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.parser import TYPE_HIERARCHY, parse_from_path, parse_from_url
 from dsl_parser.parser import parse as dsl_parse
+from dsl_parser.interfaces.utils import operation_mapping
 
 
-def op_struct(plugin_name, operation_mapping, properties=None,
-              properties_field_name='properties'):
-    result = {'plugin': plugin_name, 'operation': operation_mapping}
-    if properties:
-        result[properties_field_name] = properties
+def op_struct(plugin_name,
+              mapping,
+              inputs=None):
+    if not inputs:
+        inputs = {}
+    result = {
+        'plugin': plugin_name,
+        'operation': mapping,
+        'inputs': inputs
+    }
+    return result
+
+
+def workflow_op_struct(plugin_name,
+                       mapping,
+                       parameters=None):
+    result = {
+        'plugin': plugin_name,
+        'operation': mapping,
+    }
+    if parameters:
+        result['parameters'] = parameters
     return result
 
 
@@ -92,12 +111,18 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
-                - start: test_plugin.start
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
         properties:
             install_agent:
-                default: 'false'
+                default: false
             key: {}
             number:
                 default: 80
@@ -126,49 +151,24 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
             test_interface2:
-                - start: other_test_plugin.start
-                - shutdown: other_test_plugin.shutdown
+                start:
+                    implementation: other_test_plugin.start
+                    inputs: {}
+                shutdown:
+                    implementation: other_test_plugin.shutdown
+                    inputs: {}
 
 plugins:
     other_test_plugin:
         executor: central_deployment_agent
         source: dummy
-"""
-        result = self.parse(yaml)
-        node = result['nodes'][0]
-        self._assert_blueprint(result)
-
-        operations = node['operations']
-        self.assertEquals(op_struct('other_test_plugin', 'start'),
-                          operations['start'])
-        self.assertEquals(op_struct('other_test_plugin', 'start'),
-                          operations['test_interface2.start'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
-                          operations['shutdown'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
-                          operations['test_interface2.shutdown'])
-
-    def test_merge_plugins_and_interfaces_imports(self):
-        yaml = self.create_yaml_with_imports(
-            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
-plugins:
-    other_test_plugin:
-        executor: central_deployment_agent
-        source: dummy
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
-            test_interface2:
-                - start: other_test_plugin.start
-                - shutdown: other_test_plugin.shutdown
 """
         result = self.parse(yaml)
         node = result['nodes'][0]
@@ -567,27 +567,49 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
             test_interface2:
-                - start: test_plugin2.start
-                - stop: test_plugin2.stop
+                start:
+                    implementation: test_plugin2.start
+                    inputs: {}
+                stop:
+                    implementation: test_plugin2.stop
+                    inputs: {}
             test_interface3:
-                - op1: test_plugin3.op
-        derived_from: "test_type_parent"
+                op1:
+                    implementation: test_plugin3.op
+                    inputs: {}
+        derived_from: test_type_parent
 
     test_type_parent:
         interfaces:
             test_interface1:
-                - install: nop_plugin.install
-                - terminate: nop_plugin.install
+                install:
+                    implementation: nop_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: nop_plugin.install
+                    inputs: {}
             test_interface2:
-                - start: test_plugin2.start
-                - stop: test_plugin2.stop
+                start:
+                    implementation: test_plugin2.start
+                    inputs: {}
+                stop:
+                    implementation: test_plugin2.stop
+                    inputs: {}
             test_interface3:
-                 - op1: test_plugin3.op
+                op1:
+                    implementation: test_plugin3.op
+                    inputs: {}
             test_interface4:
-                - op2: test_plugin4.op2
+                op2:
+                    implementation: test_plugin4.op2
+                    inputs: {}
 
 plugins:
     test_plugin2:
@@ -632,21 +654,33 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
-        derived_from: "test_type_parent"
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
+        derived_from: test_type_parent
 
     test_type_parent:
-        derived_from: "test_type_grandparent"
+        derived_from: test_type_grandparent
 
     test_type_grandparent:
         interfaces:
             test_interface1:
-                - install: non_plugin.install
-                - terminate: non_plugin.terminate
+                install:
+                    implementation: non_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: non_plugin.terminate
+                    inputs: {}
             test_interface2:
-                - start: test_plugin2.start
-                - stop: test_plugin2.stop
+                start:
+                    implementation: test_plugin2.start
+                    inputs: {}
+                stop:
+                    implementation: test_plugin2.stop
+                    inputs: {}
 
 plugins:
     test_plugin2:
@@ -677,11 +711,19 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
             test_interface2:
-                - install: other_test_plugin.install
-                - shutdown: other_test_plugin.shutdown
+                install:
+                    implementation: other_test_plugin.install
+                    inputs: {}
+                shutdown:
+                    implementation: other_test_plugin.shutdown
+                    inputs: {}
 plugins:
     other_test_plugin:
         executor: central_deployment_agent
@@ -763,13 +805,15 @@ relationships:
 relationships:
     empty_rel: {}
     test_relationship:
-        derived_from: "empty_rel"
+        derived_from: empty_rel
         source_interfaces:
             test_interface3:
-                - test_interface3_op1
+                test_interface3_op1: {}
         target_interfaces:
             test_interface4:
-                - test_interface4_op1: test_plugin.task_name
+                test_interface4_op1:
+                    implementation: test_plugin.task_name
+                    inputs: {}
         """
         result = self.parse(yaml)
         self._assert_blueprint(result)
@@ -780,22 +824,29 @@ relationships:
 
         result_test_interface_3 = \
             test_relationship['source_interfaces']['test_interface3']
-        self.assertEquals('test_interface3_op1', result_test_interface_3[0])
+        self.assertEquals(NO_OP,
+                          result_test_interface_3['test_interface3_op1'])
         result_test_interface_4 = \
             test_relationship['target_interfaces']['test_interface4']
-        self.assertEquals({'test_interface4_op1': 'test_plugin.task_name'},
-                          result_test_interface_4[0])
+        self.assertEquals(
+            operation_mapping(implementation='test_plugin.task_name',
+                              inputs={}),
+            result_test_interface_4['test_interface4_op1'])
 
     def test_top_level_relationships_recursive_imports(self):
         bottom_level_yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
 relationships:
     empty_rel: {}
     test_relationship:
-        derived_from: "empty_rel"
+        derived_from: empty_rel
         source_interfaces:
             test_interface2:
-                -   install: test_plugin.install
-                -   terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
         """
 
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
@@ -811,11 +862,15 @@ relationships:
     test_relationship3:
         target_interfaces:
             test_interface2:
-                -   install: test_plugin.install
-                -   terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
 
 imports:
-    -   {0}""".format(mid_file_name)
+    - """ + mid_file_name
 
         result = self.parse(top_level_yaml)
         self._assert_blueprint(result)
@@ -824,38 +879,54 @@ imports:
         test_relationship = result['relationships']['test_relationship']
         self.assertEquals('test_relationship',
                           test_relationship['name'])
-        self.assertEqual({'install': 'test_plugin.install'},
-                         test_relationship['source_interfaces']
-                         ['test_interface2'][0])
-        self.assertEqual({'terminate': 'test_plugin.terminate'},
-                         test_relationship['source_interfaces']
-                         ['test_interface2'][1])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.install',
+                              inputs={}),
+            test_relationship['source_interfaces'][
+                'test_interface2']['install'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.terminate',
+                              inputs={}),
+            test_relationship['source_interfaces'][
+                'test_interface2']['terminate'])
         self.assertEquals(
-            2, len(test_relationship['source_interfaces']['test_interface2']))
-        self.assertEquals(3, len(test_relationship))
+            2, len(test_relationship['source_interfaces'][
+                'test_interface2']))
+        self.assertEquals(5, len(test_relationship))
 
         test_relationship2 = result['relationships']['test_relationship2']
-        self.assertEquals('test_relationship2', test_relationship2['name'])
-        self.assertEqual({'install': 'test_plugin.install'},
-                         test_relationship2['target_interfaces']
-                         ['test_interface2'][0])
-        self.assertEqual({'terminate': 'test_plugin.terminate'},
-                         test_relationship2['target_interfaces']
-                         ['test_interface2'][1])
+        self.assertEquals('test_relationship2',
+                          test_relationship2['name'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.install',
+                              inputs={}),
+            test_relationship2['target_interfaces'][
+                'test_interface2']['install'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.terminate',
+                              inputs={}),
+            test_relationship2['target_interfaces'][
+                'test_interface2']['terminate'])
         self.assertEquals(
-            2, len(test_relationship2['target_interfaces']['test_interface2']))
-        self.assertEquals(3, len(test_relationship2))
+            2, len(test_relationship2['target_interfaces'][
+                'test_interface2']))
+        self.assertEquals(5, len(test_relationship2))
 
         test_relationship3 = result['relationships']['test_relationship3']
         self.assertEquals('test_relationship3', test_relationship3['name'])
-        self.assertEqual({'install': 'test_plugin.install'},
-                         test_relationship3['target_interfaces']
-                         ['test_interface2'][0])
-        self.assertEqual({'terminate': 'test_plugin.terminate'},
-                         test_relationship3['target_interfaces']
-                         ['test_interface2'][1])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.install',
+                              inputs={}),
+            test_relationship3['target_interfaces'][
+                'test_interface2']['install'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.terminate',
+                              inputs={}),
+            test_relationship3['target_interfaces'][
+                'test_interface2']['terminate'])
         self.assertEquals(
-            2, len(test_relationship3['target_interfaces']['test_interface2']))
+            2, len(test_relationship3['target_interfaces'][
+                'test_interface2']))
         self.assertEquals(2, len(test_relationship3))
 
     def test_top_level_relationship_properties(self):
@@ -988,11 +1059,11 @@ relationships:
     test_node2:
         type: test_type
         relationships:
-            -   type: "test_relationship"
-                target: "test_node"
+            -   type: test_relationship
+                target: test_node
                 source_interfaces:
                     test_interface1:
-                        - install: test_plugin.install
+                        install: test_plugin.install
 relationships:
     test_relationship: {}
 plugins:
@@ -1009,9 +1080,9 @@ plugins:
         relationship = nodes[1]['relationships'][0]
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_node', relationship['target_id'])
-        self.assertEqual({'install': 'test_plugin.install'},
-                         relationship['source_interfaces']
-                         ['test_interface1'][0])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.install', inputs={}),
+            relationship['source_interfaces']['test_interface1']['install'])
         self.assertEquals('reachable', relationship['state'])
         relationship_source_operations = relationship['source_operations']
         self.assertEqual(op_struct('test_plugin', 'install'),
@@ -1021,7 +1092,7 @@ plugins:
             relationship_source_operations['test_interface1.install'])
         self.assertEqual(2, len(relationship_source_operations))
 
-        self.assertEquals(8, len(relationship))
+        self.assertEquals(10, len(relationship))
         plugin_def = nodes[1]['plugins']['test_plugin']
         self.assertEquals('test_plugin', plugin_def['name'])
 
@@ -1057,8 +1128,8 @@ relationships:
                           nodes[1]['relationships'][0]['state'])
         self.assertEquals('reachable',
                           nodes[1]['relationships'][1]['state'])
-        self.assertEquals(6, len(nodes[1]['relationships'][0]))
-        self.assertEquals(6, len(nodes[1]['relationships'][1]))
+        self.assertEquals(10, len(nodes[1]['relationships'][0]))
+        self.assertEquals(10, len(nodes[1]['relationships'][1]))
 
     def test_instance_relationships_relationship_inheritance(self):
         # possibly 'inheritance' is the wrong term to use here,
@@ -1075,14 +1146,16 @@ relationships:
                 target: test_node
                 source_interfaces:
                     interface1:
-                        - op1: test_plugin.task_name1
+                        op1: test_plugin.task_name1
 relationships:
     relationship: {}
     test_relationship:
-        derived_from: "relationship"
+        derived_from: relationship
         target_interfaces:
             interface2:
-                - op2: test_plugin.task_name2
+                op2:
+                    implementation: test_plugin.task_name2
+                    inputs: {}
 plugins:
     test_plugin:
         executor: central_deployment_agent
@@ -1096,12 +1169,14 @@ plugins:
         self.assertEquals('test_relationship', relationship['type'])
         self.assertEquals('test_node', relationship['target_id'])
         self.assertEquals('reachable', relationship['state'])
-        self.assertEqual({'op1': 'test_plugin.task_name1'},
-                         relationship['source_interfaces']
-                         ['interface1'][0])
-        self.assertEqual({'op2': 'test_plugin.task_name2'},
-                         relationship['target_interfaces']
-                         ['interface2'][0])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.task_name1',
+                              inputs={}),
+            relationship['source_interfaces']['interface1']['op1'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.task_name2',
+                              inputs={}),
+            relationship['target_interfaces']['interface2']['op2'])
 
         rel_source_ops = relationship['source_operations']
 
@@ -1191,21 +1266,25 @@ relationship_implementations:
                 target: test_node
                 source_interfaces:
                     test_interface3:
-                        - install: test_plugin.install
+                        install: test_plugin.install
                 target_interfaces:
                     test_interface1:
-                        - install: test_plugin.install
+                        install: test_plugin.install
 relationships:
     relationship:
-        derived_from: "parent_relationship"
+        derived_from: parent_relationship
         source_interfaces:
             test_interface2:
-                -   install: test_plugin.install
-                -   terminate: test_plugin.terminate
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
     parent_relationship:
         target_interfaces:
             test_interface3:
-                - install
+                install: {}
 plugins:
     test_plugin:
         executor: central_deployment_agent
@@ -1220,33 +1299,38 @@ plugins:
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(2, len(parent_relationship))
-        self.assertEquals(4, len(relationship))
+        self.assertEquals(5, len(relationship))
         self.assertEquals(10, len(node_relationship))
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
         self.assertEquals(1, len(parent_relationship['target_interfaces']
                                                     ['test_interface3']))
-        self.assertEquals('install',
-                          parent_relationship['target_interfaces']
-                                             ['test_interface3'][0])
+        self.assertEquals(
+            {},  # TODO - This is a bug.
+                 # Top level relationships return as is, without augmentation
+            parent_relationship['target_interfaces'][
+                'test_interface3']['install'])
 
         self.assertEquals('relationship', relationship['name'])
         self.assertEquals('parent_relationship', relationship['derived_from'])
         self.assertEquals(1, len(relationship['target_interfaces']))
         self.assertEquals(1, len(relationship['target_interfaces']
                                              ['test_interface3']))
-        self.assertEquals('install', relationship['target_interfaces']
-                                                 ['test_interface3'][0])
+        self.assertEquals(
+            NO_OP,
+            relationship['target_interfaces']['test_interface3']['install'])
         self.assertEquals(1, len(relationship['source_interfaces']))
         self.assertEquals(2, len(relationship['source_interfaces']
                                              ['test_interface2']))
-        self.assertEqual({'install': 'test_plugin.install'},
-                         relationship['source_interfaces']
-                         ['test_interface2'][0])
-        self.assertEqual({'terminate': 'test_plugin.terminate'},
-                         relationship['source_interfaces']
-                         ['test_interface2'][1])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.install', inputs={}),
+            relationship['source_interfaces']['test_interface2']['install'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.terminate',
+                              inputs={}),
+            relationship['source_interfaces'][
+                'test_interface2']['terminate'])
 
         self.assertEquals('relationship', node_relationship['type'])
         self.assertEquals('test_node', node_relationship['target_id'])
@@ -1254,27 +1338,34 @@ plugins:
         self.assertEquals(2, len(node_relationship['target_interfaces']))
         self.assertEquals(1, len(node_relationship['target_interfaces']
                                                   ['test_interface3']))
-        self.assertEquals('install', node_relationship['target_interfaces']
-                                                      ['test_interface3'][0])
+        self.assertEquals(
+            NO_OP,
+            node_relationship['target_interfaces'][
+                'test_interface3']['install'])
         self.assertEquals(1, len(node_relationship['target_interfaces']
                                                   ['test_interface1']))
-        self.assertEqual({'install': 'test_plugin.install'},
-                         node_relationship['target_interfaces']
-                         ['test_interface1'][0])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.install', inputs={}),
+            node_relationship['target_interfaces'][
+                'test_interface1']['install'])
         self.assertEquals(2, len(node_relationship['source_interfaces']))
         self.assertEquals(1, len(node_relationship['source_interfaces']
                                                   ['test_interface3']))
-        self.assertEquals({'install': 'test_plugin.install'},
-                          node_relationship['source_interfaces']
-                                           ['test_interface2'][0])
+        self.assertEquals(
+            operation_mapping(implementation='test_plugin.install', inputs={}),
+            node_relationship['source_interfaces'][
+                'test_interface2']['install'])
         self.assertEquals(2, len(node_relationship['source_interfaces']
                                                   ['test_interface2']))
-        self.assertEquals({'install': 'test_plugin.install'},
-                          node_relationship['source_interfaces']
-                                           ['test_interface2'][0])
-        self.assertEquals({'terminate': 'test_plugin.terminate'},
-                          node_relationship['source_interfaces']
-                                           ['test_interface2'][1])
+        self.assertEquals(
+            operation_mapping(implementation='test_plugin.install', inputs={}),
+            node_relationship['source_interfaces'][
+                'test_interface2']['install'])
+        self.assertEquals(
+            operation_mapping(implementation='test_plugin.terminate',
+                              inputs={}),
+            node_relationship['source_interfaces'][
+                'test_interface2']['terminate'])
 
         rel_source_ops = node_relationship['source_operations']
         self.assertEquals(4, len(rel_source_ops))
@@ -1289,8 +1380,8 @@ plugins:
 
         rel_target_ops = node_relationship['target_operations']
         self.assertEquals(2, len(rel_target_ops))
-        self.assertEqual(op_struct('test_plugin', 'install'),
-                         rel_target_ops['install'])
+        self.assertEqual(op_struct('', '', {}),
+                         rel_target_ops['test_interface3.install'])
         self.assertEqual(op_struct('test_plugin', 'install'),
                          rel_target_ops['test_interface1.install'])
 
@@ -1305,29 +1396,38 @@ plugins:
                 target: test_node
                 target_interfaces:
                     test_interface:
-                        - destroy: test_plugin.destroy1
+                        destroy: test_plugin.destroy1
                 source_interfaces:
                     test_interface:
-                        - install2: test_plugin.install2
-                        - destroy2: test_plugin.destroy2
+                        install2: test_plugin.install2
+                        destroy2: test_plugin.destroy2
 relationships:
-    relationship:
-        derived_from: "parent_relationship"
-        target_interfaces:
-            test_interface:
-                -   install: test_plugin.install
-                -   terminate: test_plugin.terminate
-        source_interfaces:
-            test_interface:
-                -   install2: test_plugin.install
-                -   terminate2: test_plugin.terminate
     parent_relationship:
         target_interfaces:
             test_interface:
-                - install
+                install: {}
         source_interfaces:
             test_interface:
-                - install2
+                install2: {}
+    relationship:
+        derived_from: parent_relationship
+        target_interfaces:
+            test_interface:
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
+        source_interfaces:
+            test_interface:
+                install2:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate2:
+                    implementation: test_plugin.terminate
+                    inputs: {}
+
 plugins:
     test_plugin:
         executor: central_deployment_agent
@@ -1342,42 +1442,45 @@ plugins:
         parent_relationship = result['relationships']['parent_relationship']
         self.assertEquals(2, len(result['relationships']))
         self.assertEquals(3, len(parent_relationship))
-        self.assertEquals(4, len(relationship))
+        self.assertEquals(5, len(relationship))
         self.assertEquals(10, len(node_relationship))
 
         self.assertEquals('parent_relationship', parent_relationship['name'])
         self.assertEquals(1, len(parent_relationship['target_interfaces']))
         self.assertEquals(1, len(parent_relationship['target_interfaces']
                                                     ['test_interface']))
-        self.assertEquals('install', parent_relationship['target_interfaces']
-                                                        ['test_interface'][0])
+        self.assertIn('install', parent_relationship['target_interfaces']
+                                                    ['test_interface'])
         self.assertEquals(1, len(parent_relationship['source_interfaces']))
         self.assertEquals(1, len(parent_relationship['source_interfaces']
                                                     ['test_interface']))
-        self.assertEquals('install2',
-                          parent_relationship['source_interfaces']
-                                             ['test_interface'][0])
+        self.assertIn('install2', parent_relationship[
+            'source_interfaces']['test_interface'])
 
         self.assertEquals('relationship', relationship['name'])
         self.assertEquals('parent_relationship', relationship['derived_from'])
         self.assertEquals(1, len(relationship['target_interfaces']))
         self.assertEquals(2, len(relationship['target_interfaces']
                                              ['test_interface']))
-        self.assertEqual({'install': 'test_plugin.install'},
-                         relationship['target_interfaces']
-                         ['test_interface'][0])
-        self.assertEqual({'terminate': 'test_plugin.terminate'},
-                         relationship['target_interfaces']
-                         ['test_interface'][1])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.install', inputs={}),
+            relationship['target_interfaces']['test_interface']['install'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.terminate',
+                              inputs={}),
+            relationship['target_interfaces'][
+                'test_interface']['terminate'])
         self.assertEquals(1, len(relationship['source_interfaces']))
         self.assertEquals(
             2, len(relationship['source_interfaces']['test_interface']))
-        self.assertEqual({'install2': 'test_plugin.install'},
-                         relationship['source_interfaces']
-                         ['test_interface'][0])
-        self.assertEqual({'terminate2': 'test_plugin.terminate'},
-                         relationship['source_interfaces']
-                         ['test_interface'][1])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.install', inputs={}),
+            relationship['source_interfaces']['test_interface']['install2'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.terminate',
+                              inputs={}),
+            relationship['source_interfaces'][
+                'test_interface']['terminate2'])
 
         self.assertEquals('relationship', node_relationship['type'])
         self.assertEquals('test_node', node_relationship['target_id'])
@@ -1385,27 +1488,39 @@ plugins:
         self.assertEquals(1, len(node_relationship['target_interfaces']))
         self.assertEquals(
             3, len(node_relationship['target_interfaces']['test_interface']))
-        self.assertEqual({'install': 'test_plugin.install'},
-                         node_relationship['target_interfaces']
-                         ['test_interface'][0])
-        self.assertEqual({'terminate': 'test_plugin.terminate'},
-                         relationship['target_interfaces']
-                         ['test_interface'][1])
-        self.assertEqual({'destroy': 'test_plugin.destroy1'},
-                         node_relationship['target_interfaces']
-                         ['test_interface'][2])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.install',
+                              inputs={}),
+            node_relationship['target_interfaces'][
+                'test_interface']['install'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.terminate',
+                              inputs={}),
+            relationship['target_interfaces'][
+                'test_interface']['terminate'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.destroy1',
+                              inputs={}),
+            node_relationship['target_interfaces'][
+                'test_interface']['destroy'])
         self.assertEquals(1, len(node_relationship['source_interfaces']))
         self.assertEquals(
-            3, len(node_relationship['source_interfaces']['test_interface']))
-        self.assertEquals({'install2': 'test_plugin.install2'},
-                          node_relationship['source_interfaces']
-                                           ['test_interface'][0])
-        self.assertEqual({'terminate2': 'test_plugin.terminate'},
-                         relationship['source_interfaces']
-                         ['test_interface'][1])
-        self.assertEquals({'destroy2': 'test_plugin.destroy2'},
-                          node_relationship['source_interfaces']
-                                           ['test_interface'][2])
+            3, len(node_relationship['source_interfaces'][
+                'test_interface']))
+        self.assertEquals(
+            operation_mapping(implementation='test_plugin.install2',
+                              inputs={}),
+            node_relationship['source_interfaces'][
+                'test_interface']['install2'])
+        self.assertEqual(
+            operation_mapping(implementation='test_plugin.terminate',
+                              inputs={}),
+            relationship['source_interfaces']['test_interface']['terminate2'])
+        self.assertEquals(
+            operation_mapping(implementation='test_plugin.destroy2',
+                              inputs={}),
+            node_relationship['source_interfaces'][
+                'test_interface']['destroy2'])
 
         rel_source_ops = node_relationship['source_operations']
         self.assertEqual(op_struct('test_plugin', 'install2'),
@@ -1591,7 +1706,9 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
 plugins:
     test_plugin:
         executor: host_agent
@@ -1621,7 +1738,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         result = self.parse(yaml)
@@ -1648,7 +1767,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         result = self.parse(yaml)
@@ -1674,7 +1795,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         result = self.parse(yaml)
@@ -1699,7 +1822,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         result = self.parse(yaml)
@@ -1739,11 +1864,15 @@ node_types:
     test_type:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
     test_type2:
         interfaces:
             test_interface2:
-                - install: test_plugin2.install
+                install:
+                    implementation: test_plugin2.install
+                    inputs: {}
 relationships:
     cloudify.relationships.contained_in: {}
 plugins:
@@ -1850,20 +1979,6 @@ imports:
         result = parse_from_path(top_file_name)
         self._assert_blueprint(result)
 
-    def test_node_interfaces_operation_mapping(self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-        interfaces:
-            test_interface1:
-                - install: test_plugin.install
-                - terminate: test_plugin.terminate
-node_types:
-    test_type:
-        properties:
-            key: {}
-            """
-        result = self.parse(yaml)
-        self._assert_blueprint(result)
-
     def test_node_without_host_id(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
     test_node2:
@@ -1889,16 +2004,16 @@ node_types:
     test_node2:
         type: test_type
         relationships:
-            -   type: "test_relationship"
-                target: "test_node"
+            -   type: test_relationship
+                target: test_node
                 source_interfaces:
                     test_interface1:
-                        - install: test_plugin1.install
-            -   type: "test_relationship"
-                target: "test_node"
+                        install: test_plugin1.install
+            -   type: test_relationship
+                target: test_node
                 target_interfaces:
                     test_interface1:
-                        - install: test_plugin2.install
+                        install: test_plugin2.install
 relationships:
     test_relationship: {}
 plugins:
@@ -1927,7 +2042,7 @@ plugins:
         self.assertEqual(op_struct('test_plugin1', 'install'),
                          rel1_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel1_source_ops))
-        self.assertEquals(8, len(relationship1))
+        self.assertEquals(10, len(relationship1))
         plugin1_def = nodes[1]['plugins']['test_plugin1']
         self.assertEquals('test_plugin1', plugin1_def['name'])
 
@@ -1941,7 +2056,7 @@ plugins:
         self.assertEqual(op_struct('test_plugin2', 'install'),
                          rel2_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel2_source_ops))
-        self.assertEquals(8, len(relationship2))
+        self.assertEquals(10, len(relationship2))
 
         # expecting the other plugin to be under test_node rather than
         # test_node2:
@@ -1984,43 +2099,19 @@ node_types:
         self.assertEquals('test_type2', node2['type'])
         self.assertEquals(1, node2['instances']['deploy'])
 
-    def test_operation_mapping_with_properties_injection(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                - install:
-                    mapping: test_plugin.install
-                    properties:
-                        key: "value"
-"""
-        result = self.parse(yaml)
-        node = result['nodes'][0]
-        self.assertEquals('test_type', node['type'])
-        operations = node['operations']
-        self.assertEquals(
-            op_struct('test_plugin', 'install', {'key': 'value'}),
-            operations['install'])
-        self.assertEquals(
-            op_struct('test_plugin', 'install', {'key': 'value'}),
-            operations['test_interface1.install'])
-
     def test_relationship_operation_mapping_with_properties_injection(self):
         yaml = self.MINIMAL_BLUEPRINT + """
     test_node2:
         type: test_type
         relationships:
-            -   type: "test_relationship"
-                target: "test_node"
+            -   type: test_relationship
+                target: test_node
                 source_interfaces:
                     test_interface1:
-                        - install:
-                            mapping: test_plugin.install
-                            properties:
-                                key: "value"
+                        install:
+                            implementation: test_plugin.install
+                            inputs:
+                                key: value
 relationships:
     test_relationship: {}
 plugins:
@@ -2173,7 +2264,7 @@ workflows:
         result = self.parse(yaml)
         workflows = result['workflows']
         self.assertEqual(1, len(workflows))
-        self.assertEqual(op_struct('test_plugin', 'workflow1'),
+        self.assertEqual(workflow_op_struct('test_plugin', 'workflow1',),
                          workflows['workflow1'])
         workflow_plugins_to_install = result['workflow_plugins_to_install']
         self.assertEqual(1, len(workflow_plugins_to_install))
@@ -2211,8 +2302,9 @@ workflows:
                 }
             }
         }
-        self.assertEqual(op_struct('test_plugin', 'workflow1',
-                                   parameters, 'parameters'),
+        self.assertEqual(workflow_op_struct('test_plugin',
+                                            'workflow1',
+                                            parameters),
                          workflows['workflow1'])
         workflow_plugins_to_install = result['workflow_plugins_to_install']
         self.assertEqual(1, len(workflow_plugins_to_install))
@@ -2239,9 +2331,9 @@ workflows:
         result = self.parse(yaml)
         workflows = result['workflows']
         self.assertEqual(2, len(workflows))
-        self.assertEqual(op_struct('test_plugin', 'workflow1'),
+        self.assertEqual(workflow_op_struct('test_plugin', 'workflow1'),
                          workflows['workflow1'])
-        self.assertEqual(op_struct('test_plugin2', 'workflow2'),
+        self.assertEqual(workflow_op_struct('test_plugin2', 'workflow2'),
                          workflows['workflow2'])
         workflow_plugins_to_install = result['workflow_plugins_to_install']
         self.assertEqual(2, len(workflow_plugins_to_install))
@@ -2583,6 +2675,86 @@ policy_types:
         self.assertEqual(result['groups'],
                          expected_result['groups'])
 
+    def test_operation_mapping_with_properties_injection(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                install:
+                    implementation: test_plugin.install
+                    inputs:
+                        key:
+                            default: value
+"""
+        result = self.parse(yaml)
+        node = result['nodes'][0]
+        self.assertEquals('test_type', node['type'])
+        operations = node['operations']
+        self.assertEquals(
+            op_struct('test_plugin', 'install', {'key': 'value'}),
+            operations['install'])
+        self.assertEquals(
+            op_struct('test_plugin', 'install', {'key': 'value'}),
+            operations['test_interface1.install'])
+
+    def test_merge_plugins_and_interfaces_imports(self):
+        yaml = self.create_yaml_with_imports(
+            [self.BASIC_NODE_TEMPLATES_SECTION, self.BASIC_PLUGIN]) + """
+plugins:
+    other_test_plugin:
+        executor: central_deployment_agent
+        source: dummy
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: test_plugin.terminate
+                    inputs: {}
+            test_interface2:
+                start:
+                    implementation: other_test_plugin.start
+                    inputs: {}
+                shutdown:
+                    implementation: other_test_plugin.shutdown
+                    inputs: {}
+"""
+        result = self.parse(yaml)
+        node = result['nodes'][0]
+        self._assert_blueprint(result)
+
+        operations = node['operations']
+        self.assertEquals(op_struct('other_test_plugin', 'start'),
+                          operations['start'])
+        self.assertEquals(op_struct('other_test_plugin', 'start'),
+                          operations['test_interface2.start'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
+                          operations['shutdown'])
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
+                          operations['test_interface2.shutdown'])
+
+    def test_node_interfaces_operation_mapping(self):
+        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
+        interfaces:
+            test_interface1:
+                install: test_plugin.install
+                terminate: test_plugin.terminate
+node_types:
+    test_type:
+        properties:
+            key: {}
+            """
+        result = self.parse(yaml)
+        self._assert_blueprint(result)
+
     def test_property_schema_type_property_with_intrinsic_functions(self):
         yaml = """
 node_templates:
@@ -2710,26 +2882,33 @@ imports:
     def test_script_mapping(self):
         yaml = self.BASIC_VERSION_SECTION + """
 plugins:
-    {0}:
+    script:
         executor: central_deployment_agent
         install: false
 node_types:
     type:
         interfaces:
             test:
-                - op: stub.py
-                - op2:
-                    mapping: stub.py
-                    properties:
-                        key: value
+                op:
+                    implementation: stub.py
+                    inputs: {}
+                op2:
+                    implementation: stub.py
+                    inputs:
+                        key:
+                            default: value
 relationships:
     relationship:
         source_interfaces:
             test:
-                - op: stub.py
+                op:
+                    implementation: stub.py
+                    inputs: {}
         target_interfaces:
             test:
-                - op: stub.py
+                op:
+                    implementation: stub.py
+                    inputs: {}
 workflows:
     workflow: stub.py
     workflow2:
@@ -2747,7 +2926,7 @@ node_templates:
     node2:
         type: type
 
-""".format(constants.SCRIPT_PLUGIN_NAME)
+"""
         self.make_file_with_name(content='content',
                                  filename='stub.py')
         yaml_path = self.make_file_with_name(content=yaml,
@@ -2764,13 +2943,13 @@ node_templates:
         workflow2 = result['workflows']['workflow2']
 
         def assert_operation(op, extra_properties=False):
-            properties = {'script_path': 'stub.py'}
+            inputs = {'script_path': 'stub.py'}
             if extra_properties:
-                properties.update({'key': 'value'})
+                inputs.update({'key': 'value'})
             self.assertEqual(op, op_struct(
                 plugin_name=constants.SCRIPT_PLUGIN_NAME,
-                operation_mapping=constants.SCRIPT_PLUGIN_RUN_TASK,
-                properties=properties))
+                mapping=constants.SCRIPT_PLUGIN_RUN_TASK,
+                inputs=inputs))
 
         assert_operation(operation)
         assert_operation(operation2, extra_properties=True)
@@ -2804,8 +2983,12 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_plugin.start
-                - create: test_management_plugin.create
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
+                create:
+                    implementation: test_management_plugin.create
+                    inputs: {}
 plugins:
     test_plugin:
         executor: host_agent
@@ -2835,7 +3018,9 @@ node_types:
     cloudify.types.base:
         interfaces:
             test_interface:
-                - start: cloud.server.start
+                start:
+                    implementation: cloud.server.start
+                    inputs: {}
 plugins:
     cloud:
         executor: central_deployment_agent
@@ -2856,7 +3041,9 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_management_plugin.start
+                start:
+                    implementation: test_management_plugin.start
+                    inputs: {}
 
 plugins:
     test_management_plugin:
@@ -2886,8 +3073,12 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_management_plugin1.start
-                - create: test_management_plugin2.create
+                start:
+                    implementation: test_management_plugin1.start
+                    inputs: {}
+                create:
+                    implementation: test_management_plugin2.create
+                    inputs: {}
 
 plugins:
     test_management_plugin1:
@@ -2917,7 +3108,9 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
 
 plugins:
     test_management_plugin:
@@ -2947,8 +3140,12 @@ node_types:
     cloudify.types.host:
         interfaces:
             test_interface:
-                - start: test_management_plugin.start
-                - create: test_management_plugin.create
+                start:
+                    implementation: test_management_plugin.start
+                    inputs: {}
+                create:
+                    implementation: test_management_plugin.create
+                    inputs: {}
 
 plugins:
     test_management_plugin:

@@ -145,8 +145,7 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                should: be
-                a: list
+                - should: be a dict
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)

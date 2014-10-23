@@ -13,19 +13,15 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import os
 
-CENTRAL_DEPLOYMENT_AGENT = 'central_deployment_agent'
-HOST_AGENT = 'host_agent'
-PLUGIN_EXECUTOR_KEY = 'executor'
-PLUGIN_SOURCE_KEY = 'source'
-PLUGIN_INSTALL_KEY = 'install'
-PLUGIN_NAME_KEY = 'name'
-DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
+from dsl_parser.parser import parse_from_path as _parse_from_path
+from dsl_parser.tests.resources import dsl
 
-SCRIPT_PLUGIN_NAME = 'script'
-SCRIPT_PLUGIN_RUN_TASK = 'script_runner.tasks.run'
-SCRIPT_PLUGIN_EXECUTE_WORKFLOW_TASK = 'script_runner.tasks.execute_workflow'
-SCRIPT_PATH_PROPERTY = 'script_path'
 
-FUNCTION_NAME_PATH_SEPARATOR = '__sep__'
-INTERFACES = 'interfaces'
+def parse_dsl_resource(path):
+
+    dsl_dir = os.path.dirname(dsl.__file__)
+    return _parse_from_path(
+        dsl_file_path=os.path.join(dsl_dir, path),
+    )

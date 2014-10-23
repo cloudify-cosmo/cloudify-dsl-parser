@@ -15,53 +15,6 @@
 #    * limitations under the License.
 
 
-ADVANCED_OPERATION_MAPPING_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'mapping': {
-            'type': 'string'
-        },
-        'properties': {
-            'type': 'object',
-            'minProperties': 1
-        }
-    },
-    'required': ['mapping', 'properties'],
-    'additionalProperties': False
-}
-
-INTERFACES_SCHEMA = {
-    'type': 'object',
-    'patternProperties': {
-        '^': {
-            'type': 'array',
-            'items': {
-                'oneOf': [
-                    {
-                        'type': 'string'
-                    },
-                    {
-                        'type': 'object',
-                        'patternProperties': {
-                            '^': {
-                                'oneOf': [
-                                    {'type': 'string'},
-                                    ADVANCED_OPERATION_MAPPING_SCHEMA,
-                                ]
-                            }
-                        },
-                        'maxProperties': 1,
-                        'minProperties': 1
-                    }
-                ]
-            },
-            'uniqueItems': True,
-            'minItems': 1
-        }
-    },
-    'minProperties': 1
-}
-
 PROPERTY_TYPES_SCHEMA = {
     'enum': [
         'string',
@@ -148,6 +101,115 @@ PROPERTIES_SCHEMA_SCHEMA = {
         }
     }
 }
+
+
+NODE_TEMPLATE_OPERATION_SCHEMA = {
+
+    'oneOf': [
+        {
+            'type': 'string'
+        },
+        {
+            'type': 'object',
+            'minProperties': 0,
+            'maxProperties': 0
+        },
+        {
+            'type': 'object',
+            'properties': {
+                'implementation': {
+                    'type': 'string'
+                },
+                'inputs': {
+                    'type': 'object',
+                    'minProperties': 1
+                }
+            },
+            'required': ['inputs'],
+            'additionalProperties': False
+        }
+    ]
+}
+
+
+NODE_TYPE_OPERATION_SCHEMA = {
+
+    'oneOf': [
+        {
+            'type': 'object',
+            'minProperties': 0,
+            'maxProperties': 0
+        },
+        {
+            'type': 'object',
+            'properties': {
+                'implementation': {
+                    'type': 'string'
+                },
+                'inputs': PROPERTIES_SCHEMA_SCHEMA
+            },
+            'required': ['implementation'],
+            'additionalProperties': False
+        }
+    ]
+}
+
+RELATIONSHIP_TYPE_OPERATION_SCHEMA = NODE_TYPE_OPERATION_SCHEMA
+RELATIONSHIP_INSTANCE_OPERATION_SCHEMA = NODE_TEMPLATE_OPERATION_SCHEMA
+
+NODE_TEMPLATE_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': NODE_TEMPLATE_OPERATION_SCHEMA
+            },
+        }
+    },
+    'minProperties': 1
+}
+
+NODE_TYPE_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': NODE_TYPE_OPERATION_SCHEMA
+            },
+        }
+    },
+    'minProperties': 1
+}
+
+RELATIONSHIP_TYPE_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': RELATIONSHIP_TYPE_OPERATION_SCHEMA
+            },
+        }
+    },
+    'minProperties': 1
+}
+
+
+RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': {
+            'type': 'object',
+            'patternProperties': {
+                '^': RELATIONSHIP_INSTANCE_OPERATION_SCHEMA
+            },
+            }
+    },
+    'minProperties': 1
+}
+
 
 WORKFLOW_MAPPING_SCHEMA = {
     'type': 'object',
@@ -301,7 +363,7 @@ DSL_SCHEMA = {
                             'required': ['deploy'],
                             'additionalProperties': False
                         },
-                        'interfaces': INTERFACES_SCHEMA,
+                        'interfaces': NODE_TEMPLATE_INTERFACES_SCHEMA,
                         'relationships': {
                             'type': 'array',
                             'items': {
@@ -318,8 +380,8 @@ DSL_SCHEMA = {
                                     'properties': {
                                         'type': 'object'
                                     },
-                                    'source_interfaces': INTERFACES_SCHEMA,
-                                    'target_interfaces': INTERFACES_SCHEMA,
+                                    'source_interfaces': RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA,
+                                    'target_interfaces': RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA,
                                 },
                                 'required': ['type', 'target'],
                                 'additionalProperties': False
@@ -451,7 +513,7 @@ DSL_SCHEMA = {
                 '^': {
                     'type': 'object',
                     'properties': {
-                        'interfaces': INTERFACES_SCHEMA,
+                        'interfaces': NODE_TYPE_INTERFACES_SCHEMA,
                         #non-meta 'properties'
                         'properties': PROPERTIES_SCHEMA_SCHEMA,
                         'derived_from': {
@@ -494,8 +556,8 @@ DSL_SCHEMA = {
                         'derived_from': {
                             'type': 'string'
                         },
-                        'source_interfaces': INTERFACES_SCHEMA,
-                        'target_interfaces': INTERFACES_SCHEMA,
+                        'source_interfaces': RELATIONSHIP_TYPE_INTERFACES_SCHEMA,
+                        'target_interfaces': RELATIONSHIP_TYPE_INTERFACES_SCHEMA,
                         #non-meta 'properties'
                         'properties': PROPERTIES_SCHEMA_SCHEMA
                     },
