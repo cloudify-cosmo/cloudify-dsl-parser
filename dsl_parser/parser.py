@@ -701,7 +701,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
     payload_field_name = 'parameters' if is_workflows else 'inputs'
     mapping_field_name = 'mapping' if is_workflows else 'implementation'
     operation_payload = None
-    if type(operation_content) == str:
+    if isinstance(operation_content, basestring):
         operation_mapping = operation_content
     else:
         # top level types do not undergo proper merge
@@ -1227,7 +1227,7 @@ def _replace_or_add_interface(merged_interfaces, interface_element):
 
 
 def _get_interface_name(interface_element):
-    return interface_element if type(interface_element) == str else \
+    return interface_element if isinstance(interface_element, basestring) else\
         interface_element.iterkeys().next()
 
 
