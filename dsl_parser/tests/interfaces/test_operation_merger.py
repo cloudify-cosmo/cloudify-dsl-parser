@@ -47,8 +47,8 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
         if expected_merged_operation is None:
             self.assertIsNone(actual_merged_operation)
         else:
-            self.assertDictEqual(expected_merged_operation,
-                                 actual_merged_operation)
+            self.assertEqual(expected_merged_operation,
+                             actual_merged_operation)
 
     def test_no_op_overrides_no_op(self):
 
@@ -314,8 +314,8 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
         if expected_merged_operation is None:
             self.assertIsNone(actual_merged_operation)
         else:
-            self.assertDictEqual(expected_merged_operation,
-                                 actual_merged_operation)
+            self.assertEqual(expected_merged_operation,
+                             actual_merged_operation)
 
     def test_no_op_overrides_no_op(self):
 
