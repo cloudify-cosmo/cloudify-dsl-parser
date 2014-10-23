@@ -599,8 +599,8 @@ def relationship_type_merging_function(overridden_relationship_type,
     merged_type = overriding_relationship_type
 
     merged_props = utils.merge_sub_dicts(overridden_relationship_type,
-                                   merged_type,
-                                   PROPERTIES)
+                                         merged_type,
+                                         PROPERTIES)
 
     merged_type[PROPERTIES] = merged_props
 
