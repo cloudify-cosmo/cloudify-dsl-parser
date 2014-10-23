@@ -74,12 +74,12 @@ def _scan_operations(operations,
                      path='',
                      replace=False):
     for name, definition in operations.iteritems():
-        if isinstance(definition, dict) and 'properties' in definition:
-            scan_properties(definition['properties'],
+        if isinstance(definition, dict) and 'inputs' in definition:
+            scan_properties(definition['inputs'],
                             handler,
                             scope=scope,
                             context=context,
-                            path='{0}.{1}.properties'.format(path, name),
+                            path='{0}.{1}.inputs'.format(path, name),
                             replace=replace)
 
 

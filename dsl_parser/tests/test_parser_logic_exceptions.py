@@ -36,8 +36,12 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                - install: missing_plugin.install
-                - terminate: missing_plugin.terminate
+                install:
+                    implementation: missing_plugin.install
+                    inputs: {}
+                terminate:
+                    implementation: missing_plugin.terminate
+                    inputs: {}
         properties:
             install_agent:
                 default: 'false'
@@ -94,7 +98,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -118,7 +124,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -143,7 +151,9 @@ node_types:
             key: {}
         interfaces:
             test_interface1:
-                - install: test_plugin.install
+                install:
+                    implementation: test_plugin.install
+                    inputs: {}
 
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -155,7 +165,9 @@ relationships:
     test_relationship:
         source_interfaces:
             some_interface:
-                - op: no_plugin.op
+                op:
+                    implementation: no_plugin.op
+                    inputs: {}
                         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 19, DSLParsingLogicException)
@@ -244,7 +256,7 @@ relationships:
                 target: "test_node"
                 source_interfaces:
                     an_interface:
-                        - op: no_plugin.op
+                        op: no_plugin.op
 relationships:
     test_relationship: {}
                         """
@@ -260,7 +272,9 @@ node_types:
     test_type:
         interfaces:
             test_interface:
-                - start: test_plugin.start
+                start:
+                    implementation: test_plugin.start
+                    inputs: {}
 plugins:
     test_plugin:
         executor: host_agent
@@ -304,108 +318,6 @@ type_implementations:
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 102, DSLParsingLogicException)
         self.assertEquals('impl', ex.implementation)
-
-    def test_node_interface_duplicate_operation_with_mapping(self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-        interfaces:
-            test_interface1:
-                - install
-                - install: test_plugin.install
-node_types:
-    test_type:
-        properties:
-            key: {}
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 20, DSLParsingLogicException)
-
-    def test_type_interface_duplicate_operation_with_mapping(self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                - install
-                - install: test_plugin.install
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 20, DSLParsingLogicException)
-
-    def test_relationship_source_interface_duplicate_operation_with_mapping(
-            self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-node_types:
-    test_type: {}
-relationships:
-    empty_relationship:
-        source_interfaces:
-            test_interface1:
-                - install
-                - install: test_plugin.install
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 20, DSLParsingLogicException)
-
-    def test_relationship_target_interface_duplicate_operation_with_mapping(
-            self):
-        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-node_types:
-    test_type: {}
-relationships:
-    empty_relationship:
-        target_interfaces:
-            test_interface1:
-                - install
-                - install: test_plugin.install
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 20, DSLParsingLogicException)
-
-    def test_instance_relationship_source_interface_duplicate_operation_with_mapping(self):  # NOQA
-        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-    test_node2:
-        type: test_type
-        relationships:
-            -   type: empty_relationship
-                target: test_node
-                source_interfaces:
-                    test_interface1:
-                        - install
-                        - install: test_plugin.install
-node_types:
-    test_type:
-        properties:
-            key:
-                default: 'default'
-relationships:
-    empty_relationship: {}
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 20, DSLParsingLogicException)
-
-    def test_instance_relationship_target_interface_duplicate_operation_with_mapping(self):  # NOQA
-        yaml = self.BASIC_PLUGIN + self.BASIC_NODE_TEMPLATES_SECTION + """
-    test_node2:
-        type: test_type
-        relationships:
-            -   type: empty_relationship
-                target: test_node
-                target_interfaces:
-                    test_interface1:
-                        - install
-                        - install: test_plugin.install
-node_types:
-    test_type:
-        properties:
-            key:
-                default: 'default'
-relationships:
-    empty_relationship: {}
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 20, DSLParsingLogicException)
 
     def test_node_set_non_existing_property(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
@@ -825,10 +737,12 @@ node_types:
     type:
         interfaces:
             test:
-                - op:
-                    mapping: stub.py
-                    properties:
-                        script_path: invalid
+                op:
+                    implementation: stub.py
+                    inputs:
+                        script_path:
+                            default: invalid
+                            type: string
 node_templates:
     node:
         type: type
@@ -848,11 +762,13 @@ node_types:
     type:
         interfaces:
             test:
-                - op: stub.py
+                op:
+                    implementation: stub.py
+                    inputs: {}
 node_templates:
     node:
         type: type
-""".format(constants.SCRIPT_PLUGIN_NAME)
+"""
         self.make_file_with_name(content='content',
                                  filename='stub.py')
         yaml_path = self.make_file_with_name(content=yaml,

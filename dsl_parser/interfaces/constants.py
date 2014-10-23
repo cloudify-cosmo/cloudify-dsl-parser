@@ -13,21 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+from dsl_parser.interfaces.utils import operation_mapping
 
-CENTRAL_DEPLOYMENT_AGENT = 'central_deployment_agent'
-HOST_AGENT = 'host_agent'
-PLUGIN_EXECUTOR_KEY = 'executor'
-PLUGIN_SOURCE_KEY = 'source'
-PLUGIN_INSTALL_KEY = 'install'
-PLUGIN_NAME_KEY = 'name'
-DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
-
-SCRIPT_PLUGIN_NAME = 'script'
-SCRIPT_PLUGIN_RUN_TASK = 'script_runner.tasks.run'
-SCRIPT_PLUGIN_EXECUTE_WORKFLOW_TASK = 'script_runner.tasks.execute_workflow'
-SCRIPT_PATH_PROPERTY = 'script_path'
-
-FUNCTION_NAME_PATH_SEPARATOR = '__sep__'
-
-NODE_INSTANCES = 'node_instances'
 INTERFACES = 'interfaces'
+SOURCE_INTERFACES = 'source_interfaces'
+TARGET_INTERFACES = 'target_interfaces'
+NO_OP = operation_mapping()

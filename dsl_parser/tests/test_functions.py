@@ -87,16 +87,16 @@ node_templates:
             ip: 10.0.0.1
         interfaces:
             interface:
-                -   op:
-                        mapping: plugin.op
-                        properties:
-                            x: { get_property: [vm, ip] }
+                op:
+                    implementation: plugin.op
+                    inputs:
+                        x: { get_property: [vm, ip] }
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         vm = self.get_node_by_name(parsed, 'vm')
-        self.assertEqual('10.0.0.1', vm['operations']['op']['properties']['x'])
+        self.assertEqual('10.0.0.1', vm['operations']['op']['inputs']['x'])
         self.assertEqual('10.0.0.1',
-                         vm['operations']['interface.op']['properties']['x'])
+                         vm['operations']['interface.op']['inputs']['x'])
 
     def test_illegal_property_in_interface(self):
         yaml = """
@@ -112,10 +112,10 @@ node_templates:
         type: vm_type
         interfaces:
             interface:
-                -   op:
-                        mapping: plugin.op
-                        properties:
-                            x: { get_property: [vm, notfound] }
+                op:
+                    implementation: plugin.op
+                    inputs:
+                        x: { get_property: [vm, notfound] }
 """
         try:
             self.parse(yaml)
@@ -124,7 +124,7 @@ node_templates:
             self.assertIn('Node template property', str(e))
             self.assertIn("doesn't exist", str(e))
             self.assertIn('vm.properties.notfound', str(e))
-            self.assertIn('vm.operations.interface.op.properties.x', str(e))
+            self.assertIn('vm.operations.interface.op.inputs.x', str(e))
 
     def test_recursive(self):
         yaml = """
@@ -219,18 +219,22 @@ relationships:
         derived_from: cloudify.relationships.contained_in
         source_interfaces:
             source_interface:
-                -   op1:
-                        mapping: plugin.operation
-                        properties:
-                            source_a: { get_property: [%(source)s, a] }
-                            target_a: { get_property: [%(target)s, a] }
+                op1:
+                    implementation: plugin.operation
+                    inputs:
+                        source_a:
+                            default: { get_property: [%(source)s, a] }
+                        target_a:
+                            default: { get_property: [%(target)s, a] }
         target_interfaces:
             target_interface:
-                -   op2:
-                        mapping: plugin.operation
-                        properties:
-                            source_a: { get_property: [%(source)s, a] }
-                            target_a: { get_property: [%(target)s, a] }
+                op2:
+                    implementation: plugin.operation
+                    inputs:
+                        source_a:
+                            default: { get_property: [%(source)s, a] }
+                        target_a:
+                            default: { get_property: [%(target)s, a] }
 node_templates:
     node1:
         type: some_type
@@ -253,17 +257,17 @@ node_templates:
             node = self.get_node_by_name(prepared, 'node2')
             source_ops = node['relationships'][0]['source_operations']
             self.assertEqual(2,
-                             source_ops['source_interface.op1']['properties']
+                             source_ops['source_interface.op1']['inputs']
                              ['source_a'])
             self.assertEqual(1,
-                             source_ops['source_interface.op1']['properties']
+                             source_ops['source_interface.op1']['inputs']
                              ['target_a'])
             target_ops = node['relationships'][0]['target_operations']
             self.assertEqual(2,
-                             target_ops['target_interface.op2']['properties']
+                             target_ops['target_interface.op2']['inputs']
                              ['source_a'])
             self.assertEqual(1,
-                             target_ops['target_interface.op2']['properties']
+                             target_ops['target_interface.op2']['inputs']
                              ['target_a'])
 
         # Explicit node template names
