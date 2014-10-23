@@ -67,13 +67,12 @@ class InterfacesMerger(object):
     def __init__(self,
                  overriding_interfaces,
                  overridden_interfaces,
-                 operation_merger,
-                 interface_merger=InterfaceMerger):
+                 operation_merger):
 
         self.overriding_interfaces = overriding_interfaces
         self.overridden_interfaces = overridden_interfaces
         self.operation_merger = operation_merger
-        self.interface_merger = interface_merger
+        self.interface_merger = InterfaceMerger
 
     def merge(self):
 

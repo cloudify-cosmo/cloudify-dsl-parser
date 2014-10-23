@@ -41,6 +41,9 @@ class OperationMerger(object):
                 inputs=raw_operation.get('inputs', {})
             )
 
+    def merge(self):
+        raise NotImplementedError('Must be implemented by subclasses')
+
 
 class NodeTemplateNodeTypeOperationMerger(OperationMerger):
 
@@ -91,12 +94,14 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
             # the operation is not defined in the type
             # should be merged by the node template operation
 
-            return self._create_operation(self.node_template_operation)
+            return self.node_template_operation
 
         if self.node_template_operation is None:
 
             # the operation is not defined in the template
             # should be merged by the node type operation
+            # this will validate that all schema inputs have
+            # default values
 
             return operation_mapping(
                 implementation=self.node_type_operation['implementation'],
@@ -108,7 +113,7 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
 
         if self.node_template_operation == NO_OP:
             # no-op overrides
-            return operation_mapping()
+            return NO_OP
         if self.node_type_operation == NO_OP:
             # no-op overridden
             return self.node_template_operation

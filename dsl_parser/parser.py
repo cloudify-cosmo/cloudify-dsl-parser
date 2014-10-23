@@ -30,6 +30,7 @@ from dsl_parser import functions
 from dsl_parser import models
 from dsl_parser import scan
 from dsl_parser import schemas
+from dsl_parser import utils
 from dsl_parser.interfaces import interfaces_parser
 from dsl_parser.exceptions import DSLParsingFormatException
 from dsl_parser.exceptions import DSLParsingLogicException
@@ -597,7 +598,7 @@ def relationship_type_merging_function(overridden_relationship_type,
 
     merged_type = overriding_relationship_type
 
-    merged_props = merge_sub_dicts(overridden_relationship_type,
+    merged_props = utils.merge_sub_dicts(overridden_relationship_type,
                                    merged_type,
                                    PROPERTIES)
 
@@ -621,7 +622,7 @@ def node_type_interfaces_merging_function(overridden_node_type,
     merged_type = overriding_node_type
 
     # derive properties
-    merged_type[PROPERTIES] = merge_sub_dicts(
+    merged_type[PROPERTIES] = utils.merge_sub_dicts(
         overridden_node_type,
         merged_type,
         PROPERTIES)
@@ -1156,12 +1157,6 @@ def _process_plugin(plugin, plugin_name):
     processed_plugin[constants.PLUGIN_SOURCE_KEY] = plugin_source
 
     return processed_plugin
-
-
-def merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
-    overridden_sub_dict = _get_dict_prop(overridden_dict, sub_dict_key)
-    overriding_sub_dict = _get_dict_prop(overriding_dict, sub_dict_key)
-    return dict(overridden_sub_dict.items() + overriding_sub_dict.items())
 
 
 def _extract_complete_node(node_type,
