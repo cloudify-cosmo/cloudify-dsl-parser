@@ -130,8 +130,8 @@ class InterfacesParserTest(testtools.TestCase):
             overriding_node_type=overriding_node_type,
             overridden_node_type=overridden_node_type
         )
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_node_type_interfaces_no_interfaces_on_overriding(self):
 
@@ -162,8 +162,8 @@ class InterfacesParserTest(testtools.TestCase):
             overriding_node_type=overriding_node_type,
             overridden_node_type=overridden_node_type
         )
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_node_type_interfaces_no_interfaces_on_overridden(self):
 
@@ -194,8 +194,8 @@ class InterfacesParserTest(testtools.TestCase):
             overriding_node_type=overriding_node_type,
             overridden_node_type=overridden_node_type
         )
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_node_type_and_node_template_interfaces(self):
 
@@ -246,8 +246,8 @@ class InterfacesParserTest(testtools.TestCase):
                 node_template=node_template
             )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_node_type_no_interfaces_and_node_template_interfaces(self):
 
@@ -275,8 +275,8 @@ class InterfacesParserTest(testtools.TestCase):
                 node_template=node_template
             )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_node_type_interfaces_and_node_template_no_interfaces(self):
 
@@ -306,8 +306,8 @@ class InterfacesParserTest(testtools.TestCase):
                 node_template=node_template
             )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_type_interfaces(self):
 
@@ -415,8 +415,8 @@ class InterfacesParserTest(testtools.TestCase):
             overridden_relationship_type=overridden_relationship_type
         )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_type_interfaces_no_source_interfaces_on_overriding(self):  # NOQA
 
@@ -496,8 +496,8 @@ class InterfacesParserTest(testtools.TestCase):
             overridden_relationship_type=overridden_relationship_type
         )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_type_interfaces_no_source_interfaces_on_overridden(self):  # NOQA
 
@@ -565,8 +565,8 @@ class InterfacesParserTest(testtools.TestCase):
             overridden_relationship_type=overridden_relationship_type
         )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_type_interfaces_no_target_interfaces_on_overriding(self):  # NOQA
 
@@ -643,8 +643,8 @@ class InterfacesParserTest(testtools.TestCase):
             overridden_relationship_type=overridden_relationship_type
         )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_type_interfaces_no_target_interfaces_on_overridden(self):  # NOQA
 
@@ -712,8 +712,8 @@ class InterfacesParserTest(testtools.TestCase):
             overridden_relationship_type=overridden_relationship_type
         )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_type_and_instance_interfaces(self):
 
@@ -799,8 +799,8 @@ class InterfacesParserTest(testtools.TestCase):
                 relationship_instance=relationship_instance
             )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_type_no_source_interfaces_and_instance_interfaces(self):  # NOQA
 
@@ -865,8 +865,8 @@ class InterfacesParserTest(testtools.TestCase):
                 relationship_instance=relationship_instance
             )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_no_target_interfaces_type_and_instance_interfaces(self):  # NOQA
 
@@ -931,8 +931,8 @@ class InterfacesParserTest(testtools.TestCase):
                 relationship_instance=relationship_instance
             )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_type_and_instance_no_source_interfaces(self):
 
@@ -1013,8 +1013,8 @@ class InterfacesParserTest(testtools.TestCase):
                 relationship_instance=relationship_instance
             )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
 
     def test_merge_relationship_type_and_instance_no_target_interfaces(self):
 
@@ -1095,5 +1095,5 @@ class InterfacesParserTest(testtools.TestCase):
                 relationship_instance=relationship_instance
             )
 
-        self.assertDictEqual(actual_merged_interfaces,
-                             expected_merged_interfaces)
+        self.assertEqual(actual_merged_interfaces,
+                         expected_merged_interfaces)
