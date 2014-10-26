@@ -17,7 +17,7 @@ __author__ = 'ran'
 
 from dsl_parser import constants
 from dsl_parser.parser import DSLParsingLogicException, parse_from_path
-from dsl_parser.parser import parse as dsl_parse
+from dsl_parser.parser import parse as dsl_parse, parse_from_url
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
@@ -25,6 +25,12 @@ class TestParserLogicExceptions(AbstractTestParser):
 
     def test_parse_dsl_from_file_bad_path(self):
         self.assertRaises(EnvironmentError, parse_from_path, 'fake-file.yaml')
+
+    def test_parser_dsl_from_bad_url(self):
+        try:
+            parse_from_url('http://www.google.com/bad-dsl')
+        except DSLParsingLogicException as e:
+            self.assertIn('http://www.google.com/bad-dsl', e.message)
 
     def test_no_type_definition(self):
         self._assert_dsl_parsing_exception_error_code(
