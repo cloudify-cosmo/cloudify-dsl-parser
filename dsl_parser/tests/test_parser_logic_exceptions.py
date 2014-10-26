@@ -31,6 +31,7 @@ class TestParserLogicExceptions(AbstractTestParser):
             parse_from_url('http://www.google.com/bad-dsl')
         except DSLParsingLogicException as e:
             self.assertIn('http://www.google.com/bad-dsl', e.message)
+            self.assertEqual(130, e.err_code)
 
     def test_no_type_definition(self):
         self._assert_dsl_parsing_exception_error_code(
