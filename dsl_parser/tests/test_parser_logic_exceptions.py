@@ -13,11 +13,10 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
 
 from dsl_parser import constants
 from dsl_parser.parser import DSLParsingLogicException, parse_from_path
-from dsl_parser.parser import parse as dsl_parse, parse_from_url
+from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
