@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import os
+from urllib2 import HTTPError
 import yaml as yml
 
 from dsl_parser import constants
@@ -88,6 +89,13 @@ class TestParserApi(AbstractTestParser):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT])
         result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
+
+    def test_parse_dsl_from_bad_url(self):
+        try:
+            parse_from_url('http://www.google.com/bad-dsl')
+        except HTTPError as e:
+            self.assertIn('http://www.google.com/bad-dsl', e.message)
+            self.assertEqual(404, e.code)
 
     def _assert_blueprint(self, result):
         node = result['nodes'][0]
