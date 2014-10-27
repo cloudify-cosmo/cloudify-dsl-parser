@@ -92,7 +92,8 @@ def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None,
         missing_url = e.filename
         message = ('HTTP Error {0}: {1} not found'
                    .format(e.code, missing_url))
-        raise DSLParsingLogicException(130, message)
+        e.message = message
+        raise
 
 
 def parse(dsl_string, alias_mapping_dict=None, alias_mapping_url=None,
