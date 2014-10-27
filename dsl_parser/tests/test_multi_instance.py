@@ -13,8 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'dank'
-
 import random
 
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
@@ -25,7 +23,7 @@ class TestMultiInstance(AbstractTestParser):
 
     BASE_BLUEPRINT = """
 node_types:
-    cloudify.types.host:
+    cloudify.nodes.Compute:
         properties:
             x:
                 default: y
@@ -62,7 +60,7 @@ node_templates:
         yaml = self.BASE_BLUEPRINT + """
 
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
 """
@@ -79,7 +77,7 @@ node_templates:
 
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -104,7 +102,7 @@ node_templates:
 
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     db:
@@ -141,9 +139,9 @@ node_templates:
     def test_single_connected_to(self):
         yaml = self.BASE_BLUEPRINT + """
     host1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     host2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -219,15 +217,15 @@ node_templates:
     def test_connected_to_and_contained_in_with_and_without_host_id(self):
         yaml = self.BASE_BLUEPRINT + """
     host1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     host2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     host3:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     network:
