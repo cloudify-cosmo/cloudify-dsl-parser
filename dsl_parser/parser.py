@@ -61,7 +61,7 @@ GROUPS = 'groups'
 INPUTS = 'inputs'
 OUTPUTS = 'outputs'
 
-HOST_TYPE = 'cloudify.types.host'
+HOST_TYPE = 'cloudify.nodes.Compute'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
