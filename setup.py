@@ -31,10 +31,11 @@ except ImportError, e:
 
 setup(
     name='cloudify-dsl-parser',
-    version='3.1a5',
+    version='3.1rc1',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
-    packages=['dsl_parser'],
+    packages=['dsl_parser',
+              'dsl_parser.interfaces'],
     license='LICENSE',
     description='Cloudify DSL parser',
     zip_safe=False,

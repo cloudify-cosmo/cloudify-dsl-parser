@@ -18,7 +18,7 @@ import os
 import copy
 import contextlib
 from urllib import pathname2url
-from urllib2 import urlopen, URLError
+from urllib2 import urlopen, URLError, HTTPError
 from collections import namedtuple
 
 import yaml
@@ -61,7 +61,7 @@ GROUPS = 'groups'
 INPUTS = 'inputs'
 OUTPUTS = 'outputs'
 
-HOST_TYPE = 'cloudify.types.host'
+HOST_TYPE = 'cloudify.nodes.Compute'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
@@ -80,10 +80,20 @@ def parse_from_path(dsl_file_path, alias_mapping_dict=None,
 
 def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None,
                    resources_base_url=None):
-    with contextlib.closing(urlopen(dsl_url)) as f:
-        dsl_string = f.read()
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
-                  resources_base_url, dsl_url)
+    try:
+        with contextlib.closing(urlopen(dsl_url)) as f:
+            dsl_string = f.read()
+        return _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
+                      resources_base_url, dsl_url)
+    except HTTPError as e:
+        # if we caught this error
+        # it means some url is missing
+        # HTTPError does not print it by default
+        missing_url = e.filename
+        message = ('HTTP Error {0}: {1} not found'
+                   .format(e.code, missing_url))
+        e.message = message
+        raise
 
 
 def parse(dsl_string, alias_mapping_dict=None, alias_mapping_url=None,

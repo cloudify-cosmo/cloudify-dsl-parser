@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import os
+from urllib2 import HTTPError
 import yaml as yml
 
 from dsl_parser import constants
@@ -88,6 +89,13 @@ class TestParserApi(AbstractTestParser):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT])
         result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
+
+    def test_parse_dsl_from_bad_url(self):
+        try:
+            parse_from_url('http://www.google.com/bad-dsl')
+        except HTTPError as e:
+            self.assertIn('http://www.google.com/bad-dsl', e.message)
+            self.assertEqual(404, e.code)
 
     def _assert_blueprint(self, result):
         node = result['nodes'][0]
@@ -1625,11 +1633,11 @@ relationships:
         yaml = """
 node_templates:
     test_node:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         properties:
             key: "val"
 node_types:
-    cloudify.types.host:
+    cloudify.nodes.Compute:
         properties:
             key: {}
             """
@@ -1640,7 +1648,7 @@ node_types:
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     test_node2:
         type: another_type
         relationships:
@@ -1652,7 +1660,7 @@ node_templates:
             -   type: cloudify.relationships.contained_in
                 target: test_node2
 node_types:
-    cloudify.types.host: {}
+    cloudify.nodes.Compute: {}
     another_type: {}
 
 relationships:
@@ -1668,9 +1676,9 @@ node_templates:
     test_node1:
         type: another_type
 node_types:
-    cloudify.types.host: {}
+    cloudify.nodes.Compute: {}
     another_type:
-        derived_from: cloudify.types.host
+        derived_from: cloudify.nodes.Compute
             """
         result = self.parse(yaml)
         self.assertEquals('test_node1', result['nodes'][0]['host_id'])
@@ -1680,14 +1688,14 @@ node_types:
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     test_node2:
         type: another_type
         relationships:
             -   type: test_relationship
                 target: test_node1
 node_types:
-    cloudify.types.host: {}
+    cloudify.nodes.Compute: {}
     another_type: {}
 relationships:
     cloudify.relationships.contained_in: {}
@@ -1701,9 +1709,9 @@ relationships:
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 node_types:
-    cloudify.types.host:
+    cloudify.nodes.Compute:
         interfaces:
             test_interface:
                 start:
@@ -1843,7 +1851,7 @@ node_types:
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     test_node2:
         type: test_type
         relationships:
@@ -1860,7 +1868,7 @@ node_templates:
             -   type: cloudify.relationships.contained_in
                 target: test_node3
 node_types:
-    cloudify.types.host: {}
+    cloudify.nodes.Compute: {}
     test_type:
         interfaces:
             test_interface:
@@ -1982,9 +1990,9 @@ imports:
     def test_node_without_host_id(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
     test_node2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 node_types:
-    cloudify.types.host: {}
+    cloudify.nodes.Compute: {}
     test_type:
         properties:
             key: {}
@@ -2978,9 +2986,9 @@ class DeploymentPluginsToInstallTest(AbstractTestParser):
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 node_types:
-    cloudify.types.host:
+    cloudify.nodes.Compute:
         interfaces:
             test_interface:
                 start:
@@ -3033,12 +3041,12 @@ plugins:
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     test_node2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 
 node_types:
-    cloudify.types.host:
+    cloudify.nodes.Compute:
         interfaces:
             test_interface:
                 start:
@@ -3067,10 +3075,10 @@ plugins:
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 
 node_types:
-    cloudify.types.host:
+    cloudify.nodes.Compute:
         interfaces:
             test_interface:
                 start:
@@ -3102,10 +3110,10 @@ plugins:
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 
 node_types:
-    cloudify.types.host:
+    cloudify.nodes.Compute:
         interfaces:
             test_interface:
                 start:
@@ -3134,10 +3142,10 @@ plugins:
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 
 node_types:
-    cloudify.types.host:
+    cloudify.nodes.Compute:
         interfaces:
             test_interface:
                 start:
