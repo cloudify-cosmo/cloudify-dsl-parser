@@ -1,18 +1,27 @@
 language: python
 python:
-  - "2.7"
+- '2.7'
 env:
-    - TOX_ENV=docs
-    - TOX_ENV=flake8
-    - TOX_ENV=py27
-    - TOX_ENV=py26
-# TODO: add coveralls support
+- TOX_ENV=docs
+- TOX_ENV=flake8
+- TOX_ENV=py27
+- TOX_ENV=py26
 install:
-    - pip install tox==1.6.1
-    # - pip install coveralls
+- pip install tox==1.6.1
 script:
-    - tox -e $TOX_ENV
-# after_success:
-#     coveralls
+- tox -e $TOX_ENV
+deploy:
+  provider: pypi
+  server: https://testpypi.python.org/pypi
+  on:
+    branch: pypi-release
+    condition: $TOX_ENV = py27
+  user:
+    secure: AwmxvWDyKF0e7RmJyXuIQ0wkLX5Gay4U58qxpKXnuqrVYz64H07uOcX5ewF98qkIgu3uNFiXoxnQhrGjyrHUvo5waGHphOfIHMK2AtX1C+FhmDzKCKGi19uFCgj9c0U/nDJ8ALeW2ImZa9POvb0YTYvTCxUrZP9h6eMu8vErPl8=
+  password:
+    secure: ZocZ/KMajS668dsyZKtCcH8+RJT90HRSfRJNND95gXgsglAexzrmkq8hm9YP2yAouMaP/MNRmYOocqmsDb1XDvKlCHUlKxzERt7eU49teyOq/xMKCDIRd3P2qVHknlffdbpn16okf9Oht3mPmzYzVSyagSctyjuJwQ3CiJ8Cj/w=
+  after_deploy:
+  - git clone https://github.com/cloudify-cosmo/travis-utils.git
+  - python travis-utils/validate_pypi.py -v || exit 1
 notifications:
-    flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
+  flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
