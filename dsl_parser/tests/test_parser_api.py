@@ -3021,9 +3021,9 @@ plugins:
         yaml = """
 node_templates:
     test_node1:
-        type: cloudify.types.base
+        type: cloudify.nodes.Root
 node_types:
-    cloudify.types.base:
+    cloudify.nodes.Root:
         interfaces:
             test_interface:
                 start:
