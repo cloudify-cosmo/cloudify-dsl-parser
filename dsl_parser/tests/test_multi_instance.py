@@ -476,7 +476,7 @@ node_templates:
     def test_illegal_connection_type(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -491,7 +491,7 @@ node_templates:
     def test_unsupported_relationship(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -504,7 +504,7 @@ node_templates:
     def test_modified_single_node_added(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 """
         plan = self.parse_multi(yaml)
         modification = self.modify_multi(plan, {
@@ -521,7 +521,7 @@ node_templates:
     def test_modified_single_node_removed(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
 """
@@ -535,7 +535,7 @@ node_templates:
     def test_modified_single_node_added_with_child_contained_in_1(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -567,7 +567,7 @@ node_templates:
     def test_modified_single_node_removed_with_child_contained_in_1(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     db:
@@ -594,7 +594,7 @@ node_templates:
     def test_modified_single_node_added_with_child_contained_in_2(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -626,7 +626,7 @@ node_templates:
     def test_modified_single_node_removed_with_child_contained_in_2(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         instances:
@@ -653,7 +653,7 @@ node_templates:
     def test_modified_two_nodes_added_with_child_contained_in(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -685,7 +685,7 @@ node_templates:
     def test_modified_two_nodes_removed_with_child_contained_in(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     db:
@@ -714,9 +714,9 @@ node_templates:
     def test_modified_single_node_added_with_connected_1(self):
         yaml = self.BASE_BLUEPRINT + """
     host1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     host2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -755,11 +755,11 @@ node_templates:
     def test_modified_single_node_removed_with_connected_1(self):
         yaml = self.BASE_BLUEPRINT + """
     host1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     host2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     db:
@@ -802,9 +802,9 @@ node_templates:
     def test_modified_single_node_added_with_connected_2(self):
         yaml = self.BASE_BLUEPRINT + """
     host1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     host2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -837,11 +837,11 @@ node_templates:
     def test_modified_single_node_removed_with_connected_2(self):
         yaml = self.BASE_BLUEPRINT + """
     host1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     host2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     db:
@@ -878,9 +878,9 @@ node_templates:
     def test_modified_single_node_added_with_connected_3(self):
         yaml = self.BASE_BLUEPRINT + """
     host1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     host2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     db:
         type: db
         relationships:
@@ -919,11 +919,11 @@ node_templates:
     def test_modified_single_node_removed_with_connected_3(self):
         yaml = self.BASE_BLUEPRINT + """
     host1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     host2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 2
     db:
@@ -966,9 +966,9 @@ node_templates:
     def test_modified_added_with_connected_all_to_one(self):
         yaml = self.BASE_BLUEPRINT + """
     host1:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     host2:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 5
     db:
@@ -1012,7 +1012,7 @@ node_templates:
     def test_removed_ids_hint(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         instances:
             deploy: 3
     db:
