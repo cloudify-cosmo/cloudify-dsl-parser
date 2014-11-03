@@ -97,15 +97,14 @@ def build_deployment_node_graph(plan_node_graph,
         modified_nodes=modified_nodes)
 
     _handle_contained_in(ctx)
-    if ctx.modification:
-        ctx.node_instance_ids.clear()
-        ctx.node_ids_to_node_instance_ids.clear()
-        for node_instance_id, data in deployment_node_graph.nodes_iter(
-                data=True):
-            ctx.node_instance_ids.add(node_instance_id)
-            node_id = _node_id_from_node_instance(data['node'])
-            ctx.add_node_id_to_node_instance_id_mapping(node_id,
-                                                        node_instance_id)
+    ctx.node_instance_ids.clear()
+    ctx.node_ids_to_node_instance_ids.clear()
+    for node_instance_id, data in deployment_node_graph.nodes_iter(
+            data=True):
+        ctx.node_instance_ids.add(node_instance_id)
+        node_id = _node_id_from_node_instance(data['node'])
+        ctx.add_node_id_to_node_instance_id_mapping(node_id,
+                                                    node_instance_id)
     _handle_connected_to_and_depends_on(ctx)
 
     return deployment_node_graph
@@ -301,7 +300,6 @@ def _build_and_update_node_instances(ctx,
             node_id=node_id,
             node_instance_id=node_instance_id,
             node_instance=node_instance)
-        ctx.add_node_id_to_node_instance_id_mapping(node_id, node_instance_id)
         if parent_node_instance_id is not None:
             relationship_instance = _relationship_instance_copy(
                 parent_relationship,
