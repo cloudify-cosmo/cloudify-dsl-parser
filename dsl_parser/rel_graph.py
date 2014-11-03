@@ -253,30 +253,13 @@ def _build_and_update_node_instances(ctx,
                 new_instances_num = (total_instances_num -
                                      previous_instances_num)
             else:
-                removed_instances_num = (previous_instances_num -
-                                         total_instances_num)
-                removed_ids_include_hint = modified_node.get(
-                    'removed_ids_include_hint', [])
-                removed_ids_exclude_hint = modified_node.get(
-                    'removed_ids_exclude_hint', [])
-                for removed_instance_id in removed_ids_include_hint:
-                    if removed_instances_num <= 0:
-                        break
-                    if removed_instance_id in previous_node_instance_ids:
-                        previous_node_instance_ids.remove(removed_instance_id)
-                        removed_instances_num -= 1
-                for removed_instance_id in copy.copy(
-                        previous_node_instance_ids):
-                    if removed_instances_num <= 0:
-                        break
-                    if removed_instance_id in removed_ids_exclude_hint:
-                        continue
-                    previous_node_instance_ids.remove(removed_instance_id)
-                    removed_instances_num -= 1
-                remaining_removed_instance_ids = previous_node_instance_ids[
-                    :removed_instances_num]
-                for removed_instance_id in remaining_removed_instance_ids:
-                    previous_node_instance_ids.remove(removed_instance_id)
+                # removed nodes are removed from the
+                # 'previous_node_instance_ids' list which means they will
+                # not be included in the resulting graph
+                _handle_removed_instances(previous_node_instance_ids,
+                                          previous_instances_num,
+                                          total_instances_num,
+                                          modified_node)
         else:
             new_instances_num = (current_instances_num -
                                  previous_instances_num)
@@ -310,6 +293,36 @@ def _build_and_update_node_instances(ctx,
                                         relationship_instance,
                                         new_current_host_instance_id))
     return previous_containers + new_containers
+
+
+def _handle_removed_instances(
+        previous_node_instance_ids,
+        previous_instances_num,
+        total_instances_num,
+        modified_node):
+    removed_instances_num = previous_instances_num - total_instances_num
+    removed_ids_include_hint = modified_node.get(
+        'removed_ids_include_hint', [])
+    removed_ids_exclude_hint = modified_node.get(
+        'removed_ids_exclude_hint', [])
+    for removed_instance_id in removed_ids_include_hint:
+        if removed_instances_num <= 0:
+            break
+        if removed_instance_id in previous_node_instance_ids:
+            previous_node_instance_ids.remove(removed_instance_id)
+            removed_instances_num -= 1
+    for removed_instance_id in copy.copy(
+            previous_node_instance_ids):
+        if removed_instances_num <= 0:
+            break
+        if removed_instance_id in removed_ids_exclude_hint:
+            continue
+        previous_node_instance_ids.remove(removed_instance_id)
+        removed_instances_num -= 1
+    remaining_removed_instance_ids = previous_node_instance_ids[
+        :removed_instances_num]
+    for removed_instance_id in remaining_removed_instance_ids:
+        previous_node_instance_ids.remove(removed_instance_id)
 
 
 def _extract_contained(node, node_instance):
