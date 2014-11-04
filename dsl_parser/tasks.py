@@ -80,7 +80,13 @@ def prepare_deployment_plan(plan, inputs=None, **kwargs):
     """
     Prepare a plan for deployment
     """
-    plan = multi_instance.create_multi_instance_plan(plan)
+    plan = multi_instance.create_deployment_plan(plan)
     _set_plan_inputs(plan, inputs)
     _process_functions(plan)
     return plan
+
+
+def modify_deployment(nodes, previous_node_instances, modified_nodes):
+    return multi_instance.modify_deployment(nodes,
+                                            previous_node_instances,
+                                            modified_nodes)

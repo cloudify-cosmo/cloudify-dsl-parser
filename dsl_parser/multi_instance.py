@@ -12,20 +12,45 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-__author__ = 'dan'
 
-import rel_graph
+
+import copy
 
 from dsl_parser import models
+from dsl_parser import rel_graph
+from dsl_parser import constants
 
 
-def create_multi_instance_plan(plan):
+def create_deployment_plan(plan):
     """
     Expand node instances based on number of instances to deploy and
     defined relationships
     """
-    graph = rel_graph.build_initial_node_graph(plan)
-    m_graph = rel_graph.build_multi_instance_node_graph(graph)
-    m_plan = rel_graph.create_multi_instance_plan_from_multi_instance_graph(
-        plan, m_graph)
-    return models.Plan(m_plan)
+    plan_node_graph = rel_graph.build_node_graph(plan['nodes'])
+    deployment_node_graph = rel_graph.build_deployment_node_graph(
+        plan_node_graph)
+    node_instances = rel_graph.extract_node_instances(
+        node_instances_graph=deployment_node_graph)
+    deployment_plan = copy.deepcopy(plan)
+    deployment_plan[constants.NODE_INSTANCES] = node_instances
+    return models.Plan(deployment_plan)
+
+
+def modify_deployment(nodes, previous_node_instances, modified_nodes):
+    plan_node_graph = rel_graph.build_node_graph(nodes)
+    previous_deployment_node_graph = rel_graph.build_node_graph(
+        previous_node_instances)
+    new_deployment_node_graph = rel_graph.build_deployment_node_graph(
+        plan_node_graph,
+        previous_deployment_node_graph,
+        modified_nodes)
+
+    added_and_related = rel_graph.extract_added_node_instances(
+        previous_deployment_node_graph, new_deployment_node_graph)
+    removed_and_related = rel_graph.extract_removed_node_instances(
+        previous_deployment_node_graph, new_deployment_node_graph)
+
+    return {
+        'added_and_related': added_and_related,
+        'removed_and_related': removed_and_related
+    }
