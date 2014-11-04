@@ -173,7 +173,7 @@ class GetAttribute(Function):
         if self.node_name not in [SELF, SOURCE, TARGET]:
             found = [
                 x for x in plan.node_templates if self.node_name == x['id']]
-            if len(found) == 0:
+            if not found:
                 raise KeyError(
                     "{0} function node reference '{1}' does not exist.".format(
                         GET_ATTRIBUTE_FUNCTION, self.node_name))
