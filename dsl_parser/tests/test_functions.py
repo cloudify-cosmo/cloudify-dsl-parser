@@ -513,26 +513,7 @@ node_templates:
 
 class TestGetAttribute(AbstractTestParser):
 
-    def test_used_only_in_outputs(self):
-        yaml = """
-node_types:
-    vm_type:
-        properties:
-            a: { type: string }
-node_templates:
-    vm:
-        type: vm_type
-        properties:
-            a: { get_attribute: [SELF, aaa] }
-"""
-        try:
-            self.parse(yaml)
-            self.fail()
-        except ValueError, e:
-            self.assertIn('get_attribute function can only be used in outputs '
-                          'but is used in vm.properties.a', str(e))
-
-    def test_illegal_safe_in_outputs(self):
+    def test_unknown_ref(self):
         yaml = """
 node_types:
     vm_type:
@@ -542,11 +523,35 @@ node_templates:
         type: vm_type
 outputs:
     a:
-        value: { get_attribute: [SELF, aaa] }
+        value: { get_attribute: [i_do_not_exist, aaa] }
 """
         try:
             self.parse(yaml)
             self.fail()
-        except ValueError, e:
-            self.assertIn('SELF cannot be used with get_attribute function in '
-                          'outputs.a.value', str(e))
+        except KeyError, e:
+            self.assertIn("get_attribute function node reference "
+                          "'i_do_not_exist' does not exist.", str(e))
+
+    def test_illegal_ref_in_outputs(self):
+        def assert_with(ref):
+            yaml = """
+node_types:
+    vm_type:
+        properties: {}
+node_templates:
+    vm:
+        type: vm_type
+outputs:
+    a:
+        value: { get_attribute: [""" + ref + """, aaa] }
+"""
+            try:
+                self.parse(yaml)
+                self.fail()
+            except ValueError, e:
+                self.assertIn('{0} cannot be used with get_attribute '
+                              'function in outputs.a.value'
+                              .format(ref), str(e))
+        assert_with('SELF')
+        assert_with('SOURCE')
+        assert_with('TARGET')

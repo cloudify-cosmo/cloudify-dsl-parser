@@ -151,21 +151,21 @@ class GetAttribute(Function):
         self.attribute_path = args[1:]
 
     def validate(self, plan):
-        if self.scope != scan.OUTPUTS_SCOPE:
-            raise ValueError('{0} function can only be used in outputs but is '
-                             'used in {1}.'.format(GET_ATTRIBUTE_FUNCTION,
-                                                   self.path))
-        if self.node_name == SELF:
+        if self.scope == scan.OUTPUTS_SCOPE and self.node_name in [SELF,
+                                                                   SOURCE,
+                                                                   TARGET]:
             raise ValueError('{0} cannot be used with {1} function in '
-                             '{2}.'.format(SELF,
+                             '{2}.'.format(self.node_name,
                                            GET_ATTRIBUTE_FUNCTION,
                                            self.path))
-        found = [
-            x for x in plan.node_templates if self.node_name == x['id']]
-        if len(found) == 0:
-            raise KeyError(
-                "{0} function node reference '{1}' does not exist.".format(
-                    GET_ATTRIBUTE_FUNCTION, self.node_name))
+
+        if self.node_name not in [SELF, SOURCE, TARGET]:
+            found = [
+                x for x in plan.node_templates if self.node_name == x['id']]
+            if len(found) == 0:
+                raise KeyError(
+                    "{0} function node reference '{1}' does not exist.".format(
+                        GET_ATTRIBUTE_FUNCTION, self.node_name))
 
     def evaluate(self, plan):
         raise RuntimeError(
