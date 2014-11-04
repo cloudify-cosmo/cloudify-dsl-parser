@@ -518,6 +518,17 @@ node_templates:
             self.assertIn('host_', instance['id'])
             self.assertEqual(instance['host_id'], instance['id'])
 
+    def test_modified_single_no_actual_modification(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host:
+        type: cloudify.nodes.Compute
+"""
+        plan = self.parse_multi(yaml)
+        modification = self.modify_multi(plan, {
+            'host': {'instances': 1}
+        })
+        self._assert_modification(modification, 0, 0, 0, 0)
+
     def test_modified_single_node_removed(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
