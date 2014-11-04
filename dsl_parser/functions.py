@@ -158,7 +158,18 @@ class GetAttribute(Function):
                              '{2}.'.format(self.node_name,
                                            GET_ATTRIBUTE_FUNCTION,
                                            self.path))
-
+        if self.scope == scan.NODE_TEMPLATE_SCOPE and \
+                self.node_name in [SOURCE, TARGET]:
+            raise ValueError('{0} cannot be used with {1} function in '
+                             '{2}.'.format(self.node_name,
+                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.path))
+        if self.scope == scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE and \
+                self.node_name == SELF:
+            raise ValueError('{0} cannot be used with {1} function in '
+                             '{2}.'.format(self.node_name,
+                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.path))
         if self.node_name not in [SELF, SOURCE, TARGET]:
             found = [
                 x for x in plan.node_templates if self.node_name == x['id']]

@@ -532,6 +532,74 @@ outputs:
             self.assertIn("get_attribute function node reference "
                           "'i_do_not_exist' does not exist.", str(e))
 
+    def test_illegal_ref_in_node_template(self):
+        def assert_with(ref):
+            yaml = """
+plugins:
+    a:
+        executor: central_deployment_agent
+        install: false
+node_types:
+    vm_type:
+        properties: {}
+node_templates:
+    vm:
+        type: vm_type
+        interfaces:
+            test:
+                op:
+                    implementation: a.a
+                    inputs:
+                        a: { get_attribute: [""" + ref + """, aaa] }
+
+"""
+            try:
+                self.parse(yaml)
+                self.fail()
+            except ValueError, e:
+                self.assertIn('{0} cannot be used with get_attribute function '
+                              'in vm.operations.test.op.inputs.a'
+                              .format(ref), str(e))
+        assert_with('SOURCE')
+        assert_with('TARGET')
+
+    def test_illegal_ref_in_relationship(self):
+        def assert_with(ref):
+            yaml = """
+plugins:
+    a:
+        executor: central_deployment_agent
+        install: false
+relationships:
+    relationship: {}
+node_types:
+    vm_type:
+        properties: {}
+node_templates:
+    node:
+        type: vm_type
+    vm:
+        type: vm_type
+        relationships:
+            - target: node
+              type: relationship
+              source_interfaces:
+                test:
+                    op:
+                        implementation: a.a
+                        inputs:
+                            a: { get_attribute: [""" + ref + """, aaa] }
+
+"""
+            try:
+                self.parse(yaml)
+                self.fail()
+            except ValueError, e:
+                self.assertIn('{0} cannot be used with get_attribute function '
+                              'in vm.relationship.test.op.inputs.a'
+                              .format(ref), str(e))
+        assert_with('SELF')
+
     def test_illegal_ref_in_outputs(self):
         def assert_with(ref):
             yaml = """
