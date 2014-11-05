@@ -231,6 +231,87 @@ def parse(raw_function, scope=None, context=None, path=None):
     return raw_function
 
 
+def process_attributes(payload, context,
+                       get_node_instances_method,
+                       get_node_instance_method):
+    """Processes attributes in payload.
+
+    :param payload: The payload to process.
+    :param context: Context used during processing.
+    :param get_node_instances_method: A method for getting node instances.
+    :param get_node_instance_method: A method for getting a node instance.
+    :return: payload.
+    """
+    ctx = {
+        'node_to_node_instances': {},
+        'node_instances': {}
+    }
+
+    def validate_ref(ref, ref_name, path, func):
+        if not ref:
+            raise exceptions.FunctionEvaluationError(
+                GET_ATTRIBUTE_FUNCTION,
+                '{0} is missing in request context in {1} for '
+                'attribute {2}'.format(ref_name, path, func.attribute_path))
+
+    def _get_node_instance(node_instance_id):
+        if node_instance_id not in ctx['node_instances']:
+            node_instance = get_node_instance_method(node_instance_id)
+            ctx['node_instances'][node_instance_id] = node_instance
+        return ctx['node_instances'][node_instance_id]
+
+    def handler(v, scope, context, path):
+        func = parse(v, scope=scope, context=context, path=path)
+        if not isinstance(func, GetAttribute):
+            return v
+
+        if func.node_name == SELF:
+            node_instance_id = context.get('self')
+            validate_ref(node_instance_id, SELF, path, func)
+            node_instance = _get_node_instance(node_instance_id)
+        elif func.node_name == SOURCE:
+            node_instance_id = context.get('source')
+            validate_ref(node_instance_id, SOURCE, path, func)
+            node_instance = _get_node_instance(node_instance_id)
+        elif func.node_name == TARGET:
+            node_instance_id = context.get('target')
+            validate_ref(node_instance_id, TARGET, path, func)
+            node_instance = _get_node_instance(node_instance_id)
+        else:
+            node_id = func.node_name
+            if func.node_name not in ctx['node_to_node_instances']:
+                node_instances = get_node_instances_method(node_id)
+                ctx['node_to_node_instances'][node_id] = node_instances
+            node_instances = ctx['node_to_node_instances'][node_id]
+            if len(node_instances) == 0:
+                raise exceptions.FunctionEvaluationError(
+                    GET_ATTRIBUTE_FUNCTION,
+                    'Node specified in function does not exist: {0}.'
+                    .format(func.node_name))
+            if len(node_instances) > 1:
+                raise exceptions.FunctionEvaluationError(
+                    GET_ATTRIBUTE_FUNCTION,
+                    'Multi instances of node "{0}" are not supported by '
+                    'function.'.format(func.node_name))
+            node_instance = node_instances[0]
+            # because of elastic_search eventual consistency
+            node_instance = _get_node_instance(node_instance.id)
+
+        return _get_property_value(node_instance.node_id,
+                                   node_instance.runtime_properties,
+                                   func.attribute_path,
+                                   path,
+                                   raise_if_not_found=False)
+
+    scan.scan_properties(payload,
+                         handler,
+                         scope=None,
+                         context=context,
+                         path='payload',
+                         replace=True)
+    return payload
+
+
 def evaluate_outputs(outputs_def, get_node_instances_method):
     """Evaluates an outputs definition containing intrinsic functions.
 
