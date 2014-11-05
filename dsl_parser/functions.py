@@ -312,50 +312,19 @@ def process_attributes(payload, context,
     return payload
 
 
-def evaluate_outputs(outputs_def, get_node_instances_method):
+def evaluate_outputs(outputs_def,
+                     get_node_instances_method,
+                     get_node_instance_method):
     """Evaluates an outputs definition containing intrinsic functions.
 
     :param outputs_def: Outputs definition.
     :param get_node_instances_method: A method for getting node instances.
+    :param get_node_instance_method: A method for getting a node instance.
     :return: Outputs dict.
     """
-    ctx = {}
     outputs = dict((k, v['value']) for k, v in outputs_def.iteritems())
-
-    def handler(v, scope, context, path):
-        func = parse(v, scope=scope, context=context, path=path)
-        if isinstance(func, GetAttribute):
-            attributes = []
-            if 'node_instances' not in ctx:
-                ctx['node_instances'] = get_node_instances_method()
-            for instance in ctx['node_instances']:
-                if instance.node_id == func.node_name:
-                    attributes.append(
-                        _get_property_value(instance.node_id,
-                                            instance.runtime_properties,
-                                            func.attribute_path,
-                                            path,
-                                            raise_if_not_found=False))
-            if len(attributes) == 1:
-                return attributes[0]
-            elif len(attributes) == 0:
-                raise exceptions.FunctionEvaluationError(
-                    GET_ATTRIBUTE_FUNCTION,
-                    'Node specified in function does not exist: {0}.'.format(
-                        func.node_name)
-                )
-            else:
-                raise exceptions.FunctionEvaluationError(
-                    GET_ATTRIBUTE_FUNCTION,
-                    'Multi instances of node "{0}" are not supported by '
-                    'function.'.format(func.node_name))
-        else:
-            return v
-
-    scan.scan_properties(outputs,
-                         handler,
-                         scope=scan.OUTPUTS_SCOPE,
-                         context=outputs,
-                         path='outputs',
-                         replace=True)
-    return outputs
+    return process_attributes(
+        payload=outputs,
+        context={},
+        get_node_instances_method=get_node_instances_method,
+        get_node_instance_method=get_node_instance_method)
