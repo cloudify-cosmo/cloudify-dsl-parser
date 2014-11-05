@@ -1056,6 +1056,8 @@ def _get_relationship_implementation_if_exists(source_node_name,
 def _operation_struct(plugin_name, operation_mapping, operation_properties,
                       properties_field_name):
     result = {'plugin': plugin_name, 'operation': operation_mapping}
+    if properties_field_name == INPUTS:
+        result['has_attributes'] = False
     if operation_properties is not None:
         result[properties_field_name] = operation_properties
     return result

@@ -59,6 +59,8 @@ def _process_functions(plan):
         evaluated_value = v
         while isinstance(func, functions.Function):
             if isinstance(func, functions.GetAttribute):
+                if 'operation' in context:
+                    context['operation']['has_attributes'] = True
                 return func.raw
             evaluated_value = func.evaluate(plan)
             scan.scan_properties(evaluated_value,
