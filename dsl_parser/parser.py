@@ -535,9 +535,10 @@ def _validate_functions(plan):
 
     # Validate there are no circular get_property calls
     for func in get_property_functions:
+        property_path = [str(prop) for prop in func.property_path]
         visited_functions = ['{0}.{1}'.format(
             func.get_node_template(plan)['name'],
-            constants.FUNCTION_NAME_PATH_SEPARATOR.join(func.property_path))]
+            constants.FUNCTION_NAME_PATH_SEPARATOR.join(property_path))]
 
         def validate_no_circular_get_property(*args):
             r = args[0]

@@ -159,16 +159,22 @@ outputs:
 """
         parsed = self.parse(yaml)
 
-        def get_node_instances():
+        def get_node_instances(node_id=None):
             return [
                 NodeInstance({
+                    'id': 'webserver1',
                     'node_id': 'webserver',
                     'runtime_properties': {
                         'port': 8080
                     }
                 })
             ]
-        o = functions.evaluate_outputs(parsed['outputs'], get_node_instances)
+
+        def get_node_instance(node_instance_id):
+            return get_node_instances()[0]
+        o = functions.evaluate_outputs(parsed['outputs'],
+                                       get_node_instances,
+                                       get_node_instance)
         self.assertEqual(8080, o['port'])
         self.assertEqual(8080, o['endpoint']['port'])
 
@@ -186,11 +192,13 @@ outputs:
 """
         parsed = self.parse(yaml)
 
-        def get_node_instances():
+        def get_node_instances(node_id=None):
             return []
 
         try:
-            functions.evaluate_outputs(parsed['outputs'], get_node_instances)
+            functions.evaluate_outputs(parsed['outputs'],
+                                       get_node_instances,
+                                       None)
             self.fail()
         except exceptions.FunctionEvaluationError, e:
             self.assertIn('Node specified in function does not exist', str(e))
@@ -210,8 +218,9 @@ outputs:
 """
         parsed = self.parse(yaml)
 
-        def get_node_instances():
+        def get_node_instances(node_id=None):
             node_instance = NodeInstance({
+                'id': 'webserver1',
                 'node_id': 'webserver',
                 'runtime_properties': {
                     'port': 8080
@@ -219,8 +228,13 @@ outputs:
             })
             return [node_instance, node_instance]
 
+        def get_node_instance(node_instance_id):
+            return get_node_instances()[0]
+
         try:
-            functions.evaluate_outputs(parsed['outputs'], get_node_instances)
+            functions.evaluate_outputs(parsed['outputs'],
+                                       get_node_instances,
+                                       get_node_instance)
             self.fail()
         except exceptions.FunctionEvaluationError, e:
             self.assertIn('Multi instances of node', str(e))
@@ -243,8 +257,9 @@ outputs:
 """
         parsed = self.parse(yaml)
 
-        def get_node_instances():
+        def get_node_instances(node_id=None):
             node_instance = NodeInstance({
+                'id': 'webserver1',
                 'node_id': 'webserver',
                 'runtime_properties': {
                     'endpoint': {
@@ -257,8 +272,12 @@ outputs:
             })
             return [node_instance]
 
+        def get_node_instance(node_instance_id):
+            return get_node_instances()[0]
+
         outputs = functions.evaluate_outputs(parsed['outputs'],
-                                             get_node_instances)
+                                             get_node_instances,
+                                             get_node_instance)
         self.assertEqual(8080, outputs['port'])
         self.assertEqual('http', outputs['protocol'])
         self.assertIsNone(outputs['none'])
@@ -268,6 +287,10 @@ class NodeInstance(dict):
 
     def __init__(self, values):
         self.update(values)
+
+    @property
+    def id(self):
+        return self.get('id')
 
     @property
     def node_id(self):

@@ -432,6 +432,8 @@ node_types:
         properties:
             endpoint: {}
             a: { type: integer }
+            b: {}
+            c: {}
     server_type:
         properties:
             port: { type: integer }
@@ -443,7 +445,15 @@ node_templates:
                 url:
                     protocol: http
                 port: 80
+                names: [site1, site2, site3]
+                pairs:
+                    - key: key1
+                      value: value1
+                    - key: key2
+                      value: value2
             a: { get_property: [ SELF, endpoint, port ] }
+            b: { get_property: [ SELF, endpoint, names, 0 ] }
+            c: { get_property: [ SELF, endpoint, pairs, 1 , key] }
     server:
         type: server_type
         properties:
@@ -453,18 +463,26 @@ outputs:
         value: { get_property: [ vm, endpoint, port ] }
     b:
         value: { get_property: [ vm, endpoint, url, protocol ] }
+    c:
+        value: { get_property: [ vm, endpoint, names, 1 ] }
+    d:
+        value: { get_property: [ vm, endpoint, pairs, 1, value] }
 
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         vm = self.get_node_by_name(parsed, 'vm')
         self.assertEqual(80, vm['properties']['a'])
+        self.assertEqual('site1', vm['properties']['b'])
+        self.assertEqual('key2', vm['properties']['c'])
         server = self.get_node_by_name(parsed, 'server')
         self.assertEqual(80, server['properties']['port'])
         outputs = parsed.outputs
         self.assertEqual(80, outputs['a']['value'])
         self.assertEqual('http', outputs['b']['value'])
+        self.assertEqual('site2', outputs['c']['value'])
+        self.assertEqual('value2', outputs['d']['value'])
 
-    def test_invalid_nested_property(self):
+    def test_invalid_nested_property1(self):
         yaml = """
 node_types:
     vm_type:
@@ -484,6 +502,47 @@ node_templates:
             self.assertIn(
                 "Node template property 'vm.properties.a.notfound' "
                 "referenced from 'vm.properties.a.a0' doesn't exist.", str(e))
+
+    def test_invalid_nested_property2(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: {}
+            b: {}
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: [1,2,3]
+            b: { get_property: [SELF, a, b] }
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except TypeError, e:
+            self.assertIn('is expected b to be an int but it is a str', str(e))
+
+    def test_invalid_nested_property3(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: {}
+            b: {}
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: [1,2,3]
+            b: { get_property: [SELF, a, 10] }
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except IndexError, e:
+            self.assertIn('index is out of range. Got 10 but list size is 3',
+                          str(e))
 
     @timeout(seconds=10)
     def test_circular_nested_property_path(self):

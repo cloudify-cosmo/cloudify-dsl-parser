@@ -205,16 +205,48 @@ def _get_property_value(node_name,
     :param raise_if_not_found: Whether to raise an error if property not found.
     :return: Property value.
     """
+    str_list = lambda li: [str(item) for item in li]
     value = properties
     for p in property_path:
-        if not isinstance(value, dict) or p not in value:
+        if isinstance(value, dict):
+            if p not in value:
+                if raise_if_not_found:
+                    raise KeyError(
+                        "Node template property '{0}.properties.{1}' "
+                        "referenced from '{2}' doesn't exist.".format(
+                            node_name, '.'.join(str_list(property_path)),
+                            context_path))
+                return None
+            value = value[p]
+        elif isinstance(value, list):
+            try:
+                value = value[p]
+            except TypeError:
+                raise TypeError(
+                    "Node template property '{0}.properties.{1}' "
+                    "referenced from '{2}' is expected {3} to be an int "
+                    "but it is a {4}.".format(
+                        node_name, '.'.join(str_list(property_path)),
+                        context_path,
+                        p, type(p).__name__))
+            except IndexError:
+                if raise_if_not_found:
+                    raise IndexError(
+                        "Node template property '{0}.properties.{1}' "
+                        "referenced from '{2}' index is out of range. Got {3}"
+                        " but list size is {4}.".format(
+                            node_name, '.'.join(str_list(property_path)),
+                            context_path, p, len(value)))
+                return None
+        else:
             if raise_if_not_found:
                 raise KeyError(
-                    "Node template property '{0}.properties.{1}' referenced "
-                    "from '{2}' doesn't exist.".format(
-                        node_name, '.'.join(property_path), context_path))
+                    "Node template property '{0}.properties.{1}' "
+                    "referenced from '{2}' doesn't exist.".format(
+                        node_name, '.'.join(str_list(property_path)),
+                        context_path))
             return None
-        value = value[p]
+
     return value
 
 
