@@ -265,18 +265,21 @@ def parse(raw_function, scope=None, context=None, path=None):
 
 def process_attributes(payload, context,
                        get_node_instances_method,
-                       get_node_instance_method):
+                       get_node_instance_method,
+                       get_node_method):
     """Processes attributes in payload.
 
     :param payload: The payload to process.
     :param context: Context used during processing.
     :param get_node_instances_method: A method for getting node instances.
     :param get_node_instance_method: A method for getting a node instance.
+    :param get_node_method: A method for getting a node.
     :return: payload.
     """
     ctx = {
         'node_to_node_instances': {},
-        'node_instances': {}
+        'node_instances': {},
+        'nodes': {}
     }
 
     def validate_ref(ref, ref_name, path, func):
@@ -291,6 +294,12 @@ def process_attributes(payload, context,
             node_instance = get_node_instance_method(node_instance_id)
             ctx['node_instances'][node_instance_id] = node_instance
         return ctx['node_instances'][node_instance_id]
+
+    def _get_node(node_id):
+        if node_id not in ctx['nodes']:
+            node = get_node_method(node_id)
+            ctx['nodes'][node_id] = node
+        return ctx['nodes'][node_id]
 
     def handler(v, scope, context, path):
         func = parse(v, scope=scope, context=context, path=path)
@@ -329,11 +338,19 @@ def process_attributes(payload, context,
             # because of elastic_search eventual consistency
             node_instance = _get_node_instance(node_instance.id)
 
-        return _get_property_value(node_instance.node_id,
-                                   node_instance.runtime_properties,
-                                   func.attribute_path,
-                                   path,
-                                   raise_if_not_found=False)
+        value = _get_property_value(node_instance.node_id,
+                                    node_instance.runtime_properties,
+                                    func.attribute_path,
+                                    path,
+                                    raise_if_not_found=False)
+        if value is None:
+            node = _get_node(node_instance.node_id)
+            value = _get_property_value(node.id,
+                                        node.properties,
+                                        func.attribute_path,
+                                        path,
+                                        raise_if_not_found=False)
+        return value
 
     scan.scan_properties(payload,
                          handler,
@@ -346,12 +363,14 @@ def process_attributes(payload, context,
 
 def evaluate_outputs(outputs_def,
                      get_node_instances_method,
-                     get_node_instance_method):
+                     get_node_instance_method,
+                     get_node_method):
     """Evaluates an outputs definition containing intrinsic functions.
 
     :param outputs_def: Outputs definition.
     :param get_node_instances_method: A method for getting node instances.
     :param get_node_instance_method: A method for getting a node instance.
+    :param get_node_method: A method for getting a node.
     :return: Outputs dict.
     """
     outputs = dict((k, v['value']) for k, v in outputs_def.iteritems())
@@ -359,4 +378,5 @@ def evaluate_outputs(outputs_def,
         payload=outputs,
         context={},
         get_node_instances_method=get_node_instances_method,
-        get_node_instance_method=get_node_instance_method)
+        get_node_instance_method=get_node_instance_method,
+        get_node_method=get_node_method)

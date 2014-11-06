@@ -172,9 +172,14 @@ outputs:
 
         def get_node_instance(node_instance_id):
             return get_node_instances()[0]
+
+        def get_node(node_id):
+            return Node({'id': node_id})
+
         o = functions.evaluate_outputs(parsed['outputs'],
                                        get_node_instances,
-                                       get_node_instance)
+                                       get_node_instance,
+                                       get_node)
         self.assertEqual(8080, o['port'])
         self.assertEqual(8080, o['endpoint']['port'])
 
@@ -198,7 +203,7 @@ outputs:
         try:
             functions.evaluate_outputs(parsed['outputs'],
                                        get_node_instances,
-                                       None)
+                                       None, None)
             self.fail()
         except exceptions.FunctionEvaluationError, e:
             self.assertIn('Node specified in function does not exist', str(e))
@@ -231,10 +236,14 @@ outputs:
         def get_node_instance(node_instance_id):
             return get_node_instances()[0]
 
+        def get_node(node_id):
+            return Node({'id': node_id})
+
         try:
             functions.evaluate_outputs(parsed['outputs'],
                                        get_node_instances,
-                                       get_node_instance)
+                                       get_node_instance,
+                                       get_node)
             self.fail()
         except exceptions.FunctionEvaluationError, e:
             self.assertIn('Multi instances of node', str(e))
@@ -275,9 +284,13 @@ outputs:
         def get_node_instance(node_instance_id):
             return get_node_instances()[0]
 
+        def get_node(node_id):
+            return Node({'id': node_id})
+
         outputs = functions.evaluate_outputs(parsed['outputs'],
                                              get_node_instances,
-                                             get_node_instance)
+                                             get_node_instance,
+                                             get_node)
         self.assertEqual(8080, outputs['port'])
         self.assertEqual('http', outputs['protocol'])
         self.assertIsNone(outputs['none'])
@@ -299,3 +312,17 @@ class NodeInstance(dict):
     @property
     def runtime_properties(self):
         return self.get('runtime_properties')
+
+
+class Node(dict):
+
+    def __init__(self, values):
+        self.update(values)
+
+    @property
+    def id(self):
+        return self.get('id')
+
+    @property
+    def properties(self):
+        return self.get('properties', {})

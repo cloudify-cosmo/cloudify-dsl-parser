@@ -116,6 +116,11 @@ class TestProcessAttributes(AbstractTestParser):
                 result.runtime_properties['d'] = 'd_val'
             return result
 
+        def get_node(node_id):
+            return Node({
+                'id': node_id,
+            })
+
         payload = {
             'a': {'get_attribute': ['SELF', 'a']},
             'b': {'get_attribute': ['node2', 'b']},
@@ -132,33 +137,110 @@ class TestProcessAttributes(AbstractTestParser):
         functions.process_attributes(payload,
                                      context,
                                      get_node_instances,
-                                     get_node_instance)
+                                     get_node_instance,
+                                     get_node)
 
         self.assertEqual(payload['a'], 'a_val')
         self.assertEqual(payload['b'], 'b_val')
         self.assertEqual(payload['c'], 'c_val')
         self.assertEqual(payload['d'], 'd_val')
 
+    def test_process_attributes_properties_fallback(self):
+
+        def get_node_instances(node_id=None):
+            return [get_node_instance(node_id)]
+
+        def get_node_instance(node_instance_id):
+            return NodeInstance({
+                'id': node_instance_id,
+                'node_id': 'webserver',
+                'runtime_properties': {}
+            })
+
+        def get_node(node_id):
+            return Node({
+                'id': node_id,
+                'properties': {
+                    'a': 'a_val',
+                    'b': 'b_val',
+                    'c': 'c_val',
+                    'd': 'd_val',
+                }
+            })
+
+        payload = {
+            'a': {'get_attribute': ['SELF', 'a']},
+            'b': {'get_attribute': ['node', 'b']},
+            'c': {'get_attribute': ['SOURCE', 'c']},
+            'd': {'get_attribute': ['TARGET', 'd']},
+        }
+
+        context = {
+            'self': 'node',
+            'source': 'node',
+            'target': 'node'
+        }
+
+        functions.process_attributes(payload,
+                                     context,
+                                     get_node_instances,
+                                     get_node_instance,
+                                     get_node)
+
+        self.assertEqual(payload['a'], 'a_val')
+        self.assertEqual(payload['b'], 'b_val')
+        self.assertEqual(payload['c'], 'c_val')
+        self.assertEqual(payload['d'], 'd_val')
+
+    def test_process_attributes_no_value(self):
+
+        def get_node_instances(node_id=None):
+            return [get_node_instance(node_id)]
+
+        def get_node_instance(node_instance_id):
+            return NodeInstance({
+                'id': node_instance_id,
+                'node_id': 'webserver',
+                'runtime_properties': {}
+            })
+
+        def get_node(node_id):
+            return Node({
+                'id': node_id,
+            })
+
+        payload = {
+            'a': {'get_attribute': ['node', 'a']},
+        }
+
+        functions.process_attributes(payload,
+                                     {},
+                                     get_node_instances,
+                                     get_node_instance,
+                                     get_node)
+
+        self.assertIsNone(payload['a'])
+
     def test_missing_self_ref(self):
         payload = {'a': {'get_attribute': ['SELF', 'a']}}
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*SELF is missing.*'):
-            functions.process_attributes(payload, {}, None, None)
+            functions.process_attributes(payload, {}, None, None, None)
 
     def test_missing_source_ref(self):
         payload = {'a': {'get_attribute': ['SOURCE', 'a']}}
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*SOURCE is missing.*'):
-            functions.process_attributes(payload, {}, None, None)
+            functions.process_attributes(payload, {}, None, None, None)
 
     def test_missing_target_ref(self):
         payload = {'a': {'get_attribute': ['TARGET', 'a']}}
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*TARGET is missing.*'):
-            functions.process_attributes(payload, {}, None, None)
+            functions.process_attributes(payload, {}, None, None, None)
 
     def test_no_instances(self):
         def get_node_instances(node_id):
@@ -167,7 +249,8 @@ class TestProcessAttributes(AbstractTestParser):
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*does not exist.*'):
-            functions.process_attributes(payload, {}, get_node_instances, None)
+            functions.process_attributes(payload, {}, get_node_instances, None,
+                                         None)
 
     def test_too_many_instances(self):
         def get_node_instances(node_id):
@@ -176,7 +259,8 @@ class TestProcessAttributes(AbstractTestParser):
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*Multi instances.*'):
-            functions.process_attributes(payload, {}, get_node_instances, None)
+            functions.process_attributes(payload, {}, get_node_instances, None,
+                                         None)
 
 
 class NodeInstance(dict):
@@ -195,3 +279,17 @@ class NodeInstance(dict):
     @property
     def runtime_properties(self):
         return self.get('runtime_properties')
+
+
+class Node(dict):
+
+    def __init__(self, values):
+        self.update(values)
+
+    @property
+    def id(self):
+        return self.get('id')
+
+    @property
+    def properties(self):
+        return self.get('properties', {})
