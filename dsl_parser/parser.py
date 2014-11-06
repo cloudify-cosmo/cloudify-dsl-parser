@@ -668,7 +668,7 @@ def extract_complete_node_type(node_types,
         dsl_type_name=node_type_name,
         dsl_type=node_type,
         dsl_container=node_types,
-        is_relationships=True,
+        is_relationships=False,
         merging_func=node_type_interfaces_merging_function
     )
 
