@@ -20,12 +20,6 @@ from dsl_parser.interfaces.utils import merge_schema_and_instance_inputs
 
 class OperationMerger(object):
 
-    def __init__(self,
-                 overriding_operation,
-                 overridden_operation):
-        self.overriding_operation = overriding_operation
-        self.overridden_operation = overridden_operation
-
     @staticmethod
     def _create_operation(raw_operation):
         if raw_operation is None:
@@ -50,9 +44,6 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
     def __init__(self,
                  overriding_operation,
                  overridden_operation):
-        super(NodeTemplateNodeTypeOperationMerger, self).__init__(
-            overriding_operation=overriding_operation,
-            overridden_operation=overridden_operation)
         self.node_type_operation = self._create_operation(
             overridden_operation)
         self.node_template_operation = self._create_operation(
@@ -133,9 +124,6 @@ class NodeTypeNodeTypeOperationMerger(OperationMerger):
     def __init__(self,
                  overriding_operation,
                  overridden_operation):
-        super(NodeTypeNodeTypeOperationMerger, self).__init__(
-            overriding_operation=overriding_operation,
-            overridden_operation=overridden_operation)
         self.overridden_node_type_operation = self._create_operation(
             overridden_operation)
         self.overriding_node_type_operation = self._create_operation(
@@ -149,15 +137,12 @@ class NodeTypeNodeTypeOperationMerger(OperationMerger):
         if self.overriding_node_type_operation == NO_OP:
             return NO_OP
 
-        # operation in node type must
-        # contain 'implementation' (validated by schema)
         merged_operation_implementation = \
-            self.overriding_operation['implementation']
+            self.overriding_node_type_operation['implementation']
 
-        # operation in node type doe's not
-        # have to contain 'inputs' (allowed by schema)
         merged_operation_inputs = \
-            self.overriding_operation.get('inputs', {})
+            self.overriding_node_type_operation['inputs']
+
         return operation_mapping(
             implementation=merged_operation_implementation,
             inputs=merged_operation_inputs
