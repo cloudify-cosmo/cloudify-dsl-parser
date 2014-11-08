@@ -77,15 +77,16 @@ def merge_schema_and_instance_inputs(schema_inputs,
     return merged_inputs
 
 
-def operation_mapping(implementation=None,
-                      inputs=None):
-    result = {}
-    if implementation is not None:
-        result['implementation'] = implementation
-    if inputs is not None:
-        result['inputs'] = inputs
-    if not implementation and not inputs:
-        # create the no-op operation
-        result['implementation'] = ''
-        result['inputs'] = {}
-    return result
+def operation_mapping(implementation, inputs):
+    return {
+        'implementation': implementation,
+        'inputs': inputs
+    }
+
+
+def no_op():
+    return operation_mapping(
+        implementation='',
+        inputs={}
+    )
+

@@ -13,9 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser.interfaces.utils import operation_mapping
+from dsl_parser.interfaces.utils import no_op
 
 INTERFACES = 'interfaces'
 SOURCE_INTERFACES = 'source_interfaces'
 TARGET_INTERFACES = 'target_interfaces'
-NO_OP = operation_mapping()
+NO_OP = no_op()
