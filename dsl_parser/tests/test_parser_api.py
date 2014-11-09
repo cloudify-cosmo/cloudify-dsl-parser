@@ -37,7 +37,7 @@ def op_struct(plugin_name,
         'plugin': plugin_name,
         'operation': mapping,
         'inputs': inputs,
-        'has_attributes': False
+        'has_intrinsic_functions': False
     }
     return result
 

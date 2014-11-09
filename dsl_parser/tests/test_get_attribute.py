@@ -24,7 +24,7 @@ from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 class TestGetAttribute(AbstractTestParser):
 
-    def test_has_attributes_property(self):
+    def test_has_intrinsic_functions_property(self):
         yaml = """
 relationships:
     cloudify.relationships.contained_in: {}
@@ -83,18 +83,18 @@ node_templates:
 
         def assertion(operations):
             op = operations['test.op_with_no_get_attribute']
-            self.assertIs(False, op.get('has_attributes'))
+            self.assertIs(False, op.get('has_intrinsic_functions'))
             op = operations['test.op_with_get_attribute']
-            self.assertIs(True, op.get('has_attributes'))
+            self.assertIs(True, op.get('has_intrinsic_functions'))
 
         assertion(webserver_node['operations'])
         assertion(webserver_node['relationships'][0]['source_operations'])
         assertion(webserver_node['relationships'][0]['target_operations'])
 
 
-class TestProcessAttributes(AbstractTestParser):
+class TestEvaluateFunctions(AbstractTestParser):
 
-    def test_process_attributes(self):
+    def test_evaluate_functions(self):
 
         def get_node_instances(node_id=None):
             return [get_node_instance(node_id)]
@@ -134,7 +134,7 @@ class TestProcessAttributes(AbstractTestParser):
             'target': 'node4'
         }
 
-        functions.process_attributes(payload,
+        functions.evaluate_functions(payload,
                                      context,
                                      get_node_instances,
                                      get_node_instance,
@@ -181,7 +181,7 @@ class TestProcessAttributes(AbstractTestParser):
             'target': 'node'
         }
 
-        functions.process_attributes(payload,
+        functions.evaluate_functions(payload,
                                      context,
                                      get_node_instances,
                                      get_node_instance,
@@ -213,7 +213,7 @@ class TestProcessAttributes(AbstractTestParser):
             'a': {'get_attribute': ['node', 'a']},
         }
 
-        functions.process_attributes(payload,
+        functions.evaluate_functions(payload,
                                      {},
                                      get_node_instances,
                                      get_node_instance,
@@ -226,21 +226,21 @@ class TestProcessAttributes(AbstractTestParser):
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*SELF is missing.*'):
-            functions.process_attributes(payload, {}, None, None, None)
+            functions.evaluate_functions(payload, {}, None, None, None)
 
     def test_missing_source_ref(self):
         payload = {'a': {'get_attribute': ['SOURCE', 'a']}}
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*SOURCE is missing.*'):
-            functions.process_attributes(payload, {}, None, None, None)
+            functions.evaluate_functions(payload, {}, None, None, None)
 
     def test_missing_target_ref(self):
         payload = {'a': {'get_attribute': ['TARGET', 'a']}}
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*TARGET is missing.*'):
-            functions.process_attributes(payload, {}, None, None, None)
+            functions.evaluate_functions(payload, {}, None, None, None)
 
     def test_no_instances(self):
         def get_node_instances(node_id):
@@ -249,7 +249,7 @@ class TestProcessAttributes(AbstractTestParser):
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*does not exist.*'):
-            functions.process_attributes(payload, {}, get_node_instances, None,
+            functions.evaluate_functions(payload, {}, get_node_instances, None,
                                          None)
 
     def test_too_many_instances(self):
@@ -259,7 +259,7 @@ class TestProcessAttributes(AbstractTestParser):
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*Multi instances.*'):
-            functions.process_attributes(payload, {}, get_node_instances, None,
+            functions.evaluate_functions(payload, {}, get_node_instances, None,
                                          None)
 
 

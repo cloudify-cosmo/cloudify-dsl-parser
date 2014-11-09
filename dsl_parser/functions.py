@@ -263,14 +263,14 @@ def parse(raw_function, scope=None, context=None, path=None):
     return raw_function
 
 
-def process_attributes(payload, context,
+def evaluate_functions(payload, context,
                        get_node_instances_method,
                        get_node_instance_method,
                        get_node_method):
-    """Processes attributes in payload.
+    """Evaluate functions in payload.
 
-    :param payload: The payload to process.
-    :param context: Context used during processing.
+    :param payload: The payload to evaluate.
+    :param context: Context used during evaluation.
     :param get_node_instances_method: A method for getting node instances.
     :param get_node_instance_method: A method for getting a node instance.
     :param get_node_method: A method for getting a node.
@@ -374,7 +374,7 @@ def evaluate_outputs(outputs_def,
     :return: Outputs dict.
     """
     outputs = dict((k, v['value']) for k, v in outputs_def.iteritems())
-    return process_attributes(
+    return evaluate_functions(
         payload=outputs,
         context={},
         get_node_instances_method=get_node_instances_method,
