@@ -108,13 +108,17 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals(4, len(plugin_props))
         self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
-        self.assertEquals(op_struct('test_plugin', 'install'),
+        self.assertEquals(op_struct('test_plugin', 'install',
+                                    executor='central_deployment_agent'),
                           operations['install'])
-        self.assertEquals(op_struct('test_plugin', 'install'),
+        self.assertEquals(op_struct('test_plugin', 'install',
+                                    executor='central_deployment_agent'),
                           operations['test_interface1.install'])
-        self.assertEquals(op_struct('test_plugin', 'terminate'),
+        self.assertEquals(op_struct('test_plugin', 'terminate',
+                                    executor='central_deployment_agent'),
                           operations['terminate'])
-        self.assertEquals(op_struct('test_plugin', 'terminate'),
+        self.assertEquals(op_struct('test_plugin', 'terminate',
+                                    executor='central_deployment_agent'),
                           operations['test_interface1.terminate'])
 
     def test_type_with_single_explicit_interface_and_plugin(self):
@@ -187,13 +191,17 @@ plugins:
         self._assert_blueprint(result)
 
         operations = node['operations']
-        self.assertEquals(op_struct('other_test_plugin', 'start'),
+        self.assertEquals(op_struct('other_test_plugin', 'start',
+                                    executor='central_deployment_agent'),
                           operations['start'])
-        self.assertEquals(op_struct('other_test_plugin', 'start'),
+        self.assertEquals(op_struct('other_test_plugin', 'start',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.start'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown',
+                                    executor='central_deployment_agent'),
                           operations['shutdown'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.shutdown'])
 
     def test_recursive_imports(self):
@@ -639,21 +647,29 @@ plugins:
         node = result['nodes'][0]
         operations = node['operations']
         self.assertEquals(12, len(operations))
-        self.assertEquals(op_struct('test_plugin2', 'start'),
+        self.assertEquals(op_struct('test_plugin2', 'start',
+                                    executor='central_deployment_agent'),
                           operations['start'])
-        self.assertEquals(op_struct('test_plugin2', 'start'),
+        self.assertEquals(op_struct('test_plugin2', 'start',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.start'])
-        self.assertEquals(op_struct('test_plugin2', 'stop'),
+        self.assertEquals(op_struct('test_plugin2', 'stop',
+                                    executor='central_deployment_agent'),
                           operations['stop'])
-        self.assertEquals(op_struct('test_plugin2', 'stop'),
+        self.assertEquals(op_struct('test_plugin2', 'stop',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.stop'])
-        self.assertEquals(op_struct('test_plugin3', 'op'),
+        self.assertEquals(op_struct('test_plugin3', 'op',
+                                    executor='central_deployment_agent'),
                           operations['op1'])
-        self.assertEquals(op_struct('test_plugin3', 'op'),
+        self.assertEquals(op_struct('test_plugin3', 'op',
+                                    executor='central_deployment_agent'),
                           operations['test_interface3.op1'])
-        self.assertEquals(op_struct('test_plugin4', 'op2'),
+        self.assertEquals(op_struct('test_plugin4', 'op2',
+                                    executor='central_deployment_agent'),
                           operations['op2'])
-        self.assertEquals(op_struct('test_plugin4', 'op2'),
+        self.assertEquals(op_struct('test_plugin4', 'op2',
+                                    executor='central_deployment_agent'),
                           operations['test_interface4.op2'])
         self.assertEquals(4, len(node['plugins']))
 
@@ -704,13 +720,17 @@ plugins:
         node = result['nodes'][0]
         operations = node['operations']
         self.assertEquals(8, len(operations))
-        self.assertEquals(op_struct('test_plugin2', 'start'),
+        self.assertEquals(op_struct('test_plugin2', 'start',
+                                    executor='central_deployment_agent'),
                           operations['start'])
-        self.assertEquals(op_struct('test_plugin2', 'start'),
+        self.assertEquals(op_struct('test_plugin2', 'start',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.start'])
-        self.assertEquals(op_struct('test_plugin2', 'stop'),
+        self.assertEquals(op_struct('test_plugin2', 'stop',
+                                    executor='central_deployment_agent'),
                           operations['stop'])
-        self.assertEquals(op_struct('test_plugin2', 'stop'),
+        self.assertEquals(op_struct('test_plugin2', 'stop',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.stop'])
         self.assertEquals(2, len(node['plugins']))
 
@@ -745,17 +765,23 @@ plugins:
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         operations = node['operations']
-        self.assertEquals(op_struct('test_plugin', 'install'),
+        self.assertEquals(op_struct('test_plugin', 'install',
+                                    executor='central_deployment_agent'),
                           operations['test_interface1.install'])
-        self.assertEquals(op_struct('test_plugin', 'terminate'),
+        self.assertEquals(op_struct('test_plugin', 'terminate',
+                                    executor='central_deployment_agent'),
                           operations['terminate'])
-        self.assertEquals(op_struct('test_plugin', 'terminate'),
+        self.assertEquals(op_struct('test_plugin', 'terminate',
+                                    executor='central_deployment_agent'),
                           operations['test_interface1.terminate'])
-        self.assertEquals(op_struct('other_test_plugin', 'install'),
+        self.assertEquals(op_struct('other_test_plugin', 'install',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.install'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown',
+                                    executor='central_deployment_agent'),
                           operations['shutdown'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.shutdown'])
         self.assertEquals(6, len(operations))
 
@@ -1105,10 +1131,12 @@ plugins:
             relationship['source_interfaces']['test_interface1']['install'])
         self.assertEquals('reachable', relationship['state'])
         relationship_source_operations = relationship['source_operations']
-        self.assertEqual(op_struct('test_plugin', 'install'),
+        self.assertEqual(op_struct('test_plugin', 'install',
+                                   executor='central_deployment_agent'),
                          relationship_source_operations['install'])
         self.assertEqual(
-            op_struct('test_plugin', 'install'),
+            op_struct('test_plugin', 'install',
+                      executor='central_deployment_agent'),
             relationship_source_operations['test_interface1.install'])
         self.assertEqual(2, len(relationship_source_operations))
 
@@ -1200,16 +1228,20 @@ plugins:
 
         rel_source_ops = relationship['source_operations']
 
-        self.assertEqual(op_struct('test_plugin', 'task_name1'),
+        self.assertEqual(op_struct('test_plugin', 'task_name1',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['op1'])
-        self.assertEqual(op_struct('test_plugin', 'task_name1'),
+        self.assertEqual(op_struct('test_plugin', 'task_name1',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['interface1.op1'])
         self.assertEquals(2, len(rel_source_ops))
 
         rel_target_ops = relationship['target_operations']
-        self.assertEqual(op_struct('test_plugin', 'task_name2'),
+        self.assertEqual(op_struct('test_plugin', 'task_name2',
+                                   executor='central_deployment_agent'),
                          rel_target_ops['op2'])
-        self.assertEqual(op_struct('test_plugin', 'task_name2'),
+        self.assertEqual(op_struct('test_plugin', 'task_name2',
+                                   executor='central_deployment_agent'),
                          rel_target_ops['interface2.op2'])
         self.assertEquals(2, len(rel_target_ops))
 
@@ -1394,20 +1426,25 @@ plugins:
 
         rel_source_ops = node_relationship['source_operations']
         self.assertEquals(4, len(rel_source_ops))
-        self.assertEqual(op_struct('test_plugin', 'install'),
+        self.assertEqual(op_struct('test_plugin', 'install',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['test_interface2.install'])
-        self.assertEqual(op_struct('test_plugin', 'install'),
+        self.assertEqual(op_struct('test_plugin', 'install',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['test_interface3.install'])
-        self.assertEqual(op_struct('test_plugin', 'terminate'),
+        self.assertEqual(op_struct('test_plugin', 'terminate',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['terminate'])
-        self.assertEqual(op_struct('test_plugin', 'terminate'),
+        self.assertEqual(op_struct('test_plugin', 'terminate',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['test_interface2.terminate'])
 
         rel_target_ops = node_relationship['target_operations']
         self.assertEquals(2, len(rel_target_ops))
         self.assertEqual(op_struct('', '', {}),
                          rel_target_ops['test_interface3.install'])
-        self.assertEqual(op_struct('test_plugin', 'install'),
+        self.assertEqual(op_struct('test_plugin', 'install',
+                                   executor='central_deployment_agent'),
                          rel_target_ops['test_interface1.install'])
 
     def test_relationship_interfaces_inheritance_merge(self):
@@ -1557,32 +1594,44 @@ plugins:
                 'test_interface']['destroy2'])
 
         rel_source_ops = node_relationship['source_operations']
-        self.assertEqual(op_struct('test_plugin', 'install2'),
+        self.assertEqual(op_struct('test_plugin', 'install2',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['install2'])
-        self.assertEqual(op_struct('test_plugin', 'install2'),
+        self.assertEqual(op_struct('test_plugin', 'install2',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['test_interface.install2'])
-        self.assertEqual(op_struct('test_plugin', 'terminate'),
+        self.assertEqual(op_struct('test_plugin', 'terminate',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['terminate2'])
-        self.assertEqual(op_struct('test_plugin', 'terminate'),
+        self.assertEqual(op_struct('test_plugin', 'terminate',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['test_interface.terminate2'])
-        self.assertEqual(op_struct('test_plugin', 'destroy2'),
+        self.assertEqual(op_struct('test_plugin', 'destroy2',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['destroy2'])
-        self.assertEqual(op_struct('test_plugin', 'destroy2'),
+        self.assertEqual(op_struct('test_plugin', 'destroy2',
+                                   executor='central_deployment_agent'),
                          rel_source_ops['test_interface.destroy2'])
         self.assertEquals(6, len(rel_source_ops))
 
         rel_target_ops = node_relationship['target_operations']
-        self.assertEqual(op_struct('test_plugin', 'install'),
+        self.assertEqual(op_struct('test_plugin', 'install',
+                                   executor='central_deployment_agent'),
                          rel_target_ops['install'])
-        self.assertEqual(op_struct('test_plugin', 'install'),
+        self.assertEqual(op_struct('test_plugin', 'install',
+                                   executor='central_deployment_agent'),
                          rel_target_ops['test_interface.install'])
-        self.assertEqual(op_struct('test_plugin', 'terminate'),
+        self.assertEqual(op_struct('test_plugin', 'terminate',
+                                   executor='central_deployment_agent'),
                          rel_target_ops['terminate'])
-        self.assertEqual(op_struct('test_plugin', 'terminate'),
+        self.assertEqual(op_struct('test_plugin', 'terminate',
+                                   executor='central_deployment_agent'),
                          rel_target_ops['test_interface.terminate'])
-        self.assertEqual(op_struct('test_plugin', 'destroy1'),
+        self.assertEqual(op_struct('test_plugin', 'destroy1',
+                                   executor='central_deployment_agent'),
                          rel_target_ops['destroy'])
-        self.assertEqual(op_struct('test_plugin', 'destroy1'),
+        self.assertEqual(op_struct('test_plugin', 'destroy1',
+                                   executor='central_deployment_agent'),
                          rel_target_ops['test_interface.destroy'])
         self.assertEquals(6, len(rel_source_ops))
 
@@ -2232,9 +2281,11 @@ plugins:
         self.assertEquals('test_node', relationship1['target_id'])
         self.assertEquals('reachable', relationship1['state'])
         rel1_source_ops = relationship1['source_operations']
-        self.assertEqual(op_struct('test_plugin1', 'install'),
+        self.assertEqual(op_struct('test_plugin1', 'install',
+                                   executor='central_deployment_agent'),
                          rel1_source_ops['install'])
-        self.assertEqual(op_struct('test_plugin1', 'install'),
+        self.assertEqual(op_struct('test_plugin1', 'install',
+                                   executor='central_deployment_agent'),
                          rel1_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel1_source_ops))
         self.assertEquals(10, len(relationship1))
@@ -2246,9 +2297,11 @@ plugins:
         self.assertEquals('test_node', relationship2['target_id'])
         self.assertEquals('reachable', relationship2['state'])
         rel2_source_ops = relationship2['target_operations']
-        self.assertEqual(op_struct('test_plugin2', 'install'),
+        self.assertEqual(op_struct('test_plugin2', 'install',
+                                   executor='central_deployment_agent'),
                          rel2_source_ops['install'])
-        self.assertEqual(op_struct('test_plugin2', 'install'),
+        self.assertEqual(op_struct('test_plugin2', 'install',
+                                   executor='central_deployment_agent'),
                          rel2_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel2_source_ops))
         self.assertEquals(10, len(relationship2))
@@ -2321,10 +2374,12 @@ plugins:
         relationship1 = nodes[1]['relationships'][0]
         rel1_source_ops = relationship1['source_operations']
         self.assertEqual(
-            op_struct('test_plugin', 'install', {'key': 'value'}),
+            op_struct('test_plugin', 'install', {'key': 'value'},
+                      executor='central_deployment_agent'),
             rel1_source_ops['install'])
         self.assertEqual(
-            op_struct('test_plugin', 'install', {'key': 'value'}),
+            op_struct('test_plugin', 'install', {'key': 'value'},
+                      executor='central_deployment_agent'),
             rel1_source_ops['test_interface1.install'])
 
     def test_type_implementation(self):
@@ -2889,10 +2944,12 @@ node_types:
         self.assertEquals('test_type', node['type'])
         operations = node['operations']
         self.assertEquals(
-            op_struct('test_plugin', 'install', {'key': 'value'}),
+            op_struct('test_plugin', 'install', {'key': 'value'},
+                      executor='central_deployment_agent'),
             operations['install'])
         self.assertEquals(
-            op_struct('test_plugin', 'install', {'key': 'value'}),
+            op_struct('test_plugin', 'install', {'key': 'value'},
+                      executor='central_deployment_agent'),
             operations['test_interface1.install'])
 
     def test_merge_plugins_and_interfaces_imports(self):
@@ -2927,13 +2984,17 @@ node_types:
         self._assert_blueprint(result)
 
         operations = node['operations']
-        self.assertEquals(op_struct('other_test_plugin', 'start'),
+        self.assertEquals(op_struct('other_test_plugin', 'start',
+                                    executor='central_deployment_agent'),
                           operations['start'])
-        self.assertEquals(op_struct('other_test_plugin', 'start'),
+        self.assertEquals(op_struct('other_test_plugin', 'start',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.start'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown',
+                                    executor='central_deployment_agent'),
                           operations['shutdown'])
-        self.assertEquals(op_struct('other_test_plugin', 'shutdown'),
+        self.assertEquals(op_struct('other_test_plugin', 'shutdown',
+                                    executor='central_deployment_agent'),
                           operations['test_interface2.shutdown'])
 
     def test_node_interfaces_operation_mapping(self):
@@ -3151,7 +3212,8 @@ node_templates:
             self.assertEqual(op, op_struct(
                 plugin_name=constants.SCRIPT_PLUGIN_NAME,
                 mapping=constants.SCRIPT_PLUGIN_RUN_TASK,
-                inputs=inputs))
+                inputs=inputs,
+                executor='central_deployment_agent'))
 
         assert_operation(operation)
         assert_operation(operation2, extra_properties=True)
