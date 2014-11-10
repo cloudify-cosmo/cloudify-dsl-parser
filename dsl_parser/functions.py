@@ -151,21 +151,32 @@ class GetAttribute(Function):
         self.attribute_path = args[1:]
 
     def validate(self, plan):
-        if self.scope != scan.OUTPUTS_SCOPE:
-            raise ValueError('{0} function can only be used in outputs but is '
-                             'used in {1}.'.format(GET_ATTRIBUTE_FUNCTION,
-                                                   self.path))
-        if self.node_name == SELF:
+        if self.scope == scan.OUTPUTS_SCOPE and self.node_name in [SELF,
+                                                                   SOURCE,
+                                                                   TARGET]:
             raise ValueError('{0} cannot be used with {1} function in '
-                             '{2}.'.format(SELF,
+                             '{2}.'.format(self.node_name,
                                            GET_ATTRIBUTE_FUNCTION,
                                            self.path))
-        found = [
-            x for x in plan.node_templates if self.node_name == x['id']]
-        if len(found) == 0:
-            raise KeyError(
-                "{0} function node reference '{1}' does not exist.".format(
-                    GET_ATTRIBUTE_FUNCTION, self.node_name))
+        if self.scope == scan.NODE_TEMPLATE_SCOPE and \
+                self.node_name in [SOURCE, TARGET]:
+            raise ValueError('{0} cannot be used with {1} function in '
+                             '{2}.'.format(self.node_name,
+                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.path))
+        if self.scope == scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE and \
+                self.node_name == SELF:
+            raise ValueError('{0} cannot be used with {1} function in '
+                             '{2}.'.format(self.node_name,
+                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.path))
+        if self.node_name not in [SELF, SOURCE, TARGET]:
+            found = [
+                x for x in plan.node_templates if self.node_name == x['id']]
+            if not found:
+                raise KeyError(
+                    "{0} function node reference '{1}' does not exist.".format(
+                        GET_ATTRIBUTE_FUNCTION, self.node_name))
 
     def evaluate(self, plan):
         raise RuntimeError(
@@ -194,16 +205,48 @@ def _get_property_value(node_name,
     :param raise_if_not_found: Whether to raise an error if property not found.
     :return: Property value.
     """
+    str_list = lambda li: [str(item) for item in li]
     value = properties
     for p in property_path:
-        if not isinstance(value, dict) or p not in value:
+        if isinstance(value, dict):
+            if p not in value:
+                if raise_if_not_found:
+                    raise KeyError(
+                        "Node template property '{0}.properties.{1}' "
+                        "referenced from '{2}' doesn't exist.".format(
+                            node_name, '.'.join(str_list(property_path)),
+                            context_path))
+                return None
+            value = value[p]
+        elif isinstance(value, list):
+            try:
+                value = value[p]
+            except TypeError:
+                raise TypeError(
+                    "Node template property '{0}.properties.{1}' "
+                    "referenced from '{2}' is expected {3} to be an int "
+                    "but it is a {4}.".format(
+                        node_name, '.'.join(str_list(property_path)),
+                        context_path,
+                        p, type(p).__name__))
+            except IndexError:
+                if raise_if_not_found:
+                    raise IndexError(
+                        "Node template property '{0}.properties.{1}' "
+                        "referenced from '{2}' index is out of range. Got {3}"
+                        " but list size is {4}.".format(
+                            node_name, '.'.join(str_list(property_path)),
+                            context_path, p, len(value)))
+                return None
+        else:
             if raise_if_not_found:
                 raise KeyError(
-                    "Node template property '{0}.properties.{1}' referenced "
-                    "from '{2}' doesn't exist.".format(
-                        node_name, '.'.join(property_path), context_path))
+                    "Node template property '{0}.properties.{1}' "
+                    "referenced from '{2}' doesn't exist.".format(
+                        node_name, '.'.join(str_list(property_path)),
+                        context_path))
             return None
-        value = value[p]
+
     return value
 
 
@@ -220,50 +263,120 @@ def parse(raw_function, scope=None, context=None, path=None):
     return raw_function
 
 
-def evaluate_outputs(outputs_def, get_node_instances_method):
-    """Evaluates an outputs definition containing intrinsic functions.
+def evaluate_functions(payload, context,
+                       get_node_instances_method,
+                       get_node_instance_method,
+                       get_node_method):
+    """Evaluate functions in payload.
 
-    :param outputs_def: Outputs definition.
+    :param payload: The payload to evaluate.
+    :param context: Context used during evaluation.
     :param get_node_instances_method: A method for getting node instances.
-    :return: Outputs dict.
+    :param get_node_instance_method: A method for getting a node instance.
+    :param get_node_method: A method for getting a node.
+    :return: payload.
     """
-    ctx = {}
-    outputs = dict((k, v['value']) for k, v in outputs_def.iteritems())
+    ctx = {
+        'node_to_node_instances': {},
+        'node_instances': {},
+        'nodes': {}
+    }
+
+    def validate_ref(ref, ref_name, path, func):
+        if not ref:
+            raise exceptions.FunctionEvaluationError(
+                GET_ATTRIBUTE_FUNCTION,
+                '{0} is missing in request context in {1} for '
+                'attribute {2}'.format(ref_name, path, func.attribute_path))
+
+    def _get_node_instance(node_instance_id):
+        if node_instance_id not in ctx['node_instances']:
+            node_instance = get_node_instance_method(node_instance_id)
+            ctx['node_instances'][node_instance_id] = node_instance
+        return ctx['node_instances'][node_instance_id]
+
+    def _get_node(node_id):
+        if node_id not in ctx['nodes']:
+            node = get_node_method(node_id)
+            ctx['nodes'][node_id] = node
+        return ctx['nodes'][node_id]
 
     def handler(v, scope, context, path):
         func = parse(v, scope=scope, context=context, path=path)
-        if isinstance(func, GetAttribute):
-            attributes = []
-            if 'node_instances' not in ctx:
-                ctx['node_instances'] = get_node_instances_method()
-            for instance in ctx['node_instances']:
-                if instance.node_id == func.node_name:
-                    attributes.append(
-                        _get_property_value(instance.node_id,
-                                            instance.runtime_properties,
-                                            func.attribute_path,
-                                            path,
-                                            raise_if_not_found=False))
-            if len(attributes) == 1:
-                return attributes[0]
-            elif len(attributes) == 0:
+        if not isinstance(func, GetAttribute):
+            return v
+
+        if func.node_name == SELF:
+            node_instance_id = context.get('self')
+            validate_ref(node_instance_id, SELF, path, func)
+            node_instance = _get_node_instance(node_instance_id)
+        elif func.node_name == SOURCE:
+            node_instance_id = context.get('source')
+            validate_ref(node_instance_id, SOURCE, path, func)
+            node_instance = _get_node_instance(node_instance_id)
+        elif func.node_name == TARGET:
+            node_instance_id = context.get('target')
+            validate_ref(node_instance_id, TARGET, path, func)
+            node_instance = _get_node_instance(node_instance_id)
+        else:
+            node_id = func.node_name
+            if func.node_name not in ctx['node_to_node_instances']:
+                node_instances = get_node_instances_method(node_id)
+                ctx['node_to_node_instances'][node_id] = node_instances
+            node_instances = ctx['node_to_node_instances'][node_id]
+            if len(node_instances) == 0:
                 raise exceptions.FunctionEvaluationError(
                     GET_ATTRIBUTE_FUNCTION,
-                    'Node specified in function does not exist: {0}.'.format(
-                        func.node_name)
-                )
-            else:
+                    'Node specified in function does not exist: {0}.'
+                    .format(func.node_name))
+            if len(node_instances) > 1:
                 raise exceptions.FunctionEvaluationError(
                     GET_ATTRIBUTE_FUNCTION,
                     'Multi instances of node "{0}" are not supported by '
                     'function.'.format(func.node_name))
-        else:
-            return v
+            node_instance = node_instances[0]
+            # because of elastic_search eventual consistency
+            node_instance = _get_node_instance(node_instance.id)
 
-    scan.scan_properties(outputs,
+        value = _get_property_value(node_instance.node_id,
+                                    node_instance.runtime_properties,
+                                    func.attribute_path,
+                                    path,
+                                    raise_if_not_found=False)
+        if value is None:
+            node = _get_node(node_instance.node_id)
+            value = _get_property_value(node.id,
+                                        node.properties,
+                                        func.attribute_path,
+                                        path,
+                                        raise_if_not_found=False)
+        return value
+
+    scan.scan_properties(payload,
                          handler,
-                         scope=scan.OUTPUTS_SCOPE,
-                         context=outputs,
-                         path='outputs',
+                         scope=None,
+                         context=context,
+                         path='payload',
                          replace=True)
-    return outputs
+    return payload
+
+
+def evaluate_outputs(outputs_def,
+                     get_node_instances_method,
+                     get_node_instance_method,
+                     get_node_method):
+    """Evaluates an outputs definition containing intrinsic functions.
+
+    :param outputs_def: Outputs definition.
+    :param get_node_instances_method: A method for getting node instances.
+    :param get_node_instance_method: A method for getting a node instance.
+    :param get_node_method: A method for getting a node.
+    :return: Outputs dict.
+    """
+    outputs = dict((k, v['value']) for k, v in outputs_def.iteritems())
+    return evaluate_functions(
+        payload=outputs,
+        context={},
+        get_node_instances_method=get_node_instances_method,
+        get_node_instance_method=get_node_instance_method,
+        get_node_method=get_node_method)

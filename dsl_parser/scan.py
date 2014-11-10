@@ -75,6 +75,8 @@ def _scan_operations(operations,
                      replace=False):
     for name, definition in operations.iteritems():
         if isinstance(definition, dict) and 'inputs' in definition:
+            context = context.copy() if context else {}
+            context['operation'] = definition
             scan_properties(definition['inputs'],
                             handler,
                             scope=scope,

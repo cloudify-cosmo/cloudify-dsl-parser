@@ -79,7 +79,9 @@ def merge_schema_and_instance_inputs(schema_inputs,
 
 def operation_mapping(implementation=None,
                       inputs=None):
-    result = {}
+    result = {
+        # 'has_intrinsic_functions': False
+    }
     if implementation is not None:
         result['implementation'] = implementation
     if inputs is not None:
