@@ -1759,7 +1759,8 @@ plugins:
         result = self.parse(yaml)
         plugin = result['nodes'][0]['deployment_plugins_to_install'][0]
         self.assertEquals('test_plugin', plugin['name'])
-        self.assertEquals(1, len(result['nodes'][0]['deployment_plugins_to_install']))
+        self.assertEquals(1, len(result['nodes'][0][
+            'deployment_plugins_to_install']))
 
     def test_node_plugins_to_install_field(self):
         yaml = """

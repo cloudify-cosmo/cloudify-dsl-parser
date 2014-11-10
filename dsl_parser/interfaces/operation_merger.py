@@ -82,8 +82,10 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
 
     def _derive_executor(self, merged_operation_implementation):
 
-        node_type_operation_executor = self.node_type_operation['executor']
-        node_template_operation_executor = self.node_template_operation['executor']
+        node_type_operation_executor = self.node_type_operation[
+            'executor']
+        node_template_operation_executor = self.node_template_operation[
+            'executor']
 
         if merged_operation_implementation != \
                 self.node_type_operation['implementation']:
@@ -133,7 +135,8 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
         merged_operation_implementation = self._derive_implementation()
         merged_operation_inputs = self._derive_inputs(
             merged_operation_implementation)
-        merged_operation_executor = self._derive_executor(merged_operation_implementation)
+        merged_operation_executor = self._derive_executor(
+            merged_operation_implementation)
 
         return operation_mapping(
             implementation=merged_operation_implementation,

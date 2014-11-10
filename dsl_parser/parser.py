@@ -308,10 +308,12 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
             for another_node in processed_nodes:
                 # going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
-                if another_node.get('host_id') == node['id'] and PLUGINS in another_node:
+                if another_node.get('host_id') == node['id'] \
+                        and PLUGINS in another_node:
                     # ok to override here since we assume it is the same plugin
                     for plugin in another_node[PLUGINS]:
-                        if plugin[constants.PLUGIN_EXECUTOR_KEY] == constants.HOST_AGENT:
+                        if plugin[constants.PLUGIN_EXECUTOR_KEY] \
+                                == constants.HOST_AGENT:
                             plugin_name = plugin['name']
                             plugins_to_install[plugin_name] = plugin
             node['plugins_to_install'] = plugins_to_install.values()
@@ -1057,7 +1059,11 @@ def _get_relationship_implementation_if_exists(source_node_name,
 
 def _operation_struct(plugin_name, operation_mapping, operation_properties,
                       properties_field_name, executor):
-    result = {'plugin': plugin_name, 'operation': operation_mapping, 'executor': executor}
+    result = {
+        'plugin': plugin_name,
+        'operation': operation_mapping,
+        'executor': executor
+    }
     if operation_properties is not None:
         result[properties_field_name] = operation_properties
     return result
@@ -1501,4 +1507,3 @@ def get_plugins_from_operations(node):
             plugins.append(plugin)
             added_plugins.add(plugin_key)
     return plugins
-
