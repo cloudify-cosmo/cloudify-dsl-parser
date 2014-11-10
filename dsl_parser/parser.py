@@ -1604,6 +1604,10 @@ def _get_plugins_from_operations(operations, processed_plugins):
             real_executor = processed_plugins[plugin_name]['executor']
         else:
             real_executor = operation_executor
+
+        # set actual executor for the operation
+        operation['executor'] = real_executor
+
         plugin = copy.deepcopy(processed_plugins[plugin_name])
         plugin['executor'] = real_executor
         plugins.append(plugin)
