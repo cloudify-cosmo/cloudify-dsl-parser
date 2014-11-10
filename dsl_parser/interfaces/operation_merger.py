@@ -27,12 +27,14 @@ class OperationMerger(object):
         if isinstance(raw_operation, str):
             return operation_mapping(
                 implementation=raw_operation,
-                inputs={}
+                inputs={},
+                executor=None
             )
         if isinstance(raw_operation, dict):
             return operation_mapping(
                 implementation=raw_operation.get('implementation', ''),
-                inputs=raw_operation.get('inputs', {})
+                inputs=raw_operation.get('inputs', {}),
+                executor=raw_operation.get('executor', None)
             )
 
     def merge(self):
@@ -78,6 +80,24 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
 
         return merged_operation_inputs
 
+    def _derive_executor(self, merged_operation_implementation):
+
+        node_type_operation_executor = self.node_type_operation['executor']
+        node_template_operation_executor = self.node_template_operation['executor']
+
+        if merged_operation_implementation != \
+                self.node_type_operation['implementation']:
+            # this means the node template operation executor will take
+            # precedence (even if it is None, in which case,
+            # the default plugin executor will be used eventually)
+            return node_template_operation_executor
+        if node_template_operation_executor is not None:
+            # node template operation executor is declared
+            # explicitly, use it
+            return node_template_operation_executor
+
+        return node_type_operation_executor
+
     def merge(self):
 
         if self.node_type_operation is None:
@@ -99,7 +119,8 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
                 inputs=merge_schema_and_instance_inputs(
                     schema_inputs=self.node_type_operation['inputs'],
                     instance_inputs={}
-                )
+                ),
+                executor=self.node_type_operation['executor']
             )
 
         if self.node_template_operation == NO_OP:
@@ -112,10 +133,12 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
         merged_operation_implementation = self._derive_implementation()
         merged_operation_inputs = self._derive_inputs(
             merged_operation_implementation)
+        merged_operation_executor = self._derive_executor(merged_operation_implementation)
 
         return operation_mapping(
             implementation=merged_operation_implementation,
-            inputs=merged_operation_inputs
+            inputs=merged_operation_inputs,
+            executor=merged_operation_executor
         )
 
 
@@ -143,9 +166,13 @@ class NodeTypeNodeTypeOperationMerger(OperationMerger):
         merged_operation_inputs = \
             self.overriding_node_type_operation['inputs']
 
+        merged_operation_executor = \
+            self.overriding_node_type_operation['executor']
+
         return operation_mapping(
             implementation=merged_operation_implementation,
-            inputs=merged_operation_inputs
+            inputs=merged_operation_inputs,
+            executor=merged_operation_executor
         )
 
 

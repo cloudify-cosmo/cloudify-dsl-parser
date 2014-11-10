@@ -1705,6 +1705,62 @@ relationships:
         result = self.parse(yaml)
         self.assertEquals('test_node1', result['nodes'][1]['host_id'])
 
+    def test_executor_override_node_types(self):
+        yaml = """
+node_templates:
+    test_node1:
+        type: cloudify.nodes.MyCompute
+node_types:
+    cloudify.nodes.Compute:
+        interfaces:
+            test_interface:
+                start:
+                    executor: central_deployment_agent
+                    implementation: test_plugin.start
+                    inputs: {}
+    cloudify.nodes.MyCompute:
+        derived_from: cloudify.nodes.Compute
+        interfaces:
+            test_interface:
+                start:
+                    executor: host_agent
+                    implementation: test_plugin.start
+                    inputs: {}
+
+plugins:
+    test_plugin:
+        executor: host_agent
+        source: dummy
+"""
+        result = self.parse(yaml)
+        plugin = result['nodes'][0]['plugins_to_install'][0]
+        self.assertEquals('test_plugin', plugin['name'])
+        self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
+
+    def test_executor_override_plugin_declaration(self):
+        yaml = """
+node_templates:
+    test_node1:
+        type: cloudify.nodes.Compute
+node_types:
+    cloudify.nodes.Compute:
+        interfaces:
+            test_interface:
+                start:
+                    executor: central_deployment_agent
+                    implementation: test_plugin.start
+                    inputs: {}
+
+plugins:
+    test_plugin:
+        executor: host_agent
+        source: dummy
+"""
+        result = self.parse(yaml)
+        plugin = result['nodes'][0]['deployment_plugins_to_install'][0]
+        self.assertEquals('test_plugin', plugin['name'])
+        self.assertEquals(1, len(result['nodes'][0]['deployment_plugins_to_install']))
+
     def test_node_plugins_to_install_field(self):
         yaml = """
 node_templates:

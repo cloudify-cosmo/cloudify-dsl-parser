@@ -121,8 +121,7 @@ NODE_TEMPLATE_OPERATION_SCHEMA = {
                     'type': 'string'
                 },
                 'inputs': {
-                    'type': 'object',
-                    'minProperties': 1
+                    'type': 'object'
                 },
                 'executor': {
                     'type': 'string'

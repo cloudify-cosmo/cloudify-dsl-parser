@@ -302,29 +302,28 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
 
     # set plugins_to_install property for nodes
     for node in processed_nodes:
+        node[PLUGINS] = get_plugins_from_operations(node)
         if node['type'] in host_types:
             plugins_to_install = {}
             for another_node in processed_nodes:
                 # going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
-                if 'host_id' in another_node and \
-                        another_node['host_id'] == node['id'] and \
-                        PLUGINS in another_node:
+                if another_node.get('host_id') == node['id'] and PLUGINS in another_node:
                     # ok to override here since we assume it is the same plugin
-                    for plugin_name, plugin_obj in \
-                            another_node[PLUGINS].iteritems():
-                        if plugin_obj[constants.PLUGIN_EXECUTOR_KEY]\
-                                == constants.HOST_AGENT:
-                            plugins_to_install[plugin_name] = plugin_obj
+                    for plugin in another_node[PLUGINS]:
+                        if plugin[constants.PLUGIN_EXECUTOR_KEY] == constants.HOST_AGENT:
+                            plugin_name = plugin['name']
+                            plugins_to_install[plugin_name] = plugin
             node['plugins_to_install'] = plugins_to_install.values()
 
     # set deployment_plugins_to_install property for nodes
     for node in processed_nodes:
         deployment_plugins_to_install = {}
-        for plugin_name, plugin_obj in node[PLUGINS].iteritems():
-            if plugin_obj[constants.PLUGIN_EXECUTOR_KEY] \
+        for plugin in node[PLUGINS]:
+            if plugin[constants.PLUGIN_EXECUTOR_KEY] \
                     == constants.CENTRAL_DEPLOYMENT_AGENT:
-                deployment_plugins_to_install[plugin_name] = plugin_obj
+                plugin_name = plugin['name']
+                deployment_plugins_to_install[plugin_name] = plugin
         node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] = \
             deployment_plugins_to_install.values()
 
@@ -727,7 +726,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                                 '',
                                 '',
                                 {},
-                                payload_field_name))
+                                payload_field_name,
+                                None))
 
     longest_prefix = 0
     longest_prefix_plugin_name = None
@@ -745,7 +745,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 longest_prefix_plugin_name,
                 operation_mapping[longest_prefix + 1:],
                 operation_payload,
-                payload_field_name
+                payload_field_name,
+                operation_content['executor']
             ))
     elif resource_base and _resource_exists(resource_base, operation_mapping):
         operation_payload = copy.deepcopy(operation_payload or {})
@@ -785,7 +786,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 constants.SCRIPT_PLUGIN_NAME,
                 operation_mapping,
                 operation_payload,
-                payload_field_name
+                payload_field_name,
+                operation_content['executor']
             ))
     else:
         # This is an error for validation done somewhere down the
@@ -1054,8 +1056,8 @@ def _get_relationship_implementation_if_exists(source_node_name,
 
 
 def _operation_struct(plugin_name, operation_mapping, operation_properties,
-                      properties_field_name):
-    result = {'plugin': plugin_name, 'operation': operation_mapping}
+                      properties_field_name, executor):
+    result = {'plugin': plugin_name, 'operation': operation_mapping, 'executor': executor}
     if operation_properties is not None:
         result[properties_field_name] = operation_properties
     return result
@@ -1478,3 +1480,25 @@ def _validate_imports_section(imports_section, dsl_location):
 
 def _apply_alias_mapping_if_available(name, alias_mapping):
     return alias_mapping[name] if name in alias_mapping else name
+
+
+def get_plugins_from_operations(node):
+    if 'operations' not in node:
+        return []
+    plugins = []
+    added_plugins = set()
+    for operation in node['operations'].values():
+        operation_executor = operation['executor']
+        plugin_name = operation['plugin']
+        if operation_executor is None:
+            real_executor = node[PLUGINS][plugin_name]['executor']
+        else:
+            real_executor = operation_executor
+        plugin = copy.deepcopy(node[PLUGINS][plugin_name])
+        plugin['executor'] = real_executor
+        plugin_key = (plugin_name, real_executor)
+        if plugin_key not in added_plugins:
+            plugins.append(plugin)
+            added_plugins.add(plugin_key)
+    return plugins
+
