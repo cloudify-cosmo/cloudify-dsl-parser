@@ -656,6 +656,103 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             expected_merged_operation=expected_merged_operation
         )
 
+    def test_operation_mapping_no_inputs_overrides_no_op(self):
+        node_template_operation = raw_operation_mapping(
+            executor='executor'
+        )
+        node_type_operation = {}
+
+        expected_merged_operation = operation_mapping(
+            implementation='',
+            inputs={},
+            executor='executor'
+        )
+        self._assert_operations(
+            node_template_operation=node_template_operation,
+            node_type_operation=node_type_operation,
+            expected_merged_operation=expected_merged_operation
+        )
+
+    def test_operation_mapping_no_inputs_overrides_operation_mapping(self):  # NOQA
+
+        node_template_operation = raw_operation_mapping(
+            executor='executor'
+        )
+        node_type_operation = raw_operation_mapping(
+            implementation='mock.tasks.create',
+            inputs={}
+        )
+
+        expected_merged_operation = operation_mapping(
+            implementation='mock.tasks.create',
+            inputs={},
+            executor='executor'
+        )
+        self._assert_operations(
+            node_template_operation=node_template_operation,
+            node_type_operation=node_type_operation,
+            expected_merged_operation=expected_merged_operation
+        )
+
+    def test_operation_mapping_no_inputs_overrides_operation_mapping_no_inputs(self):  # NOQA
+
+        node_template_operation = raw_operation_mapping(
+            executor='executor'
+        )
+        node_type_operation = raw_operation_mapping(
+            implementation='mock.tasks.create'
+        )
+
+        expected_merged_operation = operation_mapping(
+            implementation='mock.tasks.create',
+            inputs={},
+            executor='executor'
+        )
+        self._assert_operations(
+            node_template_operation=node_template_operation,
+            node_type_operation=node_type_operation,
+            expected_merged_operation=expected_merged_operation
+        )
+
+    def test_operation_mapping_no_inputs_overrides_none(self):
+
+        node_template_operation = raw_operation_mapping(
+            executor='executor'
+        )
+        node_type_operation = None
+
+        expected_merged_operation = operation_mapping(
+            implementation='',
+            inputs={},
+            executor='executor'
+        )
+        self._assert_operations(
+            node_template_operation=node_template_operation,
+            node_type_operation=node_type_operation,
+            expected_merged_operation=expected_merged_operation
+        )
+
+    def test_operation_mapping_no_inputs_overrides_operation_mapping_with_executor(self):  # NOQA
+
+        node_template_operation = raw_operation_mapping(
+            executor='executor-overridden'
+        )
+        node_type_operation = raw_operation_mapping(
+            implementation='mock.tasks.create',
+            executor='executor'
+        )
+
+        expected_merged_operation = operation_mapping(
+            implementation='mock.tasks.create',
+            inputs={},
+            executor='executor-overridden'
+        )
+        self._assert_operations(
+            node_template_operation=node_template_operation,
+            node_type_operation=node_type_operation,
+            expected_merged_operation=expected_merged_operation
+        )
+
 
 class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
 
