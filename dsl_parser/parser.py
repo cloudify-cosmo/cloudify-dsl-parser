@@ -300,9 +300,12 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
         if host_id:
             node['host_id'] = host_id
 
+    for node in processed_nodes:
+        # fix plugins for all nodes
+        node[PLUGINS] = get_plugins_from_operations(node, plugins)
+
     # set plugins_to_install property for nodes
     for node in processed_nodes:
-        node[PLUGINS] = get_plugins_from_operations(node)
         if node['type'] in host_types:
             plugins_to_install = {}
             for another_node in processed_nodes:
@@ -577,7 +580,7 @@ def _validate_functions(plan):
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
     for node in processed_nodes:
         if 'host_id' not in node and PLUGINS in node:
-            for plugin in node[PLUGINS].itervalues():
+            for plugin in node[PLUGINS]:
                 if plugin[constants.PLUGIN_EXECUTOR_KEY] \
                         == constants.HOST_AGENT:
                     raise DSLParsingLogicException(
@@ -748,7 +751,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 operation_mapping[longest_prefix + 1:],
                 operation_payload,
                 payload_field_name,
-                operation_content['executor']
+                operation_content.get('executor', None)
             ))
     elif resource_base and _resource_exists(resource_base, operation_mapping):
         operation_payload = copy.deepcopy(operation_payload or {})
@@ -789,7 +792,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 operation_mapping,
                 operation_payload,
                 payload_field_name,
-                operation_content['executor']
+                operation_content.get('executor', None)
             ))
     else:
         # This is an error for validation done somewhere down the
@@ -1488,22 +1491,43 @@ def _apply_alias_mapping_if_available(name, alias_mapping):
     return alias_mapping[name] if name in alias_mapping else name
 
 
-def get_plugins_from_operations(node):
-    if 'operations' not in node:
-        return []
-    plugins = []
+def get_plugins_from_operations(node, processed_plugins):
     added_plugins = set()
-    for operation in node['operations'].values():
-        operation_executor = operation['executor']
-        plugin_name = operation['plugin']
-        if operation_executor is None:
-            real_executor = node[PLUGINS][plugin_name]['executor']
-        else:
-            real_executor = operation_executor
-        plugin = copy.deepcopy(node[PLUGINS][plugin_name])
-        plugin['executor'] = real_executor
-        plugin_key = (plugin_name, real_executor)
+    plugins = []
+    node_operations = node.get('operations', {})
+    plugins_from_operations = _get_plugins_from_operations(
+        node_operations, processed_plugins)
+    _add_plugins(plugins, plugins_from_operations, added_plugins)
+    for relationship in node.get('relationships', []):
+        source_operations = relationship.get('source_operations', {})
+        target_operations = relationship.get('target_operations', {})
+        plugins_from_source_operations = _get_plugins_from_operations(
+            source_operations, processed_plugins)
+        plugins_from_target_operations = _get_plugins_from_operations(
+            target_operations, processed_plugins)
+        _add_plugins(plugins, plugins_from_source_operations, added_plugins)
+        _add_plugins(plugins, plugins_from_target_operations, added_plugins)
+    return plugins
+
+
+def _add_plugins(plugins, new_plugins, added_plugins):
+    for plugin in new_plugins:
+        plugin_key = (plugin['name'], plugin['executor'])
         if plugin_key not in added_plugins:
             plugins.append(plugin)
             added_plugins.add(plugin_key)
+
+
+def _get_plugins_from_operations(operations, processed_plugins):
+    plugins = []
+    for operation in operations.values():
+        operation_executor = operation['executor']
+        plugin_name = operation['plugin']
+        if operation_executor is None:
+            real_executor = processed_plugins[plugin_name]['executor']
+        else:
+            real_executor = operation_executor
+        plugin = copy.deepcopy(processed_plugins[plugin_name])
+        plugin['executor'] = real_executor
+        plugins.append(plugin)
     return plugins

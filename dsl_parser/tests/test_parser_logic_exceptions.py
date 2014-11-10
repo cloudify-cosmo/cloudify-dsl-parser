@@ -105,6 +105,28 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 18, DSLParsingLogicException)
 
+    def test_operation_with_wrongful_executor_field(self):
+        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+plugins:
+    test_plugin:
+        executor: host_agent
+        source: dummy
+
+node_types:
+    test_type:
+        properties:
+            key: {}
+        interfaces:
+            test_interface1:
+                install:
+                    executor: wrong_executor
+                    implementation: test_plugin.install
+                    inputs: {}
+
+        """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 28, DSLParsingLogicException)
+
     def test_plugin_with_missing_install_missing_source(self):
 
         """

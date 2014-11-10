@@ -25,6 +25,8 @@ from dsl_parser.interfaces.operation_merger import \
 from dsl_parser.interfaces.constants import INTERFACES
 from dsl_parser.interfaces.constants import SOURCE_INTERFACES
 from dsl_parser.interfaces.constants import TARGET_INTERFACES
+from dsl_parser import constants
+from dsl_parser import exceptions
 
 
 def merge_node_type_interfaces(overriding_node_type,
@@ -46,7 +48,10 @@ def merge_node_type_interfaces(overriding_node_type,
         overridden_interfaces=overridden_interfaces,
         operation_merger=NodeTypeNodeTypeOperationMerger
     )
-    return merger.merge()
+    merged_interfaces = merger.merge()
+    for interface_name, interface in merged_interfaces.iteritems():
+        validate_operations_executor(interface, interface_name)
+    return merged_interfaces
 
 
 def merge_node_type_and_node_template_interfaces(node_type,
@@ -68,7 +73,10 @@ def merge_node_type_and_node_template_interfaces(node_type,
         overridden_interfaces=overridden_interfaces,
         operation_merger=NodeTemplateNodeTypeOperationMerger
     )
-    return merger.merge()
+    merged_interfaces = merger.merge()
+    for interface_name, interface in merged_interfaces.iteritems():
+        validate_operations_executor(interface, interface_name)
+    return merged_interfaces
 
 
 def merge_relationship_type_interfaces(overriding_relationship_type,
@@ -107,9 +115,18 @@ def merge_relationship_type_interfaces(overriding_relationship_type,
         operation_merger=RelationshipTypeRelationshipTypeOperationMerger
     )
 
+    merged_source_interfaces = source_interfaces_merger.merge()
+    merged_target_interfaces = target_interfaces_merger.merge()
+
+    for interface_name, interface in merged_source_interfaces.iteritems():
+        validate_operations_executor(interface, interface_name)
+
+    for interface_name, interface in merged_target_interfaces.iteritems():
+        validate_operations_executor(interface, interface_name)
+
     return {
-        SOURCE_INTERFACES: source_interfaces_merger.merge(),
-        TARGET_INTERFACES: target_interfaces_merger.merge()
+        SOURCE_INTERFACES: merged_source_interfaces,
+        TARGET_INTERFACES: merged_target_interfaces
     }
 
 
@@ -147,7 +164,38 @@ def merge_relationship_type_and_instance_interfaces(
         operation_merger=RelationshipTypeRelationshipInstanceOperationMerger
     )
 
+    merged_source_interfaces = source_interfaces_merger.merge()
+    merged_target_interfaces = target_interfaces_merger.merge()
+
+    for interface_name, interface in merged_source_interfaces.iteritems():
+        validate_operations_executor(interface, interface_name)
+
+    for interface_name, interface in merged_target_interfaces.iteritems():
+        validate_operations_executor(interface, interface_name)
+
     return {
-        SOURCE_INTERFACES: source_interfaces_merger.merge(),
-        TARGET_INTERFACES: target_interfaces_merger.merge()
+        SOURCE_INTERFACES: merged_source_interfaces,
+        TARGET_INTERFACES: merged_target_interfaces
     }
+
+
+def validate_operations_executor(interface, interface_name):
+
+    for operation_name, operation in interface.iteritems():
+        full_operation_name = '{0}.{1}'.format(interface_name, operation_name)
+        executor = operation['executor']
+        valid_executors = [constants.CENTRAL_DEPLOYMENT_AGENT,
+                           constants.HOST_AGENT]
+        if executor is None:
+            # this is ok
+            # later on it will take
+            # the default executor from the plugin
+            continue
+        if executor not in valid_executors:
+            raise exceptions.DSLParsingLogicException(
+                28, 'Operation {0} has an illegal executor value: {1}. '
+                    'valid values are [{2}]'
+                    .format(full_operation_name,
+                            executor,
+                            ','.join(valid_executors))
+            )
