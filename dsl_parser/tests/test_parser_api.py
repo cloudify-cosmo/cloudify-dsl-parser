@@ -38,7 +38,8 @@ def op_struct(plugin_name,
         'plugin': plugin_name,
         'operation': mapping,
         'inputs': inputs,
-        'executor': executor
+        'executor': executor,
+        'has_intrinsic_functions': False
     }
     return result
 

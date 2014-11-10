@@ -432,6 +432,8 @@ node_types:
         properties:
             endpoint: {}
             a: { type: integer }
+            b: {}
+            c: {}
     server_type:
         properties:
             port: { type: integer }
@@ -443,7 +445,15 @@ node_templates:
                 url:
                     protocol: http
                 port: 80
+                names: [site1, site2, site3]
+                pairs:
+                    - key: key1
+                      value: value1
+                    - key: key2
+                      value: value2
             a: { get_property: [ SELF, endpoint, port ] }
+            b: { get_property: [ SELF, endpoint, names, 0 ] }
+            c: { get_property: [ SELF, endpoint, pairs, 1 , key] }
     server:
         type: server_type
         properties:
@@ -453,18 +463,26 @@ outputs:
         value: { get_property: [ vm, endpoint, port ] }
     b:
         value: { get_property: [ vm, endpoint, url, protocol ] }
+    c:
+        value: { get_property: [ vm, endpoint, names, 1 ] }
+    d:
+        value: { get_property: [ vm, endpoint, pairs, 1, value] }
 
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         vm = self.get_node_by_name(parsed, 'vm')
         self.assertEqual(80, vm['properties']['a'])
+        self.assertEqual('site1', vm['properties']['b'])
+        self.assertEqual('key2', vm['properties']['c'])
         server = self.get_node_by_name(parsed, 'server')
         self.assertEqual(80, server['properties']['port'])
         outputs = parsed.outputs
         self.assertEqual(80, outputs['a']['value'])
         self.assertEqual('http', outputs['b']['value'])
+        self.assertEqual('site2', outputs['c']['value'])
+        self.assertEqual('value2', outputs['d']['value'])
 
-    def test_invalid_nested_property(self):
+    def test_invalid_nested_property1(self):
         yaml = """
 node_types:
     vm_type:
@@ -484,6 +502,47 @@ node_templates:
             self.assertIn(
                 "Node template property 'vm.properties.a.notfound' "
                 "referenced from 'vm.properties.a.a0' doesn't exist.", str(e))
+
+    def test_invalid_nested_property2(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: {}
+            b: {}
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: [1,2,3]
+            b: { get_property: [SELF, a, b] }
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except TypeError, e:
+            self.assertIn('is expected b to be an int but it is a str', str(e))
+
+    def test_invalid_nested_property3(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: {}
+            b: {}
+node_templates:
+    vm:
+        type: vm_type
+        properties:
+            a: [1,2,3]
+            b: { get_property: [SELF, a, 10] }
+"""
+        try:
+            prepare_deployment_plan(self.parse(yaml))
+            self.fail()
+        except IndexError, e:
+            self.assertIn('index is out of range. Got 10 but list size is 3',
+                          str(e))
 
     @timeout(seconds=10)
     def test_circular_nested_property_path(self):
@@ -513,26 +572,7 @@ node_templates:
 
 class TestGetAttribute(AbstractTestParser):
 
-    def test_used_only_in_outputs(self):
-        yaml = """
-node_types:
-    vm_type:
-        properties:
-            a: { type: string }
-node_templates:
-    vm:
-        type: vm_type
-        properties:
-            a: { get_attribute: [SELF, aaa] }
-"""
-        try:
-            self.parse(yaml)
-            self.fail()
-        except ValueError, e:
-            self.assertIn('get_attribute function can only be used in outputs '
-                          'but is used in vm.properties.a', str(e))
-
-    def test_illegal_safe_in_outputs(self):
+    def test_unknown_ref(self):
         yaml = """
 node_types:
     vm_type:
@@ -542,11 +582,103 @@ node_templates:
         type: vm_type
 outputs:
     a:
-        value: { get_attribute: [SELF, aaa] }
+        value: { get_attribute: [i_do_not_exist, aaa] }
 """
         try:
             self.parse(yaml)
             self.fail()
-        except ValueError, e:
-            self.assertIn('SELF cannot be used with get_attribute function in '
-                          'outputs.a.value', str(e))
+        except KeyError, e:
+            self.assertIn("get_attribute function node reference "
+                          "'i_do_not_exist' does not exist.", str(e))
+
+    def test_illegal_ref_in_node_template(self):
+        def assert_with(ref):
+            yaml = """
+plugins:
+    a:
+        executor: central_deployment_agent
+        install: false
+node_types:
+    vm_type:
+        properties: {}
+node_templates:
+    vm:
+        type: vm_type
+        interfaces:
+            test:
+                op:
+                    implementation: a.a
+                    inputs:
+                        a: { get_attribute: [""" + ref + """, aaa] }
+
+"""
+            try:
+                self.parse(yaml)
+                self.fail()
+            except ValueError, e:
+                self.assertIn('{0} cannot be used with get_attribute function '
+                              'in vm.operations.test.op.inputs.a'
+                              .format(ref), str(e))
+        assert_with('SOURCE')
+        assert_with('TARGET')
+
+    def test_illegal_ref_in_relationship(self):
+        def assert_with(ref):
+            yaml = """
+plugins:
+    a:
+        executor: central_deployment_agent
+        install: false
+relationships:
+    relationship: {}
+node_types:
+    vm_type:
+        properties: {}
+node_templates:
+    node:
+        type: vm_type
+    vm:
+        type: vm_type
+        relationships:
+            - target: node
+              type: relationship
+              source_interfaces:
+                test:
+                    op:
+                        implementation: a.a
+                        inputs:
+                            a: { get_attribute: [""" + ref + """, aaa] }
+
+"""
+            try:
+                self.parse(yaml)
+                self.fail()
+            except ValueError, e:
+                self.assertIn('{0} cannot be used with get_attribute function '
+                              'in vm.relationship.test.op.inputs.a'
+                              .format(ref), str(e))
+        assert_with('SELF')
+
+    def test_illegal_ref_in_outputs(self):
+        def assert_with(ref):
+            yaml = """
+node_types:
+    vm_type:
+        properties: {}
+node_templates:
+    vm:
+        type: vm_type
+outputs:
+    a:
+        value: { get_attribute: [""" + ref + """, aaa] }
+"""
+            try:
+                self.parse(yaml)
+                self.fail()
+            except ValueError, e:
+                self.assertIn('{0} cannot be used with get_attribute '
+                              'function in outputs.a.value'
+                              .format(ref), str(e))
+        assert_with('SELF')
+        assert_with('SOURCE')
+        assert_with('TARGET')

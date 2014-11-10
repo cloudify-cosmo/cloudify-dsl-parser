@@ -539,9 +539,10 @@ def _validate_functions(plan):
 
     # Validate there are no circular get_property calls
     for func in get_property_functions:
+        property_path = [str(prop) for prop in func.property_path]
         visited_functions = ['{0}.{1}'.format(
             func.get_node_template(plan)['name'],
-            constants.FUNCTION_NAME_PATH_SEPARATOR.join(func.property_path))]
+            constants.FUNCTION_NAME_PATH_SEPARATOR.join(property_path))]
 
         def validate_no_circular_get_property(*args):
             r = args[0]
@@ -693,7 +694,7 @@ def extract_complete_node_type(node_types,
         dsl_type_name=node_type_name,
         dsl_type=node_type,
         dsl_container=node_types,
-        is_relationships=True,
+        is_relationships=False,
         merging_func=node_type_interfaces_merging_function
     )
 
@@ -1128,7 +1129,8 @@ def _operation_struct(plugin_name,
         'plugin': plugin_name,
         'operation': operation_mapping,
         'executor': executor,
-        'inputs': operation_inputs
+        'inputs': operation_inputs,
+        'has_intrinsic_functions': False
     }
 
 
