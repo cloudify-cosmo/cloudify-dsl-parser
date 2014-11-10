@@ -55,7 +55,7 @@ class InterfaceMergerTest(testtools.TestCase):
             'start': None
         }
 
-        expected_merged_interface_keys = {'stop', 'start'}
+        expected_merged_interface_keys = set(['stop', 'start'])
 
         self._assert_interface(
             overriding_interface=overriding_interface,
