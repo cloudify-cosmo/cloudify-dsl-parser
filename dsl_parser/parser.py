@@ -654,6 +654,19 @@ def extract_complete_relationship_type(relationship_types,
                                        relationship_type_name,
                                        relationship_type):
 
+    if 'derived_from' not in relationship_type:
+        # top level types do not undergo merge properly,
+        # which means the operations are not augmented.
+        # do so here
+        source_interfaces = relationship_type.get('source_interfaces', {})
+        for interface_name, interface in source_interfaces.iteritems():
+            for operation_name, operation in interface.iteritems():
+                augment_operation(operation)
+        target_interfaces = relationship_type.get('target_interfaces', {})
+        for interface_name, interface in target_interfaces.iteritems():
+            for operation_name, operation in interface.iteritems():
+                augment_operation(operation)
+
     return extract_complete_type_recursive(
         dsl_type_name=relationship_type_name,
         dsl_type=relationship_type,
@@ -667,6 +680,15 @@ def extract_complete_node_type(node_types,
                                node_type_name,
                                node_type):
 
+    if 'derived_from' not in node_type:
+        # top level types do not undergo merge properly,
+        # which means the operations are not augmented.
+        # do so here
+        interfaces = node_type.get('interfaces', {})
+        for interface_name, interface in interfaces.iteritems():
+            for operation_name, operation in interface.iteritems():
+                augment_operation(operation)
+
     return extract_complete_type_recursive(
         dsl_type_name=node_type_name,
         dsl_type=node_type,
@@ -674,6 +696,15 @@ def extract_complete_node_type(node_types,
         is_relationships=True,
         merging_func=node_type_interfaces_merging_function
     )
+
+
+def augment_operation(operation):
+    if 'executor' not in operation:
+        operation['executor'] = None
+    if 'implementation' not in operation:
+        operation['implementation'] = ''
+    if 'inputs' not in operation:
+        operation['inputs'] = {}
 
 
 def _process_relationships(combined_parsed_dsl, resource_base):
@@ -714,7 +745,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         is_workflows=False):
     payload_field_name = 'parameters' if is_workflows else 'inputs'
     mapping_field_name = 'mapping' if is_workflows else 'implementation'
-    operation_payload = None
+    operation_payload = {}
+    operation_executor = None
     if isinstance(operation_content, basestring):
         operation_mapping = operation_content
     else:
@@ -723,16 +755,26 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             mapping_field_name, '')
         operation_payload = operation_content.get(
             payload_field_name, {})
+        operation_executor = operation_content.get(
+            'executor', None)
 
     if not operation_mapping:
+        if is_workflows:
+            operation_struct = _workflow_operation_struct(
+                plugin_name='',
+                workflow_mapping='',
+                workflow_parameters={}
+            )
+        else:
+            operation_struct = _operation_struct(
+                plugin_name='',
+                operation_mapping='',
+                operation_inputs={},
+                executor=None
+            )
         return OpDescriptor(name=operation_name,
                             plugin='',
-                            op_struct=_operation_struct(
-                                '',
-                                '',
-                                {},
-                                payload_field_name,
-                                None))
+                            op_struct=operation_struct)
 
     longest_prefix = 0
     longest_prefix_plugin_name = None
@@ -743,16 +785,25 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 longest_prefix = plugin_name_length
                 longest_prefix_plugin_name = plugin_name
     if longest_prefix_plugin_name is not None:
+
+        if is_workflows:
+            operation_struct = _workflow_operation_struct(
+                plugin_name=longest_prefix_plugin_name,
+                workflow_mapping=operation_mapping[longest_prefix + 1:],
+                workflow_parameters=operation_payload
+            )
+        else:
+            operation_struct = _operation_struct(
+                plugin_name=longest_prefix_plugin_name,
+                operation_mapping=operation_mapping[longest_prefix + 1:],
+                operation_inputs=operation_payload,
+                executor=operation_executor
+            )
+
         return OpDescriptor(
             name=operation_name,
             plugin=plugins[longest_prefix_plugin_name],
-            op_struct=_operation_struct(
-                longest_prefix_plugin_name,
-                operation_mapping[longest_prefix + 1:],
-                operation_payload,
-                payload_field_name,
-                operation_content.get('executor', None)
-            ))
+            op_struct=operation_struct)
     elif resource_base and _resource_exists(resource_base, operation_mapping):
         operation_payload = copy.deepcopy(operation_payload or {})
         if constants.SCRIPT_PATH_PROPERTY in operation_payload:
@@ -784,16 +835,25 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                         'workflow' if is_workflows else 'operation',
                         operation_name)
             raise DSLParsingLogicException(61, message)
+
+        if is_workflows:
+            operation_struct = _workflow_operation_struct(
+                plugin_name=constants.SCRIPT_PLUGIN_NAME,
+                workflow_mapping=operation_mapping,
+                workflow_parameters=operation_payload
+            )
+        else:
+            operation_struct = _operation_struct(
+                plugin_name=constants.SCRIPT_PLUGIN_NAME,
+                operation_mapping=operation_mapping,
+                operation_inputs=operation_payload,
+                executor=operation_executor
+            )
+
         return OpDescriptor(
             name=operation_name,
             plugin=plugins[constants.SCRIPT_PLUGIN_NAME],
-            op_struct=_operation_struct(
-                constants.SCRIPT_PLUGIN_NAME,
-                operation_mapping,
-                operation_payload,
-                payload_field_name,
-                operation_content.get('executor', None)
-            ))
+            op_struct=operation_struct)
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
@@ -1060,16 +1120,26 @@ def _get_relationship_implementation_if_exists(source_node_name,
     return impl['type'], _get_dict_prop(impl, PROPERTIES)
 
 
-def _operation_struct(plugin_name, operation_mapping, operation_properties,
-                      properties_field_name, executor):
-    result = {
+def _operation_struct(plugin_name,
+                      operation_mapping,
+                      operation_inputs,
+                      executor):
+    return {
         'plugin': plugin_name,
         'operation': operation_mapping,
-        'executor': executor
+        'executor': executor,
+        'inputs': operation_inputs
     }
-    if operation_properties is not None:
-        result[properties_field_name] = operation_properties
-    return result
+
+
+def _workflow_operation_struct(plugin_name,
+                               workflow_mapping,
+                               workflow_parameters):
+    return {
+        'plugin': plugin_name,
+        'operation': workflow_mapping,
+        'parameters': workflow_parameters
+    }
 
 
 def _process_node(node_name, node, parsed_dsl,
@@ -1498,6 +1568,8 @@ def get_plugins_from_operations(node, processed_plugins):
     plugins_from_operations = _get_plugins_from_operations(
         node_operations, processed_plugins)
     _add_plugins(plugins, plugins_from_operations, added_plugins)
+    plugins_from_node = node.get('plugins', {}).values()
+    _add_plugins(plugins, plugins_from_node, added_plugins)
     for relationship in node.get('relationships', []):
         source_operations = relationship.get('source_operations', {})
         target_operations = relationship.get('target_operations', {})
@@ -1523,6 +1595,9 @@ def _get_plugins_from_operations(operations, processed_plugins):
     for operation in operations.values():
         operation_executor = operation['executor']
         plugin_name = operation['plugin']
+        if not plugin_name:
+            # no-op
+            continue
         if operation_executor is None:
             real_executor = processed_plugins[plugin_name]['executor']
         else:

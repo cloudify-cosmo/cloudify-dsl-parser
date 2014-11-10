@@ -46,13 +46,14 @@ def op_struct(plugin_name,
 def workflow_op_struct(plugin_name,
                        mapping,
                        parameters=None):
-    result = {
+
+    if not parameters:
+        parameters = {}
+    return {
         'plugin': plugin_name,
         'operation': mapping,
+        'parameters': parameters
     }
-    if parameters:
-        result['parameters'] = parameters
-    return result
 
 
 class TestParserApi(AbstractTestParser):
@@ -840,7 +841,8 @@ relationships:
             test_relationship['target_interfaces']['test_interface4']
         self.assertEquals(
             operation_mapping(implementation='test_plugin.task_name',
-                              inputs={}),
+                              inputs={},
+                              executor=None),
             result_test_interface_4['test_interface4_op1'])
 
     def test_top_level_relationships_recursive_imports(self):
@@ -1324,8 +1326,7 @@ plugins:
         self.assertEquals(1, len(parent_relationship['target_interfaces']
                                                     ['test_interface3']))
         self.assertEquals(
-            {},  # TODO - This is a bug.
-                 # Top level relationships return as is, without augmentation
+            {'implementation': '', 'inputs': {}, 'executor': None},
             parent_relationship['target_interfaces'][
                 'test_interface3']['install'])
 
@@ -1341,11 +1342,13 @@ plugins:
         self.assertEquals(2, len(relationship['source_interfaces']
                                              ['test_interface2']))
         self.assertEqual(
-            operation_mapping(implementation='test_plugin.install', inputs={}),
+            operation_mapping(implementation='test_plugin.install', inputs={},
+                              executor=None),
             relationship['source_interfaces']['test_interface2']['install'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.terminate',
-                              inputs={}),
+                              inputs={},
+                              executor=None),
             relationship['source_interfaces'][
                 'test_interface2']['terminate'])
 
@@ -1362,25 +1365,29 @@ plugins:
         self.assertEquals(1, len(node_relationship['target_interfaces']
                                                   ['test_interface1']))
         self.assertEqual(
-            operation_mapping(implementation='test_plugin.install', inputs={}),
+            operation_mapping(implementation='test_plugin.install', inputs={},
+                              executor=None),
             node_relationship['target_interfaces'][
                 'test_interface1']['install'])
         self.assertEquals(2, len(node_relationship['source_interfaces']))
         self.assertEquals(1, len(node_relationship['source_interfaces']
                                                   ['test_interface3']))
         self.assertEquals(
-            operation_mapping(implementation='test_plugin.install', inputs={}),
+            operation_mapping(implementation='test_plugin.install', inputs={},
+                              executor=None),
             node_relationship['source_interfaces'][
                 'test_interface2']['install'])
         self.assertEquals(2, len(node_relationship['source_interfaces']
                                                   ['test_interface2']))
         self.assertEquals(
-            operation_mapping(implementation='test_plugin.install', inputs={}),
+            operation_mapping(implementation='test_plugin.install', inputs={},
+                              executor=None),
             node_relationship['source_interfaces'][
                 'test_interface2']['install'])
         self.assertEquals(
             operation_mapping(implementation='test_plugin.terminate',
-                              inputs={}),
+                              inputs={},
+                              executor=None),
             node_relationship['source_interfaces'][
                 'test_interface2']['terminate'])
 
@@ -2247,7 +2254,7 @@ plugins:
 
         # expecting the other plugin to be under test_node rather than
         # test_node2:
-        plugin2_def = nodes[0]['plugins']['test_plugin2']
+        plugin2_def = nodes[0]['plugins'][0]
         self.assertEquals('test_plugin2', plugin2_def['name'])
 
     def test_multiple_instances(self):
@@ -3072,6 +3079,13 @@ plugins:
     script:
         executor: central_deployment_agent
         install: false
+
+node_templates:
+    node:
+        type: type
+        interfaces:
+            test:
+                op3: stub.py
 node_types:
     type:
         interfaces:
