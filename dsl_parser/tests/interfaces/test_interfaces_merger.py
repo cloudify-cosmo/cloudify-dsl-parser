@@ -72,7 +72,7 @@ class InterfaceMergerTest(testtools.TestCase):
             'stop': None
         }
 
-        expected_merged_interface_keys = {'stop'}
+        expected_merged_interface_keys = set(['stop'])
 
         self._assert_interface(
             overriding_interface=overriding_interface,
@@ -116,7 +116,7 @@ class InterfacesMergerTest(testtools.TestCase):
             'interface2': {}
         }
 
-        expected_merged_interfaces_keys = {'interface1', 'interface2'}
+        expected_merged_interfaces_keys = set(['interface1', 'interface2'])
         self._assert_interfaces(
             overriding_interfaces=overriding_interfaces,
             overridden_interfaces=overridden_interfaces,
@@ -132,7 +132,7 @@ class InterfacesMergerTest(testtools.TestCase):
             'interface1': {}
         }
 
-        expected_merged_interfaces_keys = {'interface1'}
+        expected_merged_interfaces_keys = set(['interface1'])
         self._assert_interfaces(
             overriding_interfaces=overriding_interfaces,
             overridden_interfaces=overridden_interfaces,
