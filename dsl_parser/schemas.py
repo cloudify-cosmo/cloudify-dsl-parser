@@ -127,7 +127,7 @@ NODE_TEMPLATE_OPERATION_SCHEMA = {
                     'type': 'string'
                 }
             },
-            'required': ['inputs'],
+            'minProperties': 1,
             'additionalProperties': False
         }
     ]
