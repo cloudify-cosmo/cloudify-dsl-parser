@@ -121,11 +121,13 @@ NODE_TEMPLATE_OPERATION_SCHEMA = {
                     'type': 'string'
                 },
                 'inputs': {
-                    'type': 'object',
-                    'minProperties': 1
+                    'type': 'object'
+                },
+                'executor': {
+                    'type': 'string'
                 }
             },
-            'required': ['inputs'],
+            'minProperties': 1,
             'additionalProperties': False
         }
     ]
@@ -146,7 +148,10 @@ NODE_TYPE_OPERATION_SCHEMA = {
                 'implementation': {
                     'type': 'string'
                 },
-                'inputs': PROPERTIES_SCHEMA_SCHEMA
+                'inputs': PROPERTIES_SCHEMA_SCHEMA,
+                'executor': {
+                    'type': 'string'
+                }
             },
             'required': ['implementation'],
             'additionalProperties': False
@@ -157,15 +162,26 @@ NODE_TYPE_OPERATION_SCHEMA = {
 RELATIONSHIP_TYPE_OPERATION_SCHEMA = NODE_TYPE_OPERATION_SCHEMA
 RELATIONSHIP_INSTANCE_OPERATION_SCHEMA = NODE_TEMPLATE_OPERATION_SCHEMA
 
+NODE_TEMPLATE_INTERFACE_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': NODE_TEMPLATE_OPERATION_SCHEMA
+    },
+    'minProperties': 1
+}
+
+NODE_TYPE_INTERFACE_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': NODE_TYPE_OPERATION_SCHEMA
+    },
+    'minProperties': 1
+}
+
 NODE_TEMPLATE_INTERFACES_SCHEMA = {
     'type': 'object',
     'patternProperties': {
-        '^': {
-            'type': 'object',
-            'patternProperties': {
-                '^': NODE_TEMPLATE_OPERATION_SCHEMA
-            },
-        }
+        '^': NODE_TEMPLATE_INTERFACE_SCHEMA
     },
     'minProperties': 1
 }
@@ -173,12 +189,23 @@ NODE_TEMPLATE_INTERFACES_SCHEMA = {
 NODE_TYPE_INTERFACES_SCHEMA = {
     'type': 'object',
     'patternProperties': {
-        '^': {
-            'type': 'object',
-            'patternProperties': {
-                '^': NODE_TYPE_OPERATION_SCHEMA
-            },
-        }
+        '^': NODE_TYPE_INTERFACE_SCHEMA
+    },
+    'minProperties': 1
+}
+
+RELATIONSHIP_TYPE_INTERFACE_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': RELATIONSHIP_TYPE_OPERATION_SCHEMA
+    },
+    'minProperties': 1
+}
+
+RELATIONSHIP_INSTANCE_INTERFACE_SCHEMA = {
+    'type': 'object',
+    'patternProperties': {
+        '^': RELATIONSHIP_INSTANCE_OPERATION_SCHEMA
     },
     'minProperties': 1
 }
@@ -186,12 +213,7 @@ NODE_TYPE_INTERFACES_SCHEMA = {
 RELATIONSHIP_TYPE_INTERFACES_SCHEMA = {
     'type': 'object',
     'patternProperties': {
-        '^': {
-            'type': 'object',
-            'patternProperties': {
-                '^': RELATIONSHIP_TYPE_OPERATION_SCHEMA
-            },
-        }
+        '^': RELATIONSHIP_TYPE_INTERFACE_SCHEMA
     },
     'minProperties': 1
 }
@@ -200,12 +222,7 @@ RELATIONSHIP_TYPE_INTERFACES_SCHEMA = {
 RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA = {
     'type': 'object',
     'patternProperties': {
-        '^': {
-            'type': 'object',
-            'patternProperties': {
-                '^': RELATIONSHIP_INSTANCE_OPERATION_SCHEMA
-            },
-            }
+        '^': RELATIONSHIP_INSTANCE_INTERFACE_SCHEMA
     },
     'minProperties': 1
 }

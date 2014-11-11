@@ -107,7 +107,8 @@ class InterfacesParserTest(testtools.TestCase):
             'interface1': {
                 'start': {
                     'implementation': 'mock.tasks.start',
-                    'inputs': {}
+                    'inputs': {},
+                    'executor': None
                 },
                 'stop': {
                     'implementation': 'mock.tasks.stop',
@@ -115,13 +116,15 @@ class InterfacesParserTest(testtools.TestCase):
                         'key': {
                             'default': 'value'
                         }
-                    }
+                    },
+                    'executor': None
                 }
             },
             'interface2': {
                 'start': {
                     'implementation': '',
-                    'inputs': {}
+                    'inputs': {},
+                    'executor': None
                 }
             }
         }
@@ -229,13 +232,15 @@ class InterfacesParserTest(testtools.TestCase):
             'interface1': {
                 'start': {
                     'implementation': 'mock.tasks.start-overridden',
-                    'inputs': {}
+                    'inputs': {},
+                    'executor': None
                 },
                 'stop': {
                     'implementation': 'mock.tasks.stop',
                     'inputs': {
                         'key': 'value'
-                    }
+                    },
+                    'executor': None
                 }
             }
         }
@@ -264,7 +269,8 @@ class InterfacesParserTest(testtools.TestCase):
             'interface1': {
                 'start': {
                     'implementation': 'mock.tasks.start',
-                    'inputs': {}
+                    'inputs': {},
+                    'executor': None
                 }
             }
         }
@@ -295,7 +301,8 @@ class InterfacesParserTest(testtools.TestCase):
             'interface1': {
                 'start': {
                     'implementation': 'mock.tasks.start',
-                    'inputs': {}
+                    'inputs': {},
+                    'executor': None
                 }
             }
         }
@@ -369,7 +376,8 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
@@ -377,13 +385,15 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': {
                                 'default': 'value'
                             }
-                        }
+                        },
+                        'executor': None
                     }
                 },
                 'interface2': {
                     'start': {
                         'implementation': '',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     }
                 }
             },
@@ -391,7 +401,8 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
@@ -399,13 +410,15 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': {
                                 'default': 'value'
                             }
-                        }
+                        },
+                        'executor': None
                     }
                 },
                 'interface2': {
                     'start': {
                         'implementation': '',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     }
                 }
             }
@@ -472,7 +485,8 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
@@ -480,13 +494,15 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': {
                                 'default': 'value'
                             }
-                        }
+                        },
+                        'executor': None
                     }
                 },
                 'interface2': {
                     'start': {
                         'implementation': '',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     }
                 }
             }
@@ -613,7 +629,8 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
@@ -621,7 +638,8 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': {
                                 'default': 'value'
                             }
-                        }
+                        },
+                        'executor': None
                     }
                 },
                 'interface2': {
@@ -767,13 +785,15 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
                         'inputs': {
                             'key': 'value'
-                        }
+                        },
+                        'executor': None
                     }
                 }
             },
@@ -781,13 +801,15 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
                         'inputs': {
                             'key': 'value'
-                        }
+                        },
+                        'executor': None
                     }
                 }
             }
@@ -839,7 +861,8 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     }
                 }
             },
@@ -847,13 +870,15 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
                         'inputs': {
                             'key': 'value'
-                        }
+                        },
+                        'executor': None
                     }
                 }
             }
@@ -905,13 +930,15 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
                         'inputs': {
                             'key': 'value'
-                        }
+                        },
+                        'executor': None
                     }
                 }
             },
@@ -919,7 +946,8 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     }
                 }
             }
@@ -981,13 +1009,15 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
                         'inputs': {
                             'key': 'value'
-                        }
+                        },
+                        'executor': None
                     }
                 }
             },
@@ -995,13 +1025,15 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
                         'inputs': {
                             'key': 'value'
-                        }
+                        },
+                        'executor': None
                     }
                 }
             }
@@ -1063,13 +1095,15 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
                         'inputs': {
                             'key': 'value'
-                        }
+                        },
+                        'executor': None
                     }
                 }
             },
@@ -1077,13 +1111,15 @@ class InterfacesParserTest(testtools.TestCase):
                 'interface1': {
                     'start': {
                         'implementation': 'mock.tasks.start',
-                        'inputs': {}
+                        'inputs': {},
+                        'executor': None
                     },
                     'stop': {
                         'implementation': 'mock.tasks.stop',
                         'inputs': {
                             'key': 'value'
-                        }
+                        },
+                        'executor': None
                     }
                 }
             }

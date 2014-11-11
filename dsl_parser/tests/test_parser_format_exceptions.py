@@ -121,20 +121,7 @@ node_templates:
 node_types:
     my_type:
         interfaces:
-            my_interface: []
-        """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_interface_with_duplicate_operations(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-node_types:
-    my_type:
-        interfaces:
-            test_interface1:
-                -   install
-                -   terminate
-                -   install
+            my_interface: {}
         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -156,7 +143,7 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                - 1 # not a string
+                1 # not a string
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -167,7 +154,7 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                - a: 1 # key not a string
+                a: 1 # key not a string
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -297,7 +284,7 @@ relationships:
 relationships:
     test_relationship:
         source_interfaces:
-            my_interface: []
+            my_interface: {}
                 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -308,19 +295,6 @@ relationships:
     test_relationship:
         source_interfaces:
             test_rel_interface: string
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_top_level_relationships_interface_with_duplicate_operations(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        source_interfaces:
-            test_rel_interface:
-                -   install
-                -   remove
-                -   install
                 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -411,7 +385,7 @@ node_types:
             -   type: "fake_relationship"
                 target: "fake_node"
                 source_interfaces:
-                    my_interface: []
+                    my_interface: {}
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -422,7 +396,7 @@ node_types:
             -   type: "fake_relationship"
                 target: "fake_node"
                 target_interfaces:
-                    my_interface: []
+                    my_interface: {}
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -457,21 +431,9 @@ node_types:
     test_type:
         interfaces:
             test_interface1:
-                - install:
-                    properties:
-                        key: "value"
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_interface_operation_mapping_no_properties(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-node_types:
-    test_type:
-        interfaces:
-            test_interface1:
-                - install:
-                    mapping: test_plugin.install
+                install:
+                  properties:
+                      key: "value"
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -563,30 +525,17 @@ workflows:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_interface_operation_mapping_empty_properties(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-node_types:
-    test_type:
-        interfaces:
-            test_interface1:
-                - install:
-                    mapping: test_plugin.install
-                    properties: {}
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
     def test_interface_operation_mapping_unknown_extra_attributes(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
 node_types:
     test_type:
         interfaces:
             test_interface1:
-                - install:
-                    mapping: test_plugin.install
-                    properties:
-                        key: 'value'
-                    unknown: 'bla'
+                install:
+                  implementation: test_plugin.install
+                  inputs:
+                      key: 'value'
+                  unknown: 'bla'
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -674,8 +623,8 @@ type_implementations:
         node_ref: test_node
         interfaces:
             test_interface1:
-                - install:
-                    mapping: test_plugin.install
+                install:
+                  implementation: test_plugin.install
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)

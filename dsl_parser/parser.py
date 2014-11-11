@@ -300,6 +300,10 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
         if host_id:
             node['host_id'] = host_id
 
+    for node in processed_nodes:
+        # fix plugins for all nodes
+        node[PLUGINS] = get_plugins_from_operations(node, plugins)
+
     # set plugins_to_install property for nodes
     for node in processed_nodes:
         if node['type'] in host_types:
@@ -307,24 +311,24 @@ def _post_process_nodes(processed_nodes, types, relationships, plugins,
             for another_node in processed_nodes:
                 # going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
-                if 'host_id' in another_node and \
-                        another_node['host_id'] == node['id'] and \
-                        PLUGINS in another_node:
+                if another_node.get('host_id') == node['id'] \
+                        and PLUGINS in another_node:
                     # ok to override here since we assume it is the same plugin
-                    for plugin_name, plugin_obj in \
-                            another_node[PLUGINS].iteritems():
-                        if plugin_obj[constants.PLUGIN_EXECUTOR_KEY]\
+                    for plugin in another_node[PLUGINS]:
+                        if plugin[constants.PLUGIN_EXECUTOR_KEY] \
                                 == constants.HOST_AGENT:
-                            plugins_to_install[plugin_name] = plugin_obj
+                            plugin_name = plugin['name']
+                            plugins_to_install[plugin_name] = plugin
             node['plugins_to_install'] = plugins_to_install.values()
 
     # set deployment_plugins_to_install property for nodes
     for node in processed_nodes:
         deployment_plugins_to_install = {}
-        for plugin_name, plugin_obj in node[PLUGINS].iteritems():
-            if plugin_obj[constants.PLUGIN_EXECUTOR_KEY] \
+        for plugin in node[PLUGINS]:
+            if plugin[constants.PLUGIN_EXECUTOR_KEY] \
                     == constants.CENTRAL_DEPLOYMENT_AGENT:
-                deployment_plugins_to_install[plugin_name] = plugin_obj
+                plugin_name = plugin['name']
+                deployment_plugins_to_install[plugin_name] = plugin
         node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] = \
             deployment_plugins_to_install.values()
 
@@ -577,7 +581,7 @@ def _validate_functions(plan):
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
     for node in processed_nodes:
         if 'host_id' not in node and PLUGINS in node:
-            for plugin in node[PLUGINS].itervalues():
+            for plugin in node[PLUGINS]:
                 if plugin[constants.PLUGIN_EXECUTOR_KEY] \
                         == constants.HOST_AGENT:
                     raise DSLParsingLogicException(
@@ -651,6 +655,19 @@ def extract_complete_relationship_type(relationship_types,
                                        relationship_type_name,
                                        relationship_type):
 
+    if 'derived_from' not in relationship_type:
+        # top level types do not undergo merge properly,
+        # which means the operations are not augmented.
+        # do so here
+        source_interfaces = relationship_type.get('source_interfaces', {})
+        for interface_name, interface in source_interfaces.iteritems():
+            for operation_name, operation in interface.iteritems():
+                augment_operation(operation)
+        target_interfaces = relationship_type.get('target_interfaces', {})
+        for interface_name, interface in target_interfaces.iteritems():
+            for operation_name, operation in interface.iteritems():
+                augment_operation(operation)
+
     return extract_complete_type_recursive(
         dsl_type_name=relationship_type_name,
         dsl_type=relationship_type,
@@ -664,6 +681,15 @@ def extract_complete_node_type(node_types,
                                node_type_name,
                                node_type):
 
+    if 'derived_from' not in node_type:
+        # top level types do not undergo merge properly,
+        # which means the operations are not augmented.
+        # do so here
+        interfaces = node_type.get('interfaces', {})
+        for interface_name, interface in interfaces.iteritems():
+            for operation_name, operation in interface.iteritems():
+                augment_operation(operation)
+
     return extract_complete_type_recursive(
         dsl_type_name=node_type_name,
         dsl_type=node_type,
@@ -671,6 +697,15 @@ def extract_complete_node_type(node_types,
         is_relationships=False,
         merging_func=node_type_interfaces_merging_function
     )
+
+
+def augment_operation(operation):
+    if 'executor' not in operation:
+        operation['executor'] = None
+    if 'implementation' not in operation:
+        operation['implementation'] = ''
+    if 'inputs' not in operation:
+        operation['inputs'] = {}
 
 
 def _process_relationships(combined_parsed_dsl, resource_base):
@@ -711,7 +746,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
         is_workflows=False):
     payload_field_name = 'parameters' if is_workflows else 'inputs'
     mapping_field_name = 'mapping' if is_workflows else 'implementation'
-    operation_payload = None
+    operation_payload = {}
+    operation_executor = None
     if isinstance(operation_content, basestring):
         operation_mapping = operation_content
     else:
@@ -720,15 +756,26 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             mapping_field_name, '')
         operation_payload = operation_content.get(
             payload_field_name, {})
+        operation_executor = operation_content.get(
+            'executor', None)
 
     if not operation_mapping:
+        if is_workflows:
+            operation_struct = _workflow_operation_struct(
+                plugin_name='',
+                workflow_mapping='',
+                workflow_parameters={}
+            )
+        else:
+            operation_struct = _operation_struct(
+                plugin_name='',
+                operation_mapping='',
+                operation_inputs={},
+                executor=None
+            )
         return OpDescriptor(name=operation_name,
                             plugin='',
-                            op_struct=_operation_struct(
-                                '',
-                                '',
-                                {},
-                                payload_field_name))
+                            op_struct=operation_struct)
 
     longest_prefix = 0
     longest_prefix_plugin_name = None
@@ -739,15 +786,25 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 longest_prefix = plugin_name_length
                 longest_prefix_plugin_name = plugin_name
     if longest_prefix_plugin_name is not None:
+
+        if is_workflows:
+            operation_struct = _workflow_operation_struct(
+                plugin_name=longest_prefix_plugin_name,
+                workflow_mapping=operation_mapping[longest_prefix + 1:],
+                workflow_parameters=operation_payload
+            )
+        else:
+            operation_struct = _operation_struct(
+                plugin_name=longest_prefix_plugin_name,
+                operation_mapping=operation_mapping[longest_prefix + 1:],
+                operation_inputs=operation_payload,
+                executor=operation_executor
+            )
+
         return OpDescriptor(
             name=operation_name,
             plugin=plugins[longest_prefix_plugin_name],
-            op_struct=_operation_struct(
-                longest_prefix_plugin_name,
-                operation_mapping[longest_prefix + 1:],
-                operation_payload,
-                payload_field_name
-            ))
+            op_struct=operation_struct)
     elif resource_base and _resource_exists(resource_base, operation_mapping):
         operation_payload = copy.deepcopy(operation_payload or {})
         if constants.SCRIPT_PATH_PROPERTY in operation_payload:
@@ -779,15 +836,25 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                         'workflow' if is_workflows else 'operation',
                         operation_name)
             raise DSLParsingLogicException(61, message)
+
+        if is_workflows:
+            operation_struct = _workflow_operation_struct(
+                plugin_name=constants.SCRIPT_PLUGIN_NAME,
+                workflow_mapping=operation_mapping,
+                workflow_parameters=operation_payload
+            )
+        else:
+            operation_struct = _operation_struct(
+                plugin_name=constants.SCRIPT_PLUGIN_NAME,
+                operation_mapping=operation_mapping,
+                operation_inputs=operation_payload,
+                executor=operation_executor
+            )
+
         return OpDescriptor(
             name=operation_name,
             plugin=plugins[constants.SCRIPT_PLUGIN_NAME],
-            op_struct=_operation_struct(
-                constants.SCRIPT_PLUGIN_NAME,
-                operation_mapping,
-                operation_payload,
-                payload_field_name
-            ))
+            op_struct=operation_struct)
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
@@ -1054,14 +1121,27 @@ def _get_relationship_implementation_if_exists(source_node_name,
     return impl['type'], _get_dict_prop(impl, PROPERTIES)
 
 
-def _operation_struct(plugin_name, operation_mapping, operation_properties,
-                      properties_field_name):
-    result = {'plugin': plugin_name, 'operation': operation_mapping}
-    if properties_field_name == INPUTS:
-        result['has_intrinsic_functions'] = False
-    if operation_properties is not None:
-        result[properties_field_name] = operation_properties
-    return result
+def _operation_struct(plugin_name,
+                      operation_mapping,
+                      operation_inputs,
+                      executor):
+    return {
+        'plugin': plugin_name,
+        'operation': operation_mapping,
+        'executor': executor,
+        'inputs': operation_inputs,
+        'has_intrinsic_functions': False
+    }
+
+
+def _workflow_operation_struct(plugin_name,
+                               workflow_mapping,
+                               workflow_parameters):
+    return {
+        'plugin': plugin_name,
+        'operation': workflow_mapping,
+        'parameters': workflow_parameters
+    }
 
 
 def _process_node(node_name, node, parsed_dsl,
@@ -1481,3 +1561,63 @@ def _validate_imports_section(imports_section, dsl_location):
 
 def _apply_alias_mapping_if_available(name, alias_mapping):
     return alias_mapping[name] if name in alias_mapping else name
+
+
+def get_plugins_from_operations(node, processed_plugins):
+    added_plugins = set()
+    plugins = []
+    node_operations = node.get('operations', {})
+    plugins_from_operations = _get_plugins_from_operations(
+        node_operations, processed_plugins)
+    _add_plugins(plugins, plugins_from_operations, added_plugins)
+    plugins_from_node = node.get('plugins', {}).values()
+    _add_plugins(plugins, plugins_from_node, added_plugins)
+    for relationship in node.get('relationships', []):
+        source_operations = relationship.get('source_operations', {})
+        target_operations = relationship.get('target_operations', {})
+        _set_operations_executor(target_operations, processed_plugins)
+        _set_operations_executor(source_operations, processed_plugins)
+    return plugins
+
+
+def _add_plugins(plugins, new_plugins, added_plugins):
+    for plugin in new_plugins:
+        plugin_key = (plugin['name'], plugin['executor'])
+        if plugin_key not in added_plugins:
+            plugins.append(plugin)
+            added_plugins.add(plugin_key)
+
+
+def _get_plugins_from_operations(operations, processed_plugins):
+    plugins = []
+    for operation in operations.values():
+        real_executor = _set_operation_executor(
+            operation, processed_plugins)
+        plugin_name = operation['plugin']
+
+        plugin = copy.deepcopy(processed_plugins[plugin_name])
+        plugin['executor'] = real_executor
+        plugins.append(plugin)
+    return plugins
+
+
+def _set_operations_executor(operations, processed_plugins):
+    for operation in operations.values():
+        _set_operation_executor(operation, processed_plugins)
+
+
+def _set_operation_executor(operation, processed_plugins):
+    operation_executor = operation['executor']
+    plugin_name = operation['plugin']
+    if not plugin_name:
+        # no-op
+        return
+    if operation_executor is None:
+        real_executor = processed_plugins[plugin_name]['executor']
+    else:
+        real_executor = operation_executor
+
+    # set actual executor for the operation
+    operation['executor'] = real_executor
+
+    return real_executor
