@@ -1575,12 +1575,8 @@ def get_plugins_from_operations(node, processed_plugins):
     for relationship in node.get('relationships', []):
         source_operations = relationship.get('source_operations', {})
         target_operations = relationship.get('target_operations', {})
-        plugins_from_source_operations = _get_plugins_from_operations(
-            source_operations, processed_plugins)
-        plugins_from_target_operations = _get_plugins_from_operations(
-            target_operations, processed_plugins)
-        _add_plugins(plugins, plugins_from_source_operations, added_plugins)
-        _add_plugins(plugins, plugins_from_target_operations, added_plugins)
+        _set_operations_executor(target_operations, processed_plugins)
+        _set_operations_executor(source_operations, processed_plugins)
     return plugins
 
 
@@ -1595,20 +1591,33 @@ def _add_plugins(plugins, new_plugins, added_plugins):
 def _get_plugins_from_operations(operations, processed_plugins):
     plugins = []
     for operation in operations.values():
-        operation_executor = operation['executor']
+        real_executor = _set_operation_executor(
+            operation, processed_plugins)
         plugin_name = operation['plugin']
-        if not plugin_name:
-            # no-op
-            continue
-        if operation_executor is None:
-            real_executor = processed_plugins[plugin_name]['executor']
-        else:
-            real_executor = operation_executor
-
-        # set actual executor for the operation
-        operation['executor'] = real_executor
 
         plugin = copy.deepcopy(processed_plugins[plugin_name])
         plugin['executor'] = real_executor
         plugins.append(plugin)
     return plugins
+
+
+def _set_operations_executor(operations, processed_plugins):
+    for operation in operations.values():
+        _set_operation_executor(operation, processed_plugins)
+
+
+def _set_operation_executor(operation, processed_plugins):
+    operation_executor = operation['executor']
+    plugin_name = operation['plugin']
+    if not plugin_name:
+        # no-op
+        return
+    if operation_executor is None:
+        real_executor = processed_plugins[plugin_name]['executor']
+    else:
+        real_executor = operation_executor
+
+    # set actual executor for the operation
+    operation['executor'] = real_executor
+
+    return real_executor
