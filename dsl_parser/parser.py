@@ -1436,7 +1436,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
                     # first level property is not white-listed for merge -
                     # throw an exception
                     raise DSLParsingLogicException(
-                        3, 'Failed on import: non-mergeable field {0}'
+                        3, 'Failed on import: non-mergeable field: "{0}"'
                            .format(key))
 
     # clean the now unnecessary 'imports' section from the combined dsl
