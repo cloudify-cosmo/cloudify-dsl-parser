@@ -20,7 +20,7 @@ deploy:
     secure: AwmxvWDyKF0e7RmJyXuIQ0wkLX5Gay4U58qxpKXnuqrVYz64H07uOcX5ewF98qkIgu3uNFiXoxnQhrGjyrHUvo5waGHphOfIHMK2AtX1C+FhmDzKCKGi19uFCgj9c0U/nDJ8ALeW2ImZa9POvb0YTYvTCxUrZP9h6eMu8vErPl8=
   password:
     secure: ZocZ/KMajS668dsyZKtCcH8+RJT90HRSfRJNND95gXgsglAexzrmkq8hm9YP2yAouMaP/MNRmYOocqmsDb1XDvKlCHUlKxzERt7eU49teyOq/xMKCDIRd3P2qVHknlffdbpn16okf9Oht3mPmzYzVSyagSctyjuJwQ3CiJ8Cj/w=
-  after_deploy:
+after_deploy:
   - git clone https://github.com/cloudify-cosmo/travis-utils.git
   - python travis-utils/validate_pypi.py -v || exit 1
 notifications:
