@@ -700,6 +700,10 @@ def extract_complete_node_type(node_types,
 
 
 def augment_operation(operation):
+    if isinstance(operation, str):
+        operation = {
+            'implementation': operation
+        }
     if 'executor' not in operation:
         operation['executor'] = None
     if 'implementation' not in operation:
