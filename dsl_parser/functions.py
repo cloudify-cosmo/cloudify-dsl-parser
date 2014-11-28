@@ -21,6 +21,7 @@ from dsl_parser import scan
 GET_INPUT_FUNCTION = 'get_input'
 GET_PROPERTY_FUNCTION = 'get_property'
 GET_ATTRIBUTE_FUNCTION = 'get_attribute'
+FN_JOIN_FUNCTION = 'fn.join'
 
 SELF = 'SELF'
 SOURCE = 'SOURCE'
@@ -184,10 +185,50 @@ class GetAttribute(Function):
                 GET_ATTRIBUTE_FUNCTION))
 
 
+class FnJoin(Function):
+
+    def __init__(self, args, **kwargs):
+        self.separator = None
+        self.joined = None
+        super(FnJoin, self).__init__(args, **kwargs)
+
+    def _parse_args(self, args):
+        if not (isinstance(args, list) and
+                len(args) == 2 and
+                isinstance(args[0], basestring) and
+                isinstance(args[1], list)):
+            raise ValueError(
+                'Illegal arguments passed to {0} function. '
+                'Expected: <separator, [arg1, arg2, ...]>'
+                'but got: {1}.'.format(FN_JOIN_FUNCTION, args))
+        self.separator = args[0]
+        self.joined = args[1]
+
+    def validate(self, plan):
+        if self.scope not in [scan.NODE_TEMPLATE_SCOPE,
+                              scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE,
+                              scan.OUTPUTS_SCOPE]:
+            raise ValueError('{0} cannot be used in {1}.'
+                             .format(FN_JOIN_FUNCTION,
+                                     self.path))
+
+    def evaluate(self, plan=None, possibly_raw=True):
+        if possibly_raw:
+            for joined_value in self.joined:
+                if parse(joined_value) != joined_value:
+                    return self.raw
+        return self._join()
+
+    def _join(self):
+        str_join = [str(elem) for elem in self.joined]
+        return self.separator.join(str_join)
+
+
 TEMPLATE_FUNCTIONS = {
     GET_PROPERTY_FUNCTION: GetProperty,
     GET_ATTRIBUTE_FUNCTION: GetAttribute,
-    GET_INPUT_FUNCTION: GetInput
+    GET_INPUT_FUNCTION: GetInput,
+    FN_JOIN_FUNCTION: FnJoin
 }
 
 
@@ -303,54 +344,61 @@ def evaluate_functions(payload, context,
 
     def handler(v, scope, context, path):
         func = parse(v, scope=scope, context=context, path=path)
-        if not isinstance(func, GetAttribute):
-            return v
+        if isinstance(func, GetAttribute):
+            if func.node_name == SELF:
+                node_instance_id = context.get('self')
+                validate_ref(node_instance_id, SELF, path, func)
+                node_instance = _get_node_instance(node_instance_id)
+            elif func.node_name == SOURCE:
+                node_instance_id = context.get('source')
+                validate_ref(node_instance_id, SOURCE, path, func)
+                node_instance = _get_node_instance(node_instance_id)
+            elif func.node_name == TARGET:
+                node_instance_id = context.get('target')
+                validate_ref(node_instance_id, TARGET, path, func)
+                node_instance = _get_node_instance(node_instance_id)
+            else:
+                node_id = func.node_name
+                if func.node_name not in ctx['node_to_node_instances']:
+                    node_instances = get_node_instances_method(node_id)
+                    ctx['node_to_node_instances'][node_id] = node_instances
+                node_instances = ctx['node_to_node_instances'][node_id]
+                if len(node_instances) == 0:
+                    raise exceptions.FunctionEvaluationError(
+                        GET_ATTRIBUTE_FUNCTION,
+                        'Node specified in function does not exist: {0}.'
+                        .format(func.node_name))
+                if len(node_instances) > 1:
+                    raise exceptions.FunctionEvaluationError(
+                        GET_ATTRIBUTE_FUNCTION,
+                        'Multi instances of node "{0}" are not supported by '
+                        'function.'.format(func.node_name))
+                node_instance = node_instances[0]
+                # because of elastic_search eventual consistency
+                node_instance = _get_node_instance(node_instance.id)
 
-        if func.node_name == SELF:
-            node_instance_id = context.get('self')
-            validate_ref(node_instance_id, SELF, path, func)
-            node_instance = _get_node_instance(node_instance_id)
-        elif func.node_name == SOURCE:
-            node_instance_id = context.get('source')
-            validate_ref(node_instance_id, SOURCE, path, func)
-            node_instance = _get_node_instance(node_instance_id)
-        elif func.node_name == TARGET:
-            node_instance_id = context.get('target')
-            validate_ref(node_instance_id, TARGET, path, func)
-            node_instance = _get_node_instance(node_instance_id)
-        else:
-            node_id = func.node_name
-            if func.node_name not in ctx['node_to_node_instances']:
-                node_instances = get_node_instances_method(node_id)
-                ctx['node_to_node_instances'][node_id] = node_instances
-            node_instances = ctx['node_to_node_instances'][node_id]
-            if len(node_instances) == 0:
-                raise exceptions.FunctionEvaluationError(
-                    GET_ATTRIBUTE_FUNCTION,
-                    'Node specified in function does not exist: {0}.'
-                    .format(func.node_name))
-            if len(node_instances) > 1:
-                raise exceptions.FunctionEvaluationError(
-                    GET_ATTRIBUTE_FUNCTION,
-                    'Multi instances of node "{0}" are not supported by '
-                    'function.'.format(func.node_name))
-            node_instance = node_instances[0]
-            # because of elastic_search eventual consistency
-            node_instance = _get_node_instance(node_instance.id)
-
-        value = _get_property_value(node_instance.node_id,
-                                    node_instance.runtime_properties,
-                                    func.attribute_path,
-                                    path,
-                                    raise_if_not_found=False)
-        if value is None:
-            node = _get_node(node_instance.node_id)
-            value = _get_property_value(node.id,
-                                        node.properties,
+            value = _get_property_value(node_instance.node_id,
+                                        node_instance.runtime_properties,
                                         func.attribute_path,
                                         path,
                                         raise_if_not_found=False)
-        return value
+            if value is None:
+                node = _get_node(node_instance.node_id)
+                value = _get_property_value(node.id,
+                                            node.properties,
+                                            func.attribute_path,
+                                            path,
+                                            raise_if_not_found=False)
+            return value
+        elif isinstance(func, FnJoin):
+            scan.scan_properties(func.joined,
+                                 handler,
+                                 scope=None,
+                                 context=context,
+                                 path='{0}.{1}'.format(path, FN_JOIN_FUNCTION),
+                                 replace=True)
+            return func.evaluate(possibly_raw=False)
+        return v
 
     scan.scan_properties(payload,
                          handler,
