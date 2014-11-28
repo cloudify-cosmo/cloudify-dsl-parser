@@ -21,6 +21,7 @@ from dsl_parser import scan
 GET_INPUT_FUNCTION = 'get_input'
 GET_PROPERTY_FUNCTION = 'get_property'
 GET_ATTRIBUTE_FUNCTION = 'get_attribute'
+FN_JOIN_FUNCTION = 'fn.join'
 
 SELF = 'SELF'
 SOURCE = 'SOURCE'
@@ -184,10 +185,49 @@ class GetAttribute(Function):
                 GET_ATTRIBUTE_FUNCTION))
 
 
+class FnJoin(Function):
+
+    def __init__(self, args, **kwargs):
+        self.separator = None
+        self.joined = None
+        super(FnJoin, self).__init__(args, **kwargs)
+
+    def _parse_args(self, args):
+        if not (isinstance(args, list) and
+                len(args) == 2 and
+                isinstance(args[0], basestring) and
+                isinstance(args[1], list)):
+            raise ValueError(
+                'Illegal arguments passed to {0} function. '
+                'Expected: <separator, [arg1, arg2, ...]>'
+                'but got: {1}.'.format(FN_JOIN_FUNCTION, args))
+        self.separator = args[0]
+        self.joined = args[1]
+
+    def validate(self, plan):
+        if self.scope not in [scan.NODE_TEMPLATE_SCOPE,
+                              scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE,
+                              scan.OUTPUTS_SCOPE]:
+            raise ValueError('{0} cannot be used in {1}.'
+                             .format(FN_JOIN_FUNCTION,
+                                     self.path))
+
+    def evaluate(self, plan):
+        for joined_value in self.joined:
+            if parse(joined_value) != joined_value:
+                return self.raw
+        return self._join()
+
+    def _join(self):
+        str_join = [str(elem) for elem in self.joined]
+        return self.separator.join(str_join)
+
+
 TEMPLATE_FUNCTIONS = {
     GET_PROPERTY_FUNCTION: GetProperty,
     GET_ATTRIBUTE_FUNCTION: GetAttribute,
-    GET_INPUT_FUNCTION: GetInput
+    GET_INPUT_FUNCTION: GetInput,
+    FN_JOIN_FUNCTION: FnJoin
 }
 
 

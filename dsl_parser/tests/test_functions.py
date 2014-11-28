@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+from testtools import ExpectedException
 
 from dsl_parser.tasks import prepare_deployment_plan
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
@@ -682,3 +683,291 @@ outputs:
         assert_with('SELF')
         assert_with('SOURCE')
         assert_with('TARGET')
+
+
+class TestFnJoin(AbstractTestParser):
+
+    def test_invalid_fn_join_1(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { fn.join: 1 }
+"""
+        with ExpectedException(ValueError, '.*Illegal.*fn\.join.*'):
+            prepare_deployment_plan(self.parse(yaml))
+
+    def test_invalid_fn_join_2(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { fn.join: [one, two, three] }
+"""
+        with ExpectedException(ValueError, '.*Illegal.*fn\.join.*'):
+            prepare_deployment_plan(self.parse(yaml))
+
+    def test_invalid_fn_join_3(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { fn.join: [2, [one, two, three]] }
+"""
+        with ExpectedException(ValueError, '.*Illegal.*fn\.join.*'):
+            prepare_deployment_plan(self.parse(yaml))
+
+    def test_invalid_fn_join_4(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { fn.join: ['', {}] }
+"""
+        with ExpectedException(ValueError, '.*Illegal.*fn\.join.*'):
+            prepare_deployment_plan(self.parse(yaml))
+
+    def test_node_template_properties_simple(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { fn.join: [':', [one, two, three]] }
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        node = self.get_node_by_name(parsed, 'node')
+        self.assertEqual('one:two:three', node['properties']['property'])
+
+    def test_node_template_properties_with_self_property(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property1: {}
+            property2: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property1: value1
+            property2: { fn.join: [':',
+                [one, { get_property: [SELF, property1] }, three]
+            ] }
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        node = self.get_node_by_name(parsed, 'node')
+        self.assertEqual('one:value1:three', node['properties']['property2'])
+
+    def test_node_template_properties_with_named_node_property(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { fn.join: [':',
+                [one, { get_property: [node2, property] }, three]
+            ] }
+    node2:
+        type: type
+        properties:
+            property: value2
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        node = self.get_node_by_name(parsed, 'node')
+        self.assertEqual('one:value2:three', node['properties']['property'])
+
+    def test_node_template_properties_with_invalid_node_property_cycle(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property1: {}
+            property2: {}
+node_templates:
+    node1:
+        type: type
+        properties:
+            property1: { fn.join: [':',
+                [one, { get_property: [node2, property1] }, three]
+            ] }
+            property2: value1
+    node2:
+        type: type
+        properties:
+            property1: { fn.join: [':',
+                [one, { get_property: [node1, property1] }, three]
+            ] }
+            property2: value2
+"""
+        with ExpectedException(RuntimeError, '.*Circular.*'):
+            prepare_deployment_plan(self.parse(yaml))
+
+    def test_node_template_properties_with_recursive_fn_join(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node1:
+        type: type
+        properties:
+            property: { fn.join: [':',
+                [one, { get_property: [node2, property] }, three]
+            ] }
+    node2:
+        type: type
+        properties:
+            property: { fn.join: [';', [one, two, three] ] }
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        node1 = self.get_node_by_name(parsed, 'node1')
+        node2 = self.get_node_by_name(parsed, 'node2')
+        self.assertEqual('one:one;two;three:three',
+                         node1['properties']['property'])
+        self.assertEqual('one;two;three', node2['properties']['property'])
+
+    def test_node_operation_inputs(self):
+        yaml = """
+plugins:
+    p:
+        executor: central_deployment_agent
+        install: false
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: value
+        interfaces:
+            interface:
+                op:
+                    implementation: p.task
+                    inputs:
+                        input1: { fn.join: [':', [one,
+                            { get_property: [SELF, property] }, three]] }
+                        input2:
+                            key1: value1
+                            key2: { fn.join: [';', [one,
+                                { get_property: [SELF, property] }, three]] }
+                            key3:
+                                - item1
+                                - { fn.join: [',', [one,
+                                    {get_property: [SELF, property] },three]]}
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        inputs = self.get_node_by_name(parsed, 'node')['operations'][
+            'interface.op']['inputs']
+        self.assertEqual('one:value:three', inputs['input1'])
+        self.assertEqual('one;value;three', inputs['input2']['key2'])
+        self.assertEqual('one,value,three', inputs['input2']['key3'][1])
+
+    def test_relationship_operation_inputs(self):
+        yaml = """
+plugins:
+    p:
+        executor: central_deployment_agent
+        install: false
+node_types:
+    type:
+        properties:
+            property: {}
+relationships:
+    cloudify.relationships.contained_in: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: value
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: node2
+                source_interfaces:
+                    interface:
+                        op:
+                            implementation: p.task
+                            inputs:
+                                input1: { fn.join: [':', [one,
+                                    { get_property: [SOURCE, property] },
+                                    three]] }
+                                input2:
+                                    key1: value1
+                                    key2: { fn.join: [';', [one,
+                                        { get_property: [SOURCE, property] },
+                                        three]] }
+                                    key3:
+                                        - item1
+                                        - { fn.join: [',', [one,
+                                            {get_property: [TARGET, property]},
+                                            three]] }
+    node2:
+        type: type
+        properties:
+            property: value2
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        inputs = self.get_node_by_name(parsed, 'node')['relationships'][0][
+            'source_operations']['interface.op']['inputs']
+        self.assertEqual('one:value:three', inputs['input1'])
+        self.assertEqual('one;value;three', inputs['input2']['key2'])
+        self.assertEqual('one,value2,three', inputs['input2']['key3'][1])
+
+    def test_outputs(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: value
+outputs:
+    output1:
+        value: { fn.join: [':', [one,
+                                 {get_property: [node, property]},
+                                 three]] }
+    output2:
+        value:
+            - item1
+            - { fn.join: [';', [one,
+                                {get_property: [node, property]},
+                                three]] }
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        outputs = parsed['outputs']
+        self.assertEqual('one:value:three', outputs['output1']['value'])
+        self.assertEqual('one;value;three', outputs['output2']['value'][1])
