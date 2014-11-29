@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pkg_resources
 import abc
 
 from dsl_parser import exceptions
@@ -41,9 +42,16 @@ def unregister(name):
         del TEMPLATE_FUNCTIONS[name]
 
 
+def register_entry_point_functions():
+    for entry_point in pkg_resources.iter_entry_points(
+            group='cloudify.tosca.ext.functions'):
+        register(fn=entry_point.load(), name=entry_point.name)
+
+
 class Function(object):
 
     __metaclass__ = abc.ABCMeta
+    name = 'function'
 
     def __init__(self, args, scope=None, context=None, path=None, raw=None):
         self.scope = scope
@@ -311,8 +319,8 @@ class GetAttribute(Function):
                                        self.attribute_path))
 
 
-@register(name='fn.join')
 class FnJoin(Function):
+    # Registered as an entry point in setup.py
 
     def __init__(self, args, **kwargs):
         self.separator = None

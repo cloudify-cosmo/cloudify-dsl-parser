@@ -38,6 +38,8 @@ from dsl_parser.utils import merge_schema_and_instance_properties
 from dsl_parser.utils import extract_complete_type_recursive
 
 
+functions.register_entry_point_functions()
+
 SUPPORTED_VERSIONS = ['cloudify_dsl_1_0']
 
 VERSION = 'tosca_definitions_version'
