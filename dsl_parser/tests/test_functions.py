@@ -886,6 +886,9 @@ node_templates:
                                 - item1
                                 - { fn.join: [',', [one,
                                     {get_property: [SELF, property] },three]]}
+                        input3: { fn.join: ['-', [one,
+                                    {get_property: [SELF, property] },
+                                    {get_attribute: [SELF, attribute] }]]}
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         inputs = self.get_node_by_name(parsed, 'node')['operations'][
@@ -893,6 +896,10 @@ node_templates:
         self.assertEqual('one:value:three', inputs['input1'])
         self.assertEqual('one;value;three', inputs['input2']['key2'])
         self.assertEqual('one,value,three', inputs['input2']['key3'][1])
+        self.assertEqual({'fn.join':
+                         ['-', ['one', 'value', {'get_attribute':
+                                                 ['SELF', 'attribute']}]]},
+                         inputs['input3'])
 
     def test_relationship_operation_inputs(self):
         yaml = """
@@ -932,6 +939,9 @@ node_templates:
                                         - { fn.join: [',', [one,
                                             {get_property: [TARGET, property]},
                                             three]] }
+                                input3: { fn.join: ['-', [one,
+                                    {get_property: [SOURCE, property] },
+                                    {get_attribute: [SOURCE, attribute] }]]}
     node2:
         type: type
         properties:
@@ -943,6 +953,10 @@ node_templates:
         self.assertEqual('one:value:three', inputs['input1'])
         self.assertEqual('one;value;three', inputs['input2']['key2'])
         self.assertEqual('one,value2,three', inputs['input2']['key3'][1])
+        self.assertEqual({'fn.join':
+                         ['-', ['one', 'value', {'get_attribute':
+                                                 ['SOURCE', 'attribute']}]]},
+                         inputs['input3'])
 
     def test_outputs(self):
         yaml = """
@@ -966,8 +980,16 @@ outputs:
             - { fn.join: [';', [one,
                                 {get_property: [node, property]},
                                 three]] }
+    output3:
+        value: { fn.join: ['-', [one,
+                                 {get_property: [node, property]},
+                                 {get_attribute: [node, attribute]}]] }
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         outputs = parsed['outputs']
         self.assertEqual('one:value:three', outputs['output1']['value'])
         self.assertEqual('one;value;three', outputs['output2']['value'][1])
+        self.assertEqual({'fn.join':
+                         ['-', ['one', 'value', {'get_attribute':
+                                                 ['node', 'attribute']}]]},
+                         outputs['output3']['value'])
