@@ -36,6 +36,11 @@ def register(fn=None, name=None):
     return fn
 
 
+def unregister(name):
+    if name in TEMPLATE_FUNCTIONS:
+        del TEMPLATE_FUNCTIONS[name]
+
+
 class Function(object):
 
     __metaclass__ = abc.ABCMeta
