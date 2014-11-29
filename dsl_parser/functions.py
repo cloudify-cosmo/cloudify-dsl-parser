@@ -212,10 +212,11 @@ class FnJoin(Function):
                              .format(FN_JOIN_FUNCTION,
                                      self.path))
 
-    def evaluate(self, plan=None):
-        for joined_value in self.joined:
-            if parse(joined_value) != joined_value:
-                return self.raw
+    def evaluate(self, plan=None, possibly_raw=True):
+        if possibly_raw:
+            for joined_value in self.joined:
+                if parse(joined_value) != joined_value:
+                    return self.raw
         return self._join()
 
     def _join(self):
@@ -396,7 +397,7 @@ def evaluate_functions(payload, context,
                                  context=context,
                                  path='{0}.{1}'.format(path, FN_JOIN_FUNCTION),
                                  replace=True)
-            return func.evaluate()
+            return func.evaluate(possibly_raw=False)
         return v
 
     scan.scan_properties(payload,
