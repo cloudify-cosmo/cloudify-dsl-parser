@@ -65,8 +65,8 @@ def _process_functions(plan):
                 return func.raw
             previous_evaluated_value = evaluated_value
             evaluated_value = func.evaluate(plan)
-            # currently this only applied to FnJoin, but will apply to any
-            # functions that only partly evaluates itself and will resume
+            # currently this only applies to FnJoin, but will apply to any
+            # function that only partly evaluates itself and will resume
             # evaluation during runtime (evaluate_outputs, evaluate_functions)
             if scanned and previous_evaluated_value == evaluated_value:
                 return evaluated_value
