@@ -18,14 +18,22 @@ import abc
 from dsl_parser import exceptions
 from dsl_parser import scan
 
-GET_INPUT_FUNCTION = 'get_input'
-GET_PROPERTY_FUNCTION = 'get_property'
-GET_ATTRIBUTE_FUNCTION = 'get_attribute'
-FN_JOIN_FUNCTION = 'fn.join'
 
 SELF = 'SELF'
 SOURCE = 'SOURCE'
 TARGET = 'TARGET'
+
+TEMPLATE_FUNCTIONS = {}
+
+
+def register(fn=None, name=None):
+    if fn is None:
+        def partial(_fn):
+            return register(_fn, name=name)
+        return partial
+    TEMPLATE_FUNCTIONS[name] = fn
+    fn.name = name
+    return fn
 
 
 class Function(object):
@@ -60,6 +68,7 @@ class Function(object):
         pass
 
 
+@register(name='get_input')
 class GetInput(Function):
 
     def __init__(self, args, **kwargs):
@@ -89,9 +98,10 @@ class GetInput(Function):
                          get_node_instance_method,
                          get_node_method):
         raise RuntimeError('runtime evaluation for {0} is not supported'
-                           .format(GET_INPUT_FUNCTION))
+                           .format(self.name))
 
 
+@register(name='get_property')
 class GetProperty(Function):
 
     def __init__(self, args, **kwargs):
@@ -104,7 +114,7 @@ class GetProperty(Function):
             raise ValueError(
                 'Illegal arguments passed to {0} function. Expected: '
                 '<node_name, property_name [, nested-property-1, ... ]> but '
-                'got: {1}.'.format(GET_PROPERTY_FUNCTION, args))
+                'got: {1}.'.format(self.name, args))
         self.node_name = args[0]
         self.property_path = args[1:]
 
@@ -136,7 +146,7 @@ class GetProperty(Function):
             if len(found) == 0:
                 raise KeyError(
                     "{0} function node reference '{1}' does not exist.".format(
-                        GET_PROPERTY_FUNCTION, self.node_name))
+                        self.name, self.node_name))
             node = found[0]
         self._get_property_value(node)
         return node
@@ -156,9 +166,10 @@ class GetProperty(Function):
                          get_node_instance_method,
                          get_node_method):
         raise RuntimeError('runtime evaluation for {0} is not supported'
-                           .format(GET_PROPERTY_FUNCTION))
+                           .format(self.name))
 
 
+@register(name='get_attribute')
 class GetAttribute(Function):
 
     def __init__(self, args, **kwargs):
@@ -171,7 +182,7 @@ class GetAttribute(Function):
             raise ValueError(
                 'Illegal arguments passed to {0} function. '
                 'Expected: <node_name, attribute_name [, nested-attr-1, ...]>'
-                'but got: {1}.'.format(GET_ATTRIBUTE_FUNCTION, args))
+                'but got: {1}.'.format(self.name, args))
         self.node_name = args[0]
         self.attribute_path = args[1:]
 
@@ -181,19 +192,19 @@ class GetAttribute(Function):
                                                                    TARGET]:
             raise ValueError('{0} cannot be used with {1} function in '
                              '{2}.'.format(self.node_name,
-                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.name,
                                            self.path))
         if self.scope == scan.NODE_TEMPLATE_SCOPE and \
                 self.node_name in [SOURCE, TARGET]:
             raise ValueError('{0} cannot be used with {1} function in '
                              '{2}.'.format(self.node_name,
-                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.name,
                                            self.path))
         if self.scope == scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE and \
                 self.node_name == SELF:
             raise ValueError('{0} cannot be used with {1} function in '
                              '{2}.'.format(self.node_name,
-                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.name,
                                            self.path))
         if self.node_name not in [SELF, SOURCE, TARGET]:
             found = [
@@ -201,7 +212,7 @@ class GetAttribute(Function):
             if not found:
                 raise KeyError(
                     "{0} function node reference '{1}' does not exist.".format(
-                        GET_ATTRIBUTE_FUNCTION, self.node_name))
+                        self.name, self.node_name))
 
     def evaluate(self, plan):
         if 'operation' in self.context:
@@ -239,12 +250,12 @@ class GetAttribute(Function):
             node_instances = cache['node_to_node_instances'][node_id]
             if len(node_instances) == 0:
                 raise exceptions.FunctionEvaluationError(
-                    GET_ATTRIBUTE_FUNCTION,
+                    self.name,
                     'Node specified in function does not exist: {0}.'
                     .format(self.node_name))
             if len(node_instances) > 1:
                 raise exceptions.FunctionEvaluationError(
-                    GET_ATTRIBUTE_FUNCTION,
+                    self.name,
                     'Multi instances of node "{0}" are not supported by '
                     'function.'.format(self.node_name))
             node_instance = node_instances[0]
@@ -288,13 +299,14 @@ class GetAttribute(Function):
     def _validate_ref(self, ref, ref_name):
         if not ref:
             raise exceptions.FunctionEvaluationError(
-                GET_ATTRIBUTE_FUNCTION,
+                self.name,
                 '{0} is missing in request context in {1} for '
                 'attribute {2}'.format(ref_name,
                                        self.path,
                                        self.attribute_path))
 
 
+@register(name='fn.join')
 class FnJoin(Function):
 
     def __init__(self, args, **kwargs):
@@ -310,7 +322,7 @@ class FnJoin(Function):
             raise ValueError(
                 'Illegal arguments passed to {0} function. '
                 'Expected: <separator, [arg1, arg2, ...]>'
-                'but got: {1}.'.format(FN_JOIN_FUNCTION, args))
+                'but got: {1}.'.format(self.name, args))
         self.separator = args[0]
         self.joined = args[1]
 
@@ -319,7 +331,7 @@ class FnJoin(Function):
                               scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE,
                               scan.OUTPUTS_SCOPE]:
             raise ValueError('{0} cannot be used in {1}.'
-                             .format(FN_JOIN_FUNCTION,
+                             .format(self.name,
                                      self.path))
 
     def evaluate(self, plan):
@@ -338,14 +350,6 @@ class FnJoin(Function):
     def join(self):
         str_join = [str(elem) for elem in self.joined]
         return self.separator.join(str_join)
-
-
-TEMPLATE_FUNCTIONS = {
-    GET_PROPERTY_FUNCTION: GetProperty,
-    GET_ATTRIBUTE_FUNCTION: GetAttribute,
-    GET_INPUT_FUNCTION: GetInput,
-    FN_JOIN_FUNCTION: FnJoin
-}
 
 
 def _get_property_value(node_name,
