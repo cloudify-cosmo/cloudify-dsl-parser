@@ -54,35 +54,7 @@ def _set_plan_inputs(plan, inputs=None):
 
 
 def _process_functions(plan):
-    def handler(v, scope, context, path):
-        func = functions.parse(v, scope=scope, context=context, path=path)
-        evaluated_value = v
-        scanned = False
-        while isinstance(func, functions.Function):
-            if isinstance(func, functions.GetAttribute):
-                if 'operation' in context:
-                    context['operation']['has_intrinsic_functions'] = True
-                return func.raw
-            previous_evaluated_value = evaluated_value
-            evaluated_value = func.evaluate(plan)
-            # currently this only applies to FnJoin, but will apply to any
-            # function that only partly evaluates itself and will resume
-            # evaluation during runtime (evaluate_outputs, evaluate_functions)
-            if scanned and previous_evaluated_value == evaluated_value:
-                return evaluated_value
-            scan.scan_properties(evaluated_value,
-                                 handler,
-                                 scope=scope,
-                                 context=context,
-                                 path=path,
-                                 replace=True)
-            scanned = True
-            func = functions.parse(evaluated_value,
-                                   scope=scope,
-                                   context=context,
-                                   path=path)
-        return evaluated_value
-
+    handler = functions.plan_evaluation_handler(plan)
     scan.scan_service_template(plan, handler, replace=True)
 
 
