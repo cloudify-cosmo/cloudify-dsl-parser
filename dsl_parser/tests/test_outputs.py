@@ -144,8 +144,14 @@ outputs:
 
     def test_valid_evaluation(self):
         yaml = """
+inputs:
+    input:
+        default: input_value
 node_types:
-    webserver_type: {}
+    webserver_type:
+        properties:
+            property:
+                default: property_value
 node_templates:
     webserver:
         type: webserver_type
@@ -156,8 +162,21 @@ outputs:
     endpoint:
         value:
             port: { get_attribute: [ webserver, port ] }
+    joined:
+        value: { fn.join: [':', [one,
+                                 {get_property: [webserver, property]},
+                                 {get_attribute: [webserver, attribute]},
+                                 {get_input: input},
+                                 five]] }
 """
-        parsed = self.parse(yaml)
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        joined = parsed['outputs']['joined']['value']['fn.join'][1]
+        self.assertEqual('one', joined[0])
+        self.assertEqual('property_value', joined[1])
+        self.assertEqual({'get_attribute': ['webserver', 'attribute']},
+                         joined[2])
+        self.assertEqual('input_value', joined[3])
+        self.assertEqual('five', joined[4])
 
         def get_node_instances(node_id=None):
             return [
@@ -165,7 +184,8 @@ outputs:
                     'id': 'webserver1',
                     'node_id': 'webserver',
                     'runtime_properties': {
-                        'port': 8080
+                        'port': 8080,
+                        'attribute': 'attribute_value'
                     }
                 })
             ]
@@ -182,6 +202,8 @@ outputs:
                                        get_node)
         self.assertEqual(8080, o['port'])
         self.assertEqual(8080, o['endpoint']['port'])
+        self.assertEqual('one:property_value:attribute_value:input_value:five',
+                         o['joined'])
 
     def test_unknown_node_instance_evaluation(self):
         yaml = """
