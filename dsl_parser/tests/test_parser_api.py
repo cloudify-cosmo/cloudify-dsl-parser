@@ -1780,6 +1780,55 @@ relationships:
         result = self.parse(yaml)
         self.assertEquals('test_node1', result['nodes'][1]['host_id'])
 
+    def test_node_type_operation_override(self):
+        yaml = """
+node_templates:
+    test_node1:
+        type: cloudify.nodes.MyCompute
+node_types:
+    cloudify.nodes.Compute:
+        interfaces:
+            test_interface:
+                start: test_plugin.start
+    cloudify.nodes.MyCompute:
+        derived_from: cloudify.nodes.Compute
+        interfaces:
+            test_interface:
+                start: test_plugin.overriding_start
+
+plugins:
+    test_plugin:
+        executor: host_agent
+        source: dummy
+"""
+        result = self.parse(yaml)
+        start_operation = result['nodes'][0]['operations']['start']
+        self.assertEqual('overriding_start', start_operation['operation'])
+
+    def test_node_type_node_template_operation_override(self):
+        yaml = """
+node_templates:
+    test_node1:
+        type: cloudify.nodes.Compute
+        interfaces:
+            test_interface:
+                start: test_plugin.overriding_start
+
+node_types:
+    cloudify.nodes.Compute:
+        interfaces:
+            test_interface:
+                start: test_plugin.start
+
+plugins:
+    test_plugin:
+        executor: host_agent
+        source: dummy
+"""
+        result = self.parse(yaml)
+        start_operation = result['nodes'][0]['operations']['start']
+        self.assertEqual('overriding_start', start_operation['operation'])
+
     def test_executor_override_node_types(self):
         yaml = """
 node_templates:

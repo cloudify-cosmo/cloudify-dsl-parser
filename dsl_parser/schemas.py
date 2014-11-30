@@ -138,6 +138,9 @@ NODE_TYPE_OPERATION_SCHEMA = {
 
     'oneOf': [
         {
+            'type': 'string'
+        },
+        {
             'type': 'object',
             'minProperties': 0,
             'maxProperties': 0
