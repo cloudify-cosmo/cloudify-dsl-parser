@@ -131,7 +131,13 @@ class TestEvaluateFunctions(AbstractTestParser):
                 {'get_attribute': ['node2', 'b']},
                 {'get_attribute': ['SOURCE', 'c']},
                 {'get_attribute': ['TARGET', 'd']}
-            ]]}
+            ]]},
+            'f': {'fn.concat': [
+                {'get_attribute': ['SELF', 'a']},
+                {'get_attribute': ['node2', 'b']},
+                {'get_attribute': ['SOURCE', 'c']},
+                {'get_attribute': ['TARGET', 'd']}
+            ]}
         }
 
         context = {
@@ -151,6 +157,7 @@ class TestEvaluateFunctions(AbstractTestParser):
         self.assertEqual(payload['c'], 'c_val')
         self.assertEqual(payload['d'], 'd_val')
         self.assertEqual(payload['e'], 'a_val:b_val:c_val:d_val')
+        self.assertEqual(payload['f'], 'a_valb_valc_vald_val')
 
     def test_process_attributes_properties_fallback(self):
 

@@ -993,3 +993,44 @@ outputs:
                          ['-', ['one', 'value', {'get_attribute':
                                                  ['node', 'attribute']}]]},
                          outputs['output3']['value'])
+
+
+class TestFnConcat(AbstractTestParser):
+    # There is no need to extensively test this
+    # intrinsic function as it derives all of its logic
+    # from fn.join which is already properly tested
+
+    def test_invalid_fn_concat(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { fn.concat: 1 }
+"""
+        with ExpectedException(ValueError, '.*Illegal.*fn\.concat.*'):
+            prepare_deployment_plan(self.parse(yaml))
+
+    def test_fn_concat(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property1: {}
+            property2: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property1: value1
+            property2: { fn.concat: [one,
+                                     { get_property: [SELF, property1] },
+                                     three] }
+"""
+        parsed = prepare_deployment_plan(self.parse(yaml))
+        node = self.get_node_by_name(parsed, 'node')
+        self.assertEqual('onevalue1three', node['properties']['property2'])

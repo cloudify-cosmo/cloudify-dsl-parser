@@ -365,6 +365,19 @@ class FnJoin(Function):
         return self.separator.join(str_join)
 
 
+class FnConcat(FnJoin):
+    # Registered as an entry point in setup.py
+
+    def _parse_args(self, args):
+        if not isinstance(args, list):
+            raise ValueError(
+                'Illegal arguments passed to {0} function. '
+                'Expected: <[arg1, arg2, ...]>'
+                'but got: {1}.'.format(self.name, args))
+        self.separator = ''
+        self.joined = args
+
+
 def _get_property_value(node_name,
                         properties,
                         property_path,
