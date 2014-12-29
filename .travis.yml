@@ -20,7 +20,7 @@ deploy:
   password:
     secure: "N3cbKuM6HqwPf3R9Ua8vVC0seY6qUxjlVl++qZ/1pIN78p+/Yul1aVkkMPNPksEHC6pivGDPqMajuwD6HYXTm7MpbNZezznSDtjqS5uTFCb6CYsMDuFfv00G99rReAFl9ONwM6OLhbWXcOHVSlzHe5puBK0Kj4u0tbTfeSrumA4="
 - provider: pypi
-  server: https://pypitest.python.org/pypi
+  server: https://testpypi.python.org/pypi
   on:
     branch: pypi-test
     condition: $TOX_ENV = py27
@@ -29,6 +29,6 @@ deploy:
     secure: "fNhXKwg0tQuj/g01pEVb5eO/yne8wf3Svdgf05m0r9nLaU7eiXmkW1CcbDpdgEoXTh6q0dsstcY0lzgitDYOgqf288eLcafDW94u54imzR+TJkDipmPGbMSKOPXT4d0r40ACV0J72F79O7UysfoDCgpDb+8ujM7QC5EzMQGfxpo="
 after_deploy:
   - git clone https://github.com/cloudify-cosmo/travis-utils.git
-  - python travis-utils/validate_pypi.py -v || exit 1
+  - python travis-utils/validate_pypi.py -v -b $TRAVIS_BRANCH || exit 1
 notifications:
   flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
