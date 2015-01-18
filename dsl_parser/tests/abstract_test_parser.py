@@ -65,7 +65,6 @@ plugins:
         source: dummy
 """
 
-
     PLUGIN_WITH_INSTALL_ARGS = """
 plugins:
     test_plugin:

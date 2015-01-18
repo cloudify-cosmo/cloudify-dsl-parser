@@ -154,12 +154,12 @@ node_types:
         result = self.parse(yaml)
         self._assert_blueprint(result)
 
-    def test_type_with_single_implicit_interface_and_plugin_no_install_args(self):
+    def test_type_with_single_implicit_interface_and_plugin(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS
         result = self.parse(yaml)
         self._assert_blueprint(result)
 
-    def test_type_with_single_implicit_interface_and_plugin_with_install_args(self):
+    def test_type_with_single_implicit_interface_and_plugin_install_args(self):
         yaml = self.PLUGIN_WITH_INTERFACES_AND_PLUGINS_WITH_INSTALL_ARGS
         result = self.parse(yaml)
         self._assert_blueprint(result)
