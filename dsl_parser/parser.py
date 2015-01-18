@@ -1237,6 +1237,8 @@ def _process_plugin(plugin, plugin_name):
 
     plugin_source = plugin.get(constants.PLUGIN_SOURCE_KEY, None)
     plugin_install = plugin.get(constants.PLUGIN_INSTALL_KEY, True)
+    plugin_install_arguments = plugin.get(
+        constants.PLUGIN_INSTALL_ARGUMENTS_KEY, None)
 
     if plugin_install and not plugin_source:
         raise DSLParsingLogicException(
@@ -1252,6 +1254,8 @@ def _process_plugin(plugin, plugin_name):
     processed_plugin[constants.PLUGIN_NAME_KEY] = plugin_name
     processed_plugin[constants.PLUGIN_INSTALL_KEY] = plugin_install
     processed_plugin[constants.PLUGIN_SOURCE_KEY] = plugin_source
+    processed_plugin[constants.PLUGIN_INSTALL_ARGUMENTS_KEY] = \
+        plugin_install_arguments
 
     return processed_plugin
 
