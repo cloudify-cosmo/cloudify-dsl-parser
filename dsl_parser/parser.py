@@ -150,13 +150,13 @@ def _create_plan_deployment_plugins(processed_nodes):
     deployment_plugin_names = set()
     for node in processed_nodes:
         if constants.DEPLOYMENT_PLUGINS_TO_INSTALL in node:
-            for management_plugin in \
+            for deployment_plugin in \
                     node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
-                if management_plugin[constants.PLUGIN_NAME_KEY] \
+                if deployment_plugin[constants.PLUGIN_NAME_KEY] \
                         not in deployment_plugin_names:
-                    deployment_plugins.append(management_plugin)
+                    deployment_plugins.append(deployment_plugin)
                     deployment_plugin_names\
-                        .add(management_plugin[constants.PLUGIN_NAME_KEY])
+                        .add(deployment_plugin[constants.PLUGIN_NAME_KEY])
     return deployment_plugins
 
 
@@ -238,7 +238,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         processed_workflows,
         processed_plugins)
 
-    plan_management_plugins = _create_plan_deployment_plugins(processed_nodes)
+    plan_deployment_plugins = _create_plan_deployment_plugins(processed_nodes)
 
     policy_types = _process_policy_types(
         combined_parsed_dsl.get(POLICY_TYPES, {}))
@@ -260,7 +260,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         POLICY_TRIGGERS: policy_triggers,
         GROUPS: groups,
         INPUTS: inputs,
-        constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_management_plugins,
+        constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_deployment_plugins,
         OUTPUTS: outputs,
         'workflow_plugins_to_install': workflow_plugins_to_install
     })
@@ -1242,7 +1242,7 @@ def _process_plugin(plugin, plugin_name):
         raise DSLParsingLogicException(
             50,
             "plugin {0} needs to be installed, "
-            "but doe's not declare a {1} property"
+            "but does not declare a {1} property"
             .format(plugin_name, constants.PLUGIN_SOURCE_KEY)
         )
 
