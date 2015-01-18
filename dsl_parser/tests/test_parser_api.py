@@ -18,8 +18,9 @@ from urllib2 import HTTPError
 import yaml as yml
 
 from dsl_parser import constants
-from dsl_parser.constants import PLUGIN_NAME_KEY
-from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
+from dsl_parser.constants import PLUGIN_NAME_KEY, PLUGIN_EXECUTOR_KEY, \
+    PLUGIN_SOURCE_KEY, PLUGIN_INSTALL_KEY, PLUGIN_INSTALL_ARGUMENTS_KEY, \
+    DEPLOYMENT_PLUGINS_TO_INSTALL, CENTRAL_DEPLOYMENT_AGENT
 from urllib import pathname2url
 from dsl_parser.interfaces.constants import NO_OP
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
@@ -153,10 +154,25 @@ node_types:
         result = self.parse(yaml)
         self._assert_blueprint(result)
 
-    def test_type_with_single_implicit_interface_and_plugin(self):
+    def test_type_with_single_implicit_interface_and_plugin_no_install_args(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS
         result = self.parse(yaml)
         self._assert_blueprint(result)
+
+    def test_type_with_single_implicit_interface_and_plugin_with_install_args(self):
+        yaml = self.PLUGIN_WITH_INTERFACES_AND_PLUGINS_WITH_INSTALL_ARGS
+        result = self.parse(yaml)
+        self._assert_blueprint(result)
+        node = result['nodes'][0]
+        parsed_plugins = node['plugins']
+        expected_plugins = [{
+            PLUGIN_NAME_KEY: 'test_plugin',
+            PLUGIN_SOURCE_KEY: 'dummy',
+            PLUGIN_INSTALL_KEY: True,
+            PLUGIN_EXECUTOR_KEY: CENTRAL_DEPLOYMENT_AGENT,
+            PLUGIN_INSTALL_ARGUMENTS_KEY: '-r requirements.txt'
+        }]
+        self.assertEquals(parsed_plugins, expected_plugins)
 
     def test_dsl_with_type_with_operation_mappings(self):
         yaml = self.create_yaml_with_imports(

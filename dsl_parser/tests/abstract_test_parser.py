@@ -65,6 +65,15 @@ plugins:
         source: dummy
 """
 
+
+    PLUGIN_WITH_INSTALL_ARGS = """
+plugins:
+    test_plugin:
+        executor: central_deployment_agent
+        source: dummy
+        install_arguments: -r requirements.txt
+"""
+
     BASIC_TYPE = """
 node_types:
     test_type:
@@ -94,6 +103,9 @@ node_types:
 
     BLUEPRINT_WITH_INTERFACES_AND_PLUGINS = BASIC_NODE_TEMPLATES_SECTION + \
         BASIC_PLUGIN + BASIC_TYPE
+
+    PLUGIN_WITH_INTERFACES_AND_PLUGINS_WITH_INSTALL_ARGS = \
+        BASIC_NODE_TEMPLATES_SECTION + PLUGIN_WITH_INSTALL_ARGS + BASIC_TYPE
 
     def setUp(self):
         super(AbstractTestParser, self).setUp()
