@@ -105,7 +105,7 @@ class TestParserApi(AbstractTestParser):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins'][0]
-        self.assertEquals(4, len(plugin_props))
+        self.assertEquals(5, len(plugin_props))
         self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('test_plugin', 'install',
