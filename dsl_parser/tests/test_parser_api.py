@@ -18,9 +18,6 @@ from urllib2 import HTTPError
 import yaml as yml
 
 from dsl_parser import constants
-from dsl_parser.constants import PLUGIN_NAME_KEY, PLUGIN_EXECUTOR_KEY, \
-    PLUGIN_SOURCE_KEY, PLUGIN_INSTALL_KEY, PLUGIN_INSTALL_ARGUMENTS_KEY, \
-    DEPLOYMENT_PLUGINS_TO_INSTALL, CENTRAL_DEPLOYMENT_AGENT
 from urllib import pathname2url
 from dsl_parser.interfaces.constants import NO_OP
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
@@ -107,7 +104,8 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('test_type', node['type'])
         plugin_props = node['plugins'][0]
         self.assertEquals(5, len(plugin_props))
-        self.assertEquals('test_plugin', plugin_props[PLUGIN_NAME_KEY])
+        self.assertEquals('test_plugin',
+                          plugin_props[constants.PLUGIN_NAME_KEY])
         operations = node['operations']
         self.assertEquals(op_struct('test_plugin', 'install',
                                     executor='central_deployment_agent'),
@@ -154,23 +152,34 @@ node_types:
         result = self.parse(yaml)
         self._assert_blueprint(result)
 
-    def test_type_with_single_implicit_interface_and_plugin(self):
+    def test_type_with_interfaces_and_basic_plugin(self):
         yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS
         result = self.parse(yaml)
         self._assert_blueprint(result)
-
-    def test_type_with_single_implicit_interface_and_plugin_install_args(self):
-        yaml = self.PLUGIN_WITH_INTERFACES_AND_PLUGINS_WITH_INSTALL_ARGS
-        result = self.parse(yaml)
-        self._assert_blueprint(result)
-        node = result['nodes'][0]
-        parsed_plugins = node['plugins']
+        first_node = result['nodes'][0]
+        parsed_plugins = first_node['plugins']
         expected_plugins = [{
-            PLUGIN_NAME_KEY: 'test_plugin',
-            PLUGIN_SOURCE_KEY: 'dummy',
-            PLUGIN_INSTALL_KEY: True,
-            PLUGIN_EXECUTOR_KEY: CENTRAL_DEPLOYMENT_AGENT,
-            PLUGIN_INSTALL_ARGUMENTS_KEY: '-r requirements.txt'
+            constants.PLUGIN_NAME_KEY: 'test_plugin',
+            constants.PLUGIN_SOURCE_KEY: 'dummy',
+            constants.PLUGIN_INSTALL_KEY: True,
+            constants.PLUGIN_EXECUTOR_KEY: constants.CENTRAL_DEPLOYMENT_AGENT,
+            constants.PLUGIN_INSTALL_ARGUMENTS_KEY: None
+        }]
+        self.assertEquals(parsed_plugins, expected_plugins)
+
+    def test_type_with_interface_and_plugin_with_install_args(self):
+        yaml = self.PLUGIN_WITH_INTERFACES_AND_PLUGINS_WITH_INSTALL_ARGS
+        result = self.parse(yaml,
+                            dsl_version=self.BASIC_VERSION_SECTION_DSL_1_1)
+        self._assert_blueprint(result)
+        first_node = result['nodes'][0]
+        parsed_plugins = first_node['plugins']
+        expected_plugins = [{
+            constants.PLUGIN_NAME_KEY: 'test_plugin',
+            constants.PLUGIN_SOURCE_KEY: 'dummy',
+            constants.PLUGIN_INSTALL_KEY: True,
+            constants.PLUGIN_EXECUTOR_KEY: constants.CENTRAL_DEPLOYMENT_AGENT,
+            constants.PLUGIN_INSTALL_ARGUMENTS_KEY: '-r requirements.txt'
         }]
         self.assertEquals(parsed_plugins, expected_plugins)
 
@@ -237,13 +246,13 @@ imports:
         self._assert_blueprint(result)
 
     def test_parse_dsl_from_file(self):
-        filename = self.make_yaml_file(self.BASIC_VERSION_SECTION +
+        filename = self.make_yaml_file(self.BASIC_VERSION_SECTION_DSL_1_0 +
                                        self.MINIMAL_BLUEPRINT)
         result = parse_from_path(filename)
         self._assert_minimal_blueprint(result)
 
     def test_parse_dsl_from_url(self):
-        filename_url = self.make_yaml_file(self.BASIC_VERSION_SECTION +
+        filename_url = self.make_yaml_file(self.BASIC_VERSION_SECTION_DSL_1_0 +
                                            self.MINIMAL_BLUEPRINT, True)
         result = parse_from_url(filename_url)
         self._assert_minimal_blueprint(result)
@@ -2053,7 +2062,7 @@ node_types:
 
         """
         result = self.parse(yaml)
-        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        plugin = result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL][0]
         self.assertTrue(plugin['install'])
         self.assertEqual('dummy', plugin['source'])
 
@@ -2082,7 +2091,7 @@ node_types:
 
         """
         result = self.parse(yaml)
-        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        plugin = result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL][0]
         self.assertFalse(plugin['install'])
         self.assertEqual('dummy', plugin['source'])
 
@@ -2110,7 +2119,7 @@ node_types:
 
         """
         result = self.parse(yaml)
-        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        plugin = result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL][0]
         self.assertFalse(plugin['install'])
 
     def test_plugin_with_missing_install_existing_source(self):
@@ -2137,7 +2146,7 @@ node_types:
 
         """
         result = self.parse(yaml)
-        plugin = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL][0]
+        plugin = result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL][0]
         self.assertTrue(plugin['install'])
         self.assertEqual('dummy', plugin['source'])
 
@@ -2236,7 +2245,7 @@ imports:
         file_name = self.make_file_with_name(
             self.MINIMAL_BLUEPRINT, resource_file_name, 'resources')
         file_url = self._path2url(file_name)
-        yaml = self.BASIC_VERSION_SECTION + """
+        yaml = self.BASIC_VERSION_SECTION_DSL_1_0 + """
 imports:
     -   {0}""".format(resource_file_name)
         top_file = self.make_yaml_file(yaml, True)
@@ -2279,7 +2288,7 @@ imports:
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
         top_level_yaml = \
-            self.BASIC_VERSION_SECTION + self.BASIC_NODE_TEMPLATES_SECTION +\
+            self.BASIC_VERSION_SECTION_DSL_1_0 + self.BASIC_NODE_TEMPLATES_SECTION +\
             """
 imports:
     -   {0}""".format(mid_file_name)
@@ -3176,7 +3185,7 @@ node_types:
         self.assertEquals('test_node', node['id'])
 
     def test_version_field(self):
-        yaml = self.MINIMAL_BLUEPRINT + self.BASIC_VERSION_SECTION
+        yaml = self.MINIMAL_BLUEPRINT + self.BASIC_VERSION_SECTION_DSL_1_0
         result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)
 
@@ -3185,23 +3194,23 @@ node_types:
         imported_yaml_filename = self.make_yaml_file(imported_yaml)
         yaml = """
 imports:
-    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION + \
+    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION_DSL_1_0 + \
                self.MINIMAL_BLUEPRINT
         result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)
 
     def test_version_field_with_imports_with_version(self):
-        imported_yaml = self.BASIC_VERSION_SECTION
+        imported_yaml = self.BASIC_VERSION_SECTION_DSL_1_0
         imported_yaml_filename = self.make_yaml_file(imported_yaml)
         yaml = """
 imports:
-    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION + \
+    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION_DSL_1_0 + \
                self.MINIMAL_BLUEPRINT
         result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)
 
     def test_script_mapping(self):
-        yaml = self.BASIC_VERSION_SECTION + """
+        yaml = self.BASIC_VERSION_SECTION_DSL_1_0 + """
 plugins:
     script:
         executor: central_deployment_agent
@@ -3328,14 +3337,14 @@ plugins:
 """
         result = self.parse(yaml)
         deployment_plugins_to_install_for_node = \
-            result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
+            result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(1, len(deployment_plugins_to_install_for_node))
         plugin = deployment_plugins_to_install_for_node[0]
         self.assertEquals('test_management_plugin', plugin['name'])
 
         # check the property on the plan is correct
         deployment_plugins_to_install_for_plan = \
-            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
 
     def test_node_plugins_to_install_no_host(self):
@@ -3356,7 +3365,8 @@ plugins:
         source: dummy
 """
         result = self.parse(yaml)
-        self.assertEquals(1, len(result[DEPLOYMENT_PLUGINS_TO_INSTALL]))
+        self.assertEquals(1,
+                          len(result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]))
 
     def test_same_plugin_one_two_nodes(self):
         yaml = """
@@ -3382,14 +3392,14 @@ plugins:
         result = self.parse(yaml)
         for node in result['nodes']:
             deployment_plugins_to_install_for_node = \
-                node[DEPLOYMENT_PLUGINS_TO_INSTALL]
+                node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
             self.assertEquals(1, len(deployment_plugins_to_install_for_node))
             plugin = deployment_plugins_to_install_for_node[0]
             self.assertEquals('test_management_plugin', plugin['name'])
 
         # check the property on the plan is correct
         deployment_plugins_to_install_for_plan = \
-            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
 
     def test_two_plugins_on_one_node(self):
@@ -3419,12 +3429,12 @@ plugins:
 """
         result = self.parse(yaml)
         deployment_plugins_to_install_for_node = \
-            result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
+            result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(2, len(deployment_plugins_to_install_for_node))
 
         # check the property on the plan is correct
         deployment_plugins_to_install_for_plan = \
-            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(2, len(deployment_plugins_to_install_for_plan))
 
     def test_no_operation_mapping_no_plugin(self):
@@ -3451,12 +3461,12 @@ plugins:
 """
         result = self.parse(yaml)
         deployment_plugins_to_install_for_node = \
-            result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
+            result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(0, len(deployment_plugins_to_install_for_node))
 
         # check the property on the plan is correct
         deployment_plugins_to_install_for_plan = \
-            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(0, len(deployment_plugins_to_install_for_plan))
 
     def test_two_identical_plugins_on_node(self):
@@ -3483,12 +3493,12 @@ plugins:
 """
         result = self.parse(yaml)
         deployment_plugins_to_install_for_node = \
-            result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
+            result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(1, len(deployment_plugins_to_install_for_node))
 
         # check the property on the plan is correct
         deployment_plugins_to_install_for_plan = \
-            result[DEPLOYMENT_PLUGINS_TO_INSTALL]
+            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
 
 ##############################################

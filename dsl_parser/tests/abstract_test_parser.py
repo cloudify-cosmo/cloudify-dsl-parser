@@ -26,7 +26,8 @@ import yaml
 
 from dsl_parser.exceptions import DSLParsingException
 from dsl_parser.parser import parse as dsl_parse
-from dsl_parser.parser import parse_from_path as dsl_parse_from_path
+from dsl_parser.parser import parse_from_path as dsl_parse_from_path, \
+    DSL_VERSION_PREFIX
 
 
 def timeout(seconds=10):
@@ -46,8 +47,12 @@ def timeout(seconds=10):
 
 
 class AbstractTestParser(testtools.TestCase):
-    BASIC_VERSION_SECTION = """
+    BASIC_VERSION_SECTION_DSL_1_0 = """
 tosca_definitions_version: cloudify_dsl_1_0
+    """
+
+    BASIC_VERSION_SECTION_DSL_1_1 = """
+tosca_definitions_version: cloudify_dsl_1_1
     """
 
     BASIC_NODE_TEMPLATES_SECTION = """
@@ -151,8 +156,11 @@ imports:"""
         return yaml
 
     def parse(self, dsl_string, alias_mapping_dict=None,
-              alias_mapping_url=None, resources_base_url=None):
-        dsl_string = AbstractTestParser.BASIC_VERSION_SECTION + dsl_string
+              alias_mapping_url=None, resources_base_url=None,
+              dsl_version=BASIC_VERSION_SECTION_DSL_1_0):
+        # add dsl version if missing
+        if DSL_VERSION_PREFIX not in dsl_string:
+            dsl_string = dsl_version + dsl_string
         return dsl_parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                          resources_base_url)
 
