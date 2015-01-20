@@ -19,6 +19,7 @@ HOST_AGENT = 'host_agent'
 PLUGIN_EXECUTOR_KEY = 'executor'
 PLUGIN_SOURCE_KEY = 'source'
 PLUGIN_INSTALL_KEY = 'install'
+PLUGIN_INSTALL_ARGUMENTS_KEY = 'install_arguments'
 PLUGIN_NAME_KEY = 'name'
 DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
 

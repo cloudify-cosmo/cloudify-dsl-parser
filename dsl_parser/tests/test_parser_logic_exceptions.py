@@ -15,9 +15,11 @@
 
 
 from dsl_parser import constants
-from dsl_parser.parser import DSLParsingLogicException, parse_from_path
+from dsl_parser.parser import DSLParsingLogicException, parse_from_path, \
+    parse_dsl_version
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
+from dsl_parser.parser import DSL_VERSION_1_0, DSL_VERSION_1_1
 
 
 class TestParserLogicExceptions(AbstractTestParser):
@@ -719,7 +721,7 @@ node_types:
             yaml, 27, DSLParsingLogicException, dsl_parse)
 
     def test_no_version_field_in_main_blueprint_file(self):
-        imported_yaml = self.BASIC_VERSION_SECTION
+        imported_yaml = self.BASIC_VERSION_SECTION_DSL_1_0
         imported_yaml_filename = self.make_yaml_file(imported_yaml)
         yaml = """
 imports:
@@ -735,7 +737,7 @@ tosca_definitions_version: cloudify_1_1
         imported_yaml_filename = self.make_yaml_file(imported_yaml)
         yaml = """
 imports:
-    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION +\
+    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION_DSL_1_0 +\
                self.MINIMAL_BLUEPRINT
 
         self._assert_dsl_parsing_exception_error_code(
@@ -749,7 +751,7 @@ tosca_definitions_version: unsupported_version
             yaml, 29, DSLParsingLogicException, dsl_parse)
 
     def test_script_mapping_illegal_script_path_override(self):
-        yaml = self.BASIC_VERSION_SECTION + """
+        yaml = self.BASIC_VERSION_SECTION_DSL_1_0 + """
 plugins:
     {0}:
         executor: central_deployment_agent
@@ -778,7 +780,7 @@ node_templates:
             parsing_method=self.parse_from_path)
 
     def test_script_mapping_missing_script_plugin(self):
-        yaml = self.BASIC_VERSION_SECTION + """
+        yaml = self.BASIC_VERSION_SECTION_DSL_1_0 + """
 node_types:
     type:
         interfaces:
@@ -797,3 +799,63 @@ node_templates:
         self._assert_dsl_parsing_exception_error_code(
             yaml_path, 61, DSLParsingLogicException,
             parsing_method=self.parse_from_path)
+
+    def test_plugin_with_install_args_wrong_dsl_version(self):
+        yaml = self.PLUGIN_WITH_INTERFACES_AND_PLUGINS_WITH_INSTALL_ARGS
+        expected_err_msg = 'plugin property "{0}" is not ' \
+                           'supported for tosca_definitions_version earlier' \
+                           ' than "{1}". You are currently using' \
+                           ' version "{2}"' \
+            .format(constants.PLUGIN_INSTALL_ARGUMENTS_KEY,
+                    DSL_VERSION_1_1, DSL_VERSION_1_0)
+        self.assertRaisesRegex(DSLParsingLogicException,
+                               expected_err_msg, self.parse, yaml,
+                               dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0)
+
+    def test_parse_empty_or_none_dsl_version(self):
+        expected_err_msg = 'tosca_definitions_version is missing or empty'
+        self.assertRaisesRegex(DSLParsingLogicException,
+                               expected_err_msg, parse_dsl_version, '')
+        self.assertRaisesRegex(DSLParsingLogicException,
+                               expected_err_msg, parse_dsl_version, None)
+
+    def test_parse_not_string_dsl_version(self):
+        expected_err_msg = 'Invalid tosca_definitions_version: \[1\] is not' \
+                           ' a string'
+        self.assertRaisesRegex(DSLParsingLogicException,
+                               expected_err_msg, parse_dsl_version, [1])
+
+    def test_parse_wrong_dsl_version_format(self):
+        expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
+                           'expected a value following this format: "{1}"'\
+            .format('1_0', DSL_VERSION_1_0)
+        self.assertRaisesRegex(DSLParsingLogicException,
+                               expected_err_msg, parse_dsl_version, '1_0')
+
+        expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
+                           'expected a value following this format: "{1}"' \
+            .format('cloudify_dsl_1.0', DSL_VERSION_1_0)
+        self.assertRaisesRegex(DSLParsingLogicException,
+                               expected_err_msg, parse_dsl_version,
+                               'cloudify_dsl_1.0')
+
+        expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
+                           'major version is "a" while expected to be a number' \
+            .format('cloudify_dsl_a_0', DSL_VERSION_1_0)
+        self.assertRaisesRegex(DSLParsingLogicException,
+                               expected_err_msg, parse_dsl_version,
+                               'cloudify_dsl_a_0')
+
+        expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
+                           'minor version is "a" while expected to be a number' \
+            .format('cloudify_dsl_1_a', DSL_VERSION_1_0)
+        self.assertRaisesRegex(DSLParsingLogicException,
+                               expected_err_msg, parse_dsl_version,
+                               'cloudify_dsl_1_a')
+
+        expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
+                           'micro version is "a" while expected to be a number' \
+            .format('cloudify_dsl_1_1_a', DSL_VERSION_1_0)
+        self.assertRaisesRegex(DSLParsingLogicException,
+                               expected_err_msg, parse_dsl_version,
+                               'cloudify_dsl_1_1_a')

@@ -38,7 +38,10 @@ from dsl_parser.utils import merge_schema_and_instance_properties
 from dsl_parser.utils import extract_complete_type_recursive
 
 
-SUPPORTED_VERSIONS = ['cloudify_dsl_1_0']
+DSL_VERSION_PREFIX = 'cloudify_dsl_'
+DSL_VERSION_1_0 = DSL_VERSION_PREFIX + '1_0'
+DSL_VERSION_1_1 = DSL_VERSION_PREFIX + '1_1'
+SUPPORTED_VERSIONS = [DSL_VERSION_1_0, DSL_VERSION_1_1]
 
 VERSION = 'tosca_definitions_version'
 NODE_TEMPLATES = 'node_templates'
@@ -150,13 +153,13 @@ def _create_plan_deployment_plugins(processed_nodes):
     deployment_plugin_names = set()
     for node in processed_nodes:
         if constants.DEPLOYMENT_PLUGINS_TO_INSTALL in node:
-            for management_plugin in \
+            for deployment_plugin in \
                     node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
-                if management_plugin[constants.PLUGIN_NAME_KEY] \
+                if deployment_plugin[constants.PLUGIN_NAME_KEY] \
                         not in deployment_plugin_names:
-                    deployment_plugins.append(management_plugin)
+                    deployment_plugins.append(deployment_plugin)
                     deployment_plugin_names\
-                        .add(management_plugin[constants.PLUGIN_NAME_KEY])
+                        .add(deployment_plugin[constants.PLUGIN_NAME_KEY])
     return deployment_plugins
 
 
@@ -194,8 +197,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
     if dsl_version not in SUPPORTED_VERSIONS:
         raise DSLParsingLogicException(
             29, 'Unexpected tosca_definitions_version {0}; Currently '
-                'supported version are: {1}'.format(dsl_version,
-                                                    SUPPORTED_VERSIONS))
+                'supported versions are: {1}'.format(dsl_version,
+                                                     SUPPORTED_VERSIONS))
 
     nodes = combined_parsed_dsl[NODE_TEMPLATES]
     node_names_set = set(nodes.keys())
@@ -210,7 +213,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         RELATIONSHIP_IMPLEMENTATIONS).copy()
 
     plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
-    processed_plugins = dict((name, _process_plugin(plugin, name))
+    processed_plugins = dict((name, _process_plugin(plugin, name, dsl_version))
                              for (name, plugin) in plugins.items())
 
     processed_nodes = map(lambda node_name_and_node: _process_node(
@@ -238,7 +241,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         processed_workflows,
         processed_plugins)
 
-    plan_management_plugins = _create_plan_deployment_plugins(processed_nodes)
+    plan_deployment_plugins = _create_plan_deployment_plugins(processed_nodes)
 
     policy_types = _process_policy_types(
         combined_parsed_dsl.get(POLICY_TYPES, {}))
@@ -260,7 +263,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         POLICY_TRIGGERS: policy_triggers,
         GROUPS: groups,
         INPUTS: inputs,
-        constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_management_plugins,
+        constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_deployment_plugins,
         OUTPUTS: outputs,
         'workflow_plugins_to_install': workflow_plugins_to_install
     })
@@ -1221,7 +1224,7 @@ def _extract_node_host_id(processed_node, node_name_to_node, host_types,
                         contained_in_rel_types)
 
 
-def _process_plugin(plugin, plugin_name):
+def _process_plugin(plugin, plugin_name, dsl_version):
     if plugin[constants.PLUGIN_EXECUTOR_KEY] not \
             in [constants.CENTRAL_DEPLOYMENT_AGENT,
                 constants.HOST_AGENT]:
@@ -1237,12 +1240,28 @@ def _process_plugin(plugin, plugin_name):
 
     plugin_source = plugin.get(constants.PLUGIN_SOURCE_KEY, None)
     plugin_install = plugin.get(constants.PLUGIN_INSTALL_KEY, True)
+    plugin_install_arguments = None
+
+    # if 'install_arguments' are set - verify dsl version is at least 1_1
+    if constants.PLUGIN_INSTALL_ARGUMENTS_KEY in plugin:
+        if is_version_equal_or_greater_than(
+                parse_dsl_version(dsl_version),
+                parse_dsl_version(DSL_VERSION_1_1)):
+            plugin_install_arguments = \
+                plugin[constants.PLUGIN_INSTALL_ARGUMENTS_KEY]
+        else:
+            raise DSLParsingLogicException(
+                70,
+                'plugin property "{0}" is not supported for {1} earlier than '
+                '"{2}". You are currently using version "{3}"'.format(
+                    constants.PLUGIN_INSTALL_ARGUMENTS_KEY, VERSION,
+                    DSL_VERSION_1_1, dsl_version))
 
     if plugin_install and not plugin_source:
         raise DSLParsingLogicException(
             50,
             "plugin {0} needs to be installed, "
-            "but doe's not declare a {1} property"
+            "but does not declare a {1} property"
             .format(plugin_name, constants.PLUGIN_SOURCE_KEY)
         )
 
@@ -1252,8 +1271,31 @@ def _process_plugin(plugin, plugin_name):
     processed_plugin[constants.PLUGIN_NAME_KEY] = plugin_name
     processed_plugin[constants.PLUGIN_INSTALL_KEY] = plugin_install
     processed_plugin[constants.PLUGIN_SOURCE_KEY] = plugin_source
+    processed_plugin[constants.PLUGIN_INSTALL_ARGUMENTS_KEY] = \
+        plugin_install_arguments
 
     return processed_plugin
+
+
+def is_version_equal_or_greater_than(version_found, version_required):
+
+    greater_or_equals = False
+
+    if version_found.major > version_required.major:
+        greater_or_equals = True
+    elif (version_found.major == version_required.major) \
+            and (version_found.minor > version_required.minor):
+        greater_or_equals = True
+    else:
+        # comparing micro version, need to treat None as 0
+        found_micro_as_int = version_found.micro or 0
+        required_micro_as_int = version_required.micro or 0
+        if (version_found.major == version_required.major) \
+            and (version_found.minor == version_required.minor)\
+                and (found_micro_as_int >= required_micro_as_int):
+                    greater_or_equals = True
+
+    return greater_or_equals
 
 
 def _extract_complete_node(node_type,
@@ -1440,7 +1482,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
                     # first level property is not white-listed for merge -
                     # throw an exception
                     raise DSLParsingLogicException(
-                        3, 'Failed on import: non-mergeable field {0}'
+                        3, 'Failed on import: non-mergeable field: "{0}"'
                            .format(key))
 
     # clean the now unnecessary 'imports' section from the combined dsl
@@ -1627,3 +1669,58 @@ def _set_operation_executor(operation, processed_plugins):
     operation['executor'] = real_executor
 
     return real_executor
+
+
+def parse_dsl_version(dsl_version):
+
+    if not dsl_version:
+        raise DSLParsingLogicException(71, '{0} is missing or empty'
+                                       .format(VERSION))
+
+    if not isinstance(dsl_version, basestring):
+        raise DSLParsingLogicException(72, 'Invalid {0}: {1} is not a string'
+                                       .format(VERSION, dsl_version))
+
+    short_dsl_version = dsl_version.strip()
+
+    # handle the 'dsl_version_' prefix
+    if dsl_version.startswith(DSL_VERSION_PREFIX):
+        short_dsl_version = dsl_version[len(DSL_VERSION_PREFIX):]
+    else:
+        raise DSLParsingLogicException(73, 'Invalid {0}: "{1}", expected a '
+                                           'value following this format: "{2}"'
+                                           .format(VERSION, dsl_version,
+                                                   DSL_VERSION_1_0))
+
+    if not short_dsl_version.__contains__("_"):
+        raise DSLParsingLogicException(73, 'Invalid {0}: "{1}", expected a '
+                                           'value following this format: "{2}"'
+                                           .format(VERSION, dsl_version,
+                                                   DSL_VERSION_1_0))
+
+    version_parts = short_dsl_version.split('_')
+    version_details = namedtuple('version_details',
+                                 ['major', 'minor', 'micro'])
+    major = version_parts[0]
+    minor = version_parts[1]
+    micro = None
+    if len(version_parts) > 2:
+        micro = version_parts[2]
+
+    if not major.isdigit():
+        raise DSLParsingLogicException(74, 'Invalid {0}: "{1}", major version '
+                                       'is "{2}" while expected to be a number'
+                                       .format(VERSION, dsl_version, major))
+
+    if not minor.isdigit():
+        raise DSLParsingLogicException(75, 'Invalid {0}: "{1}", minor version '
+                                       'is "{2}" while expected to be a number'
+                                       .format(VERSION, dsl_version, minor))
+
+    if micro and not micro.isdigit():
+        raise DSLParsingLogicException(76, 'Invalid {0}: "{1}", micro version '
+                                       'is "{2}" while expected to be a number'
+                                       .format(VERSION, dsl_version, micro))
+
+    return version_details(int(major), int(minor),
+                           int(micro) if micro else None)

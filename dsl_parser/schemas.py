@@ -431,6 +431,9 @@ DSL_SCHEMA = {
                         },
                         'install': {
                             'type': 'boolean'
+                        },
+                        'install_arguments': {
+                            'type': 'string'
                         }
                     },
                     'required': ['executor'],
