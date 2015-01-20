@@ -335,8 +335,6 @@ def evaluate_functions(payload, context,
                     'Multi instances of node "{0}" are not supported by '
                     'function.'.format(func.node_name))
             node_instance = node_instances[0]
-            # because of elastic_search eventual consistency
-            node_instance = _get_node_instance(node_instance.id)
 
         value = _get_property_value(node_instance.node_id,
                                     node_instance.runtime_properties,
