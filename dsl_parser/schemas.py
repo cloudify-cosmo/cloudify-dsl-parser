@@ -36,6 +36,19 @@ PROPERTIES_SCHEMA_SCHEMA = {
                     'type': 'object',
                     'properties': {
                         'default': {
+                            'type': 'null'
+                        },
+                        'description': {
+                            'type': 'string'
+                        },
+                        'type': PROPERTY_TYPES_SCHEMA
+                    },
+                    'additionalProperties': False
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'default': {
                             'type': 'object'
                         },
                         'description': {
@@ -431,6 +444,9 @@ DSL_SCHEMA = {
                         },
                         'install': {
                             'type': 'boolean'
+                        },
+                        'install_arguments': {
+                            'type': 'string'
                         }
                     },
                     'required': ['executor'],

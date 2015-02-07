@@ -272,10 +272,6 @@ class GetAttribute(Function):
                     'Multi instances of node "{0}" are not supported by '
                     'function.'.format(self.node_name))
             node_instance = node_instances[0]
-            # because of elastic_search eventual consistency
-            node_instance = self._get_node_instance(cache,
-                                                    get_node_instance_method,
-                                                    node_instance.id)
 
         value = _get_property_value(node_instance.node_id,
                                     node_instance.runtime_properties,
@@ -468,7 +464,6 @@ def evaluate_functions(payload, context,
         'node_instances': {},
         'nodes': {}
     }
-
     handler = runtime_evaluation_handler(cache,
                                          get_node_instances_method,
                                          get_node_instance_method,
