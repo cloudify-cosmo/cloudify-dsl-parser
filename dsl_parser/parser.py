@@ -28,7 +28,6 @@ from yaml.parser import ParserError
 from dsl_parser import constants
 from dsl_parser import functions
 from dsl_parser import models
-from dsl_parser import scan
 from dsl_parser import schemas
 from dsl_parser import utils
 from dsl_parser.interfaces import interfaces_parser
@@ -270,7 +269,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         'workflow_plugins_to_install': workflow_plugins_to_install
     })
 
-    _validate_functions(plan)
+    functions.validate_functions(plan)
 
     return plan
 
@@ -522,65 +521,6 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
                     19,
                     'Relationship: {0}'.format(rel_name),
                     resource_base=resource_base)
-
-
-def _validate_functions(plan):
-    get_property_functions = []
-
-    def handler(v, scope, context, path):
-        _func = functions.parse(v, scope=scope, context=context, path=path)
-        if isinstance(_func, functions.Function):
-            _func.validate(plan)
-        if isinstance(_func, functions.GetProperty):
-            get_property_functions.append(_func)
-            return _func
-        return v
-
-    # Replace all get_property functions with their instance representation
-    scan.scan_service_template(plan, handler, replace=True)
-
-    if not get_property_functions:
-        return
-
-    # Validate there are no circular get_property calls
-    for func in get_property_functions:
-        property_path = [str(prop) for prop in func.property_path]
-        visited_functions = ['{0}.{1}'.format(
-            func.get_node_template(plan)['name'],
-            constants.FUNCTION_NAME_PATH_SEPARATOR.join(property_path))]
-
-        def validate_no_circular_get_property(*args):
-            r = args[0]
-            if isinstance(r, functions.GetProperty):
-                func_id = '{0}.{1}'.format(
-                    r.get_node_template(plan)['name'],
-                    constants.FUNCTION_NAME_PATH_SEPARATOR.join(
-                        r.property_path))
-                if func_id in visited_functions:
-                    visited_functions.append(func_id)
-                    error_output = [
-                        x.replace(constants.FUNCTION_NAME_PATH_SEPARATOR, ',')
-                        for x in visited_functions
-                    ]
-                    raise RuntimeError(
-                        'Circular get_property function call detected: '
-                        '{0}'.format(' -> '.join(error_output)))
-                visited_functions.append(func_id)
-                r = r.evaluate(plan)
-                validate_no_circular_get_property(r)
-            else:
-                scan.scan_properties(r, validate_no_circular_get_property)
-
-        result = func.evaluate(plan)
-        validate_no_circular_get_property(result)
-
-    def replace_with_raw_function(*args):
-        if isinstance(args[0], functions.GetProperty):
-            return args[0].raw
-        return args[0]
-
-    # Change previously replaced get_property instances with raw values
-    scan.scan_service_template(plan, replace_with_raw_function, replace=True)
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):

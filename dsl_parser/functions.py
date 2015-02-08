@@ -16,6 +16,7 @@
 import pkg_resources
 import abc
 
+from dsl_parser import constants
 from dsl_parser import exceptions
 from dsl_parser import scan
 
@@ -519,3 +520,62 @@ def runtime_evaluation_handler(cache,
                     get_node_instances_method=get_node_instances_method,
                     get_node_instance_method=get_node_instance_method,
                     get_node_method=get_node_method)
+
+
+def validate_functions(plan):
+    get_property_functions = []
+
+    def handler(v, scope, context, path):
+        _func = parse(v, scope=scope, context=context, path=path)
+        if isinstance(_func, Function):
+            _func.validate(plan)
+        if isinstance(_func, GetProperty):
+            get_property_functions.append(_func)
+            return _func
+        return v
+
+    # Replace all get_property functions with their instance representation
+    scan.scan_service_template(plan, handler, replace=True)
+
+    if not get_property_functions:
+        return
+
+    # Validate there are no circular get_property calls
+    for func in get_property_functions:
+        property_path = [str(prop) for prop in func.property_path]
+        visited_functions = ['{0}.{1}'.format(
+            func.get_node_template(plan)['name'],
+            constants.FUNCTION_NAME_PATH_SEPARATOR.join(property_path))]
+
+        def validate_no_circular_get_property(*args):
+            r = args[0]
+            if isinstance(r, GetProperty):
+                func_id = '{0}.{1}'.format(
+                    r.get_node_template(plan)['name'],
+                    constants.FUNCTION_NAME_PATH_SEPARATOR.join(
+                        r.property_path))
+                if func_id in visited_functions:
+                    visited_functions.append(func_id)
+                    error_output = [
+                        x.replace(constants.FUNCTION_NAME_PATH_SEPARATOR, ',')
+                        for x in visited_functions
+                    ]
+                    raise RuntimeError(
+                        'Circular get_property function call detected: '
+                        '{0}'.format(' -> '.join(error_output)))
+                visited_functions.append(func_id)
+                r = r.evaluate(plan)
+                validate_no_circular_get_property(r)
+            else:
+                scan.scan_properties(r, validate_no_circular_get_property)
+
+        result = func.evaluate(plan)
+        validate_no_circular_get_property(result)
+
+    def replace_with_raw_function(*args):
+        if isinstance(args[0], GetProperty):
+            return args[0].raw
+        return args[0]
+
+    # Change previously replaced get_property instances with raw values
+    scan.scan_service_template(plan, replace_with_raw_function, replace=True)
