@@ -488,11 +488,11 @@ def plan_evaluation_handler(plan):
         while isinstance(func, Function):
             previous_evaluated_value = evaluated_value
             evaluated_value = func.evaluate(plan)
-            # currently this only applies to FnJoin, but will apply to any
+            # currently this only applies to Concat, but will apply to any
             # function that only partly evaluates itself and will resume
             # evaluation during runtime (evaluate_outputs, evaluate_functions)
             if scanned and previous_evaluated_value == evaluated_value:
-                return evaluated_value
+                break
             scan.scan_properties(evaluated_value,
                                  handler,
                                  scope=scope,
