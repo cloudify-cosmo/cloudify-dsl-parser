@@ -36,11 +36,6 @@ setup(
     author_email='cosmo-admin@gigaspaces.com',
     packages=['dsl_parser',
               'dsl_parser.interfaces'],
-    entry_points={
-        'cloudify.tosca.ext.functions': [
-            'concat = dsl_parser.functions:Concat'
-        ]
-    },
     license='LICENSE',
     description='Cloudify DSL parser',
     zip_safe=False,
