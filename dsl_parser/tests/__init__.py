@@ -20,5 +20,6 @@ def setUp():
     # only until part of the spec
     functions.register(functions.Concat, 'concat')
 
+
 def tearDown():
     functions.unregister('concat')
