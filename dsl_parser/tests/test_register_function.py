@@ -38,8 +38,7 @@ class TestFunctionRegistration(AbstractTestParser):
             def parse_args(self, args):
                 self.arg = args
 
-            def evaluate_runtime(self, cache, get_node_instances_method,
-                                 get_node_instance_method, get_node_method):
+            def evaluate_runtime(self, storage):
                 return self.evaluate(plan=None)
 
             def evaluate(self, plan):

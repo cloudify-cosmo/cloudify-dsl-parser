@@ -49,6 +49,39 @@ def register_entry_point_functions():
         register(fn=entry_point.load(), name=entry_point.name)
 
 
+class RuntimeEvaluationStorage(object):
+
+    def __init__(self,
+                 get_node_instances_method,
+                 get_node_instance_method,
+                 get_node_method):
+        self._get_node_instances_method = get_node_instances_method
+        self._get_node_instance_method = get_node_instance_method
+        self._get_node_method = get_node_method
+
+        self._node_to_node_instances = {}
+        self._node_instances = {}
+        self._nodes = {}
+
+    def get_node_instances(self, node_id):
+        if node_id not in self._node_to_node_instances:
+            node_instances = self._get_node_instances_method(node_id)
+            self._node_to_node_instances[node_id] = node_instances
+        return self._node_to_node_instances[node_id]
+
+    def get_node_instance(self, node_instance_id):
+        if node_instance_id not in self._node_instances:
+            node_instance = self._get_node_instance_method(node_instance_id)
+            self._node_instances[node_instance_id] = node_instance
+        return self._node_instances[node_instance_id]
+
+    def get_node(self, node_id):
+        if node_id not in self._nodes:
+            node = self._get_node_method(node_id)
+            self._nodes[node_id] = node
+        return self._nodes[node_id]
+
+
 class Function(object):
 
     __metaclass__ = abc.ABCMeta
@@ -74,11 +107,7 @@ class Function(object):
         pass
 
     @abc.abstractmethod
-    def evaluate_runtime(self,
-                         cache,
-                         get_node_instances_method,
-                         get_node_instance_method,
-                         get_node_method):
+    def evaluate_runtime(self, storage):
         pass
 
 
@@ -106,11 +135,7 @@ class GetInput(Function):
     def evaluate(self, plan):
         return plan.inputs[self.input_name]
 
-    def evaluate_runtime(self,
-                         cache,
-                         get_node_instances_method,
-                         get_node_instance_method,
-                         get_node_method):
+    def evaluate_runtime(self, storage):
         raise RuntimeError('runtime evaluation for {0} is not supported'
                            .format(self.name))
 
@@ -174,11 +199,7 @@ class GetProperty(Function):
     def evaluate(self, plan):
         return self._get_property_value(self.get_node_template(plan))
 
-    def evaluate_runtime(self,
-                         cache,
-                         get_node_instances_method,
-                         get_node_instance_method,
-                         get_node_method):
+    def evaluate_runtime(self, storage):
         raise RuntimeError('runtime evaluation for {0} is not supported'
                            .format(self.name))
 
@@ -233,35 +254,22 @@ class GetAttribute(Function):
             self.context['operation']['has_intrinsic_functions'] = True
         return self.raw
 
-    def evaluate_runtime(self,
-                         cache,
-                         get_node_instances_method,
-                         get_node_instance_method,
-                         get_node_method):
+    def evaluate_runtime(self, storage):
         if self.node_name == SELF:
             node_instance_id = self.context.get('self')
             self._validate_ref(node_instance_id, SELF)
-            node_instance = self._get_node_instance(cache,
-                                                    get_node_instance_method,
-                                                    node_instance_id)
+            node_instance = storage.get_node_instance(node_instance_id)
         elif self.node_name == SOURCE:
             node_instance_id = self.context.get('source')
             self._validate_ref(node_instance_id, SOURCE)
-            node_instance = self._get_node_instance(cache,
-                                                    get_node_instance_method,
-                                                    node_instance_id)
+            node_instance = storage.get_node_instance(node_instance_id)
         elif self.node_name == TARGET:
             node_instance_id = self.context.get('target')
             self._validate_ref(node_instance_id, TARGET)
-            node_instance = self._get_node_instance(cache,
-                                                    get_node_instance_method,
-                                                    node_instance_id)
+            node_instance = storage.get_node_instance(node_instance_id)
         else:
             node_id = self.node_name
-            if self.node_name not in cache['node_to_node_instances']:
-                node_instances = get_node_instances_method(node_id)
-                cache['node_to_node_instances'][node_id] = node_instances
-            node_instances = cache['node_to_node_instances'][node_id]
+            node_instances = storage.get_node_instances(node_id)
             if len(node_instances) == 0:
                 raise exceptions.FunctionEvaluationError(
                     self.name,
@@ -280,31 +288,13 @@ class GetAttribute(Function):
                                     self.path,
                                     raise_if_not_found=False)
         if value is None:
-            node = self._get_node(cache,
-                                  get_node_method,
-                                  node_instance.node_id)
+            node = storage.get_node(node_instance.node_id)
             value = _get_property_value(node.id,
                                         node.properties,
                                         self.attribute_path,
                                         self.path,
                                         raise_if_not_found=False)
         return value
-
-    @staticmethod
-    def _get_node(cache, get_node_method, node_id):
-        if node_id not in cache['nodes']:
-            node = get_node_method(node_id)
-            cache['nodes'][node_id] = node
-        return cache['nodes'][node_id]
-
-    @staticmethod
-    def _get_node_instance(cache,
-                           get_node_instance_method,
-                           node_instance_id):
-        if node_instance_id not in cache['node_instances']:
-            node_instance = get_node_instance_method(node_instance_id)
-            cache['node_instances'][node_instance_id] = node_instance
-        return cache['node_instances'][node_instance_id]
 
     def _validate_ref(self, ref, ref_name):
         if not ref:
@@ -350,11 +340,7 @@ class Concat(Function):
                 return self.raw
         return self.join()
 
-    def evaluate_runtime(self,
-                         cache,
-                         get_node_instances_method,
-                         get_node_instance_method,
-                         get_node_method):
+    def evaluate_runtime(self, storage):
         return self.evaluate(plan=None)
 
     def join(self):
@@ -450,13 +436,7 @@ def evaluate_functions(payload, context,
     :param get_node_method: A method for getting a node.
     :return: payload.
     """
-    cache = {
-        'node_to_node_instances': {},
-        'node_instances': {},
-        'nodes': {}
-    }
-    handler = runtime_evaluation_handler(cache,
-                                         get_node_instances_method,
+    handler = runtime_evaluation_handler(get_node_instances_method,
                                          get_node_instance_method,
                                          get_node_method)
     scan.scan_properties(payload,
@@ -519,15 +499,14 @@ def plan_evaluation_handler(plan):
     return _handler('evaluate', plan=plan)
 
 
-def runtime_evaluation_handler(cache,
-                               get_node_instances_method,
+def runtime_evaluation_handler(get_node_instances_method,
                                get_node_instance_method,
                                get_node_method):
     return _handler('evaluate_runtime',
-                    cache=cache,
-                    get_node_instances_method=get_node_instances_method,
-                    get_node_instance_method=get_node_instance_method,
-                    get_node_method=get_node_method)
+                    storage=RuntimeEvaluationStorage(
+                        get_node_instances_method=get_node_instances_method,
+                        get_node_instance_method=get_node_instance_method,
+                        get_node_method=get_node_method))
 
 
 def validate_functions(plan):
