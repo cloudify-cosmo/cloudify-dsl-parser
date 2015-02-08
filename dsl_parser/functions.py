@@ -333,9 +333,10 @@ class Concat(Function):
 
     def validate(self, plan):
         if plan.version < (1, 1):
-            raise ValueError('Using {0} requires using dsl version 1_1 or '
-                             'greater, but found: {1} in {2}.'
-                             .format(self.name, plan.version, self.path))
+            raise exceptions.FunctionEvaluationError(
+                'Using {0} requires using dsl version 1_1 or '
+                'greater, but found: {1} in {2}.'
+                .format(self.name, plan.version, self.path))
         if self.scope not in [scan.NODE_TEMPLATE_SCOPE,
                               scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE,
                               scan.OUTPUTS_SCOPE]:

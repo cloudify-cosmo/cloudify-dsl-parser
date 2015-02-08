@@ -15,6 +15,7 @@
 
 from testtools import ExpectedException
 
+from dsl_parser import exceptions
 from dsl_parser.tasks import prepare_deployment_plan
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.tests.abstract_test_parser import timeout
@@ -699,7 +700,8 @@ node_templates:
         properties:
             property: { concat: [1, 2] }
 """
-        with ExpectedException(ValueError, '.*version 1_1 or greater.*'):
+        with ExpectedException(exceptions.FunctionEvaluationError,
+                               '.*version 1_1 or greater.*'):
             prepare_deployment_plan(self.parse(
                 yaml,
                 dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0))
