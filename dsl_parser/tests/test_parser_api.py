@@ -3314,15 +3314,16 @@ node_templates:
 
     def test_version(self):
         def assertion(version_str, expected):
-            parsed = self.parse(self.MINIMAL_BLUEPRINT,
-                                dsl_version=version_str)
-            self.assertEqual(parsed['version']['raw'],
+            version = self.parse(self.MINIMAL_BLUEPRINT,
+                                 dsl_version=version_str)['version']
+            self.assertEqual(version['raw'],
                              version_str.split(' ')[1].strip())
-            self.assertEqual(parsed['version']['version'], expected)
+            self.assertEqual(version['definitions_name'], 'cloudify_dsl')
+            self.assertEqual(version['definitions_version'], expected)
         assertion(self.BASIC_VERSION_SECTION_DSL_1_0,
-                  expected=(1, 0, None))
+                  expected=(1, 0))
         assertion(self.BASIC_VERSION_SECTION_DSL_1_1,
-                  expected=(1, 1, None))
+                  expected=(1, 1))
 
 
 class DeploymentPluginsToInstallTest(AbstractTestParser):

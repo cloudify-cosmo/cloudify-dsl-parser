@@ -256,11 +256,6 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         policy_triggers,
         processed_nodes)
 
-    version_struct = {
-        'raw': dsl_version,
-        'version': parse_dsl_version(dsl_version)
-    }
-
     plan = models.Plan({
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
@@ -272,7 +267,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_deployment_plugins,
         OUTPUTS: outputs,
         'workflow_plugins_to_install': workflow_plugins_to_install,
-        'version': version_struct
+        'version': _process_dsl_version(dsl_version)
     })
 
     functions.validate_functions(plan)
@@ -1629,8 +1624,6 @@ def parse_dsl_version(dsl_version):
         raise DSLParsingLogicException(72, 'Invalid {0}: {1} is not a string'
                                        .format(VERSION, dsl_version))
 
-    short_dsl_version = dsl_version.strip()
-
     # handle the 'dsl_version_' prefix
     if dsl_version.startswith(DSL_VERSION_PREFIX):
         short_dsl_version = dsl_version[len(DSL_VERSION_PREFIX):]
@@ -1672,3 +1665,16 @@ def parse_dsl_version(dsl_version):
 
     return version_details(int(major), int(minor),
                            int(micro) if micro else None)
+
+
+def _process_dsl_version(dsl_version):
+    version_definitions_name = DSL_VERSION_PREFIX[:-1]
+    version_definitions_version = parse_dsl_version(dsl_version)
+    if version_definitions_version.micro is None:
+        version_definitions_version = (version_definitions_version.major,
+                                       version_definitions_version.minor)
+    return {
+        'raw': dsl_version,
+        'definitions_name': version_definitions_name,
+        'definitions_version': tuple(version_definitions_version)
+    }
