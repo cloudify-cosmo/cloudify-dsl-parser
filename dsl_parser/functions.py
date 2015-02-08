@@ -480,17 +480,19 @@ def evaluate_outputs(outputs_def,
         get_node_method=get_node_method)
 
 
-def plan_evaluation_handler(plan):
+def _handler(evaluator, **evaluator_kwargs):
     def handler(v, scope, context, path):
-        func = parse(v, scope=scope, context=context, path=path)
         evaluated_value = v
         scanned = False
-        while isinstance(func, Function):
+        while True:
+            func = parse(evaluated_value,
+                         scope=scope,
+                         context=context,
+                         path=path)
+            if not isinstance(func, Function):
+                break
             previous_evaluated_value = evaluated_value
-            evaluated_value = func.evaluate(plan)
-            # currently this only applies to Concat, but will apply to any
-            # function that only partly evaluates itself and will resume
-            # evaluation during runtime (evaluate_outputs, evaluate_functions)
+            evaluated_value = getattr(func, evaluator)(**evaluator_kwargs)
             if scanned and previous_evaluated_value == evaluated_value:
                 break
             scan.scan_properties(evaluated_value,
@@ -500,35 +502,20 @@ def plan_evaluation_handler(plan):
                                  path=path,
                                  replace=True)
             scanned = True
-            func = parse(evaluated_value,
-                         scope=scope,
-                         context=context,
-                         path=path)
         return evaluated_value
     return handler
+
+
+def plan_evaluation_handler(plan):
+    return _handler('evaluate', plan=plan)
 
 
 def runtime_evaluation_handler(cache,
                                get_node_instances_method,
                                get_node_instance_method,
                                get_node_method):
-    def handler(v, scope, context, path):
-        func = parse(v, scope=scope, context=context, path=path)
-        evaluated_value = v
-        while isinstance(func, Function):
-            evaluated_value = func.evaluate_runtime(cache,
-                                                    get_node_instances_method,
-                                                    get_node_instance_method,
-                                                    get_node_method)
-            scan.scan_properties(evaluated_value,
-                                 handler,
-                                 scope=scope,
-                                 context=context,
-                                 path=path,
-                                 replace=True)
-            func = parse(evaluated_value,
-                         scope=scope,
-                         context=context,
-                         path=path)
-        return evaluated_value
-    return handler
+    return _handler('evaluate_runtime',
+                    cache=cache,
+                    get_node_instances_method=get_node_instances_method,
+                    get_node_instance_method=get_node_instance_method,
+                    get_node_method=get_node_method)
