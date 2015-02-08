@@ -317,7 +317,7 @@ class GetAttribute(Function):
 
 
 class Concat(Function):
-    # Registered as an entry point in setup.py
+    # Currently, only registered in tests until part of the spec
 
     def __init__(self, args, **kwargs):
         self.separator = ''
