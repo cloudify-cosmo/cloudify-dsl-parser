@@ -315,25 +315,20 @@ class GetAttribute(Function):
                                        self.attribute_path))
 
 
-class FnJoin(Function):
+class Concat(Function):
     # Registered as an entry point in setup.py
 
     def __init__(self, args, **kwargs):
-        self.separator = None
-        self.joined = None
-        super(FnJoin, self).__init__(args, **kwargs)
+        self.separator = ''
+        self.joined = args
+        super(Concat, self).__init__(args, **kwargs)
 
     def _parse_args(self, args):
-        if not (isinstance(args, list) and
-                len(args) == 2 and
-                isinstance(args[0], basestring) and
-                isinstance(args[1], list)):
+        if not isinstance(args, list):
             raise ValueError(
                 'Illegal arguments passed to {0} function. '
-                'Expected: <separator, [arg1, arg2, ...]>'
+                'Expected: [arg1, arg2, ...]'
                 'but got: {1}.'.format(self.name, args))
-        self.separator = args[0]
-        self.joined = args[1]
 
     def validate(self, plan):
         if self.scope not in [scan.NODE_TEMPLATE_SCOPE,
@@ -359,19 +354,6 @@ class FnJoin(Function):
     def join(self):
         str_join = [str(elem) for elem in self.joined]
         return self.separator.join(str_join)
-
-
-class FnConcat(FnJoin):
-    # Registered as an entry point in setup.py
-
-    def _parse_args(self, args):
-        if not isinstance(args, list):
-            raise ValueError(
-                'Illegal arguments passed to {0} function. '
-                'Expected: <[arg1, arg2, ...]>'
-                'but got: {1}.'.format(self.name, args))
-        self.separator = ''
-        self.joined = args
 
 
 def _get_property_value(node_name,

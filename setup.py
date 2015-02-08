@@ -38,8 +38,7 @@ setup(
               'dsl_parser.interfaces'],
     entry_points={
         'cloudify.tosca.ext.functions': [
-            'fn.join = dsl_parser.functions:FnJoin',
-            'fn.concat = dsl_parser.functions:FnConcat'
+            'concat = dsl_parser.functions:Concat'
         ]
     },
     license='LICENSE',

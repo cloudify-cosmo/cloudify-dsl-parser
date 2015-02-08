@@ -685,9 +685,9 @@ outputs:
         assert_with('TARGET')
 
 
-class TestFnJoin(AbstractTestParser):
+class TestConcat(AbstractTestParser):
 
-    def test_invalid_fn_join_1(self):
+    def test_invalid_concat(self):
         yaml = """
 node_types:
     type:
@@ -697,54 +697,9 @@ node_templates:
     node:
         type: type
         properties:
-            property: { fn.join: 1 }
+            property: { concat: 1 }
 """
-        with ExpectedException(ValueError, '.*Illegal.*fn\.join.*'):
-            prepare_deployment_plan(self.parse(yaml))
-
-    def test_invalid_fn_join_2(self):
-        yaml = """
-node_types:
-    type:
-        properties:
-            property: {}
-node_templates:
-    node:
-        type: type
-        properties:
-            property: { fn.join: [one, two, three] }
-"""
-        with ExpectedException(ValueError, '.*Illegal.*fn\.join.*'):
-            prepare_deployment_plan(self.parse(yaml))
-
-    def test_invalid_fn_join_3(self):
-        yaml = """
-node_types:
-    type:
-        properties:
-            property: {}
-node_templates:
-    node:
-        type: type
-        properties:
-            property: { fn.join: [2, [one, two, three]] }
-"""
-        with ExpectedException(ValueError, '.*Illegal.*fn\.join.*'):
-            prepare_deployment_plan(self.parse(yaml))
-
-    def test_invalid_fn_join_4(self):
-        yaml = """
-node_types:
-    type:
-        properties:
-            property: {}
-node_templates:
-    node:
-        type: type
-        properties:
-            property: { fn.join: ['', {}] }
-"""
-        with ExpectedException(ValueError, '.*Illegal.*fn\.join.*'):
+        with ExpectedException(ValueError, '.*Illegal.*concat.*'):
             prepare_deployment_plan(self.parse(yaml))
 
     def test_node_template_properties_simple(self):
@@ -757,11 +712,11 @@ node_templates:
     node:
         type: type
         properties:
-            property: { fn.join: [':', [one, two, three]] }
+            property: { concat: [one, two, three] }
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         node = self.get_node_by_name(parsed, 'node')
-        self.assertEqual('one:two:three', node['properties']['property'])
+        self.assertEqual('onetwothree', node['properties']['property'])
 
     def test_node_template_properties_with_self_property(self):
         yaml = """
@@ -775,13 +730,13 @@ node_templates:
         type: type
         properties:
             property1: value1
-            property2: { fn.join: [':',
+            property2: { concat:
                 [one, { get_property: [SELF, property1] }, three]
-            ] }
+            }
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         node = self.get_node_by_name(parsed, 'node')
-        self.assertEqual('one:value1:three', node['properties']['property2'])
+        self.assertEqual('onevalue1three', node['properties']['property2'])
 
     def test_node_template_properties_with_named_node_property(self):
         yaml = """
@@ -793,9 +748,9 @@ node_templates:
     node:
         type: type
         properties:
-            property: { fn.join: [':',
+            property: { concat:
                 [one, { get_property: [node2, property] }, three]
-            ] }
+            }
     node2:
         type: type
         properties:
@@ -803,7 +758,7 @@ node_templates:
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         node = self.get_node_by_name(parsed, 'node')
-        self.assertEqual('one:value2:three', node['properties']['property'])
+        self.assertEqual('onevalue2three', node['properties']['property'])
 
     def test_node_template_properties_with_invalid_node_property_cycle(self):
         yaml = """
@@ -816,22 +771,22 @@ node_templates:
     node1:
         type: type
         properties:
-            property1: { fn.join: [':',
+            property1: { concat:
                 [one, { get_property: [node2, property1] }, three]
-            ] }
+            }
             property2: value1
     node2:
         type: type
         properties:
-            property1: { fn.join: [':',
+            property1: { concat:
                 [one, { get_property: [node1, property1] }, three]
-            ] }
+            }
             property2: value2
 """
         with ExpectedException(RuntimeError, '.*Circular.*'):
             prepare_deployment_plan(self.parse(yaml))
 
-    def test_node_template_properties_with_recursive_fn_join(self):
+    def test_node_template_properties_with_recursive_concat(self):
         yaml = """
 node_types:
     type:
@@ -841,20 +796,20 @@ node_templates:
     node1:
         type: type
         properties:
-            property: { fn.join: [':',
+            property: { concat:
                 [one, { get_property: [node2, property] }, three]
-            ] }
+            }
     node2:
         type: type
         properties:
-            property: { fn.join: [';', [one, two, three] ] }
+            property: { concat: [one, two, three] }
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         node1 = self.get_node_by_name(parsed, 'node1')
         node2 = self.get_node_by_name(parsed, 'node2')
-        self.assertEqual('one:one;two;three:three',
+        self.assertEqual('oneonetwothreethree',
                          node1['properties']['property'])
-        self.assertEqual('one;two;three', node2['properties']['property'])
+        self.assertEqual('onetwothree', node2['properties']['property'])
 
     def test_node_operation_inputs(self):
         yaml = """
@@ -876,29 +831,29 @@ node_templates:
                 op:
                     implementation: p.task
                     inputs:
-                        input1: { fn.join: [':', [one,
-                            { get_property: [SELF, property] }, three]] }
+                        input1: { concat: [one,
+                            { get_property: [SELF, property] }, three] }
                         input2:
                             key1: value1
-                            key2: { fn.join: [';', [one,
-                                { get_property: [SELF, property] }, three]] }
+                            key2: { concat: [one,
+                                { get_property: [SELF, property] }, three] }
                             key3:
                                 - item1
-                                - { fn.join: [',', [one,
-                                    {get_property: [SELF, property] },three]]}
-                        input3: { fn.join: ['-', [one,
+                                - { concat: [one,
+                                    {get_property: [SELF, property] },three]}
+                        input3: { concat: [one,
                                     {get_property: [SELF, property] },
-                                    {get_attribute: [SELF, attribute] }]]}
+                                    {get_attribute: [SELF, attribute] }]}
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         inputs = self.get_node_by_name(parsed, 'node')['operations'][
             'interface.op']['inputs']
-        self.assertEqual('one:value:three', inputs['input1'])
-        self.assertEqual('one;value;three', inputs['input2']['key2'])
-        self.assertEqual('one,value,three', inputs['input2']['key3'][1])
-        self.assertEqual({'fn.join':
-                         ['-', ['one', 'value', {'get_attribute':
-                                                 ['SELF', 'attribute']}]]},
+        self.assertEqual('onevaluethree', inputs['input1'])
+        self.assertEqual('onevaluethree', inputs['input2']['key2'])
+        self.assertEqual('onevaluethree', inputs['input2']['key3'][1])
+        self.assertEqual({'concat':
+                         ['one', 'value', {'get_attribute': ['SELF',
+                                                             'attribute']}]},
                          inputs['input3'])
 
     def test_relationship_operation_inputs(self):
@@ -926,22 +881,22 @@ node_templates:
                         op:
                             implementation: p.task
                             inputs:
-                                input1: { fn.join: [':', [one,
+                                input1: { concat: [one,
                                     { get_property: [SOURCE, property] },
-                                    three]] }
+                                    three] }
                                 input2:
                                     key1: value1
-                                    key2: { fn.join: [';', [one,
+                                    key2: { concat: [one,
                                         { get_property: [SOURCE, property] },
-                                        three]] }
+                                        three] }
                                     key3:
                                         - item1
-                                        - { fn.join: [',', [one,
+                                        - { concat: [one,
                                             {get_property: [TARGET, property]},
-                                            three]] }
-                                input3: { fn.join: ['-', [one,
+                                            three] }
+                                input3: { concat: [one,
                                     {get_property: [SOURCE, property] },
-                                    {get_attribute: [SOURCE, attribute] }]]}
+                                    {get_attribute: [SOURCE, attribute] }]}
     node2:
         type: type
         properties:
@@ -950,12 +905,12 @@ node_templates:
         parsed = prepare_deployment_plan(self.parse(yaml))
         inputs = self.get_node_by_name(parsed, 'node')['relationships'][0][
             'source_operations']['interface.op']['inputs']
-        self.assertEqual('one:value:three', inputs['input1'])
-        self.assertEqual('one;value;three', inputs['input2']['key2'])
-        self.assertEqual('one,value2,three', inputs['input2']['key3'][1])
-        self.assertEqual({'fn.join':
-                         ['-', ['one', 'value', {'get_attribute':
-                                                 ['SOURCE', 'attribute']}]]},
+        self.assertEqual('onevaluethree', inputs['input1'])
+        self.assertEqual('onevaluethree', inputs['input2']['key2'])
+        self.assertEqual('onevalue2three', inputs['input2']['key3'][1])
+        self.assertEqual({'concat':
+                         ['one', 'value', {'get_attribute': ['SOURCE',
+                                                             'attribute']}]},
                          inputs['input3'])
 
     def test_outputs(self):
@@ -971,66 +926,25 @@ node_templates:
             property: value
 outputs:
     output1:
-        value: { fn.join: [':', [one,
-                                 {get_property: [node, property]},
-                                 three]] }
+        value: { concat: [one,
+                          {get_property: [node, property]},
+                          three] }
     output2:
         value:
             - item1
-            - { fn.join: [';', [one,
-                                {get_property: [node, property]},
-                                three]] }
+            - { concat: [one,
+                         {get_property: [node, property]},
+                         three] }
     output3:
-        value: { fn.join: ['-', [one,
-                                 {get_property: [node, property]},
-                                 {get_attribute: [node, attribute]}]] }
+        value: { concat: [one,
+                          {get_property: [node, property]},
+                          {get_attribute: [node, attribute]}] }
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         outputs = parsed['outputs']
-        self.assertEqual('one:value:three', outputs['output1']['value'])
-        self.assertEqual('one;value;three', outputs['output2']['value'][1])
-        self.assertEqual({'fn.join':
-                         ['-', ['one', 'value', {'get_attribute':
-                                                 ['node', 'attribute']}]]},
+        self.assertEqual('onevaluethree', outputs['output1']['value'])
+        self.assertEqual('onevaluethree', outputs['output2']['value'][1])
+        self.assertEqual({'concat':
+                         ['one', 'value', {'get_attribute': ['node',
+                                                             'attribute']}]},
                          outputs['output3']['value'])
-
-
-class TestFnConcat(AbstractTestParser):
-    # There is no need to extensively test this
-    # intrinsic function as it derives all of its logic
-    # from fn.join which is already properly tested
-
-    def test_invalid_fn_concat(self):
-        yaml = """
-node_types:
-    type:
-        properties:
-            property: {}
-node_templates:
-    node:
-        type: type
-        properties:
-            property: { fn.concat: 1 }
-"""
-        with ExpectedException(ValueError, '.*Illegal.*fn\.concat.*'):
-            prepare_deployment_plan(self.parse(yaml))
-
-    def test_fn_concat(self):
-        yaml = """
-node_types:
-    type:
-        properties:
-            property1: {}
-            property2: {}
-node_templates:
-    node:
-        type: type
-        properties:
-            property1: value1
-            property2: { fn.concat: [one,
-                                     { get_property: [SELF, property1] },
-                                     three] }
-"""
-        parsed = prepare_deployment_plan(self.parse(yaml))
-        node = self.get_node_by_name(parsed, 'node')
-        self.assertEqual('onevalue1three', node['properties']['property2'])

@@ -162,18 +162,12 @@ outputs:
     endpoint:
         value:
             port: { get_attribute: [ webserver, port ] }
-    joined:
-        value: { fn.join: [':', [one,
-                                 {get_property: [webserver, property]},
-                                 {get_attribute: [webserver, attribute]},
-                                 {get_input: input},
-                                 five]] }
     concatenated:
-        value: { fn.concat: [one,
-                             {get_property: [webserver, property]},
-                             {get_attribute: [webserver, attribute]},
-                             {get_input: input},
-                             five] }
+        value: { concat: [one,
+                          {get_property: [webserver, property]},
+                          {get_attribute: [webserver, attribute]},
+                          {get_input: input},
+                          five] }
 """
 
         def assertion(tested):
@@ -185,9 +179,7 @@ outputs:
             self.assertEqual('five', tested[4])
 
         parsed = prepare_deployment_plan(self.parse(yaml))
-        joined = parsed['outputs']['joined']['value']['fn.join'][1]
-        concatenated = parsed['outputs']['concatenated']['value']['fn.concat']
-        assertion(joined)
+        concatenated = parsed['outputs']['concatenated']['value']['concat']
         assertion(concatenated)
 
         def get_node_instances(node_id=None):
@@ -214,8 +206,6 @@ outputs:
                                        get_node)
         self.assertEqual(8080, o['port'])
         self.assertEqual(8080, o['endpoint']['port'])
-        self.assertEqual('one:property_value:attribute_value:input_value:five',
-                         o['joined'])
         self.assertEqual('oneproperty_valueattribute_valueinput_valuefive',
                          o['concatenated'])
 
