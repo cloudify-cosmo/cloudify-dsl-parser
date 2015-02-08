@@ -332,7 +332,7 @@ class Concat(Function):
                 'but got: {1}.'.format(self.name, args))
 
     def validate(self, plan):
-        if plan.version < (1, 1):
+        if plan.version['version'] < (1, 1):
             raise exceptions.FunctionEvaluationError(
                 'Using {0} requires using dsl version 1_1 or '
                 'greater, but found: {1} in {2}.'
