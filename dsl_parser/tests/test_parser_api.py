@@ -2288,7 +2288,8 @@ imports:
         mid_file_name = self.make_yaml_file(mid_level_yaml)
 
         top_level_yaml = \
-            self.BASIC_VERSION_SECTION_DSL_1_0 + self.BASIC_NODE_TEMPLATES_SECTION +\
+            self.BASIC_VERSION_SECTION_DSL_1_0 + \
+            self.BASIC_NODE_TEMPLATES_SECTION +\
             """
 imports:
     -   {0}""".format(mid_file_name)
@@ -3194,7 +3195,8 @@ node_types:
         imported_yaml_filename = self.make_yaml_file(imported_yaml)
         yaml = """
 imports:
-    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION_DSL_1_0 + \
+    -   {0}""".format(imported_yaml_filename) + \
+               self.BASIC_VERSION_SECTION_DSL_1_0 + \
                self.MINIMAL_BLUEPRINT
         result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)
@@ -3204,7 +3206,8 @@ imports:
         imported_yaml_filename = self.make_yaml_file(imported_yaml)
         yaml = """
 imports:
-    -   {0}""".format(imported_yaml_filename) + self.BASIC_VERSION_SECTION_DSL_1_0 + \
+    -   {0}""".format(imported_yaml_filename) + \
+               self.BASIC_VERSION_SECTION_DSL_1_0 + \
                self.MINIMAL_BLUEPRINT
         result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)

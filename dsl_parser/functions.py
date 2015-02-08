@@ -375,7 +375,10 @@ def _get_property_value(node_name,
     :param raise_if_not_found: Whether to raise an error if property not found.
     :return: Property value.
     """
-    str_list = lambda li: [str(item) for item in li]
+
+    def str_list(li):
+        return [str(item) for item in li]
+
     value = properties
     for p in property_path:
         if isinstance(value, dict):
