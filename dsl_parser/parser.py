@@ -256,6 +256,11 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         policy_triggers,
         processed_nodes)
 
+    version_struct = {
+        'raw': dsl_version,
+        'version': parse_dsl_version(dsl_version)
+    }
+
     plan = models.Plan({
         'nodes': processed_nodes,
         RELATIONSHIPS: top_level_relationships,
@@ -267,7 +272,7 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_deployment_plugins,
         OUTPUTS: outputs,
         'workflow_plugins_to_install': workflow_plugins_to_install,
-        'version': parse_dsl_version(dsl_version)
+        'version': version_struct
     })
 
     functions.validate_functions(plan)
