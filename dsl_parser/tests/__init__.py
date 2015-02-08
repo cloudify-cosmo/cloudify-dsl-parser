@@ -12,3 +12,14 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+
+from dsl_parser import functions
+
+
+def setUp():
+    # only until part of the spec
+    functions.register(functions.Concat, 'concat')
+
+
+def tearDown():
+    functions.unregister('concat')

@@ -13,33 +13,89 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pkg_resources
 import abc
 
+from dsl_parser import constants
 from dsl_parser import exceptions
 from dsl_parser import scan
 
-GET_INPUT_FUNCTION = 'get_input'
-GET_PROPERTY_FUNCTION = 'get_property'
-GET_ATTRIBUTE_FUNCTION = 'get_attribute'
 
 SELF = 'SELF'
 SOURCE = 'SOURCE'
 TARGET = 'TARGET'
 
+TEMPLATE_FUNCTIONS = {}
+
+
+def register(fn=None, name=None):
+    if fn is None:
+        def partial(_fn):
+            return register(_fn, name=name)
+        return partial
+    TEMPLATE_FUNCTIONS[name] = fn
+    fn.name = name
+    return fn
+
+
+def unregister(name):
+    if name in TEMPLATE_FUNCTIONS:
+        del TEMPLATE_FUNCTIONS[name]
+
+
+def register_entry_point_functions():
+    for entry_point in pkg_resources.iter_entry_points(
+            group='cloudify.tosca.ext.functions'):
+        register(fn=entry_point.load(), name=entry_point.name)
+
+
+class RuntimeEvaluationStorage(object):
+
+    def __init__(self,
+                 get_node_instances_method,
+                 get_node_instance_method,
+                 get_node_method):
+        self._get_node_instances_method = get_node_instances_method
+        self._get_node_instance_method = get_node_instance_method
+        self._get_node_method = get_node_method
+
+        self._node_to_node_instances = {}
+        self._node_instances = {}
+        self._nodes = {}
+
+    def get_node_instances(self, node_id):
+        if node_id not in self._node_to_node_instances:
+            node_instances = self._get_node_instances_method(node_id)
+            self._node_to_node_instances[node_id] = node_instances
+        return self._node_to_node_instances[node_id]
+
+    def get_node_instance(self, node_instance_id):
+        if node_instance_id not in self._node_instances:
+            node_instance = self._get_node_instance_method(node_instance_id)
+            self._node_instances[node_instance_id] = node_instance
+        return self._node_instances[node_instance_id]
+
+    def get_node(self, node_id):
+        if node_id not in self._nodes:
+            node = self._get_node_method(node_id)
+            self._nodes[node_id] = node
+        return self._nodes[node_id]
+
 
 class Function(object):
 
     __metaclass__ = abc.ABCMeta
+    name = 'function'
 
     def __init__(self, args, scope=None, context=None, path=None, raw=None):
         self.scope = scope
         self.context = context
         self.path = path
         self.raw = raw
-        self._parse_args(args)
+        self.parse_args(args)
 
     @abc.abstractmethod
-    def _parse_args(self, args):
+    def parse_args(self, args):
         pass
 
     @abc.abstractmethod
@@ -50,14 +106,19 @@ class Function(object):
     def evaluate(self, plan):
         pass
 
+    @abc.abstractmethod
+    def evaluate_runtime(self, storage):
+        pass
 
+
+@register(name='get_input')
 class GetInput(Function):
 
     def __init__(self, args, **kwargs):
         self.input_name = None
         super(GetInput, self).__init__(args, **kwargs)
 
-    def _parse_args(self, args):
+    def parse_args(self, args):
         valid_args_type = isinstance(args, basestring)
         if not valid_args_type:
             raise ValueError(
@@ -74,7 +135,12 @@ class GetInput(Function):
     def evaluate(self, plan):
         return plan.inputs[self.input_name]
 
+    def evaluate_runtime(self, storage):
+        raise RuntimeError('runtime evaluation for {0} is not supported'
+                           .format(self.name))
 
+
+@register(name='get_property')
 class GetProperty(Function):
 
     def __init__(self, args, **kwargs):
@@ -82,12 +148,12 @@ class GetProperty(Function):
         self.property_path = None
         super(GetProperty, self).__init__(args, **kwargs)
 
-    def _parse_args(self, args):
+    def parse_args(self, args):
         if not isinstance(args, list) or len(args) < 2:
             raise ValueError(
                 'Illegal arguments passed to {0} function. Expected: '
                 '<node_name, property_name [, nested-property-1, ... ]> but '
-                'got: {1}.'.format(GET_PROPERTY_FUNCTION, args))
+                'got: {1}.'.format(self.name, args))
         self.node_name = args[0]
         self.property_path = args[1:]
 
@@ -119,7 +185,7 @@ class GetProperty(Function):
             if len(found) == 0:
                 raise KeyError(
                     "{0} function node reference '{1}' does not exist.".format(
-                        GET_PROPERTY_FUNCTION, self.node_name))
+                        self.name, self.node_name))
             node = found[0]
         self._get_property_value(node)
         return node
@@ -133,7 +199,12 @@ class GetProperty(Function):
     def evaluate(self, plan):
         return self._get_property_value(self.get_node_template(plan))
 
+    def evaluate_runtime(self, storage):
+        raise RuntimeError('runtime evaluation for {0} is not supported'
+                           .format(self.name))
 
+
+@register(name='get_attribute')
 class GetAttribute(Function):
 
     def __init__(self, args, **kwargs):
@@ -141,12 +212,12 @@ class GetAttribute(Function):
         self.attribute_path = None
         super(GetAttribute, self).__init__(args, **kwargs)
 
-    def _parse_args(self, args):
+    def parse_args(self, args):
         if not isinstance(args, list) or len(args) < 2:
             raise ValueError(
                 'Illegal arguments passed to {0} function. '
                 'Expected: <node_name, attribute_name [, nested-attr-1, ...]>'
-                'but got: {1}.'.format(GET_ATTRIBUTE_FUNCTION, args))
+                'but got: {1}.'.format(self.name, args))
         self.node_name = args[0]
         self.attribute_path = args[1:]
 
@@ -156,19 +227,19 @@ class GetAttribute(Function):
                                                                    TARGET]:
             raise ValueError('{0} cannot be used with {1} function in '
                              '{2}.'.format(self.node_name,
-                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.name,
                                            self.path))
         if self.scope == scan.NODE_TEMPLATE_SCOPE and \
                 self.node_name in [SOURCE, TARGET]:
             raise ValueError('{0} cannot be used with {1} function in '
                              '{2}.'.format(self.node_name,
-                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.name,
                                            self.path))
         if self.scope == scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE and \
                 self.node_name == SELF:
             raise ValueError('{0} cannot be used with {1} function in '
                              '{2}.'.format(self.node_name,
-                                           GET_ATTRIBUTE_FUNCTION,
+                                           self.name,
                                            self.path))
         if self.node_name not in [SELF, SOURCE, TARGET]:
             found = [
@@ -176,19 +247,105 @@ class GetAttribute(Function):
             if not found:
                 raise KeyError(
                     "{0} function node reference '{1}' does not exist.".format(
-                        GET_ATTRIBUTE_FUNCTION, self.node_name))
+                        self.name, self.node_name))
 
     def evaluate(self, plan):
-        raise RuntimeError(
-            '{0} function does not support evaluation.'.format(
-                GET_ATTRIBUTE_FUNCTION))
+        if 'operation' in self.context:
+            self.context['operation']['has_intrinsic_functions'] = True
+        return self.raw
+
+    def evaluate_runtime(self, storage):
+        if self.node_name == SELF:
+            node_instance_id = self.context.get('self')
+            self._validate_ref(node_instance_id, SELF)
+            node_instance = storage.get_node_instance(node_instance_id)
+        elif self.node_name == SOURCE:
+            node_instance_id = self.context.get('source')
+            self._validate_ref(node_instance_id, SOURCE)
+            node_instance = storage.get_node_instance(node_instance_id)
+        elif self.node_name == TARGET:
+            node_instance_id = self.context.get('target')
+            self._validate_ref(node_instance_id, TARGET)
+            node_instance = storage.get_node_instance(node_instance_id)
+        else:
+            node_id = self.node_name
+            node_instances = storage.get_node_instances(node_id)
+            if len(node_instances) == 0:
+                raise exceptions.FunctionEvaluationError(
+                    self.name,
+                    'Node specified in function does not exist: {0}.'
+                    .format(self.node_name))
+            if len(node_instances) > 1:
+                raise exceptions.FunctionEvaluationError(
+                    self.name,
+                    'Multi instances of node "{0}" are not supported by '
+                    'function.'.format(self.node_name))
+            node_instance = node_instances[0]
+
+        value = _get_property_value(node_instance.node_id,
+                                    node_instance.runtime_properties,
+                                    self.attribute_path,
+                                    self.path,
+                                    raise_if_not_found=False)
+        if value is None:
+            node = storage.get_node(node_instance.node_id)
+            value = _get_property_value(node.id,
+                                        node.properties,
+                                        self.attribute_path,
+                                        self.path,
+                                        raise_if_not_found=False)
+        return value
+
+    def _validate_ref(self, ref, ref_name):
+        if not ref:
+            raise exceptions.FunctionEvaluationError(
+                self.name,
+                '{0} is missing in request context in {1} for '
+                'attribute {2}'.format(ref_name,
+                                       self.path,
+                                       self.attribute_path))
 
 
-TEMPLATE_FUNCTIONS = {
-    GET_PROPERTY_FUNCTION: GetProperty,
-    GET_ATTRIBUTE_FUNCTION: GetAttribute,
-    GET_INPUT_FUNCTION: GetInput
-}
+class Concat(Function):
+    # Currently, only registered in tests until part of the spec
+
+    def __init__(self, args, **kwargs):
+        self.separator = ''
+        self.joined = args
+        super(Concat, self).__init__(args, **kwargs)
+
+    def parse_args(self, args):
+        if not isinstance(args, list):
+            raise ValueError(
+                'Illegal arguments passed to {0} function. '
+                'Expected: [arg1, arg2, ...]'
+                'but got: {1}.'.format(self.name, args))
+
+    def validate(self, plan):
+        if plan.version.definitions_version < (1, 1):
+            raise exceptions.FunctionEvaluationError(
+                'Using {0} requires using dsl version 1_1 or '
+                'greater, but found: {1} in {2}.'
+                .format(self.name, plan.version, self.path))
+        if self.scope not in [scan.NODE_TEMPLATE_SCOPE,
+                              scan.NODE_TEMPLATE_RELATIONSHIP_SCOPE,
+                              scan.OUTPUTS_SCOPE]:
+            raise ValueError('{0} cannot be used in {1}.'
+                             .format(self.name,
+                                     self.path))
+
+    def evaluate(self, plan):
+        for joined_value in self.joined:
+            if parse(joined_value) != joined_value:
+                return self.raw
+        return self.join()
+
+    def evaluate_runtime(self, storage):
+        return self.evaluate(plan=None)
+
+    def join(self):
+        str_join = [str(elem) for elem in self.joined]
+        return self.separator.join(str_join)
 
 
 def _get_property_value(node_name,
@@ -279,80 +436,9 @@ def evaluate_functions(payload, context,
     :param get_node_method: A method for getting a node.
     :return: payload.
     """
-    ctx = {
-        'node_to_node_instances': {},
-        'node_instances': {},
-        'nodes': {}
-    }
-
-    def validate_ref(ref, ref_name, path, func):
-        if not ref:
-            raise exceptions.FunctionEvaluationError(
-                GET_ATTRIBUTE_FUNCTION,
-                '{0} is missing in request context in {1} for '
-                'attribute {2}'.format(ref_name, path, func.attribute_path))
-
-    def _get_node_instance(node_instance_id):
-        if node_instance_id not in ctx['node_instances']:
-            node_instance = get_node_instance_method(node_instance_id)
-            ctx['node_instances'][node_instance_id] = node_instance
-        return ctx['node_instances'][node_instance_id]
-
-    def _get_node(node_id):
-        if node_id not in ctx['nodes']:
-            node = get_node_method(node_id)
-            ctx['nodes'][node_id] = node
-        return ctx['nodes'][node_id]
-
-    def handler(v, scope, context, path):
-        func = parse(v, scope=scope, context=context, path=path)
-        if not isinstance(func, GetAttribute):
-            return v
-
-        if func.node_name == SELF:
-            node_instance_id = context.get('self')
-            validate_ref(node_instance_id, SELF, path, func)
-            node_instance = _get_node_instance(node_instance_id)
-        elif func.node_name == SOURCE:
-            node_instance_id = context.get('source')
-            validate_ref(node_instance_id, SOURCE, path, func)
-            node_instance = _get_node_instance(node_instance_id)
-        elif func.node_name == TARGET:
-            node_instance_id = context.get('target')
-            validate_ref(node_instance_id, TARGET, path, func)
-            node_instance = _get_node_instance(node_instance_id)
-        else:
-            node_id = func.node_name
-            if func.node_name not in ctx['node_to_node_instances']:
-                node_instances = get_node_instances_method(node_id)
-                ctx['node_to_node_instances'][node_id] = node_instances
-            node_instances = ctx['node_to_node_instances'][node_id]
-            if len(node_instances) == 0:
-                raise exceptions.FunctionEvaluationError(
-                    GET_ATTRIBUTE_FUNCTION,
-                    'Node specified in function does not exist: {0}.'
-                    .format(func.node_name))
-            if len(node_instances) > 1:
-                raise exceptions.FunctionEvaluationError(
-                    GET_ATTRIBUTE_FUNCTION,
-                    'Multi instances of node "{0}" are not supported by '
-                    'function.'.format(func.node_name))
-            node_instance = node_instances[0]
-
-        value = _get_property_value(node_instance.node_id,
-                                    node_instance.runtime_properties,
-                                    func.attribute_path,
-                                    path,
-                                    raise_if_not_found=False)
-        if value is None:
-            node = _get_node(node_instance.node_id)
-            value = _get_property_value(node.id,
-                                        node.properties,
-                                        func.attribute_path,
-                                        path,
-                                        raise_if_not_found=False)
-        return value
-
+    handler = runtime_evaluation_handler(get_node_instances_method,
+                                         get_node_instance_method,
+                                         get_node_method)
     scan.scan_properties(payload,
                          handler,
                          scope=None,
@@ -381,3 +467,102 @@ def evaluate_outputs(outputs_def,
         get_node_instances_method=get_node_instances_method,
         get_node_instance_method=get_node_instance_method,
         get_node_method=get_node_method)
+
+
+def _handler(evaluator, **evaluator_kwargs):
+    def handler(v, scope, context, path):
+        evaluated_value = v
+        scanned = False
+        while True:
+            func = parse(evaluated_value,
+                         scope=scope,
+                         context=context,
+                         path=path)
+            if not isinstance(func, Function):
+                break
+            previous_evaluated_value = evaluated_value
+            evaluated_value = getattr(func, evaluator)(**evaluator_kwargs)
+            if scanned and previous_evaluated_value == evaluated_value:
+                break
+            scan.scan_properties(evaluated_value,
+                                 handler,
+                                 scope=scope,
+                                 context=context,
+                                 path=path,
+                                 replace=True)
+            scanned = True
+        return evaluated_value
+    return handler
+
+
+def plan_evaluation_handler(plan):
+    return _handler('evaluate', plan=plan)
+
+
+def runtime_evaluation_handler(get_node_instances_method,
+                               get_node_instance_method,
+                               get_node_method):
+    return _handler('evaluate_runtime',
+                    storage=RuntimeEvaluationStorage(
+                        get_node_instances_method=get_node_instances_method,
+                        get_node_instance_method=get_node_instance_method,
+                        get_node_method=get_node_method))
+
+
+def validate_functions(plan):
+    get_property_functions = []
+
+    def handler(v, scope, context, path):
+        _func = parse(v, scope=scope, context=context, path=path)
+        if isinstance(_func, Function):
+            _func.validate(plan)
+        if isinstance(_func, GetProperty):
+            get_property_functions.append(_func)
+            return _func
+        return v
+
+    # Replace all get_property functions with their instance representation
+    scan.scan_service_template(plan, handler, replace=True)
+
+    if not get_property_functions:
+        return
+
+    # Validate there are no circular get_property calls
+    for func in get_property_functions:
+        property_path = [str(prop) for prop in func.property_path]
+        visited_functions = ['{0}.{1}'.format(
+            func.get_node_template(plan)['name'],
+            constants.FUNCTION_NAME_PATH_SEPARATOR.join(property_path))]
+
+        def validate_no_circular_get_property(*args):
+            r = args[0]
+            if isinstance(r, GetProperty):
+                func_id = '{0}.{1}'.format(
+                    r.get_node_template(plan)['name'],
+                    constants.FUNCTION_NAME_PATH_SEPARATOR.join(
+                        r.property_path))
+                if func_id in visited_functions:
+                    visited_functions.append(func_id)
+                    error_output = [
+                        x.replace(constants.FUNCTION_NAME_PATH_SEPARATOR, ',')
+                        for x in visited_functions
+                    ]
+                    raise RuntimeError(
+                        'Circular get_property function call detected: '
+                        '{0}'.format(' -> '.join(error_output)))
+                visited_functions.append(func_id)
+                r = r.evaluate(plan)
+                validate_no_circular_get_property(r)
+            else:
+                scan.scan_properties(r, validate_no_circular_get_property)
+
+        result = func.evaluate(plan)
+        validate_no_circular_get_property(result)
+
+    def replace_with_raw_function(*args):
+        if isinstance(args[0], GetProperty):
+            return args[0].raw
+        return args[0]
+
+    # Change previously replaced get_property instances with raw values
+    scan.scan_service_template(plan, replace_with_raw_function, replace=True)

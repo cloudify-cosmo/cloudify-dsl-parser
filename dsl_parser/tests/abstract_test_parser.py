@@ -164,6 +164,12 @@ imports:"""
         return dsl_parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                          resources_base_url)
 
+    def parse_1_1(self, dsl_string, alias_mapping_dict=None,
+                  alias_mapping_url=None, resources_base_url=None):
+        return self.parse(dsl_string, alias_mapping_dict, alias_mapping_url,
+                          resources_base_url,
+                          dsl_version=self.BASIC_VERSION_SECTION_DSL_1_1)
+
     def parse_from_path(self, dsl_path, alias_mapping_dict=None,
                         alias_mapping_url=None, resources_base_url=None):
         return dsl_parse_from_path(dsl_path,

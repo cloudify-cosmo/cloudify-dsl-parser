@@ -13,7 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+from testtools import ExpectedException
 
+from dsl_parser import exceptions
 from dsl_parser.tasks import prepare_deployment_plan
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.tests.abstract_test_parser import timeout
@@ -682,3 +684,286 @@ outputs:
         assert_with('SELF')
         assert_with('SOURCE')
         assert_with('TARGET')
+
+
+class TestConcat(AbstractTestParser):
+
+    def test_invalid_version(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { concat: [1, 2] }
+"""
+        with ExpectedException(exceptions.FunctionEvaluationError,
+                               '.*version 1_1 or greater.*'):
+            prepare_deployment_plan(self.parse(
+                yaml,
+                dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0))
+
+    def test_invalid_concat(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { concat: 1 }
+"""
+        with ExpectedException(ValueError, '.*Illegal.*concat.*'):
+            prepare_deployment_plan(self.parse_1_1(yaml))
+
+    def test_node_template_properties_simple(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { concat: [one, two, three] }
+"""
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
+        node = self.get_node_by_name(parsed, 'node')
+        self.assertEqual('onetwothree', node['properties']['property'])
+
+    def test_node_template_properties_with_self_property(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property1: {}
+            property2: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property1: value1
+            property2: { concat:
+                [one, { get_property: [SELF, property1] }, three]
+            }
+"""
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
+        node = self.get_node_by_name(parsed, 'node')
+        self.assertEqual('onevalue1three', node['properties']['property2'])
+
+    def test_node_template_properties_with_named_node_property(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { concat:
+                [one, { get_property: [node2, property] }, three]
+            }
+    node2:
+        type: type
+        properties:
+            property: value2
+"""
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
+        node = self.get_node_by_name(parsed, 'node')
+        self.assertEqual('onevalue2three', node['properties']['property'])
+
+    def test_node_template_properties_with_invalid_node_property_cycle(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property1: {}
+            property2: {}
+node_templates:
+    node1:
+        type: type
+        properties:
+            property1: { concat:
+                [one, { get_property: [node2, property1] }, three]
+            }
+            property2: value1
+    node2:
+        type: type
+        properties:
+            property1: { concat:
+                [one, { get_property: [node1, property1] }, three]
+            }
+            property2: value2
+"""
+        with ExpectedException(RuntimeError, '.*Circular.*'):
+            prepare_deployment_plan(self.parse_1_1(yaml))
+
+    def test_node_template_properties_with_recursive_concat(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node1:
+        type: type
+        properties:
+            property: { concat:
+                [one, { get_property: [node2, property] }, three]
+            }
+    node2:
+        type: type
+        properties:
+            property: { concat: [one, two, three] }
+"""
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
+        node1 = self.get_node_by_name(parsed, 'node1')
+        node2 = self.get_node_by_name(parsed, 'node2')
+        self.assertEqual('oneonetwothreethree',
+                         node1['properties']['property'])
+        self.assertEqual('onetwothree', node2['properties']['property'])
+
+    def test_node_operation_inputs(self):
+        yaml = """
+plugins:
+    p:
+        executor: central_deployment_agent
+        install: false
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: value
+        interfaces:
+            interface:
+                op:
+                    implementation: p.task
+                    inputs:
+                        input1: { concat: [one,
+                            { get_property: [SELF, property] }, three] }
+                        input2:
+                            key1: value1
+                            key2: { concat: [one,
+                                { get_property: [SELF, property] }, three] }
+                            key3:
+                                - item1
+                                - { concat: [one,
+                                    {get_property: [SELF, property] },three]}
+                        input3: { concat: [one,
+                                    {get_property: [SELF, property] },
+                                    {get_attribute: [SELF, attribute] }]}
+"""
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
+        inputs = self.get_node_by_name(parsed, 'node')['operations'][
+            'interface.op']['inputs']
+        self.assertEqual('onevaluethree', inputs['input1'])
+        self.assertEqual('onevaluethree', inputs['input2']['key2'])
+        self.assertEqual('onevaluethree', inputs['input2']['key3'][1])
+        self.assertEqual({'concat':
+                         ['one', 'value', {'get_attribute': ['SELF',
+                                                             'attribute']}]},
+                         inputs['input3'])
+
+    def test_relationship_operation_inputs(self):
+        yaml = """
+plugins:
+    p:
+        executor: central_deployment_agent
+        install: false
+node_types:
+    type:
+        properties:
+            property: {}
+relationships:
+    cloudify.relationships.contained_in: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: value
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: node2
+                source_interfaces:
+                    interface:
+                        op:
+                            implementation: p.task
+                            inputs:
+                                input1: { concat: [one,
+                                    { get_property: [SOURCE, property] },
+                                    three] }
+                                input2:
+                                    key1: value1
+                                    key2: { concat: [one,
+                                        { get_property: [SOURCE, property] },
+                                        three] }
+                                    key3:
+                                        - item1
+                                        - { concat: [one,
+                                            {get_property: [TARGET, property]},
+                                            three] }
+                                input3: { concat: [one,
+                                    {get_property: [SOURCE, property] },
+                                    {get_attribute: [SOURCE, attribute] }]}
+    node2:
+        type: type
+        properties:
+            property: value2
+"""
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
+        inputs = self.get_node_by_name(parsed, 'node')['relationships'][0][
+            'source_operations']['interface.op']['inputs']
+        self.assertEqual('onevaluethree', inputs['input1'])
+        self.assertEqual('onevaluethree', inputs['input2']['key2'])
+        self.assertEqual('onevalue2three', inputs['input2']['key3'][1])
+        self.assertEqual({'concat':
+                         ['one', 'value', {'get_attribute': ['SOURCE',
+                                                             'attribute']}]},
+                         inputs['input3'])
+
+    def test_outputs(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: value
+outputs:
+    output1:
+        value: { concat: [one,
+                          {get_property: [node, property]},
+                          three] }
+    output2:
+        value:
+            - item1
+            - { concat: [one,
+                         {get_property: [node, property]},
+                         three] }
+    output3:
+        value: { concat: [one,
+                          {get_property: [node, property]},
+                          {get_attribute: [node, attribute]}] }
+"""
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
+        outputs = parsed['outputs']
+        self.assertEqual('onevaluethree', outputs['output1']['value'])
+        self.assertEqual('onevaluethree', outputs['output2']['value'][1])
+        self.assertEqual({'concat':
+                         ['one', 'value', {'get_attribute': ['node',
+                                                             'attribute']}]},
+                         outputs['output3']['value'])

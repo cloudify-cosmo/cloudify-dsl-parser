@@ -28,7 +28,6 @@ from yaml.parser import ParserError
 from dsl_parser import constants
 from dsl_parser import functions
 from dsl_parser import models
-from dsl_parser import scan
 from dsl_parser import schemas
 from dsl_parser import utils
 from dsl_parser.interfaces import interfaces_parser
@@ -37,6 +36,8 @@ from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.utils import merge_schema_and_instance_properties
 from dsl_parser.utils import extract_complete_type_recursive
 
+
+functions.register_entry_point_functions()
 
 DSL_VERSION_PREFIX = 'cloudify_dsl_'
 DSL_VERSION_1_0 = DSL_VERSION_PREFIX + '1_0'
@@ -265,10 +266,11 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         INPUTS: inputs,
         constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_deployment_plugins,
         OUTPUTS: outputs,
-        'workflow_plugins_to_install': workflow_plugins_to_install
+        'workflow_plugins_to_install': workflow_plugins_to_install,
+        'version': _process_dsl_version(dsl_version)
     })
 
-    _validate_functions(plan)
+    functions.validate_functions(plan)
 
     return plan
 
@@ -520,65 +522,6 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
                     19,
                     'Relationship: {0}'.format(rel_name),
                     resource_base=resource_base)
-
-
-def _validate_functions(plan):
-    get_property_functions = []
-
-    def handler(v, scope, context, path):
-        _func = functions.parse(v, scope=scope, context=context, path=path)
-        if isinstance(_func, functions.Function):
-            _func.validate(plan)
-        if isinstance(_func, functions.GetProperty):
-            get_property_functions.append(_func)
-            return _func
-        return v
-
-    # Replace all get_property functions with their instance representation
-    scan.scan_service_template(plan, handler, replace=True)
-
-    if not get_property_functions:
-        return
-
-    # Validate there are no circular get_property calls
-    for func in get_property_functions:
-        property_path = [str(prop) for prop in func.property_path]
-        visited_functions = ['{0}.{1}'.format(
-            func.get_node_template(plan)['name'],
-            constants.FUNCTION_NAME_PATH_SEPARATOR.join(property_path))]
-
-        def validate_no_circular_get_property(*args):
-            r = args[0]
-            if isinstance(r, functions.GetProperty):
-                func_id = '{0}.{1}'.format(
-                    r.get_node_template(plan)['name'],
-                    constants.FUNCTION_NAME_PATH_SEPARATOR.join(
-                        r.property_path))
-                if func_id in visited_functions:
-                    visited_functions.append(func_id)
-                    error_output = [
-                        x.replace(constants.FUNCTION_NAME_PATH_SEPARATOR, ',')
-                        for x in visited_functions
-                    ]
-                    raise RuntimeError(
-                        'Circular get_property function call detected: '
-                        '{0}'.format(' -> '.join(error_output)))
-                visited_functions.append(func_id)
-                r = r.evaluate(plan)
-                validate_no_circular_get_property(r)
-            else:
-                scan.scan_properties(r, validate_no_circular_get_property)
-
-        result = func.evaluate(plan)
-        validate_no_circular_get_property(result)
-
-    def replace_with_raw_function(*args):
-        if isinstance(args[0], functions.GetProperty):
-            return args[0].raw
-        return args[0]
-
-    # Change previously replaced get_property instances with raw values
-    scan.scan_service_template(plan, replace_with_raw_function, replace=True)
 
 
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
@@ -1681,8 +1624,6 @@ def parse_dsl_version(dsl_version):
         raise DSLParsingLogicException(72, 'Invalid {0}: {1} is not a string'
                                        .format(VERSION, dsl_version))
 
-    short_dsl_version = dsl_version.strip()
-
     # handle the 'dsl_version_' prefix
     if dsl_version.startswith(DSL_VERSION_PREFIX):
         short_dsl_version = dsl_version[len(DSL_VERSION_PREFIX):]
@@ -1724,3 +1665,16 @@ def parse_dsl_version(dsl_version):
 
     return version_details(int(major), int(minor),
                            int(micro) if micro else None)
+
+
+def _process_dsl_version(dsl_version):
+    version_definitions_name = DSL_VERSION_PREFIX[:-1]
+    version_definitions_version = parse_dsl_version(dsl_version)
+    if version_definitions_version.micro is None:
+        version_definitions_version = (version_definitions_version.major,
+                                       version_definitions_version.minor)
+    return {
+        'raw': dsl_version,
+        'definitions_name': version_definitions_name,
+        'definitions_version': tuple(version_definitions_version)
+    }

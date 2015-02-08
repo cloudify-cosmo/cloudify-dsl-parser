@@ -144,8 +144,14 @@ outputs:
 
     def test_valid_evaluation(self):
         yaml = """
+inputs:
+    input:
+        default: input_value
 node_types:
-    webserver_type: {}
+    webserver_type:
+        properties:
+            property:
+                default: property_value
 node_templates:
     webserver:
         type: webserver_type
@@ -156,8 +162,25 @@ outputs:
     endpoint:
         value:
             port: { get_attribute: [ webserver, port ] }
+    concatenated:
+        value: { concat: [one,
+                          {get_property: [webserver, property]},
+                          {get_attribute: [webserver, attribute]},
+                          {get_input: input},
+                          five] }
 """
-        parsed = self.parse(yaml)
+
+        def assertion(tested):
+            self.assertEqual('one', tested[0])
+            self.assertEqual('property_value', tested[1])
+            self.assertEqual({'get_attribute': ['webserver', 'attribute']},
+                             tested[2])
+            self.assertEqual('input_value', tested[3])
+            self.assertEqual('five', tested[4])
+
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
+        concatenated = parsed['outputs']['concatenated']['value']['concat']
+        assertion(concatenated)
 
         def get_node_instances(node_id=None):
             return [
@@ -165,7 +188,8 @@ outputs:
                     'id': 'webserver1',
                     'node_id': 'webserver',
                     'runtime_properties': {
-                        'port': 8080
+                        'port': 8080,
+                        'attribute': 'attribute_value'
                     }
                 })
             ]
@@ -182,6 +206,8 @@ outputs:
                                        get_node)
         self.assertEqual(8080, o['port'])
         self.assertEqual(8080, o['endpoint']['port'])
+        self.assertEqual('oneproperty_valueattribute_valueinput_valuefive',
+                         o['concatenated'])
 
     def test_unknown_node_instance_evaluation(self):
         yaml = """

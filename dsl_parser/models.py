@@ -14,10 +14,32 @@
 #    * limitations under the License.
 
 
+class Version(dict):
+
+    def __init__(self, version):
+        self.update(version)
+
+    @property
+    def raw(self):
+        return self['raw']
+
+    @property
+    def definitions_name(self):
+        return self['definitions_name']
+
+    @property
+    def definitions_version(self):
+        return self['definitions_version']
+
+
 class Plan(dict):
 
     def __init__(self, plan):
         self.update(plan)
+
+    @property
+    def version(self):
+        return Version(self['version'])
 
     @property
     def inputs(self):
