@@ -31,7 +31,11 @@ class TestFunctionRegistration(AbstractTestParser):
         @functions.register(name='to_upper')
         class ToUpper(functions.Function):
 
-            def _parse_args(self, args):
+            def __init__(self, args, **kwargs):
+                self.arg = None
+                super(ToUpper, self).__init__(args, **kwargs)
+
+            def parse_args(self, args):
                 self.arg = args
 
             def evaluate_runtime(self, cache, get_node_instances_method,

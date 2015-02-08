@@ -58,10 +58,10 @@ class Function(object):
         self.context = context
         self.path = path
         self.raw = raw
-        self._parse_args(args)
+        self.parse_args(args)
 
     @abc.abstractmethod
-    def _parse_args(self, args):
+    def parse_args(self, args):
         pass
 
     @abc.abstractmethod
@@ -88,7 +88,7 @@ class GetInput(Function):
         self.input_name = None
         super(GetInput, self).__init__(args, **kwargs)
 
-    def _parse_args(self, args):
+    def parse_args(self, args):
         valid_args_type = isinstance(args, basestring)
         if not valid_args_type:
             raise ValueError(
@@ -122,7 +122,7 @@ class GetProperty(Function):
         self.property_path = None
         super(GetProperty, self).__init__(args, **kwargs)
 
-    def _parse_args(self, args):
+    def parse_args(self, args):
         if not isinstance(args, list) or len(args) < 2:
             raise ValueError(
                 'Illegal arguments passed to {0} function. Expected: '
@@ -190,7 +190,7 @@ class GetAttribute(Function):
         self.attribute_path = None
         super(GetAttribute, self).__init__(args, **kwargs)
 
-    def _parse_args(self, args):
+    def parse_args(self, args):
         if not isinstance(args, list) or len(args) < 2:
             raise ValueError(
                 'Illegal arguments passed to {0} function. '
@@ -323,7 +323,7 @@ class Concat(Function):
         self.joined = args
         super(Concat, self).__init__(args, **kwargs)
 
-    def _parse_args(self, args):
+    def parse_args(self, args):
         if not isinstance(args, list):
             raise ValueError(
                 'Illegal arguments passed to {0} function. '
