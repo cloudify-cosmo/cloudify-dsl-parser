@@ -447,7 +447,10 @@ node_templates:
         node_host_ids = [node['host_id'] for node in nodes]
         for node_host_id in node_host_ids:
             self.assertIn(node_host_id, host_ids)
-        key_fun = lambda n: n['host_id']
+
+        def key_fun(n):
+            return n['host_id']
+
         for _, g in itertools.groupby(sorted(nodes, key=key_fun), key=key_fun):
             self.assertEqual(len(list(g)), len(node_ids) / len(host_ids))
 

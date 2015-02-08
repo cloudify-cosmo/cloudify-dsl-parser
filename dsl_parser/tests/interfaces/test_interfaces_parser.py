@@ -27,8 +27,11 @@ from dsl_parser.interfaces.interfaces_parser import \
 from dsl_parser.interfaces.interfaces_parser import \
     merge_relationship_type_interfaces
 from dsl_parser.parser import SOURCE_INTERFACES, TARGET_INTERFACES
-from dsl_parser.schemas import NODE_TYPE_INTERFACES_SCHEMA, RELATIONSHIP_TYPE_INTERFACES_SCHEMA, \
+from dsl_parser.schemas import (
+    NODE_TYPE_INTERFACES_SCHEMA,
+    RELATIONSHIP_TYPE_INTERFACES_SCHEMA,
     RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA
+)
 from dsl_parser.schemas import NODE_TEMPLATE_INTERFACES_SCHEMA
 
 
