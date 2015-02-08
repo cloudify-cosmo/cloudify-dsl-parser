@@ -3312,6 +3312,20 @@ node_templates:
         self.assertEqual(workflow2['parameters']['key']['default'], 'value')
         self.assertEqual(workflow['plugin'], constants.SCRIPT_PLUGIN_NAME)
 
+    def test_version(self):
+        def assertion(version_str, expected_major, expected_minor,
+                      expected_micro):
+            parsed = self.parse(self.MINIMAL_BLUEPRINT,
+                                dsl_version=version_str)
+            version = parsed['version']
+            self.assertEqual(version.major, expected_major)
+            self.assertEqual(version.minor, expected_minor)
+            self.assertEqual(version.micro, expected_micro)
+        assertion(self.BASIC_VERSION_SECTION_DSL_1_0,
+                  expected_major=1, expected_minor=0, expected_micro=None)
+        assertion(self.BASIC_VERSION_SECTION_DSL_1_1,
+                  expected_major=1, expected_minor=1, expected_micro=None)
+
 
 class DeploymentPluginsToInstallTest(AbstractTestParser):
 
