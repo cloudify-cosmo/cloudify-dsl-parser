@@ -178,7 +178,7 @@ outputs:
             self.assertEqual('input_value', tested[3])
             self.assertEqual('five', tested[4])
 
-        parsed = prepare_deployment_plan(self.parse(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
         concatenated = parsed['outputs']['concatenated']['value']['concat']
         assertion(concatenated)
 

@@ -266,7 +266,8 @@ def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
         INPUTS: inputs,
         constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_deployment_plugins,
         OUTPUTS: outputs,
-        'workflow_plugins_to_install': workflow_plugins_to_install
+        'workflow_plugins_to_install': workflow_plugins_to_install,
+        'version': parse_dsl_version(dsl_version)
     })
 
     functions.validate_functions(plan)

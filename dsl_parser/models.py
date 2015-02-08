@@ -20,6 +20,10 @@ class Plan(dict):
         self.update(plan)
 
     @property
+    def version(self):
+        return self['version']
+
+    @property
     def inputs(self):
         return self['inputs']
 

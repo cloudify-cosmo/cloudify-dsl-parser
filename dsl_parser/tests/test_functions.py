@@ -700,7 +700,7 @@ node_templates:
             property: { concat: 1 }
 """
         with ExpectedException(ValueError, '.*Illegal.*concat.*'):
-            prepare_deployment_plan(self.parse(yaml))
+            prepare_deployment_plan(self.parse_1_1(yaml))
 
     def test_node_template_properties_simple(self):
         yaml = """
@@ -714,7 +714,7 @@ node_templates:
         properties:
             property: { concat: [one, two, three] }
 """
-        parsed = prepare_deployment_plan(self.parse(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
         node = self.get_node_by_name(parsed, 'node')
         self.assertEqual('onetwothree', node['properties']['property'])
 
@@ -734,7 +734,7 @@ node_templates:
                 [one, { get_property: [SELF, property1] }, three]
             }
 """
-        parsed = prepare_deployment_plan(self.parse(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
         node = self.get_node_by_name(parsed, 'node')
         self.assertEqual('onevalue1three', node['properties']['property2'])
 
@@ -756,7 +756,7 @@ node_templates:
         properties:
             property: value2
 """
-        parsed = prepare_deployment_plan(self.parse(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
         node = self.get_node_by_name(parsed, 'node')
         self.assertEqual('onevalue2three', node['properties']['property'])
 
@@ -784,7 +784,7 @@ node_templates:
             property2: value2
 """
         with ExpectedException(RuntimeError, '.*Circular.*'):
-            prepare_deployment_plan(self.parse(yaml))
+            prepare_deployment_plan(self.parse_1_1(yaml))
 
     def test_node_template_properties_with_recursive_concat(self):
         yaml = """
@@ -804,7 +804,7 @@ node_templates:
         properties:
             property: { concat: [one, two, three] }
 """
-        parsed = prepare_deployment_plan(self.parse(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
         node1 = self.get_node_by_name(parsed, 'node1')
         node2 = self.get_node_by_name(parsed, 'node2')
         self.assertEqual('oneonetwothreethree',
@@ -845,7 +845,7 @@ node_templates:
                                     {get_property: [SELF, property] },
                                     {get_attribute: [SELF, attribute] }]}
 """
-        parsed = prepare_deployment_plan(self.parse(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
         inputs = self.get_node_by_name(parsed, 'node')['operations'][
             'interface.op']['inputs']
         self.assertEqual('onevaluethree', inputs['input1'])
@@ -902,7 +902,7 @@ node_templates:
         properties:
             property: value2
 """
-        parsed = prepare_deployment_plan(self.parse(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
         inputs = self.get_node_by_name(parsed, 'node')['relationships'][0][
             'source_operations']['interface.op']['inputs']
         self.assertEqual('onevaluethree', inputs['input1'])
@@ -940,7 +940,7 @@ outputs:
                           {get_property: [node, property]},
                           {get_attribute: [node, attribute]}] }
 """
-        parsed = prepare_deployment_plan(self.parse(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
         outputs = parsed['outputs']
         self.assertEqual('onevaluethree', outputs['output1']['value'])
         self.assertEqual('onevaluethree', outputs['output2']['value'][1])
