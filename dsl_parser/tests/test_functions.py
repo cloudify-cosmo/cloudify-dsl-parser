@@ -687,6 +687,23 @@ outputs:
 
 class TestConcat(AbstractTestParser):
 
+    def test_invalid_version(self):
+        yaml = """
+node_types:
+    type:
+        properties:
+            property: {}
+node_templates:
+    node:
+        type: type
+        properties:
+            property: { concat: [1, 2] }
+"""
+        with ExpectedException(ValueError, '.*version 1_1 or greater.*'):
+            prepare_deployment_plan(self.parse(
+                yaml,
+                dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0))
+
     def test_invalid_concat(self):
         yaml = """
 node_types:
