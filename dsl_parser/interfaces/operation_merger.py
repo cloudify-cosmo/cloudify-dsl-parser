@@ -28,13 +28,17 @@ class OperationMerger(object):
             return operation_mapping(
                 implementation=raw_operation,
                 inputs={},
-                executor=None
+                executor=None,
+                retries=None,
+                retry_interval=None
             )
         if isinstance(raw_operation, dict):
             return operation_mapping(
                 implementation=raw_operation.get('implementation', ''),
                 inputs=raw_operation.get('inputs', {}),
-                executor=raw_operation.get('executor', None)
+                executor=raw_operation.get('executor', None),
+                retries=raw_operation.get('retries', None),
+                retry_interval=raw_operation.get('retry_interval', None)
             )
 
     def merge(self):
@@ -61,6 +65,28 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
             merged_operation_implementation = \
                 self.node_type_operation['implementation']
         return merged_operation_implementation
+
+    def _derive_retries(self):
+        merged_operation_retries = \
+            self.node_template_operation['retries']
+        if not merged_operation_retries:
+            # node template does not define retries
+            # this means we want to inherit the retries
+            # from the type
+            merged_operation_retries = \
+                self.node_type_operation['retries']
+        return merged_operation_retries
+
+    def _derive_retry_interval(self):
+        merged_operation_retry_interval = \
+            self.node_template_operation['retry_interval']
+        if not merged_operation_retry_interval:
+            # node template does not define retry_interval
+            # this means we want to inherit retry_interval
+            # from the type
+            merged_operation_retry_interval = \
+                self.node_type_operation['retry_interval']
+        return merged_operation_retry_interval
 
     def _derive_inputs(self, merged_operation_implementation):
         if merged_operation_implementation == \
@@ -122,7 +148,9 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
                     schema_inputs=self.node_type_operation['inputs'],
                     instance_inputs={}
                 ),
-                executor=self.node_type_operation['executor']
+                executor=self.node_type_operation['executor'],
+                retries=self.node_type_operation['retries'],
+                retry_interval=self.node_type_operation['retry_interval'],
             )
 
         if self.node_template_operation == NO_OP:
@@ -137,11 +165,15 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
             merged_operation_implementation)
         merged_operation_executor = self._derive_executor(
             merged_operation_implementation)
+        merged_operation_retries = self._derive_retries()
+        merged_operation_retry_interval = self._derive_retry_interval()
 
         return operation_mapping(
             implementation=merged_operation_implementation,
             inputs=merged_operation_inputs,
-            executor=merged_operation_executor
+            executor=merged_operation_executor,
+            retries=merged_operation_retries,
+            retry_interval=merged_operation_retry_interval
         )
 
 
@@ -172,10 +204,18 @@ class NodeTypeNodeTypeOperationMerger(OperationMerger):
         merged_operation_executor = \
             self.overriding_node_type_operation['executor']
 
+        merged_operation_retries = \
+            self.overriding_node_type_operation['retries']
+
+        merged_operation_retry_interval = \
+            self.overriding_node_type_operation['retry_interval']
+
         return operation_mapping(
             implementation=merged_operation_implementation,
             inputs=merged_operation_inputs,
-            executor=merged_operation_executor
+            executor=merged_operation_executor,
+            retries=merged_operation_retries,
+            retry_interval=merged_operation_retry_interval
         )
 
 

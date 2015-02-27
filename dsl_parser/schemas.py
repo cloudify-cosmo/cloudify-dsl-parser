@@ -28,90 +28,19 @@ PROPERTIES_SCHEMA_SCHEMA = {
     'type': 'object',
     'patternProperties': {
         '^': {
-            # can't seem to be able to do the 'oneOf' inside the
-            # 'properties' object, so some duplication is required here in
-            # order to allow any type for the 'default' value.
-            'anyOf': [
-                {
-                    'type': 'object',
-                    'properties': {
-                        'default': {
-                            'type': 'null'
-                        },
-                        'description': {
-                            'type': 'string'
-                        },
-                        'type': PROPERTY_TYPES_SCHEMA
-                    },
-                    'additionalProperties': False
+            'type': 'object',
+            'properties': {
+                'default': {
+                    'type': ['array', 'boolean', 'number', 'string', 'object',
+                             'null']
                 },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'default': {
-                            'type': 'object'
-                        },
-                        'description': {
-                            'type': 'string'
-                        },
-                        'type': PROPERTY_TYPES_SCHEMA
-                    },
-                    'additionalProperties': False
+                'description': {
+                    'type': 'string'
                 },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'default': {
-                            'type': 'string'
-                        },
-                        'description': {
-                            'type': 'string'
-                        },
-                        'type': PROPERTY_TYPES_SCHEMA
-                    },
-                    'additionalProperties': False
-                },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'default': {
-                            'type': 'number'
-                        },
-                        'description': {
-                            'type': 'string'
-                        },
-                        'type': PROPERTY_TYPES_SCHEMA
-                    },
-                    'additionalProperties': False
-                },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'default': {
-                            'type': 'boolean'
-                        },
-                        'description': {
-                            'type': 'string'
-                        },
-                        'type': PROPERTY_TYPES_SCHEMA
-                    },
-                    'additionalProperties': False
-                },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'default': {
-                            'type': 'array'
-                        },
-                        'description': {
-                            'type': 'string'
-                        },
-                        'type': PROPERTY_TYPES_SCHEMA
-                    },
-                    'additionalProperties': False
-                }
-            ]
-        }
+                'type': PROPERTY_TYPES_SCHEMA
+            },
+            'additionalProperties': False
+        },
     }
 }
 
@@ -138,6 +67,12 @@ NODE_TEMPLATE_OPERATION_SCHEMA = {
                 },
                 'executor': {
                     'type': 'string'
+                },
+                'retries': {
+                    'type': ['null', 'number']
+                },
+                'retry_interval': {
+                    'type': ['null', 'number']
                 }
             },
             'minProperties': 1,
@@ -167,6 +102,12 @@ NODE_TYPE_OPERATION_SCHEMA = {
                 'inputs': PROPERTIES_SCHEMA_SCHEMA,
                 'executor': {
                     'type': 'string'
+                },
+                'retries': {
+                    'type': ['null', 'number']
+                },
+                'retry_interval': {
+                    'type': ['null', 'number']
                 }
             },
             'required': ['implementation'],
@@ -280,59 +221,8 @@ OUTPUTS_SCHEMA = {
                             'type': 'string'
                         },
                         'value': {
-                            'type': 'number'
-                        }
-                    },
-                    'required': ['value'],
-                    'additionalProperties': False
-                },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'description': {
-                            'type': 'string'
-                        },
-                        'value': {
-                            'type': 'string'
-                        }
-                    },
-                    'required': ['value'],
-                    'additionalProperties': False
-                },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'description': {
-                            'type': 'string'
-                        },
-                        'value': {
-                            'type': 'object'
-                        }
-                    },
-                    'required': ['value'],
-                    'additionalProperties': False
-                },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'description': {
-                            'type': 'string'
-                        },
-                        'value': {
-                            'type': 'array'
-                        }
-                    },
-                    'required': ['value'],
-                    'additionalProperties': False
-                },
-                {
-                    'type': 'object',
-                    'properties': {
-                        'description': {
-                            'type': 'string'
-                        },
-                        'value': {
-                            'type': 'boolean'
+                            'type': ['number', 'object', 'string', 'boolean',
+                                     'array']
                         }
                     },
                     'required': ['value'],

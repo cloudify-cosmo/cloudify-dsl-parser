@@ -29,7 +29,9 @@ from dsl_parser.interfaces.utils import operation_mapping
 def op_struct(plugin_name,
               mapping,
               inputs=None,
-              executor=None):
+              executor=None,
+              retries=None,
+              retry_interval=None):
     if not inputs:
         inputs = {}
     result = {
@@ -37,7 +39,9 @@ def op_struct(plugin_name,
         'operation': mapping,
         'inputs': inputs,
         'executor': executor,
-        'has_intrinsic_functions': False
+        'has_intrinsic_functions': False,
+        'retries': retries,
+        'retry_interval': retry_interval
     }
     return result
 
@@ -894,7 +898,9 @@ relationships:
         self.assertEquals(
             operation_mapping(implementation='test_plugin.task_name',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             result_test_interface_4['test_interface4_op1'])
 
     def test_top_level_relationships_recursive_imports(self):
@@ -946,13 +952,17 @@ imports:
         self.assertEqual(
             operation_mapping(implementation='test_plugin.install',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             test_relationship['source_interfaces'][
                 'test_interface2']['install'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.terminate',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             test_relationship['source_interfaces'][
                 'test_interface2']['terminate'])
         self.assertEquals(
@@ -966,13 +976,17 @@ imports:
         self.assertEqual(
             operation_mapping(implementation='test_plugin.install',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             test_relationship2['target_interfaces'][
                 'test_interface2']['install'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.terminate',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             test_relationship2['target_interfaces'][
                 'test_interface2']['terminate'])
         self.assertEquals(
@@ -985,13 +999,17 @@ imports:
         self.assertEqual(
             operation_mapping(implementation='test_plugin.install',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             test_relationship3['target_interfaces'][
                 'test_interface2']['install'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.terminate',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             test_relationship3['target_interfaces'][
                 'test_interface2']['terminate'])
         self.assertEquals(
@@ -1152,7 +1170,9 @@ plugins:
         self.assertEquals('test_node', relationship['target_id'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.install', inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['source_interfaces']['test_interface1']['install'])
         self.assertEquals('reachable', relationship['state'])
         relationship_source_operations = relationship['source_operations']
@@ -1244,11 +1264,15 @@ plugins:
         self.assertEquals('reachable', relationship['state'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.task_name1',
-                              inputs={}, executor=None),
+                              inputs={}, executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['source_interfaces']['interface1']['op1'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.task_name2',
-                              inputs={}, executor=None),
+                              inputs={}, executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['target_interfaces']['interface2']['op2'])
 
         rel_source_ops = relationship['source_operations']
@@ -1384,7 +1408,8 @@ plugins:
         self.assertEquals(1, len(parent_relationship['target_interfaces']
                                                     ['test_interface3']))
         self.assertEquals(
-            {'implementation': '', 'inputs': {}, 'executor': None},
+            {'implementation': '', 'inputs': {}, 'executor': None,
+             'retries': None, 'retry_interval': None},
             parent_relationship['target_interfaces'][
                 'test_interface3']['install'])
 
@@ -1401,12 +1426,16 @@ plugins:
                                              ['test_interface2']))
         self.assertEqual(
             operation_mapping(implementation='test_plugin.install', inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['source_interfaces']['test_interface2']['install'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.terminate',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['source_interfaces'][
                 'test_interface2']['terminate'])
 
@@ -1424,7 +1453,9 @@ plugins:
                                                   ['test_interface1']))
         self.assertEqual(
             operation_mapping(implementation='test_plugin.install', inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             node_relationship['target_interfaces'][
                 'test_interface1']['install'])
         self.assertEquals(2, len(node_relationship['source_interfaces']))
@@ -1432,20 +1463,26 @@ plugins:
                                                   ['test_interface3']))
         self.assertEquals(
             operation_mapping(implementation='test_plugin.install', inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             node_relationship['source_interfaces'][
                 'test_interface2']['install'])
         self.assertEquals(2, len(node_relationship['source_interfaces']
                                                   ['test_interface2']))
         self.assertEquals(
             operation_mapping(implementation='test_plugin.install', inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             node_relationship['source_interfaces'][
                 'test_interface2']['install'])
         self.assertEquals(
             operation_mapping(implementation='test_plugin.terminate',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             node_relationship['source_interfaces'][
                 'test_interface2']['terminate'])
 
@@ -1551,11 +1588,15 @@ plugins:
                                              ['test_interface']))
         self.assertEqual(
             operation_mapping(implementation='test_plugin.install', inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['target_interfaces']['test_interface']['install'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.terminate',
-                              inputs={}, executor=None),
+                              inputs={}, executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['target_interfaces'][
                 'test_interface']['terminate'])
         self.assertEquals(1, len(relationship['source_interfaces']))
@@ -1563,12 +1604,16 @@ plugins:
             2, len(relationship['source_interfaces']['test_interface']))
         self.assertEqual(
             operation_mapping(implementation='test_plugin.install', inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['source_interfaces']['test_interface']['install2'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.terminate',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['source_interfaces'][
                 'test_interface']['terminate2'])
 
@@ -1581,19 +1626,25 @@ plugins:
         self.assertEqual(
             operation_mapping(implementation='test_plugin.install',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             node_relationship['target_interfaces'][
                 'test_interface']['install'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.terminate',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['target_interfaces'][
                 'test_interface']['terminate'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.destroy1',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             node_relationship['target_interfaces'][
                 'test_interface']['destroy'])
         self.assertEquals(1, len(node_relationship['source_interfaces']))
@@ -1603,18 +1654,24 @@ plugins:
         self.assertEquals(
             operation_mapping(implementation='test_plugin.install2',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             node_relationship['source_interfaces'][
                 'test_interface']['install2'])
         self.assertEqual(
             operation_mapping(implementation='test_plugin.terminate',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             relationship['source_interfaces']['test_interface']['terminate2'])
         self.assertEquals(
             operation_mapping(implementation='test_plugin.destroy2',
                               inputs={},
-                              executor=None),
+                              executor=None,
+                              retries=None,
+                              retry_interval=None),
             node_relationship['source_interfaces'][
                 'test_interface']['destroy2'])
 

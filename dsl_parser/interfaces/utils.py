@@ -77,11 +77,14 @@ def merge_schema_and_instance_inputs(schema_inputs,
     return merged_inputs
 
 
-def operation_mapping(implementation, inputs, executor):
+def operation_mapping(implementation, inputs, executor,
+                      retries, retry_interval):
     return {
         'implementation': implementation,
         'inputs': inputs,
-        'executor': executor
+        'executor': executor,
+        'retries': retries,
+        'retry_interval': retry_interval
     }
 
 
@@ -89,5 +92,7 @@ def no_op():
     return operation_mapping(
         implementation='',
         inputs={},
-        executor=None
+        executor=None,
+        retries=None,
+        retry_interval=None,
     )

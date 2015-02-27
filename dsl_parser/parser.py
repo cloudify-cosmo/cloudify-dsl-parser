@@ -656,6 +656,10 @@ def augment_operation(operation):
         operation['implementation'] = ''
     if 'inputs' not in operation:
         operation['inputs'] = {}
+    if 'retries' not in operation:
+        operation['retries'] = None
+    if 'retry_interval' not in operation:
+        operation['retry_interval'] = None
 
 
 def _process_relationships(combined_parsed_dsl, resource_base):
@@ -698,6 +702,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
     mapping_field_name = 'mapping' if is_workflows else 'implementation'
     operation_payload = {}
     operation_executor = None
+    operation_retries = None
+    operation_retry_interval = None
     if isinstance(operation_content, basestring):
         operation_mapping = operation_content
     else:
@@ -708,6 +714,10 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             payload_field_name, {})
         operation_executor = operation_content.get(
             'executor', None)
+        operation_retries = operation_content.get(
+            'retries', None)
+        operation_retry_interval = operation_content.get(
+            'retry_interval', None)
 
     if not operation_mapping:
         if is_workflows:
@@ -721,7 +731,9 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 plugin_name='',
                 operation_mapping='',
                 operation_inputs={},
-                executor=None
+                executor=None,
+                retries=None,
+                retry_interval=None
             )
         return OpDescriptor(name=operation_name,
                             plugin='',
@@ -748,7 +760,9 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 plugin_name=longest_prefix_plugin_name,
                 operation_mapping=operation_mapping[longest_prefix + 1:],
                 operation_inputs=operation_payload,
-                executor=operation_executor
+                executor=operation_executor,
+                retries=operation_retries,
+                retry_interval=operation_retry_interval
             )
 
         return OpDescriptor(
@@ -798,7 +812,9 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 plugin_name=constants.SCRIPT_PLUGIN_NAME,
                 operation_mapping=operation_mapping,
                 operation_inputs=operation_payload,
-                executor=operation_executor
+                executor=operation_executor,
+                retries=operation_retries,
+                retry_interval=operation_retry_interval
             )
 
         return OpDescriptor(
@@ -1074,13 +1090,17 @@ def _get_relationship_implementation_if_exists(source_node_name,
 def _operation_struct(plugin_name,
                       operation_mapping,
                       operation_inputs,
-                      executor):
+                      executor,
+                      retries,
+                      retry_interval):
     return {
         'plugin': plugin_name,
         'operation': operation_mapping,
         'executor': executor,
         'inputs': operation_inputs,
-        'has_intrinsic_functions': False
+        'has_intrinsic_functions': False,
+        'retries': retries,
+        'retry_interval': retry_interval
     }
 
 
