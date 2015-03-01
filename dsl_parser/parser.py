@@ -91,8 +91,10 @@ def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None,
                       resources_base_url, dsl_url)
     except HTTPError as e:
         if e.code == 404:
-            # it means some url is missing
-            # HTTPError does not print it by default
+            # HTTPError.__str__ uses the 'msg'.
+            # by default it is set to 'Not Found' for 404 errors, which is not
+            # very helpful, so we override it with a more meaningful message
+            # that specifies the missing url.
             e.msg = '{0} not found'.format(e.filename)
         raise
 
