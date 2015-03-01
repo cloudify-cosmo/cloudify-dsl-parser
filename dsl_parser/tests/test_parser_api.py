@@ -96,7 +96,7 @@ class TestParserApi(AbstractTestParser):
         try:
             parse_from_url('http://www.google.com/bad-dsl')
         except HTTPError as e:
-            self.assertIn('http://www.google.com/bad-dsl', e.message)
+            self.assertIn('http://www.google.com/bad-dsl', str(e))
             self.assertEqual(404, e.code)
 
     def _assert_blueprint(self, result):
