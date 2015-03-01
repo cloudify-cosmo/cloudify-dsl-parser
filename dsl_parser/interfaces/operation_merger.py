@@ -29,7 +29,7 @@ class OperationMerger(object):
                 implementation=raw_operation,
                 inputs={},
                 executor=None,
-                retries=None,
+                max_retries=None,
                 retry_interval=None
             )
         if isinstance(raw_operation, dict):
@@ -37,7 +37,7 @@ class OperationMerger(object):
                 implementation=raw_operation.get('implementation', ''),
                 inputs=raw_operation.get('inputs', {}),
                 executor=raw_operation.get('executor', None),
-                retries=raw_operation.get('retries', None),
+                max_retries=raw_operation.get('max_retries', None),
                 retry_interval=raw_operation.get('retry_interval', None)
             )
 
@@ -66,16 +66,16 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
                 self.node_type_operation['implementation']
         return merged_operation_implementation
 
-    def _derive_retries(self):
-        merged_operation_retries = \
-            self.node_template_operation['retries']
-        if not merged_operation_retries:
+    def _derive_max_retries(self):
+        merged_operation_max_retries = \
+            self.node_template_operation['max_retries']
+        if not merged_operation_max_retries:
             # node template does not define retries
             # this means we want to inherit the retries
             # from the type
-            merged_operation_retries = \
-                self.node_type_operation['retries']
-        return merged_operation_retries
+            merged_operation_max_retries = \
+                self.node_type_operation['max_retries']
+        return merged_operation_max_retries
 
     def _derive_retry_interval(self):
         merged_operation_retry_interval = \
@@ -149,7 +149,7 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
                     instance_inputs={}
                 ),
                 executor=self.node_type_operation['executor'],
-                retries=self.node_type_operation['retries'],
+                max_retries=self.node_type_operation['max_retries'],
                 retry_interval=self.node_type_operation['retry_interval'],
             )
 
@@ -165,14 +165,14 @@ class NodeTemplateNodeTypeOperationMerger(OperationMerger):
             merged_operation_implementation)
         merged_operation_executor = self._derive_executor(
             merged_operation_implementation)
-        merged_operation_retries = self._derive_retries()
+        merged_operation_retries = self._derive_max_retries()
         merged_operation_retry_interval = self._derive_retry_interval()
 
         return operation_mapping(
             implementation=merged_operation_implementation,
             inputs=merged_operation_inputs,
             executor=merged_operation_executor,
-            retries=merged_operation_retries,
+            max_retries=merged_operation_retries,
             retry_interval=merged_operation_retry_interval
         )
 
@@ -205,7 +205,7 @@ class NodeTypeNodeTypeOperationMerger(OperationMerger):
             self.overriding_node_type_operation['executor']
 
         merged_operation_retries = \
-            self.overriding_node_type_operation['retries']
+            self.overriding_node_type_operation['max_retries']
 
         merged_operation_retry_interval = \
             self.overriding_node_type_operation['retry_interval']
@@ -214,7 +214,7 @@ class NodeTypeNodeTypeOperationMerger(OperationMerger):
             implementation=merged_operation_implementation,
             inputs=merged_operation_inputs,
             executor=merged_operation_executor,
-            retries=merged_operation_retries,
+            max_retries=merged_operation_retries,
             retry_interval=merged_operation_retry_interval
         )
 

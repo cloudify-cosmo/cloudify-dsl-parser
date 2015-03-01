@@ -68,7 +68,7 @@ NODE_TEMPLATE_OPERATION_SCHEMA = {
                 'executor': {
                     'type': 'string'
                 },
-                'retries': {
+                'max_retries': {
                     'type': ['null', 'number']
                 },
                 'retry_interval': {
@@ -103,7 +103,7 @@ NODE_TYPE_OPERATION_SCHEMA = {
                 'executor': {
                     'type': 'string'
                 },
-                'retries': {
+                'max_retries': {
                     'type': ['null', 'number']
                 },
                 'retry_interval': {

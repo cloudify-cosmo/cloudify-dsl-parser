@@ -656,8 +656,8 @@ def augment_operation(operation):
         operation['implementation'] = ''
     if 'inputs' not in operation:
         operation['inputs'] = {}
-    if 'retries' not in operation:
-        operation['retries'] = None
+    if 'max_retries' not in operation:
+        operation['max_retries'] = None
     if 'retry_interval' not in operation:
         operation['retry_interval'] = None
 
@@ -702,7 +702,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
     mapping_field_name = 'mapping' if is_workflows else 'implementation'
     operation_payload = {}
     operation_executor = None
-    operation_retries = None
+    operation_max_retries = None
     operation_retry_interval = None
     if isinstance(operation_content, basestring):
         operation_mapping = operation_content
@@ -714,8 +714,8 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             payload_field_name, {})
         operation_executor = operation_content.get(
             'executor', None)
-        operation_retries = operation_content.get(
-            'retries', None)
+        operation_max_retries = operation_content.get(
+            'max_retries', None)
         operation_retry_interval = operation_content.get(
             'retry_interval', None)
 
@@ -732,7 +732,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 operation_mapping='',
                 operation_inputs={},
                 executor=None,
-                retries=None,
+                max_retries=None,
                 retry_interval=None
             )
         return OpDescriptor(name=operation_name,
@@ -761,7 +761,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 operation_mapping=operation_mapping[longest_prefix + 1:],
                 operation_inputs=operation_payload,
                 executor=operation_executor,
-                retries=operation_retries,
+                max_retries=operation_max_retries,
                 retry_interval=operation_retry_interval
             )
 
@@ -813,7 +813,7 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 operation_mapping=operation_mapping,
                 operation_inputs=operation_payload,
                 executor=operation_executor,
-                retries=operation_retries,
+                max_retries=operation_max_retries,
                 retry_interval=operation_retry_interval
             )
 
@@ -1091,7 +1091,7 @@ def _operation_struct(plugin_name,
                       operation_mapping,
                       operation_inputs,
                       executor,
-                      retries,
+                      max_retries,
                       retry_interval):
     return {
         'plugin': plugin_name,
@@ -1099,7 +1099,7 @@ def _operation_struct(plugin_name,
         'executor': executor,
         'inputs': operation_inputs,
         'has_intrinsic_functions': False,
-        'retries': retries,
+        'max_retries': max_retries,
         'retry_interval': retry_interval
     }
 

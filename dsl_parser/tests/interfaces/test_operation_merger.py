@@ -29,7 +29,7 @@ from dsl_parser.schemas import NODE_TYPE_OPERATION_SCHEMA
 def raw_operation_mapping(implementation=None,
                           inputs=None,
                           executor=None,
-                          retries=None,
+                          max_retries=None,
                           retry_interval=None):
 
     """
@@ -44,8 +44,8 @@ def raw_operation_mapping(implementation=None,
         result['inputs'] = inputs
     if executor is not None:
         result['executor'] = executor
-    if retries is not None:
-        result['retries'] = retries
+    if max_retries is not None:
+        result['max_retries'] = max_retries
     if retry_interval is not None:
         result['retry_interval'] = retry_interval
     return result
@@ -166,7 +166,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -191,7 +191,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -211,7 +211,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -229,7 +229,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -251,7 +251,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -269,7 +269,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -291,7 +291,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={'key': 'value'},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -323,7 +323,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
                 'key': 'value-overridden'
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -349,7 +349,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
                 'key': 'value'
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -374,7 +374,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
                 'key': 'value'
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -402,7 +402,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
                 'key': 'value'
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -428,7 +428,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
                 'key': 'value'
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -468,7 +468,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
                 'key': 'value'
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -488,7 +488,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -522,7 +522,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -541,7 +541,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -564,7 +564,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -589,7 +589,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -613,7 +613,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -635,7 +635,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -660,7 +660,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor='executor-overridden',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -682,7 +682,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor='executor-overridden',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -702,7 +702,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -729,7 +729,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
                 'key': 'value'
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -752,7 +752,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -773,7 +773,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -797,7 +797,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor-overridden',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -818,7 +818,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor-overridden',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -837,7 +837,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -860,7 +860,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -882,7 +882,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -902,7 +902,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -925,7 +925,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor-overridden',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -945,7 +945,7 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor-overridden',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1082,7 +1082,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
                 }
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -1118,7 +1118,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
                 }
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -1149,7 +1149,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
                 }
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -1178,7 +1178,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
                 }
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -1210,7 +1210,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
                 }
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -1239,7 +1239,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
                 }
             },
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None)
 
         self._assert_operations(
@@ -1273,7 +1273,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -1294,7 +1294,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -1329,7 +1329,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -1348,7 +1348,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
 
@@ -1369,7 +1369,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1396,7 +1396,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1418,7 +1418,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1438,7 +1438,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1461,7 +1461,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1481,7 +1481,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1502,7 +1502,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1523,7 +1523,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1547,7 +1547,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1570,7 +1570,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor='executor',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1594,7 +1594,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor='executor-overridden',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1615,7 +1615,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor='executor-overridden',
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1633,7 +1633,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1651,7 +1651,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1672,7 +1672,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1692,7 +1692,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1713,7 +1713,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(
@@ -1731,7 +1731,7 @@ class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
             implementation='mock.tasks.create-overridden',
             inputs={},
             executor=None,
-            retries=None,
+            max_retries=None,
             retry_interval=None
         )
         self._assert_operations(

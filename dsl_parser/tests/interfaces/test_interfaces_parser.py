@@ -112,7 +112,7 @@ class InterfacesParserTest(testtools.TestCase):
                     'implementation': 'mock.tasks.start',
                     'inputs': {},
                     'executor': None,
-                    'retries': None,
+                    'max_retries': None,
                     'retry_interval': None
                 },
                 'stop': {
@@ -123,7 +123,7 @@ class InterfacesParserTest(testtools.TestCase):
                         }
                     },
                     'executor': None,
-                    'retries': None,
+                    'max_retries': None,
                     'retry_interval': None
                 }
             },
@@ -132,7 +132,7 @@ class InterfacesParserTest(testtools.TestCase):
                     'implementation': '',
                     'inputs': {},
                     'executor': None,
-                    'retries': None,
+                    'max_retries': None,
                     'retry_interval': None
                 }
             }
@@ -243,7 +243,7 @@ class InterfacesParserTest(testtools.TestCase):
                     'implementation': 'mock.tasks.start-overridden',
                     'inputs': {},
                     'executor': None,
-                    'retries': None,
+                    'max_retries': None,
                     'retry_interval': None
                 },
                 'stop': {
@@ -252,7 +252,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'key': 'value'
                     },
                     'executor': None,
-                    'retries': None,
+                    'max_retries': None,
                     'retry_interval': None
                 }
             }
@@ -284,7 +284,7 @@ class InterfacesParserTest(testtools.TestCase):
                     'implementation': 'mock.tasks.start',
                     'inputs': {},
                     'executor': None,
-                    'retries': None,
+                    'max_retries': None,
                     'retry_interval': None
                 }
             }
@@ -318,7 +318,7 @@ class InterfacesParserTest(testtools.TestCase):
                     'implementation': 'mock.tasks.start',
                     'inputs': {},
                     'executor': None,
-                    'retries': None,
+                    'max_retries': None,
                     'retry_interval': None
                 }
             }
@@ -395,7 +395,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -406,7 +406,7 @@ class InterfacesParserTest(testtools.TestCase):
                             }
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 },
@@ -415,7 +415,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': '',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -426,7 +426,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -437,7 +437,7 @@ class InterfacesParserTest(testtools.TestCase):
                             }
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 },
@@ -446,7 +446,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': '',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -516,7 +516,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -527,7 +527,7 @@ class InterfacesParserTest(testtools.TestCase):
                             }
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 },
@@ -536,7 +536,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': '',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -666,7 +666,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -677,7 +677,7 @@ class InterfacesParserTest(testtools.TestCase):
                             }
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 },
@@ -826,7 +826,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start-overridden',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -835,7 +835,7 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': 'value'
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -846,7 +846,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start-overridden',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -855,7 +855,7 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': 'value'
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -910,7 +910,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start-overridden',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -921,7 +921,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start-overridden',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -930,7 +930,7 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': 'value'
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -985,7 +985,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start-overridden',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -994,7 +994,7 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': 'value'
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -1005,7 +1005,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start-overridden',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -1070,7 +1070,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -1079,7 +1079,7 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': 'value'
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -1090,7 +1090,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start-overridden',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -1099,7 +1099,7 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': 'value'
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -1164,7 +1164,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start-overridden',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -1173,7 +1173,7 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': 'value'
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
@@ -1184,7 +1184,7 @@ class InterfacesParserTest(testtools.TestCase):
                         'implementation': 'mock.tasks.start',
                         'inputs': {},
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     },
                     'stop': {
@@ -1193,7 +1193,7 @@ class InterfacesParserTest(testtools.TestCase):
                             'key': 'value'
                         },
                         'executor': None,
-                        'retries': None,
+                        'max_retries': None,
                         'retry_interval': None
                     }
                 }
