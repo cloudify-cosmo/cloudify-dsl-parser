@@ -90,13 +90,10 @@ def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None,
         return _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
                       resources_base_url, dsl_url)
     except HTTPError as e:
-        # if we caught this error
-        # it means some url is missing
-        # HTTPError does not print it by default
-        missing_url = e.filename
-        message = ('HTTP Error {0}: {1} not found'
-                   .format(e.code, missing_url))
-        e.message = message
+        if e.code == 404:
+            # it means some url is missing
+            # HTTPError does not print it by default
+            e.msg = '{0} not found'.format(e.filename)
         raise
 
 
