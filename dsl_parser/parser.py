@@ -74,6 +74,17 @@ OpDescriptor = namedtuple('OpDescriptor', [
     'plugin', 'op_struct', 'name'])
 
 
+class ParseContext(dict):
+    @property
+    def version(self):
+        return self['version']
+
+    @version.setter
+    def version(self, value):
+        self['version'] = value
+parse_context = ParseContext()
+
+
 def parse_from_path(dsl_file_path, alias_mapping_dict=None,
                     alias_mapping_url=None, resources_base_url=None):
     with open(dsl_file_path, 'r') as f:
@@ -177,102 +188,110 @@ def _create_plan_workflow_plugins(workflows, plugins):
 
 def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
            resources_base_url, dsl_location=None):
+    try:
+        alias_mapping = _get_alias_mapping(alias_mapping_dict,
+                                           alias_mapping_url)
 
-    alias_mapping = _get_alias_mapping(alias_mapping_dict, alias_mapping_url)
+        parsed_dsl = _load_yaml(dsl_string, 'Failed to parse DSL')
 
-    parsed_dsl = _load_yaml(dsl_string, 'Failed to parse DSL')
+        # not sure about the name. this will actually be the dsl_location
+        # minus the /blueprint.yaml at the end of it
+        resource_base = None
+        if dsl_location:
+            dsl_location = _dsl_location_to_url(dsl_location, alias_mapping,
+                                                resources_base_url)
+            resource_base = dsl_location[:dsl_location.rfind('/')]
+        combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping,
+                                               dsl_location,
+                                               resources_base_url)
 
-    # not sure about the name. this will actually be the dsl_location
-    # minus the /blueprint.yaml at the end of it
-    resource_base = None
-    if dsl_location:
-        dsl_location = _dsl_location_to_url(dsl_location, alias_mapping,
-                                            resources_base_url)
-        resource_base = dsl_location[:dsl_location.rfind('/')]
-    combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping,
-                                           dsl_location, resources_base_url)
+        _validate_dsl_schema(combined_parsed_dsl)
 
-    _validate_dsl_schema(combined_parsed_dsl)
+        dsl_version = combined_parsed_dsl[VERSION]
+        if dsl_version not in SUPPORTED_VERSIONS:
+            raise DSLParsingLogicException(
+                29, 'Unexpected tosca_definitions_version {0}; Currently '
+                    'supported versions are: {1}'.format(dsl_version,
+                                                         SUPPORTED_VERSIONS))
+        parsed_dsl_version = parse_dsl_version(dsl_version)
+        parse_context.version = parsed_dsl_version
 
-    dsl_version = combined_parsed_dsl[VERSION]
-    if dsl_version not in SUPPORTED_VERSIONS:
-        raise DSLParsingLogicException(
-            29, 'Unexpected tosca_definitions_version {0}; Currently '
-                'supported versions are: {1}'.format(dsl_version,
-                                                     SUPPORTED_VERSIONS))
+        nodes = combined_parsed_dsl[NODE_TEMPLATES]
+        node_names_set = set(nodes.keys())
 
-    nodes = combined_parsed_dsl[NODE_TEMPLATES]
-    node_names_set = set(nodes.keys())
+        top_level_relationships = _process_relationships(
+            combined_parsed_dsl, resource_base)
 
-    top_level_relationships = _process_relationships(
-        combined_parsed_dsl, resource_base)
+        type_impls = _get_dict_prop(combined_parsed_dsl, TYPE_IMPLEMENTATIONS)\
+            .copy()
+        relationship_impls = _get_dict_prop(
+            combined_parsed_dsl,
+            RELATIONSHIP_IMPLEMENTATIONS).copy()
 
-    type_impls = _get_dict_prop(combined_parsed_dsl, TYPE_IMPLEMENTATIONS)\
-        .copy()
-    relationship_impls = _get_dict_prop(
-        combined_parsed_dsl,
-        RELATIONSHIP_IMPLEMENTATIONS).copy()
+        plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
+        processed_plugins = dict((name, _process_plugin(plugin, name,
+                                                        dsl_version))
+                                 for (name, plugin) in plugins.items())
 
-    plugins = _get_dict_prop(combined_parsed_dsl, PLUGINS)
-    processed_plugins = dict((name, _process_plugin(plugin, name, dsl_version))
-                             for (name, plugin) in plugins.items())
+        processed_nodes = map(lambda node_name_and_node: _process_node(
+            node_name_and_node[0], node_name_and_node[1], combined_parsed_dsl,
+            top_level_relationships, node_names_set, type_impls,
+            relationship_impls, processed_plugins, resource_base),
+            nodes.iteritems())
 
-    processed_nodes = map(lambda node_name_and_node: _process_node(
-        node_name_and_node[0], node_name_and_node[1], combined_parsed_dsl,
-        top_level_relationships, node_names_set, type_impls,
-        relationship_impls, processed_plugins, resource_base),
-        nodes.iteritems())
+        inputs = combined_parsed_dsl.get(INPUTS, {})
+        outputs = combined_parsed_dsl.get(OUTPUTS, {})
 
-    inputs = combined_parsed_dsl.get(INPUTS, {})
-    outputs = combined_parsed_dsl.get(OUTPUTS, {})
+        _post_process_nodes(processed_nodes,
+                            _get_dict_prop(combined_parsed_dsl, NODE_TYPES),
+                            _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS),
+                            processed_plugins,
+                            type_impls,
+                            relationship_impls,
+                            resource_base)
 
-    _post_process_nodes(processed_nodes,
-                        _get_dict_prop(combined_parsed_dsl, NODE_TYPES),
-                        _get_dict_prop(combined_parsed_dsl, RELATIONSHIPS),
-                        processed_plugins,
-                        type_impls,
-                        relationship_impls,
-                        resource_base)
+        processed_workflows = _process_workflows(
+            combined_parsed_dsl.get(WORKFLOWS, {}),
+            processed_plugins,
+            resource_base)
+        workflow_plugins_to_install = _create_plan_workflow_plugins(
+            processed_workflows,
+            processed_plugins)
 
-    processed_workflows = _process_workflows(
-        combined_parsed_dsl.get(WORKFLOWS, {}),
-        processed_plugins,
-        resource_base)
-    workflow_plugins_to_install = _create_plan_workflow_plugins(
-        processed_workflows,
-        processed_plugins)
+        plan_deployment_plugins = _create_plan_deployment_plugins(
+            processed_nodes)
 
-    plan_deployment_plugins = _create_plan_deployment_plugins(processed_nodes)
+        policy_types = _process_policy_types(
+            combined_parsed_dsl.get(POLICY_TYPES, {}))
 
-    policy_types = _process_policy_types(
-        combined_parsed_dsl.get(POLICY_TYPES, {}))
+        policy_triggers = _process_policy_triggers(
+            combined_parsed_dsl.get(POLICY_TRIGGERS, {}))
 
-    policy_triggers = _process_policy_triggers(
-        combined_parsed_dsl.get(POLICY_TRIGGERS, {}))
+        groups = _process_groups(
+            combined_parsed_dsl.get(GROUPS, {}),
+            policy_types,
+            policy_triggers,
+            processed_nodes)
 
-    groups = _process_groups(
-        combined_parsed_dsl.get(GROUPS, {}),
-        policy_types,
-        policy_triggers,
-        processed_nodes)
+        plan = models.Plan({
+            'nodes': processed_nodes,
+            RELATIONSHIPS: top_level_relationships,
+            WORKFLOWS: processed_workflows,
+            POLICY_TYPES: policy_types,
+            POLICY_TRIGGERS: policy_triggers,
+            GROUPS: groups,
+            INPUTS: inputs,
+            constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_deployment_plugins,
+            OUTPUTS: outputs,
+            'workflow_plugins_to_install': workflow_plugins_to_install,
+            'version': _process_dsl_version(dsl_version)
+        })
 
-    plan = models.Plan({
-        'nodes': processed_nodes,
-        RELATIONSHIPS: top_level_relationships,
-        WORKFLOWS: processed_workflows,
-        POLICY_TYPES: policy_types,
-        POLICY_TRIGGERS: policy_triggers,
-        GROUPS: groups,
-        INPUTS: inputs,
-        constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_deployment_plugins,
-        OUTPUTS: outputs,
-        'workflow_plugins_to_install': workflow_plugins_to_install,
-        'version': _process_dsl_version(dsl_version)
-    })
+        functions.validate_functions(plan)
 
-    functions.validate_functions(plan)
-
-    return plan
+        return plan
+    finally:
+        parse_context.clear()
 
 
 def _post_process_nodes(processed_nodes, types, relationships, plugins,
@@ -718,6 +737,20 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             'max_retries', None)
         operation_retry_interval = operation_content.get(
             'retry_interval', None)
+
+    if not is_version_equal_or_greater_than(
+            parse_context.version, parse_dsl_version(DSL_VERSION_1_1)):
+        def error_message(field):
+            return (
+                'Cannot use {0} with {1} in operation {2}. '
+                '{3}.'.format(field,
+                              parse_context.version,
+                              operation_name,
+                              partial_error_message))
+        if operation_max_retries:
+            raise DSLParsingLogicException(81, error_message('max_retries'))
+        if operation_retry_interval:
+            raise DSLParsingLogicException(81, error_message('retry_interval'))
 
     if not operation_mapping:
         if is_workflows:
