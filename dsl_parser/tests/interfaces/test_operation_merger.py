@@ -999,6 +999,29 @@ class NodeTemplateNodeTypeOperationMergerTest(testtools.TestCase):
             expected_merged_operation=expected_merged_operation
         )
 
+    def test_operation_mapping_with_retry_overrides_operation_mapping_with_retry_zero_values(self):  # noqa
+        node_template_operation = raw_operation_mapping(
+            max_retries=0,
+            retry_interval=0
+        )
+        node_type_operation = raw_operation_mapping(
+            implementation='mock.tasks.create',
+            max_retries=1,
+            retry_interval=2
+        )
+        expected_merged_operation = operation_mapping(
+            implementation='mock.tasks.create',
+            inputs={},
+            executor=None,
+            max_retries=0,
+            retry_interval=0
+        )
+        self._assert_operations(
+            node_template_operation=node_template_operation,
+            node_type_operation=node_type_operation,
+            expected_merged_operation=expected_merged_operation
+        )
+
 
 class NodeTypeNodeTypeOperationMergerTest(testtools.TestCase):
 
