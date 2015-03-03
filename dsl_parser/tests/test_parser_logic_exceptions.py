@@ -863,27 +863,3 @@ node_templates:
         self.assertRaisesRegex(DSLParsingLogicException,
                                expected_err_msg, parse_dsl_version,
                                'cloudify_dsl_1_1_a')
-
-    def test_max_retries_version_validation(self):
-        yaml_template = '{0}' + self.MINIMAL_BLUEPRINT + """
-        interfaces:
-            my_interface:
-                my_operation:
-                    max_retries: 1
-"""
-        self.parse(yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_1))
-        self._assert_dsl_parsing_exception_error_code(
-            yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_0),
-            81, DSLParsingLogicException)
-
-    def test_retry_interval_version_validation(self):
-        yaml_template = '{0}' + self.MINIMAL_BLUEPRINT + """
-        interfaces:
-            my_interface:
-                my_operation:
-                    retry_interval: 1
-"""
-        self.parse(yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_1))
-        self._assert_dsl_parsing_exception_error_code(
-            yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_0),
-            81, DSLParsingLogicException)
