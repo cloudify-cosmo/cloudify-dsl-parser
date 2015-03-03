@@ -306,8 +306,8 @@ class GetAttribute(Function):
                                        self.attribute_path))
 
 
+@register(name='concat')
 class Concat(Function):
-    # Currently, only registered in tests until part of the spec
 
     def __init__(self, args, **kwargs):
         self.separator = ''
