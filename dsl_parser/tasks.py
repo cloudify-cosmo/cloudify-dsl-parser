@@ -24,10 +24,8 @@ from dsl_parser import exceptions
 from dsl_parser import scan
 
 
-def parse_dsl(dsl_location, alias_mapping_url,
-              resources_base_url, **kwargs):
+def parse_dsl(dsl_location, resources_base_url, **kwargs):
     result = parser.parse_from_url(dsl_url=dsl_location,
-                                   alias_mapping_url=alias_mapping_url,
                                    resources_base_url=resources_base_url)
     return json.dumps(result)
 
