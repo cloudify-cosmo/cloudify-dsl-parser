@@ -85,21 +85,17 @@ class ParseContext(dict):
 parse_context = ParseContext()
 
 
-def parse_from_path(dsl_file_path, alias_mapping_dict=None,
-                    alias_mapping_url=None, resources_base_url=None):
+def parse_from_path(dsl_file_path, resources_base_url=None):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
-                  resources_base_url, dsl_file_path)
+    return _parse(dsl_string, resources_base_url, dsl_file_path)
 
 
-def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None,
-                   resources_base_url=None):
+def parse_from_url(dsl_url, resources_base_url=None):
     try:
         with contextlib.closing(urlopen(dsl_url)) as f:
             dsl_string = f.read()
-        return _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
-                      resources_base_url, dsl_url)
+        return _parse(dsl_string, resources_base_url, dsl_url)
     except HTTPError as e:
         if e.code == 404:
             # HTTPError.__str__ uses the 'msg'.
@@ -110,30 +106,11 @@ def parse_from_url(dsl_url, alias_mapping_dict=None, alias_mapping_url=None,
         raise
 
 
-def parse(dsl_string, alias_mapping_dict=None, alias_mapping_url=None,
-          resources_base_url=None):
-    return _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
-                  resources_base_url)
+def parse(dsl_string, resources_base_url=None):
+    return _parse(dsl_string, resources_base_url)
 
 
-def _get_alias_mapping(alias_mapping_dict, alias_mapping_url):
-    alias_mapping = {}
-    if alias_mapping_url is not None:
-        with contextlib.closing(urlopen(alias_mapping_url)) as f:
-            alias_mapping_string = f.read()
-        alias_mapping = dict(alias_mapping.items() +
-                             _load_yaml(alias_mapping_string,
-                                        'Failed to parse alias-mapping')
-                             .items())
-    if alias_mapping_dict is not None:
-        alias_mapping = dict(alias_mapping.items() +
-                             alias_mapping_dict.items())
-    return alias_mapping
-
-
-def _dsl_location_to_url(dsl_location, alias_mapping, resources_base_url):
-    dsl_location = _apply_alias_mapping_if_available(dsl_location,
-                                                     alias_mapping)
+def _dsl_location_to_url(dsl_location, resources_base_url):
     if dsl_location is not None:
         dsl_location = _get_resource_location(dsl_location, resources_base_url)
         if dsl_location is None:
@@ -185,22 +162,18 @@ def _create_plan_workflow_plugins(workflows, plugins):
     return workflow_plugins
 
 
-def _parse(dsl_string, alias_mapping_dict, alias_mapping_url,
-           resources_base_url, dsl_location=None):
+def _parse(dsl_string, resources_base_url, dsl_location=None):
     try:
-        alias_mapping = _get_alias_mapping(alias_mapping_dict,
-                                           alias_mapping_url)
-
         parsed_dsl = _load_yaml(dsl_string, 'Failed to parse DSL')
 
         # not sure about the name. this will actually be the dsl_location
         # minus the /blueprint.yaml at the end of it
         resource_base = None
         if dsl_location:
-            dsl_location = _dsl_location_to_url(dsl_location, alias_mapping,
+            dsl_location = _dsl_location_to_url(dsl_location,
                                                 resources_base_url)
             resource_base = dsl_location[:dsl_location.rfind('/')]
-        combined_parsed_dsl = _combine_imports(parsed_dsl, alias_mapping,
+        combined_parsed_dsl = _combine_imports(parsed_dsl,
                                                dsl_location,
                                                resources_base_url)
 
@@ -1330,22 +1303,6 @@ def _extract_complete_node(node_type,
     return complete_node
 
 
-def _apply_ref(filename, path_context, alias_mapping, resources_base_url):
-    filename = _apply_alias_mapping_if_available(filename, alias_mapping)
-    ref_url = _get_resource_location(filename, resources_base_url,
-                                     path_context)
-    if not ref_url:
-        raise DSLParsingLogicException(
-            31, 'Failed on ref - Unable to locate ref {0}'.format(filename))
-    try:
-        with contextlib.closing(urlopen(ref_url)) as f:
-            return f.read()
-    except URLError:
-        raise DSLParsingLogicException(
-            31, 'Failed on ref - Unable to open file {0} (searched for {1})'
-                .format(filename, ref_url))
-
-
 def _replace_or_add_interface(merged_interfaces, interface_element):
     # locate if this interface exists in the list
     matching_interface = next((x for x in merged_interfaces if
@@ -1373,8 +1330,7 @@ def _get_dict_prop(dictionary, prop_name):
     return dictionary.get(prop_name, {})
 
 
-def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
-                     resources_base_url):
+def _combine_imports(parsed_dsl, dsl_location, resources_base_url):
     def _merge_into_dict_or_throw_on_duplicate(from_dict, to_dict,
                                                top_level_key, path):
         for _key, _value in from_dict.iteritems():
@@ -1395,8 +1351,6 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
     merge_one_nested_level_no_override = dict()
 
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
-    _replace_ref_with_inline_paths(combined_parsed_dsl, dsl_location,
-                                   alias_mapping, resources_base_url)
 
     if VERSION not in parsed_dsl:
         raise DSLParsingLogicException(
@@ -1411,7 +1365,7 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
 
     ordered_imports_list = []
     _build_ordered_imports_list(parsed_dsl, ordered_imports_list,
-                                alias_mapping, dsl_location,
+                                dsl_location,
                                 resources_base_url)
     if dsl_location:
         ordered_imports_list = ordered_imports_list[1:]
@@ -1444,9 +1398,6 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
             # no need to keep imported dsl's version - it's only used for
             # validation against the main blueprint's version
             del parsed_imported_dsl[VERSION]
-
-        _replace_ref_with_inline_paths(parsed_imported_dsl, single_import,
-                                       alias_mapping, resources_base_url)
 
         # combine the current file with the combined parsed dsl
         # we have thus far
@@ -1486,26 +1437,6 @@ def _combine_imports(parsed_dsl, alias_mapping, dsl_location,
     return combined_parsed_dsl
 
 
-def _replace_ref_with_inline_paths(dsl, path_context, alias_mapping,
-                                   resources_base_url):
-    if type(dsl) not in (list, dict):
-        return
-
-    if type(dsl) == list:
-        for item in dsl:
-            _replace_ref_with_inline_paths(item, path_context, alias_mapping,
-                                           resources_base_url)
-        return
-
-    for key, value in dsl.iteritems():
-        if key == 'ref':
-            dsl[key] = _apply_ref(value, path_context, alias_mapping,
-                                  resources_base_url)
-        else:
-            _replace_ref_with_inline_paths(value, path_context, alias_mapping,
-                                           resources_base_url)
-
-
 def _get_resource_location(resource_name, resources_base_url,
                            current_resource_context=None):
     # Already url format
@@ -1538,7 +1469,7 @@ def _validate_url_exists(url):
 
 
 def _build_ordered_imports_list(parsed_dsl, ordered_imports_list,
-                                alias_mapping, current_import,
+                                current_import,
                                 resources_base_url):
     def _build_ordered_imports_list_recursive(_parsed_dsl, _current_import):
         if _current_import is not None:
@@ -1548,8 +1479,6 @@ def _build_ordered_imports_list(parsed_dsl, ordered_imports_list,
             return
 
         for another_import in _parsed_dsl[IMPORTS]:
-            another_import = _apply_alias_mapping_if_available(another_import,
-                                                               alias_mapping)
             import_url = _get_resource_location(another_import,
                                                 resources_base_url,
                                                 _current_import)
@@ -1598,10 +1527,6 @@ def _validate_imports_section(imports_section, dsl_location):
             2, 'Improper "imports" section in yaml {0}; {1}; Path to error: '
                '{2}'.format(dsl_location, ex.message,
                             '.'.join((str(x) for x in ex.path))))
-
-
-def _apply_alias_mapping_if_available(name, alias_mapping):
-    return alias_mapping[name] if name in alias_mapping else name
 
 
 def get_plugins_from_operations(node, processed_plugins):

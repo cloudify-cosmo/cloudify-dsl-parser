@@ -305,32 +305,6 @@ node_types:
         node = result['nodes'][0]
         self.assertEquals('val2', node['properties']['key2'])
 
-    def test_alias_mapping_imports(self):
-        imported_yaml = self.MINIMAL_BLUEPRINT
-        imported_filename = self.make_yaml_file(imported_yaml)
-        imported_alias = 'imported_alias'
-        yaml = """
-imports:
-    -   {0}""".format(imported_alias)
-        result = self.parse(yaml,
-                            alias_mapping_dict={
-                                '{0}'.format(imported_alias):
-                                '{0}'.format(imported_filename)
-                            })
-        self._assert_minimal_blueprint(result)
-
-    def test_alias_mapping_imports_using_path(self):
-        imported_yaml = self.MINIMAL_BLUEPRINT
-        imported_filename = self.make_yaml_file(imported_yaml)
-        imported_alias = 'imported_alias'
-        yaml = """
-imports:
-    -   {0}""".format(imported_alias)
-        alias_path = self.make_alias_yaml_file({
-            '{0}'.format(imported_alias): '{0}'.format(imported_filename)})
-        result = self.parse(yaml, alias_mapping_url=alias_path)
-        self._assert_minimal_blueprint(result)
-
     def test_instance_relationship_base_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
     test_node2:
