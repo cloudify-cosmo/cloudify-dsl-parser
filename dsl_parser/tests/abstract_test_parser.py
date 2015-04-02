@@ -22,7 +22,6 @@ from functools import wraps
 from multiprocessing import Process
 
 import testtools
-import yaml
 
 from dsl_parser.exceptions import DSLParsingException
 from dsl_parser.parser import parse as dsl_parse
@@ -119,13 +118,6 @@ node_types:
         shutil.rmtree(self._temp_dir)
         super(AbstractTestParser, self).tearDown()
 
-    def make_alias_yaml_file(self, alias):
-        filename = 'tempfile{0}.yaml'.format(uuid.uuid4())
-        filename_path = os.path.join(self._temp_dir, filename)
-        with open(filename_path, 'w') as outfile:
-            outfile.write(yaml.dump(alias, default_flow_style=True))
-        return self._path2url(filename_path)
-
     def make_file_with_name(self, content, filename, base_dir=None):
         base_dir = os.path.join(self._temp_dir, base_dir) \
             if base_dir else self._temp_dir
@@ -155,25 +147,19 @@ imports:"""
     -   {0}""".format(filename if not as_uri else self._path2url(filename))
         return yaml
 
-    def parse(self, dsl_string, alias_mapping_dict=None,
-              alias_mapping_url=None, resources_base_url=None,
+    def parse(self, dsl_string, resources_base_url=None,
               dsl_version=BASIC_VERSION_SECTION_DSL_1_0):
         # add dsl version if missing
         if DSL_VERSION_PREFIX not in dsl_string:
             dsl_string = dsl_version + dsl_string
-        return dsl_parse(dsl_string, alias_mapping_dict, alias_mapping_url,
-                         resources_base_url)
+        return dsl_parse(dsl_string, resources_base_url)
 
-    def parse_1_1(self, dsl_string, alias_mapping_dict=None,
-                  alias_mapping_url=None, resources_base_url=None):
-        return self.parse(dsl_string, alias_mapping_dict, alias_mapping_url,
-                          resources_base_url,
+    def parse_1_1(self, dsl_string, resources_base_url=None):
+        return self.parse(dsl_string, resources_base_url,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_1)
 
-    def parse_from_path(self, dsl_path, alias_mapping_dict=None,
-                        alias_mapping_url=None, resources_base_url=None):
+    def parse_from_path(self, dsl_path, resources_base_url=None):
         return dsl_parse_from_path(dsl_path,
-                                   alias_mapping_dict, alias_mapping_url,
                                    resources_base_url)
 
     def _assert_dsl_parsing_exception_error_code(
