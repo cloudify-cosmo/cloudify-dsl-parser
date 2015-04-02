@@ -14,8 +14,6 @@
 #    * limitations under the License.
 
 
-import json
-
 import parser
 import multi_instance
 
