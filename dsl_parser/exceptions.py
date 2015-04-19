@@ -54,3 +54,22 @@ class DSLParsingLogicException(DSLParsingException):
 
 class DSLParsingFormatException(DSLParsingException):
     pass
+
+
+class DSLParsingElementMatchException(DSLParsingException):
+    """
+    An error raised when element child/ancestor lookup fails (element not
+    found)
+    """
+    pass
+
+
+class DSLParsingSchemaAPIException(DSLParsingException):
+    """
+    An error raised due to invalid usage of framework
+    """
+    pass
+
+
+ERROR_CODE_CYCLE = 100
+ERROR_CODE_ILLEGAL_VALUE_ACCESS = 101

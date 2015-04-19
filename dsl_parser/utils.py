@@ -12,10 +12,16 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-import copy
+
+import contextlib
+import urllib2
+
+import yaml
+import yaml.parser
 
 from dsl_parser import functions
-from dsl_parser.exceptions import DSLParsingLogicException
+from dsl_parser.exceptions import (DSLParsingLogicException,
+                                   DSLParsingFormatException)
 
 
 def merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
@@ -36,14 +42,10 @@ def flatten_schema(schema):
 
 def merge_schema_and_instance_properties(
         instance_properties,
-        impl_properties,
         schema_properties,
         undefined_property_error_message,
         missing_property_error_message,
         node_name):
-    instance_properties = dict(instance_properties.items() +
-                               impl_properties.items())
-
     flattened_schema_props = flatten_schema(schema_properties)
 
     # validate instance properties don't
@@ -109,61 +111,22 @@ def _validate_properties_types(properties, properties_schema):
                 .format(prop_key, prop_type, prop_val))
 
 
-def extract_complete_type_recursive(dsl_type,
-                                    dsl_type_name,
-                                    dsl_container,
-                                    merging_func,
-                                    is_relationships,
-                                    visited_type_names=None):
+def load_yaml(raw_yaml, error_message):
+    try:
+        result = yaml.safe_load(raw_yaml)
+        if result is None:
+            # load of empty string returns None so we convert it to an empty
+            # dict
+            result = {}
+        return result
+    except yaml.parser.ParserError, ex:
+        raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'
+                                        .format(error_message, ex))
 
-    """
-    This method is applicable to both types and relationships.
-    it's concerned with extracting the super types recursively,
-    where the merging_func parameter is used
-    to merge them with the current type
 
-    :param dsl_type:
-    :param dsl_type_name:
-    :param dsl_container:
-    :param merging_func:
-    :param is_relationships:
-    :param visited_type_names:
-    :return:
-    """
-
-    if not visited_type_names:
-        visited_type_names = []
-    if dsl_type_name in visited_type_names:
-        visited_type_names.append(dsl_type_name)
-        ex = DSLParsingLogicException(
-            100, 'Failed parsing {0} {1}, Circular dependency detected: {2}'
-                 .format('relationship' if is_relationships else 'type',
-                         dsl_type_name,
-                         ' --> '.join(visited_type_names)))
-        ex.circular_dependency = visited_type_names
-        raise ex
-    visited_type_names.append(dsl_type_name)
-    current_level_type = copy.deepcopy(dsl_type)
-
-    # halt condition
-    if 'derived_from' not in current_level_type:
-        return current_level_type
-
-    super_type_name = current_level_type['derived_from']
-    if super_type_name not in dsl_container:
-        raise DSLParsingLogicException(
-            14, 'Missing definition for {0} {1} which is declared as derived '
-                'by {0} {2}'
-                .format('relationship' if is_relationships else 'type',
-                        super_type_name,
-                        dsl_type_name))
-
-    super_type = dsl_container[super_type_name]
-    complete_super_type = extract_complete_type_recursive(
-        dsl_type=super_type,
-        dsl_type_name=super_type_name,
-        dsl_container=dsl_container,
-        merging_func=merging_func,
-        visited_type_names=visited_type_names,
-        is_relationships=is_relationships)
-    return merging_func(complete_super_type, current_level_type)
+def url_exists(url):
+    try:
+        with contextlib.closing(urllib2.urlopen(url)):
+            return True
+    except urllib2.URLError:
+        return False

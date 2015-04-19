@@ -19,7 +19,6 @@ from setuptools import setup
 
 install_requires = [
     'PyYAML==3.10',
-    'jsonschema==2.3.0',
     'networkx==1.8.1',
 ]
 
@@ -31,7 +30,7 @@ except ImportError, e:
 
 setup(
     name='cloudify-dsl-parser',
-    version='3.2rc1',
+    version='3.3a1',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
     packages=['dsl_parser',

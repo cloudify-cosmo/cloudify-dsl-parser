@@ -15,11 +15,11 @@
 
 
 from dsl_parser import constants
-from dsl_parser.parser import DSLParsingLogicException, parse_from_path, \
-    parse_dsl_version
+from dsl_parser.parser import parse_from_path
 from dsl_parser.parser import parse as dsl_parse
+from dsl_parser.exceptions import DSLParsingLogicException
+from dsl_parser import version
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.parser import DSL_VERSION_1_0, DSL_VERSION_1_1
 
 
 class TestParserLogicExceptions(AbstractTestParser):
@@ -82,9 +82,9 @@ node_types:
     """
         ex = self._assert_dsl_parsing_exception_error_code(
             yaml, 100, DSLParsingLogicException)
-        expected_circular_dependency = ['test_type', 'test_type_parent',
-                                        'test_type_grandparent', 'test_type']
-        self.assertEquals(expected_circular_dependency, ex.circular_dependency)
+        circular = ex.circular_dependency
+        self.assertEqual(len(circular), 4)
+        self.assertEqual(circular[0], circular[-1])
 
     def test_plugin_with_wrongful_executor_field(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
@@ -111,7 +111,7 @@ node_types:
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 plugins:
     test_plugin:
-        executor: host_agent
+        executor: central_deployment_agent
         source: dummy
 
 node_types:
@@ -306,41 +306,26 @@ plugins:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 24, DSLParsingLogicException)
 
-    def test_type_implementation_ambiguous(self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
+    def test_ambiguous_plugin_operation_mapping(self):
+        yaml = """
 node_types:
-    specific1_test_type:
-        derived_from: test_type
-    specific2_test_type:
-        derived_from: test_type
-
-type_implementations:
-    first_implementation:
-        type: specific1_test_type
-        node_ref: test_node
-    second_implementation:
-        type: specific2_test_type
-        node_ref: test_node
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 103, DSLParsingLogicException)
-        self.assertEqual(
-            set(['first_implementation', 'second_implementation']),
-            set(ex.implementations))
-
-    def test_type_implementation_not_derived_type(self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-node_types:
-    specific1_test_type: {}
-
-type_implementations:
-    impl:
-        type: specific1_test_type
-        node_ref: test_node
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 102, DSLParsingLogicException)
-        self.assertEquals('impl', ex.implementation)
+    test_type: {}
+node_templates:
+    test_node:
+        type: test_type
+        interfaces:
+            test_interface:
+                op: one.two.three.four
+plugins:
+    one.two:
+        executor: host_agent
+        source: dummy
+    one:
+        executor: host_agent
+        source: dummy
+        """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 91, DSLParsingLogicException)
 
     def test_node_set_non_existing_property(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
@@ -418,126 +403,6 @@ relationships:
         self.assertEqual(set(['cloudify.relationships.contained_in',
                               'derived_from_contained_in']),
                          set(ex.relationship_types))
-
-    def test_relationship_implementation_ambiguous(self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
-    test_node2:
-        type: test_type
-        relationships:
-            - type: test_relationship
-              target: test_node
-
-relationships:
-    test_relationship: {} """]) + """
-
-relationships:
-    specific_test_relationship:
-        derived_from: test_relationship
-
-relationship_implementations:
-    specific_test_relationship_impl1:
-        type: specific_test_relationship
-        source_node_ref: test_node2
-        target_node_ref: test_node
-    specific_test_relationship_impl2:
-        type: specific_test_relationship
-        source_node_ref: test_node2
-        target_node_ref: test_node
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 108, DSLParsingLogicException)
-        self.assertEqual(
-            set(['specific_test_relationship_impl1',
-                 'specific_test_relationship_impl2']),
-            set(ex.implementations))
-
-    def test_relationship_implementation_not_derived_type(self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
-    test_node2:
-        type: test_type
-        relationships:
-            - type: test_relationship
-              target: test_node
-relationships:
-    test_relationship: {} """]) + """
-
-relationships:
-    specific_test_relationship: {}
-
-relationship_implementations:
-    impl:
-        type: specific_test_relationship
-        source_node_ref: test_node2
-        target_node_ref: test_node
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 111, DSLParsingLogicException)
-        self.assertEquals('impl', ex.implementation)
-
-    def test_type_impl_non_existing_node(self):
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-
-type_implementations:
-    impl:
-        type: test_type
-        node_ref: non_existing_node
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 110, DSLParsingLogicException)
-        self.assertEquals('impl', ex.implementation)
-        self.assertEquals('non_existing_node', ex.node_ref)
-
-    def test_relationship_impl_non_existing_source_node(self):
-
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT]) + """
-relationships:
-    test_relationship: {}
-
-relationship_implementations:
-    impl:
-        type: test_relationship
-        source_node_ref: non_existing_node
-        target_node_ref: test_node
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 111, DSLParsingLogicException)
-        self.assertEquals('impl', ex.implementation)
-        self.assertEquals('non_existing_node', ex.source_node_ref)
-
-    def test_relationship_impl_non_existing_target_node(self):
-
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship: {}
-
-relationship_implementations:
-    impl:
-        type: test_relationship
-        source_node_ref: test_node
-        target_node_ref: non_existing_node
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 111, DSLParsingLogicException)
-        self.assertEquals('impl', ex.implementation)
-
-    def test_relationship_impl_for_no_relationship_specified(self):
-
-        yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT + """
-    test_node2:
-        type: test_type """]) + """
-
-relationships:
-    test_relationship: {}
-
-relationship_implementations:
-    impl:
-        type: test_relationship
-        source_node_ref: test_node
-        target_node_ref: test_node2
-"""
-        ex = self._assert_dsl_parsing_exception_error_code(
-            yaml, 111, DSLParsingLogicException)
-        self.assertEquals('impl', ex.implementation)
 
     def test_group_missing_member(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -808,7 +673,10 @@ node_templates:
                            ' than "{1}". You are currently using' \
                            ' version "{2}"' \
             .format(constants.PLUGIN_INSTALL_ARGUMENTS_KEY,
-                    DSL_VERSION_1_1, DSL_VERSION_1_0)
+                    version.DSL_VERSION_1_1,
+                    version.DSL_VERSION_1_0)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 70, parsing_method=self.parse_1_0)
         self.assertRaisesRegex(DSLParsingLogicException,
                                expected_err_msg, self.parse, yaml,
                                dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0)
@@ -816,52 +684,60 @@ node_templates:
     def test_parse_empty_or_none_dsl_version(self):
         expected_err_msg = 'tosca_definitions_version is missing or empty'
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg, parse_dsl_version, '')
+                               expected_err_msg,
+                               version.parse_dsl_version, '')
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg, parse_dsl_version, None)
+                               expected_err_msg,
+                               version.parse_dsl_version, None)
 
     def test_parse_not_string_dsl_version(self):
         expected_err_msg = 'Invalid tosca_definitions_version: \[1\] is not' \
                            ' a string'
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg, parse_dsl_version, [1])
+                               expected_err_msg,
+                               version.parse_dsl_version, [1])
 
     def test_parse_wrong_dsl_version_format(self):
         expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
                            'expected a value following this format: "{1}"'\
-            .format('1_0', DSL_VERSION_1_0)
+            .format('1_0', version.DSL_VERSION_1_0)
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg, parse_dsl_version, '1_0')
+                               expected_err_msg,
+                               version.parse_dsl_version, '1_0')
 
         expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
                            'expected a value following this format: "{1}"' \
-            .format('cloudify_dsl_1.0', DSL_VERSION_1_0)
+            .format('cloudify_dsl_1.0', version.DSL_VERSION_1_0)
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg, parse_dsl_version,
+                               expected_err_msg,
+                               version.parse_dsl_version,
                                'cloudify_dsl_1.0')
 
         expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
                            'major version is "a" while expected to be a' \
                            ' number' \
-            .format('cloudify_dsl_a_0', DSL_VERSION_1_0)
+            .format('cloudify_dsl_a_0', version.DSL_VERSION_1_0)
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg, parse_dsl_version,
+                               expected_err_msg,
+                               version.parse_dsl_version,
                                'cloudify_dsl_a_0')
 
         expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
                            'minor version is "a" while expected to be a' \
                            ' number' \
-            .format('cloudify_dsl_1_a', DSL_VERSION_1_0)
+            .format('cloudify_dsl_1_a', version.DSL_VERSION_1_0)
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg, parse_dsl_version,
+                               expected_err_msg,
+                               version.parse_dsl_version,
                                'cloudify_dsl_1_a')
 
         expected_err_msg = 'Invalid tosca_definitions_version: "{0}", ' \
                            'micro version is "a" while expected to be a' \
                            ' number' \
-            .format('cloudify_dsl_1_1_a', DSL_VERSION_1_0)
+            .format('cloudify_dsl_1_1_a', version.DSL_VERSION_1_0)
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg, parse_dsl_version,
+                               expected_err_msg,
+                               version.parse_dsl_version,
                                'cloudify_dsl_1_1_a')
 
     def test_max_retries_version_validation(self):
