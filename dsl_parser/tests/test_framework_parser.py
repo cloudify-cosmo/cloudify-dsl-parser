@@ -21,6 +21,92 @@ from dsl_parser.framework import (parser,
                                   elements)
 
 
+class TestSchemaSchemaValidation(testtools.TestCase):
+
+    def setUp(self):
+        super(TestSchemaSchemaValidation, self).setUp()
+        self.parser = parser.Parser()
+
+    def assert_invalid(self, element_cls):
+        self.assertRaises(exceptions.DSLParsingFormatException,
+                          self.parser.parse,
+                          value=None,
+                          element_cls=element_cls)
+
+    def test_invalid_schema(self):
+        class TestElement(elements.Element):
+            schema = 1
+        self.assert_invalid(TestElement)
+
+    def test_invalid_element_type_schema(self):
+        class TestElement(elements.Element):
+            schema = elements.ElementType(type=str)
+        self.assert_invalid(TestElement)
+
+    def test_invalid_leaf_element_type_schema1(self):
+        class TestElement(elements.Element):
+            schema = elements.Leaf(type=1)
+        self.assert_invalid(TestElement)
+
+    def test_invalid_leaf_element_type_schema2(self):
+        class TestElement(elements.Element):
+            schema = elements.Leaf(type=())
+        self.assert_invalid(TestElement)
+
+    def test_invalid_leaf_element_type_schema3(self):
+        class TestElement(elements.Element):
+            schema = elements.Leaf(type=(1,))
+        self.assert_invalid(TestElement)
+
+    def test_invalid_dict_element_type_schema1(self):
+        class TestElement(elements.Element):
+            schema = elements.Dict(type=str)
+        self.assert_invalid(TestElement)
+
+    def test_invalid_dict_element_type_schema2(self):
+        class TestElement(elements.Element):
+            schema = elements.Dict(type=elements.Element)
+        self.assert_invalid(TestElement)
+
+    def test_invalid_dict_element_type_schema3(self):
+        class TestElement(elements.Element):
+            schema = elements.Dict(type=1)
+        self.assert_invalid(TestElement)
+
+    def test_invalid_list_element_type_schema1(self):
+        class TestElement(elements.Element):
+            schema = elements.List(type=str)
+        self.assert_invalid(TestElement)
+
+    def test_invalid_list_element_type_schema2(self):
+        class TestElement(elements.Element):
+            schema = elements.List(type=elements.Element)
+        self.assert_invalid(TestElement)
+
+    def test_invalid_list_element_type_schema3(self):
+        class TestElement(elements.Element):
+            schema = elements.List(type=1)
+        self.assert_invalid(TestElement)
+
+    def test_invalid_dict_schema(self):
+        def assertion(schema):
+            test_element = type('TestElement', (elements.Element,),
+                                {'schema': schema})
+            self.assert_invalid(test_element)
+
+        class TestLeaf(elements.Element):
+            schema = elements.Leaf(type=str)
+
+        assertion({1: TestLeaf})
+        assertion({'key': elements.Leaf(type=str)})
+        assertion({'key': None})
+        assertion({'key': 'str'})
+        assertion({'key': elements.Element})
+
+    def test_invalid_list_schema(self):
+        pass
+
+
 class TestSchemaValidation(testtools.TestCase):
 
     def setUp(self):
@@ -39,102 +125,6 @@ class TestSchemaValidation(testtools.TestCase):
                           value=value,
                           element_cls=element_cls,
                           strict=strict)
-
-    def test_invalid_schema(self):
-        class TestElement(elements.Element):
-            schema = 1
-        self.assert_invalid(1, TestElement)
-        self.assert_invalid('1', TestElement)
-        self.assert_invalid({}, TestElement)
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_element_type_schema(self):
-        class TestElement(elements.Element):
-            schema = elements.ElementType(type=str)
-        self.assert_invalid('1', TestElement)
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_leaf_element_type_schema1(self):
-        class TestElement(elements.Element):
-            schema = elements.Leaf(type=1)
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_leaf_element_type_schema2(self):
-        class TestElement(elements.Element):
-            schema = elements.Leaf(type=())
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_leaf_element_type_schema3(self):
-        class TestElement(elements.Element):
-            schema = elements.Leaf(type=(1,))
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_dict_element_type_schema1(self):
-        class TestElement(elements.Element):
-            schema = elements.Dict(type=str)
-        self.assert_invalid({}, TestElement)
-        self.assert_invalid({'key': 'value'}, TestElement)
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_dict_element_type_schema2(self):
-        class TestElement(elements.Element):
-            schema = elements.Dict(type=elements.Element)
-        self.assert_invalid({}, TestElement)
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_dict_element_type_schema3(self):
-        class TestElement(elements.Element):
-            schema = elements.Dict(type=1)
-        self.assert_invalid({}, TestElement)
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_list_element_type_schema1(self):
-        class TestElement(elements.Element):
-            schema = elements.List(type=str)
-        self.assert_invalid([], TestElement)
-        self.assert_invalid(['one'], TestElement)
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_list_element_type_schema2(self):
-        class TestElement(elements.Element):
-            schema = elements.List(type=elements.Element)
-        self.assert_invalid([], TestElement)
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_list_element_type_schema3(self):
-        class TestElement(elements.Element):
-            schema = elements.List(type=1)
-        self.assert_invalid([], TestElement)
-        self.assert_invalid(None, TestElement)
-
-    def test_invalid_dict_schema(self):
-        def assertion(value, schema, valid=False):
-            test_element = type('TestElement', (elements.Element,),
-                                {'schema': schema})
-            if valid:
-                self.assert_valid(value, test_element)
-            else:
-                self.assert_invalid(value, test_element)
-
-        class TestLeaf(elements.Element):
-            schema = elements.Leaf(type=str)
-
-        # sanity
-        assertion({'key': 'value'}, {'key': TestLeaf}, valid=True)
-
-        assertion({1: 'one'}, {1: TestLeaf})
-        assertion({'key': 'value'}, {'key': elements.Leaf(type=str)})
-        assertion({'key': None}, {'key': None})
-        assertion({'key': str}, {'key': 'str'})
-        assertion({'key': 'value'}, {'key': elements.Element})
-        assertion(None, {1: TestLeaf})
-        assertion(None, {'key': elements.Leaf(type=str)})
-        assertion(None, {'key': None})
-        assertion(None, {'key': 'str'})
-        assertion(None, {'key': elements.Element})
-
-    def test_invalid_list_schema(self):
-        pass
 
     def test_primitive_leaf_element_type_schema_validation(self):
         class TestStrLeaf(elements.Element):
