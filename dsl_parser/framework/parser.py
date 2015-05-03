@@ -64,12 +64,27 @@ class Parser(object):
             raise exceptions.DSLParsingFormatException(1)
 
     def _traverse_dict_schema(self, schema,  parent_element, context):
-        if not parent_element:
-            return
-        if not isinstance(parent_element.initial_value, dict):
-            return
-
         for name, element_cls in schema.items():
+            # TODO: move to schema structure validation
+            if not isinstance(name, basestring):
+                raise exceptions.DSLParsingFormatException(
+                    1, 'Schema keys must be strings for {0} but'
+                       ' found {1}'.format(parent_element.name,
+                                           name))
+            # TODO: move to schema structure validation
+            if not (isinstance(element_cls, type) and
+                    issubclass(element_cls, elements.Element) and
+                    element_cls != elements.Element):
+                raise exceptions.DSLParsingFormatException(
+                    1, 'Schema values must be strict subclasses of Element'
+                       ' but found {0}'.format(element_cls))
+
+            # TODO: once the above is moved to specific schema structure
+            # validate, this condition should be moved to the beginning
+            # of this function
+            if not isinstance(parent_element.initial_value, dict):
+                continue
+
             if name not in parent_element.initial_value:
                 value = None
             else:
@@ -83,8 +98,24 @@ class Parser(object):
     def _traverse_element_type_schema(self, schema, parent_element, context):
         element_cls = schema.type
         if isinstance(schema, elements.Leaf):
+            # TODO: move to schema structure validation
+            if not (isinstance(element_cls, type) or
+                    (isinstance(element_cls, (list, tuple)) and
+                     len(element_cls) > 0 and
+                     all([isinstance(e, type) for e in element_cls]))):
+                raise exceptions.DSLParsingFormatException(
+                    1, 'ElementType type attribute must be a type or a '
+                       'list/tuple of types')
             return
-        elif isinstance(schema, elements.Dict):
+
+        # TODO: move to schema structure validation
+        if not (isinstance(element_cls, type) and
+                issubclass(element_cls, elements.Element) and
+                element_cls != elements.Element):
+            raise exceptions.DSLParsingFormatException(
+                1, 'Illegal element type specified: {0}'.format(element_cls))
+
+        if isinstance(schema, elements.Dict):
             if not isinstance(parent_element.initial_value, dict):
                 return
             for name, value in parent_element.initial_value.items():
@@ -136,7 +167,7 @@ class Parser(object):
                 for key in value.keys():
                     if not isinstance(key, basestring):
                         raise exceptions.DSLParsingFormatException(
-                            1, 'Schema/Dict keys must be strings for {0} but'
+                            1, 'Dict keys must be strings for {0} but'
                                ' found {1}'.format(element.name, key))
 
             if strict and isinstance(schema, dict):

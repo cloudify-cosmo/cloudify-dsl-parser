@@ -38,6 +38,7 @@ class List(ElementType):
 
 class Element(object):
 
+    schema = None
     required = False
     requires = {}
     provides = []
