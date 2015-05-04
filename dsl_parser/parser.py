@@ -26,7 +26,7 @@ from dsl_parser import (constants,
                         functions)
 from dsl_parser.exceptions import (DSLParsingFormatException,
                                    DSLParsingLogicException)
-from dsl_parser.framework.parser import Parser
+from dsl_parser.framework import parser
 
 
 NODE_TEMPLATES = 'node_templates'
@@ -85,8 +85,6 @@ def _parse(dsl_string, resources_base_url, dsl_location=None):
 
     parsed_dsl = _load_yaml(yaml_stream=dsl_string,
                             error_message='Failed to parse DSL')
-
-    parser = Parser()
 
     # validate and extract version
     parser.parse(parsed_dsl,

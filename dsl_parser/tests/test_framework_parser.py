@@ -26,7 +26,7 @@ class TestSchemaSchemaValidation(testtools.TestCase):
 
     def assert_invalid(self, element_cls):
         self.assertRaises(exceptions.DSLParsingSchemaAPIException,
-                          parser.schema_validator.validate,
+                          parser.validate_schema_api,
                           element_cls=element_cls)
 
     def test_invalid_schema(self):
@@ -120,19 +120,15 @@ class TestSchemaSchemaValidation(testtools.TestCase):
 
 class TestSchemaValidation(testtools.TestCase):
 
-    def setUp(self):
-        super(TestSchemaValidation, self).setUp()
-        self.parser = parser.Parser()
-
     def assert_valid(self, value, element_cls, strict=True):
-        self.assertEqual(self.parser.parse(value=value,
-                                           element_cls=element_cls,
-                                           strict=strict),
+        self.assertEqual(parser.parse(value=value,
+                                      element_cls=element_cls,
+                                      strict=strict),
                          value)
 
     def assert_invalid(self, value, element_cls, strict=True, error_code=1):
         exc = self.assertRaises(exceptions.DSLParsingException,
-                                self.parser.parse,
+                                parser.parse,
                                 value=value,
                                 element_cls=element_cls,
                                 strict=strict)

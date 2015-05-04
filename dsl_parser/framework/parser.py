@@ -62,7 +62,7 @@ class SchemaAPIValidator(object):
                 raise exceptions.DSLParsingSchemaAPIException(1)
         else:
             raise exceptions.DSLParsingSchemaAPIException(1)
-schema_validator = SchemaAPIValidator()
+_schema_validator = SchemaAPIValidator()
 
 
 class Parser(object):
@@ -73,7 +73,7 @@ class Parser(object):
               element_name='root',
               inputs=None,
               strict=True):
-        schema_validator.validate(element_cls)
+        validate_schema_api(element_cls)
         context = self._init(
             value=value,
             element_cls=element_cls,
@@ -305,6 +305,7 @@ class Parser(object):
                     required_args[requirement.name] = result
 
         return required_args
+_parser = Parser()
 
 
 class Context(object):
@@ -398,3 +399,19 @@ class Context(object):
 
     def descendants(self, element):
         return nx.descendants(self.element_tree, element)
+
+
+def validate_schema_api(element_cls):
+    _schema_validator.validate(element_cls)
+
+
+def parse(value,
+          element_cls,
+          element_name='root',
+          inputs=None,
+          strict=True):
+    return _parser.parse(value=value,
+                         element_cls=element_cls,
+                         element_name=element_name,
+                         inputs=inputs,
+                         strict=strict)

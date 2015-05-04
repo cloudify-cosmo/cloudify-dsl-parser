@@ -13,7 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser.framework.parser import Parser
+from dsl_parser.framework import parser
 from dsl_parser.framework.elements import Element
 from dsl_parser.elements import misc
 
@@ -28,5 +28,4 @@ def validate(obj, element_cls):
         'tosca_definitions_version': 'cloudify_dsl_1_1',
         'test': obj
     }
-    parser = Parser()
     parser.parse(obj, element_cls=TestElement, strict=True)
