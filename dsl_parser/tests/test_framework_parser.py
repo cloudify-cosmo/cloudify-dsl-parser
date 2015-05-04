@@ -23,14 +23,9 @@ from dsl_parser.framework import (parser,
 
 class TestSchemaSchemaValidation(testtools.TestCase):
 
-    def setUp(self):
-        super(TestSchemaSchemaValidation, self).setUp()
-        self.parser = parser.Parser()
-
     def assert_invalid(self, element_cls):
-        self.assertRaises(exceptions.DSLParsingFormatException,
-                          self.parser.parse,
-                          value=None,
+        self.assertRaises(exceptions.DSLParsingSchemaAPIException,
+                          parser.schema_validator.validate,
                           element_cls=element_cls)
 
     def test_invalid_schema(self):
@@ -103,8 +98,23 @@ class TestSchemaSchemaValidation(testtools.TestCase):
         assertion({'key': 'str'})
         assertion({'key': elements.Element})
 
-    def test_invalid_list_schema(self):
-        pass
+    def test_invalid_list_schema1(self):
+        class TestList(elements.Element):
+            schema = []
+        self.assert_invalid(TestList)
+
+    def test_invalid_list_schema2(self):
+        class TestList(elements.Element):
+            schema = [
+                elements.Leaf(type=str),
+                [elements.Leaf(type=int)]
+            ]
+        self.assert_invalid(TestList)
+
+    def test_invalid_list_schema3(self):
+        class TestList(elements.Element):
+            schema = [1]
+        self.assert_invalid(TestList)
 
 
 class TestSchemaValidation(testtools.TestCase):
@@ -230,6 +240,29 @@ class TestSchemaValidation(testtools.TestCase):
         self.assert_valid({'key': 'value'}, TestElement, strict=False)
 
     def test_list_schema_validation(self):
+        class TestChild(elements.Element):
+            schema = elements.Leaf(type=int)
+
+        class TestElement(elements.Element):
+            schema = [
+                elements.Leaf(type=str),
+                {
+                    'test': TestChild
+                }
+            ]
+        self.assert_valid('value', TestElement)
+        self.assert_valid({'test': 123}, TestElement)
+        self.assert_invalid(123, TestElement)
+        self.assert_invalid({'test': 'value'}, TestElement)
+
+    def test_required_value(self):
+        class TestElement(elements.Element):
+            required = True
+            schema = elements.Leaf(type=str)
+        self.assert_valid('1', TestElement)
+        self.assert_invalid(None, TestElement)
+
+    def test_cycle_detection(self):
         pass
 
     def test_strict_validation(self):

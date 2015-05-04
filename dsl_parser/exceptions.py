@@ -58,3 +58,7 @@ class DSLParsingFormatException(DSLParsingException):
 
 class DSLParsingElementMatchException(DSLParsingException):
     pass
+
+
+class DSLParsingSchemaAPIException(DSLParsingException):
+    pass

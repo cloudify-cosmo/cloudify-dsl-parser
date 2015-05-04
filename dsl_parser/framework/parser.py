@@ -20,9 +20,69 @@ from dsl_parser.framework import elements
 from dsl_parser.framework.requirements import Requirement
 
 
+class SchemaAPIValidator(object):
+
+    def validate(self, element_cls):
+        self._traverse_element_cls(element_cls)
+
+    def _traverse_element_cls(self, element_cls):
+        try:
+            if not issubclass(element_cls, elements.Element):
+                raise exceptions.DSLParsingSchemaAPIException(1)
+        except TypeError:
+            raise exceptions.DSLParsingSchemaAPIException(1)
+        self._traverse_schema(element_cls.schema)
+
+    def _traverse_schema(self, schema, list_nesting=0):
+        if isinstance(schema, dict):
+            for key, value in schema.items():
+                if not isinstance(key, basestring):
+                    raise exceptions.DSLParsingSchemaAPIException(1)
+                self._traverse_element_cls(value)
+        elif isinstance(schema, list):
+            if list_nesting > 0:
+                raise exceptions.DSLParsingSchemaAPIException(1)
+            if len(schema) == 0:
+                raise exceptions.DSLParsingSchemaAPIException(1)
+            for value in schema:
+                self._traverse_schema(value, list_nesting+1)
+        elif isinstance(schema, elements.ElementType):
+            if isinstance(schema, elements.Leaf):
+                if not isinstance(schema.type, (type, list, tuple)):
+                    raise exceptions.DSLParsingSchemaAPIException(1)
+                if (isinstance(schema.type, (list, tuple)) and
+                    (not schema.type or
+                     not all([isinstance(i, type) for i in schema.type]))):
+                    raise exceptions.DSLParsingSchemaAPIException(1)
+            elif isinstance(schema, elements.Dict):
+                self._traverse_element_cls(schema.type)
+            elif isinstance(schema, elements.List):
+                self._traverse_element_cls(schema.type)
+            else:
+                raise exceptions.DSLParsingSchemaAPIException(1)
+        else:
+            raise exceptions.DSLParsingSchemaAPIException(1)
+schema_validator = SchemaAPIValidator()
+
+
 class Parser(object):
 
-    def _init_element_context(self, value, element_cls, element_name, inputs):
+    def parse(self,
+              value,
+              element_cls,
+              element_name='root',
+              inputs=None,
+              strict=True):
+        schema_validator.validate(element_cls)
+        context = self._init(
+            value=value,
+            element_cls=element_cls,
+            element_name=element_name,
+            inputs=inputs)
+        self._iterate_elements(context, strict=strict)
+        return context.root_element.value
+
+    def _init(self, value, element_cls, element_name, inputs):
         context = Context(self, inputs)
         self._traverse_element_cls(element_cls=element_cls,
                                    name=element_name,
@@ -61,30 +121,13 @@ class Parser(object):
                                        parent_element=parent_element,
                                        context=context)
         else:
-            raise exceptions.DSLParsingFormatException(1)
+            raise ValueError('Illegal state should have been identified'
+                             ' by schema API validation')
 
     def _traverse_dict_schema(self, schema,  parent_element, context):
+        if not isinstance(parent_element.initial_value, dict):
+            return
         for name, element_cls in schema.items():
-            # TODO: move to schema structure validation
-            if not isinstance(name, basestring):
-                raise exceptions.DSLParsingFormatException(
-                    1, 'Schema keys must be strings for {0} but'
-                       ' found {1}'.format(parent_element.name,
-                                           name))
-            # TODO: move to schema structure validation
-            if not (isinstance(element_cls, type) and
-                    issubclass(element_cls, elements.Element) and
-                    element_cls != elements.Element):
-                raise exceptions.DSLParsingFormatException(
-                    1, 'Schema values must be strict subclasses of Element'
-                       ' but found {0}'.format(element_cls))
-
-            # TODO: once the above is moved to specific schema structure
-            # validate, this condition should be moved to the beginning
-            # of this function
-            if not isinstance(parent_element.initial_value, dict):
-                continue
-
             if name not in parent_element.initial_value:
                 value = None
             else:
@@ -96,25 +139,10 @@ class Parser(object):
                                        context=context)
 
     def _traverse_element_type_schema(self, schema, parent_element, context):
-        element_cls = schema.type
         if isinstance(schema, elements.Leaf):
-            # TODO: move to schema structure validation
-            if not (isinstance(element_cls, type) or
-                    (isinstance(element_cls, (list, tuple)) and
-                     len(element_cls) > 0 and
-                     all([isinstance(e, type) for e in element_cls]))):
-                raise exceptions.DSLParsingFormatException(
-                    1, 'ElementType type attribute must be a type or a '
-                       'list/tuple of types')
             return
 
-        # TODO: move to schema structure validation
-        if not (isinstance(element_cls, type) and
-                issubclass(element_cls, elements.Element) and
-                element_cls != elements.Element):
-            raise exceptions.DSLParsingFormatException(
-                1, 'Illegal element type specified: {0}'.format(element_cls))
-
+        element_cls = schema.type
         if isinstance(schema, elements.Dict):
             if not isinstance(parent_element.initial_value, dict):
                 return
@@ -134,7 +162,8 @@ class Parser(object):
                                            parent_element=parent_element,
                                            context=context)
         else:
-            raise exceptions.DSLParsingFormatException(1)
+            raise ValueError('Illegal state should have been identified'
+                             ' by schema API validation')
 
     def _traverse_list_schema(self, schema, parent_element, context):
         for schema_item in schema:
@@ -207,8 +236,8 @@ class Parser(object):
                         break
                 if not validated:
                     if not last_error:
-                        raise exceptions.DSLParsingFormatException(
-                            1, 'Invalid list schema')
+                        raise ValueError('Illegal state should have been '
+                                         'identified by schema API validation')
                     else:
                         raise last_error
             else:
@@ -276,20 +305,6 @@ class Parser(object):
                     required_args[requirement.name] = result
 
         return required_args
-
-    def parse(self,
-              value,
-              element_cls,
-              element_name='root',
-              inputs=None,
-              strict=True):
-        context = self._init_element_context(
-            value=value,
-            element_cls=element_cls,
-            element_name=element_name,
-            inputs=inputs)
-        self._iterate_elements(context, strict=strict)
-        return context.root_element.value
 
 
 class Context(object):
