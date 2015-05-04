@@ -18,7 +18,8 @@ import testtools
 from dsl_parser import exceptions
 
 from dsl_parser.framework import (parser,
-                                  elements)
+                                  elements,
+                                  requirements)
 
 
 class TestSchemaSchemaValidation(testtools.TestCase):
@@ -129,12 +130,13 @@ class TestSchemaValidation(testtools.TestCase):
                                            strict=strict),
                          value)
 
-    def assert_invalid(self, value, element_cls, strict=True):
-        self.assertRaises(exceptions.DSLParsingFormatException,
-                          self.parser.parse,
-                          value=value,
-                          element_cls=element_cls,
-                          strict=strict)
+    def assert_invalid(self, value, element_cls, strict=True, error_code=1):
+        exc = self.assertRaises(exceptions.DSLParsingException,
+                                self.parser.parse,
+                                value=value,
+                                element_cls=element_cls,
+                                strict=strict)
+        self.assertEqual(exc.err_code, error_code)
 
     def test_primitive_leaf_element_type_schema_validation(self):
         class TestStrLeaf(elements.Element):
@@ -263,7 +265,23 @@ class TestSchemaValidation(testtools.TestCase):
         self.assert_invalid(None, TestElement)
 
     def test_cycle_detection(self):
-        pass
+        def predicate(source, target):
+            return source.name != target.name
+
+        class TestChild(elements.Element):
+            schema = elements.Leaf(type=str)
+            requires = {
+                'self': [requirements.Value(
+                    'req',
+                    multiple_results=True,
+                    predicate=predicate)]
+            }
+
+        class TestElement(elements.Element):
+            schema = elements.List(type=TestChild)
+
+        self.assert_valid(['1'], TestElement)
+        self.assert_invalid(['1', '2'], TestElement, error_code=100)
 
     def test_strict_validation(self):
         class TestLeaf(elements.Element):

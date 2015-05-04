@@ -371,11 +371,12 @@ class Context(object):
         except nx.NetworkXUnfeasible:
             # Cycle detected
             cycle = nx.recursive_simple_cycles(self.element_graph)[0]
-            names = [e.name for e in cycle]
-            names.append(names[0])
+            names = [str(e.name) for e in cycle]
+            names.append(str(names[0]))
             ex = exceptions.DSLParsingLogicException(
-                100, 'Failed parsing. Circular dependency detected: {0}'
-                     .format(' --> '.join(names)))
+                exceptions.ERROR_CODE_CYCLE,
+                'Failed parsing. Circular dependency detected: {0}'
+                .format(' --> '.join(names)))
             ex.circular_dependency = names
             raise ex
 

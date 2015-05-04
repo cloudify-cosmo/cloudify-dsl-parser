@@ -62,3 +62,6 @@ class DSLParsingElementMatchException(DSLParsingException):
 
 class DSLParsingSchemaAPIException(DSLParsingException):
     pass
+
+
+ERROR_CODE_CYCLE = 100
