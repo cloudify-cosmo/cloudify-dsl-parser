@@ -205,7 +205,6 @@ class GroupMembers(Element):
 
 class GroupPolicies(DictElement):
 
-    # TODO: validate at least one policy
     required = True
     schema = Dict(type=GroupPolicy)
 

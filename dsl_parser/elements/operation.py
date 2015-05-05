@@ -64,7 +64,6 @@ class NodeTemplateOperationInputs(Element):
 class OperationMaxRetries(Element):
 
     schema = Leaf(type=int)
-
     requires = {
         misc.ToscaDefinitionsVersion: ['version']
     }
@@ -88,7 +87,6 @@ class OperationMaxRetries(Element):
 class OperationRetryInterval(Element):
 
     schema = Leaf(type=(int, float, long))
-
     requires = {
         misc.ToscaDefinitionsVersion: ['version']
     }

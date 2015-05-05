@@ -37,7 +37,6 @@ class Type(Element):
 class DerivedFrom(Element):
 
     schema = Leaf(type=str)
-
     descriptor = ''
 
     def validate(self):

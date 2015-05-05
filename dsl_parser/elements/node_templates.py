@@ -186,7 +186,6 @@ class NodeTemplateRelationship(Element):
         'source_interfaces': _operation.NodeTemplateInterfaces,
         'target_interfaces': _operation.NodeTemplateInterfaces,
     }
-
     requires = {
         _relationships.Relationship: [
             Value('relationship_type',
@@ -214,7 +213,6 @@ class NodeTemplateRelationship(Element):
 class NodeTemplateRelationships(Element):
 
     schema = List(type=NodeTemplateRelationship)
-
     requires = {
         _relationships.Relationships: [Value('relationships')],
     }
