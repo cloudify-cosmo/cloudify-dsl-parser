@@ -65,66 +65,87 @@ class SchemaAPIValidator(object):
 _schema_validator = SchemaAPIValidator()
 
 
-class Parser(object):
+class Context(object):
 
-    def parse(self,
-              value,
-              element_cls,
-              element_name='root',
-              inputs=None,
-              strict=True):
-        validate_schema_api(element_cls)
-        context = self._init(
-            value=value,
-            element_cls=element_cls,
-            element_name=element_name,
-            inputs=inputs)
-        self._iterate_elements(context, strict=strict)
-        return context.root_element.value
-
-    def _init(self, value, element_cls, element_name, inputs):
-        context = Context(self, inputs)
+    def __init__(self,
+                 value,
+                 element_cls,
+                 element_name,
+                 inputs):
+        self.inputs = inputs or {}
+        self.element_type_to_elements = {}
+        self._root_element = None
+        self._element_tree = nx.DiGraph()
+        self._element_graph = nx.DiGraph()
         self._traverse_element_cls(element_cls=element_cls,
                                    name=element_name,
                                    value=value,
-                                   parent_element=None,
-                                   context=context)
-        context.calculate_element_graph()
-        return context
+                                   parent_element=None)
+        self._calculate_element_graph()
+
+    @property
+    def parsed_value(self):
+        return self._root_element.value if self._root_element else None
+
+    def child_elements_iter(self, element):
+        return self._element_tree.successors_iter(element)
+
+    def ancestors_iter(self, element):
+        current_element = element
+        while True:
+            predecessors = self._element_tree.predecessors(current_element)
+            if not predecessors:
+                return
+            if len(predecessors) > 1:
+                raise exceptions.DSLParsingFormatException(
+                    1, 'More than 1 parent found for {0}'
+                       .format(element))
+            current_element = predecessors[0]
+            yield current_element
+
+    def descendants(self, element):
+        return nx.descendants(self._element_tree, element)
+
+    def _add_element(self, element, parent=None):
+        element_type = type(element)
+        if element_type not in self.element_type_to_elements:
+            self.element_type_to_elements[element_type] = []
+        self.element_type_to_elements[element_type].append(element)
+
+        self._element_tree.add_node(element)
+        if parent:
+            self._element_tree.add_edge(parent, element)
+        else:
+            self._root_element = element
 
     def _traverse_element_cls(self,
                               element_cls,
                               name,
                               value,
-                              parent_element,
-                              context):
+                              parent_element):
         element = element_cls(name=name,
                               initial_value=value,
-                              context=context)
-        context.add_element(element, parent=parent_element)
+                              context=self)
+        self._add_element(element, parent=parent_element)
         self._traverse_schema(schema=element_cls.schema,
-                              parent_element=element,
-                              context=context)
+                              parent_element=element)
 
-    def _traverse_schema(self, schema, parent_element, context):
+    def _traverse_schema(self, schema, parent_element):
         if isinstance(schema, dict):
             self._traverse_dict_schema(schema=schema,
-                                       parent_element=parent_element,
-                                       context=context)
+                                       parent_element=parent_element)
         elif isinstance(schema, elements.ElementType):
             self._traverse_element_type_schema(
                 schema=schema,
-                parent_element=parent_element,
-                context=context)
+                parent_element=parent_element)
         elif isinstance(schema, list):
             self._traverse_list_schema(schema=schema,
-                                       parent_element=parent_element,
-                                       context=context)
+                                       parent_element=parent_element)
         else:
             raise ValueError('Illegal state should have been identified'
                              ' by schema API validation')
 
-    def _traverse_dict_schema(self, schema,  parent_element, context):
+    def _traverse_dict_schema(self, schema,  parent_element):
         if not isinstance(parent_element.initial_value, dict):
             return
         for name, element_cls in schema.items():
@@ -135,10 +156,9 @@ class Parser(object):
             self._traverse_element_cls(element_cls=element_cls,
                                        name=name,
                                        value=value,
-                                       parent_element=parent_element,
-                                       context=context)
+                                       parent_element=parent_element)
 
-    def _traverse_element_type_schema(self, schema, parent_element, context):
+    def _traverse_element_type_schema(self, schema, parent_element):
         if isinstance(schema, elements.Leaf):
             return
 
@@ -150,8 +170,7 @@ class Parser(object):
                 self._traverse_element_cls(element_cls=element_cls,
                                            name=name,
                                            value=value,
-                                           parent_element=parent_element,
-                                           context=context)
+                                           parent_element=parent_element)
         elif isinstance(schema, elements.List):
             if not isinstance(parent_element.initial_value, list):
                 return
@@ -159,25 +178,78 @@ class Parser(object):
                 self._traverse_element_cls(element_cls=element_cls,
                                            name=index,
                                            value=value,
-                                           parent_element=parent_element,
-                                           context=context)
+                                           parent_element=parent_element)
         else:
             raise ValueError('Illegal state should have been identified'
                              ' by schema API validation')
 
-    def _traverse_list_schema(self, schema, parent_element, context):
+    def _traverse_list_schema(self, schema, parent_element):
         for schema_item in schema:
             self._traverse_schema(schema=schema_item,
-                                  parent_element=parent_element,
-                                  context=context)
+                                  parent_element=parent_element)
 
-    def _iterate_elements(self, context, strict):
+    def _calculate_element_graph(self):
+        self.element_graph = nx.DiGraph(self._element_tree)
+        for element_type, _elements in self.element_type_to_elements.items():
+            requires = element_type.requires
+            for requirement, requirement_values in requires.items():
+                requirement_values = [
+                    Requirement(r) if isinstance(r, basestring)
+                    else r for r in requirement_values]
+                if requirement == 'inputs':
+                    continue
+                if requirement == 'self':
+                    requirement = element_type
+                dependencies = self.element_type_to_elements.get(
+                    requirement, [])
+                for dependency in dependencies:
+                    for element in _elements:
+                        predicates = [r.predicate for r in requirement_values
+                                      if r.predicate is not None]
+                        add_dependency = not predicates or all([
+                            predicate(element, dependency)
+                            for predicate in predicates])
+                        if add_dependency:
+                            self.element_graph.add_edge(element, dependency)
+        # we reverse the graph because only netorkx 1.9.1 has the reverse
+        # flag in the topological sort function, it is only used by it
+        # so this should be good
+        self.element_graph.reverse(copy=False)
+
+    def elements_graph_topological_sort(self):
+        try:
+            return nx.topological_sort(self.element_graph)
+        except nx.NetworkXUnfeasible:
+            # Cycle detected
+            cycle = nx.recursive_simple_cycles(self.element_graph)[0]
+            names = [str(e.name) for e in cycle]
+            names.append(str(names[0]))
+            ex = exceptions.DSLParsingLogicException(
+                exceptions.ERROR_CODE_CYCLE,
+                'Failed parsing. Circular dependency detected: {0}'
+                .format(' --> '.join(names)))
+            ex.circular_dependency = names
+            raise ex
+
+
+class Parser(object):
+
+    def parse(self,
+              value,
+              element_cls,
+              element_name='root',
+              inputs=None,
+              strict=True):
+        context = Context(
+            value=value,
+            element_cls=element_cls,
+            element_name=element_name,
+            inputs=inputs)
         for element in context.elements_graph_topological_sort():
-            required_args = self._extract_element_requirements(
-                element=element,
-                context=context)
+            required_args = self._extract_element_requirements(element)
             self._validate_element(element, required_args, strict=strict)
             self._parse_element(element, required_args)
+        return context.parsed_value
 
     @staticmethod
     def _validate_element(element, required_args, strict):
@@ -252,7 +324,8 @@ class Parser(object):
         element.provided = element.calculate_provided(**required_args)
 
     @staticmethod
-    def _extract_element_requirements(element, context):
+    def _extract_element_requirements(element):
+        context = element.context
         required_args = {}
         for required_type, requirements in element.requires.items():
             requirements = [Requirement(r) if isinstance(r, basestring)
@@ -308,99 +381,6 @@ class Parser(object):
 _parser = Parser()
 
 
-class Context(object):
-
-    def __init__(self, parser, inputs):
-        self.parser = parser
-        self.inputs = inputs or {}
-        self._root_element = None
-        self.element_tree = nx.DiGraph()
-        self.element_graph = nx.DiGraph()
-        self.element_type_to_elements = {}
-
-    @property
-    def root_element(self):
-        return self._root_element
-
-    @root_element.setter
-    def root_element(self, value):
-        self._root_element = value
-
-    def add_element(self, element, parent=None):
-        element_type = type(element)
-        if element_type not in self.element_type_to_elements:
-            self.element_type_to_elements[element_type] = []
-        self.element_type_to_elements[element_type].append(element)
-
-        self.element_tree.add_node(element)
-        if parent:
-            self.element_tree.add_edge(parent, element)
-        else:
-            self.root_element = element
-
-    def calculate_element_graph(self):
-        self.element_graph = nx.DiGraph(self.element_tree)
-        for element_type, _elements in self.element_type_to_elements.items():
-            requires = element_type.requires
-            for requirement, requirement_values in requires.items():
-                requirement_values = [
-                    Requirement(r) if isinstance(r, basestring)
-                    else r for r in requirement_values]
-                if requirement == 'inputs':
-                    continue
-                if requirement == 'self':
-                    requirement = element_type
-                dependencies = self.element_type_to_elements.get(
-                    requirement, [])
-                for dependency in dependencies:
-                    for element in _elements:
-                        predicates = [r.predicate for r in requirement_values
-                                      if r.predicate is not None]
-                        add_dependency = not predicates or all([
-                            predicate(element, dependency)
-                            for predicate in predicates])
-                        if add_dependency:
-                            self.element_graph.add_edge(element, dependency)
-        # we reverse the graph because only netorkx 1.9.1 has the reverse
-        # flag in the topological sort function, it is only used by it
-        # so this should be good
-        self.element_graph.reverse(copy=False)
-
-    def elements_graph_topological_sort(self):
-        try:
-            return nx.topological_sort(self.element_graph)
-        except nx.NetworkXUnfeasible:
-            # Cycle detected
-            cycle = nx.recursive_simple_cycles(self.element_graph)[0]
-            names = [str(e.name) for e in cycle]
-            names.append(str(names[0]))
-            ex = exceptions.DSLParsingLogicException(
-                exceptions.ERROR_CODE_CYCLE,
-                'Failed parsing. Circular dependency detected: {0}'
-                .format(' --> '.join(names)))
-            ex.circular_dependency = names
-            raise ex
-
-    def child_elements_iter(self, element):
-        return self.element_tree.successors_iter(element)
-
-    def ancestors_iter(self, element):
-        current_element = element
-        while True:
-            predecessors = self.element_tree.predecessors(current_element)
-            if not predecessors:
-                return
-            if len(predecessors) > 1:
-                raise exceptions.DSLParsingFormatException(
-                    1, 'More than 1 parent found for {0}'
-                       .format(element))
-            current_element = predecessors[0]
-            yield current_element
-
-    def descendants(self, element):
-        return nx.descendants(self.element_tree, element)
-
-
 def validate_schema_api(element_cls):
     _schema_validator.validate(element_cls)
 
@@ -410,6 +390,7 @@ def parse(value,
           element_name='root',
           inputs=None,
           strict=True):
+    validate_schema_api(element_cls)
     return _parser.parse(value=value,
                          element_cls=element_cls,
                          element_name=element_name,
