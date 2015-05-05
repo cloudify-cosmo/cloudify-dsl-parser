@@ -14,7 +14,6 @@
 #    * limitations under the License.
 
 
-import collections
 import copy
 import contextlib
 import urllib2
@@ -51,8 +50,6 @@ HOST_TYPE = 'cloudify.nodes.Compute'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
-OpDescriptor = collections.namedtuple('OpDescriptor', [
-    'plugin', 'op_struct', 'name'])
 
 
 def parse_from_path(dsl_file_path, resources_base_url=None):
@@ -116,7 +113,7 @@ def _parse(dsl_string, resources_base_url, dsl_location=None):
     return plan
 
 
-def _extract_plugin_names_and_operation_mapping_from_interface(
+def _process_interface_operations(
         interface,
         plugins,
         error_code,
@@ -125,7 +122,7 @@ def _extract_plugin_names_and_operation_mapping_from_interface(
     result = []
     for operation_name, operation_content in interface.items():
         op_descriptor = \
-            _extract_plugin_name_and_operation_mapping_from_operation(
+            _process_operation(
                 plugins=plugins,
                 operation_name=operation_name,
                 operation_content=operation_content,
@@ -136,7 +133,7 @@ def _extract_plugin_names_and_operation_mapping_from_interface(
     return result
 
 
-def _extract_plugin_name_and_operation_mapping_from_operation(
+def _process_operation(
         plugins,
         operation_name,
         operation_content,
@@ -159,16 +156,14 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
             raise RuntimeError('Illegal state. workflow mapping should always'
                                'be defined (enforced by schema validation)')
         else:
-            return OpDescriptor(
+            return _operation_struct(
                 name=operation_name,
-                plugin='',
-                op_struct=_operation_struct(
-                    plugin_name='',
-                    operation_mapping='',
-                    operation_inputs={},
-                    executor=None,
-                    max_retries=None,
-                    retry_interval=None))
+                plugin_name='',
+                operation_mapping='',
+                operation_inputs={},
+                executor=None,
+                max_retries=None,
+                retry_interval=None)
 
     candidate_plugins = [p for p in plugins.keys()
                          if operation_mapping.startswith('{0}.'.format(p))]
@@ -186,16 +181,14 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 workflow_parameters=operation_payload)
         else:
             operation_struct = _operation_struct(
+                name=operation_name,
                 plugin_name=plugin_name,
                 operation_mapping=mapping,
                 operation_inputs=operation_payload,
                 executor=operation_executor,
                 max_retries=operation_max_retries,
                 retry_interval=operation_retry_interval)
-        return OpDescriptor(
-            name=operation_name,
-            plugin=plugins[plugin_name],
-            op_struct=operation_struct)
+        return operation_struct
     elif resource_base and _resource_exists(resource_base, operation_mapping):
         operation_payload = copy.deepcopy(operation_payload or {})
         if constants.SCRIPT_PATH_PROPERTY in operation_payload:
@@ -235,16 +228,14 @@ def _extract_plugin_name_and_operation_mapping_from_operation(
                 workflow_parameters=operation_payload)
         else:
             operation_struct = _operation_struct(
+                name=operation_name,
                 plugin_name=constants.SCRIPT_PLUGIN_NAME,
                 operation_mapping=operation_mapping,
                 operation_inputs=operation_payload,
                 executor=operation_executor,
                 max_retries=operation_max_retries,
                 retry_interval=operation_retry_interval)
-        return OpDescriptor(
-            name=operation_name,
-            plugin=plugins[constants.SCRIPT_PLUGIN_NAME],
-            op_struct=operation_struct)
+        return operation_struct
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
@@ -262,13 +253,15 @@ def _resource_exists(resource_base, resource_name):
     return _validate_url_exists('{0}/{1}'.format(resource_base, resource_name))
 
 
-def _operation_struct(plugin_name,
+def _operation_struct(name,
+                      plugin_name,
                       operation_mapping,
                       operation_inputs,
                       executor,
                       max_retries,
                       retry_interval):
     return {
+        'name': name,
         'plugin': plugin_name,
         'operation': operation_mapping,
         'executor': executor,

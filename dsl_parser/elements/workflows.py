@@ -50,17 +50,14 @@ class Workflow(Element):
                                  'parameters': {}}
         else:
             operation_content = self.build_dict_result()
-
-        op_descriptor = \
-            old_parser._extract_plugin_name_and_operation_mapping_from_operation(  # noqa
-                plugins=plugins,
-                operation_name=self.name,
-                operation_content=operation_content,
-                error_code=21,
-                partial_error_message='',
-                resource_base=resource_base,
-                is_workflows=True)
-        return op_descriptor.op_struct
+        return old_parser._process_operation(
+            plugins=plugins,
+            operation_name=self.name,
+            operation_content=operation_content,
+            error_code=21,
+            partial_error_message='',
+            resource_base=resource_base,
+            is_workflows=True)
 
 
 class Workflows(DictElement):

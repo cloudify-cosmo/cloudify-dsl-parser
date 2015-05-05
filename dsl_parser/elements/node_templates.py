@@ -458,8 +458,8 @@ def _process_operations(partial_error_message,
                         resource_base):
     operations = {}
     for interface_name, interface in interfaces.items():
-        operation_mapping_context = \
-            old_parser._extract_plugin_names_and_operation_mapping_from_interface(  # noqa
+        interface_operations = \
+            old_parser._process_interface_operations(
                 interface=interface,
                 plugins=plugins,
                 error_code=error_code,
@@ -467,25 +467,24 @@ def _process_operations(partial_error_message,
                     'In interface {0} {1}'.format(interface_name,
                                                   partial_error_message)),
                 resource_base=resource_base)
-        for op_descriptor in operation_mapping_context:
-            op_struct = op_descriptor.op_struct
-            plugin_name = op_descriptor.op_struct['plugin']
-            operation_name = op_descriptor.name
-            if op_descriptor.plugin:
-                node_plugins[plugin_name] = op_descriptor.plugin
-            op_struct = op_struct.copy()
+        for operation in interface_operations:
+            plugin_name = operation['plugin']
+            operation_name = operation.pop('name')
+            if plugin_name:
+                node_plugins[plugin_name] = plugins[plugin_name]
+            operation = operation.copy()
             if operation_name in operations:
                 # Indicate this implicit operation name needs to be
                 # removed as we can only
                 # support explicit implementation in this case
                 operations[operation_name] = None
             else:
-                operations[operation_name] = op_struct
+                operations[operation_name] = operation
             operations['{0}.{1}'.format(interface_name,
-                                        operation_name)] = op_struct
+                                        operation_name)] = operation
 
-    return dict((operation, op_struct) for operation, op_struct in
-                operations.iteritems() if op_struct is not None)
+    return dict((operation_name, operation) for operation_name, operation in
+                operations.iteritems() if operation is not None)
 
 
 def _process_node_relationships_operations(relationship,
