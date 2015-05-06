@@ -83,7 +83,7 @@ def _parse(dsl_string, resources_base_url, dsl_location=None):
     parsed_dsl = _load_yaml(yaml_stream=dsl_string,
                             error_message='Failed to parse DSL')
 
-    # validate and extract version
+    # validate version
     parser.parse(parsed_dsl,
                  element_cls=blueprint.BlueprintVersionExtractor,
                  strict=False)
@@ -119,18 +119,13 @@ def _process_interface_operations(
         error_code,
         partial_error_message,
         resource_base):
-    result = []
-    for operation_name, operation_content in interface.items():
-        op_descriptor = \
-            _process_operation(
-                plugins=plugins,
-                operation_name=operation_name,
-                operation_content=operation_content,
-                error_code=error_code,
-                partial_error_message=partial_error_message,
-                resource_base=resource_base)
-        result.append(op_descriptor)
-    return result
+    return [_process_operation(plugins=plugins,
+                               operation_name=operation_name,
+                               operation_content=operation_content,
+                               error_code=error_code,
+                               partial_error_message=partial_error_message,
+                               resource_base=resource_base)
+            for operation_name, operation_content in interface.items()]
 
 
 def _process_operation(
@@ -156,7 +151,7 @@ def _process_operation(
             raise RuntimeError('Illegal state. workflow mapping should always'
                                'be defined (enforced by schema validation)')
         else:
-            return _operation_struct(
+            return _operation(
                 name=operation_name,
                 plugin_name='',
                 operation_mapping='',
@@ -175,12 +170,12 @@ def _process_operation(
         plugin_name = candidate_plugins[0]
         mapping = operation_mapping[len(plugin_name) + 1:]
         if is_workflows:
-            operation_struct = _workflow_operation_struct(
+            return _workflow_operation(
                 plugin_name=plugin_name,
                 workflow_mapping=mapping,
                 workflow_parameters=operation_payload)
         else:
-            operation_struct = _operation_struct(
+            return _operation(
                 name=operation_name,
                 plugin_name=plugin_name,
                 operation_mapping=mapping,
@@ -188,7 +183,6 @@ def _process_operation(
                 executor=operation_executor,
                 max_retries=operation_max_retries,
                 retry_interval=operation_retry_interval)
-        return operation_struct
     elif resource_base and _resource_exists(resource_base, operation_mapping):
         operation_payload = copy.deepcopy(operation_payload or {})
         if constants.SCRIPT_PATH_PROPERTY in operation_payload:
@@ -222,12 +216,12 @@ def _process_operation(
             raise DSLParsingLogicException(61, message)
 
         if is_workflows:
-            operation_struct = _workflow_operation_struct(
+            return _workflow_operation(
                 plugin_name=constants.SCRIPT_PLUGIN_NAME,
                 workflow_mapping=operation_mapping,
                 workflow_parameters=operation_payload)
         else:
-            operation_struct = _operation_struct(
+            return _operation(
                 name=operation_name,
                 plugin_name=constants.SCRIPT_PLUGIN_NAME,
                 operation_mapping=operation_mapping,
@@ -235,7 +229,6 @@ def _process_operation(
                 executor=operation_executor,
                 max_retries=operation_max_retries,
                 retry_interval=operation_retry_interval)
-        return operation_struct
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
@@ -253,13 +246,13 @@ def _resource_exists(resource_base, resource_name):
     return _validate_url_exists('{0}/{1}'.format(resource_base, resource_name))
 
 
-def _operation_struct(name,
-                      plugin_name,
-                      operation_mapping,
-                      operation_inputs,
-                      executor,
-                      max_retries,
-                      retry_interval):
+def _operation(name,
+               plugin_name,
+               operation_mapping,
+               operation_inputs,
+               executor,
+               max_retries,
+               retry_interval):
     return {
         'name': name,
         'plugin': plugin_name,
@@ -272,9 +265,9 @@ def _operation_struct(name,
     }
 
 
-def _workflow_operation_struct(plugin_name,
-                               workflow_mapping,
-                               workflow_parameters):
+def _workflow_operation(plugin_name,
+                        workflow_mapping,
+                        workflow_parameters):
     return {
         'plugin': plugin_name,
         'operation': workflow_mapping,
