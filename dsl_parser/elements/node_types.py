@@ -62,21 +62,9 @@ class NodeTypes(types.Types):
 
     def calculate_provided(self):
         return {
-            'host_types': _build_family_descendants_set(
-                types_dict=self.value,
-                derived_from=old_parser.HOST_TYPE)
+            'host_types': self._types_derived_from(old_parser.HOST_TYPE)
         }
 
-
-def _build_family_descendants_set(types_dict, derived_from):
-    return set(type_name for type_name in types_dict.iterkeys()
-               if _is_derived_from(type_name, types_dict, derived_from))
-
-
-def _is_derived_from(type_name, _types, derived_from):
-    if type_name == derived_from:
-        return True
-    elif 'derived_from' in _types[type_name]:
-        return _is_derived_from(_types[type_name]['derived_from'], _types,
-                                derived_from)
-    return False
+    def _types_derived_from(self, derived_from):
+        return set(type_name for type_name, _type in self.value.items()
+                   if derived_from in _type[old_parser.TYPE_HIERARCHY])
