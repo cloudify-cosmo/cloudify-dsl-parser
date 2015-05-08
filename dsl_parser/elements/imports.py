@@ -152,9 +152,9 @@ def _combine_imports(parsed_dsl, dsl_location, resources_base_url):
     for imported in ordered_imports:
         import_url = imported['import']
         parsed_imported_dsl = imported['parsed']
-        _validate_and_remove_dsl_version_if_exists(dsl_version,
-                                                   import_url,
-                                                   parsed_imported_dsl)
+        _validate_version(dsl_version,
+                          import_url,
+                          parsed_imported_dsl)
         _merge_parsed_into_combined(combined_parsed_dsl,
                                     parsed_imported_dsl)
 
@@ -209,9 +209,9 @@ def _build_ordered_imports(parsed_dsl,
     return ordered_imports
 
 
-def _validate_and_remove_dsl_version_if_exists(dsl_version,
-                                               import_url,
-                                               parsed_imported_dsl):
+def _validate_version(dsl_version,
+                      import_url,
+                      parsed_imported_dsl):
     if version.VERSION in parsed_imported_dsl:
         imported_dsl_version = parsed_imported_dsl[version.VERSION]
         if imported_dsl_version != dsl_version:
@@ -224,16 +224,14 @@ def _validate_and_remove_dsl_version_if_exists(dsl_version,
                     .format(dsl_version,
                             import_url,
                             imported_dsl_version))
-        # no need to keep imported dsl's version - it's only used for
-        # validation against the main blueprint's version
-        del parsed_imported_dsl[version.VERSION]
 
 
 def _merge_parsed_into_combined(combined_parsed_dsl, parsed_imported_dsl):
     # combine the current file with the combined parsed dsl
     # we have thus far
     for key, value in parsed_imported_dsl.iteritems():
-        if key == old_parser.IMPORTS:  # no need to merge those..
+        if key in [old_parser.IMPORTS, version.VERSION]:
+            # no need to merge those..
             continue
         if key not in combined_parsed_dsl:
             # simply add this first level property to the dsl
