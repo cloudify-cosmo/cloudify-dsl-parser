@@ -136,10 +136,6 @@ def _get_resource_location(resource_name,
 
 def _combine_imports(parsed_dsl, dsl_location, resources_base_url):
     combined_parsed_dsl = copy.deepcopy(parsed_dsl)
-
-    if old_parser.IMPORTS not in parsed_dsl:
-        return combined_parsed_dsl
-
     ordered_imports = _build_ordered_imports(parsed_dsl,
                                              dsl_location,
                                              resources_base_url)
@@ -166,18 +162,14 @@ def _build_ordered_imports(parsed_dsl,
                            resources_base_url):
     ordered_imports = []
 
-    def _build_ordered_imports_recursive(_parsed_dsl, _current_import):
+    def _build_ordered_imports_recursive(_current_parsed_dsl, _current_import):
         if _current_import is not None:
             ordered_imports.append({
                 'import': _current_import,
-                'parsed': _parsed_dsl,
+                'parsed': _current_parsed_dsl,
             })
-
-        if old_parser.IMPORTS not in _parsed_dsl:
-            return
-
         imports = [i['import'] for i in ordered_imports]
-        for another_import in _parsed_dsl[old_parser.IMPORTS]:
+        for another_import in _current_parsed_dsl.get(old_parser.IMPORTS, []):
             import_url = _get_resource_location(another_import,
                                                 resources_base_url,
                                                 _current_import)
@@ -188,20 +180,12 @@ def _build_ordered_imports(parsed_dsl,
                 ex.failed_import = another_import
                 raise ex
             if import_url not in imports:
-                try:
-                    with contextlib.closing(urllib2.urlopen(import_url)) as f:
-                        imported_dsl = old_parser._load_yaml(
-                            f, 'Failed to parse import {0} (via {1})'
-                               .format(another_import, import_url))
-                    _build_ordered_imports_recursive(imported_dsl,
-                                                     import_url)
-                except urllib2.URLError, ex:
-                    ex = old_parser.DSLParsingLogicException(
-                        13, 'Failed on import - Unable to open import url '
-                            '{0}; {1}'.format(import_url, ex.message))
-                    ex.failed_import = import_url
-                    raise ex
-
+                raw_imported_dsl = _fetch_import(import_url)
+                imported_dsl = old_parser._load_yaml(
+                    raw_imported_dsl,
+                    error_message='Failed to parse import {0} (via {1})'
+                                  .format(another_import, import_url))
+                _build_ordered_imports_recursive(imported_dsl, import_url)
     _build_ordered_imports_recursive(parsed_dsl, dsl_location)
     return ordered_imports
 
@@ -249,3 +233,15 @@ def _merge_into_dict_or_throw_on_duplicate(from_dict, to_dict,
             raise exceptions.DSLParsingLogicException(
                 4, 'Failed on import: Could not merge {0} due to conflict '
                    'on {1}'.format(key_name, key))
+
+
+def _fetch_import(import_url):
+    try:
+        with contextlib.closing(urllib2.urlopen(import_url)) as f:
+            return f.read()
+    except urllib2.URLError, ex:
+        ex = old_parser.DSLParsingLogicException(
+            13, 'Failed on import - Unable to open import url '
+                '{0}; {1}'.format(import_url, ex.message))
+        ex.failed_import = import_url
+        raise ex
