@@ -18,13 +18,10 @@ import copy
 import contextlib
 import urllib2
 
-import yaml
-import yaml.parser
-
 from dsl_parser import (constants,
-                        functions)
-from dsl_parser.exceptions import (DSLParsingFormatException,
-                                   DSLParsingLogicException)
+                        functions,
+                        utils)
+from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.framework import parser
 
 
@@ -80,8 +77,8 @@ def parse(dsl_string, resources_base_url=None):
 def _parse(dsl_string, resources_base_url, dsl_location=None):
     from dsl_parser.elements import blueprint
 
-    parsed_dsl = _load_yaml(yaml_stream=dsl_string,
-                            error_message='Failed to parse DSL')
+    parsed_dsl = utils.load_yaml(raw_yaml=dsl_string,
+                                 error_message='Failed to parse DSL')
 
     # validate version
     parser.parse(parsed_dsl,
@@ -273,15 +270,6 @@ def _workflow_operation(plugin_name,
         'operation': workflow_mapping,
         'parameters': workflow_parameters
     }
-
-
-def _load_yaml(yaml_stream, error_message):
-    try:
-        # load of empty string returns None so we convert it to an empty dict
-        return yaml.safe_load(yaml_stream) or {}
-    except yaml.parser.ParserError, ex:
-        raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'
-                                        .format(error_message, ex))
 
 
 def _validate_url_exists(url):

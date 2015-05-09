@@ -21,7 +21,8 @@ import urllib2
 
 from dsl_parser import (exceptions,
                         parser as old_parser,
-                        version)
+                        version,
+                        utils)
 from dsl_parser.framework.elements import (Element,
                                            Leaf,
                                            List)
@@ -181,8 +182,8 @@ def _build_ordered_imports(parsed_dsl,
                 raise ex
             if import_url not in imports:
                 raw_imported_dsl = _fetch_import(import_url)
-                imported_dsl = old_parser._load_yaml(
-                    raw_imported_dsl,
+                imported_dsl = utils.load_yaml(
+                    raw_yaml=raw_imported_dsl,
                     error_message='Failed to parse import {0} (via {1})'
                                   .format(another_import, import_url))
                 _build_ordered_imports_recursive(imported_dsl, import_url)

@@ -13,8 +13,12 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import yaml
+import yaml.parser
+
 from dsl_parser import functions
-from dsl_parser.exceptions import DSLParsingLogicException
+from dsl_parser.exceptions import (DSLParsingLogicException,
+                                   DSLParsingFormatException)
 
 
 def merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
@@ -102,3 +106,16 @@ def _validate_properties_types(properties, properties_schema):
             50, 'Property type validation failed: Property {0} type '
                 'is {1}, yet it was assigned with the value {2}'
                 .format(prop_key, prop_type, prop_val))
+
+
+def load_yaml(raw_yaml, error_message):
+    try:
+        result = yaml.safe_load(raw_yaml)
+        if result is None:
+            # load of empty string returns None so we convert it to an empty
+            # dict
+            result = {}
+        return result
+    except yaml.parser.ParserError, ex:
+        raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'
+                                        .format(error_message, ex))
