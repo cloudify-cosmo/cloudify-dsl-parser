@@ -13,6 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import contextlib
+import urllib2
+
 import yaml
 import yaml.parser
 
@@ -119,3 +122,11 @@ def load_yaml(raw_yaml, error_message):
     except yaml.parser.ParserError, ex:
         raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'
                                         .format(error_message, ex))
+
+
+def url_exists(url):
+    try:
+        with contextlib.closing(urllib2.urlopen(url)):
+            return True
+    except urllib2.URLError:
+        return False

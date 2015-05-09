@@ -240,7 +240,7 @@ def _process_operation(
 
 
 def _resource_exists(resource_base, resource_name):
-    return _validate_url_exists('{0}/{1}'.format(resource_base, resource_name))
+    return utils.url_exists('{0}/{1}'.format(resource_base, resource_name))
 
 
 def _operation(name,
@@ -270,11 +270,3 @@ def _workflow_operation(plugin_name,
         'operation': workflow_mapping,
         'parameters': workflow_parameters
     }
-
-
-def _validate_url_exists(url):
-    try:
-        with contextlib.closing(urllib2.urlopen(url)):
-            return True
-    except urllib2.URLError:
-        return False
