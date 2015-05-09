@@ -114,12 +114,10 @@ def _dsl_location_to_url(dsl_location, resources_base_url):
 def _get_resource_location(resource_name,
                            resources_base_url,
                            current_resource_context=None):
-    # Already url format
     url_parts = resource_name.split(':')
     if url_parts[0] in ['http', 'https', 'file', 'ftp']:
         return resource_name
 
-    # Points to an existing file
     if os.path.exists(resource_name):
         return 'file:{0}'.format(
             urllib.pathname2url(os.path.abspath(resource_name)))
@@ -158,7 +156,6 @@ def _combine_imports(parsed_dsl, dsl_location, resources_base_url):
         _merge_parsed_into_combined(combined_parsed_dsl,
                                     parsed_imported_dsl)
 
-    # clean the now unnecessary 'imports' section from the combined dsl
     if old_parser.IMPORTS in combined_parsed_dsl:
         del combined_parsed_dsl[old_parser.IMPORTS]
     return combined_parsed_dsl
@@ -227,35 +224,28 @@ def _validate_version(dsl_version,
 
 
 def _merge_parsed_into_combined(combined_parsed_dsl, parsed_imported_dsl):
-    # combine the current file with the combined parsed dsl
-    # we have thus far
     for key, value in parsed_imported_dsl.iteritems():
         if key in [old_parser.IMPORTS, version.VERSION]:
-            # no need to merge those..
-            continue
-        if key not in combined_parsed_dsl:
-            # simply add this first level property to the dsl
+            pass
+        elif key not in combined_parsed_dsl:
             combined_parsed_dsl[key] = value
+        elif key in MERGE_NO_OVERRIDE:
+            _merge_into_dict_or_throw_on_duplicate(
+                from_dict=value,
+                to_dict=combined_parsed_dsl[key],
+                key_name=key)
         else:
-            if key in MERGE_NO_OVERRIDE:
-                # this section will combine dictionary entries of the top
-                # level only, with no overrides
-                _merge_into_dict_or_throw_on_duplicate(
-                    value, combined_parsed_dsl[key], key)
-            else:
-                # first level property is not white-listed for merge -
-                # throw an exception
-                raise exceptions.DSLParsingLogicException(
-                    3, 'Failed on import: non-mergeable field: "{0}"'
-                       .format(key))
+            raise exceptions.DSLParsingLogicException(
+                3, 'Failed on import: non-mergeable field: "{0}"'
+                   .format(key))
 
 
 def _merge_into_dict_or_throw_on_duplicate(from_dict, to_dict,
-                                           top_level_key):
+                                           key_name):
     for key, value in from_dict.iteritems():
         if key not in to_dict:
             to_dict[key] = value
         else:
             raise exceptions.DSLParsingLogicException(
                 4, 'Failed on import: Could not merge {0} due to conflict '
-                   'on {1}'.format(top_level_key, key))
+                   'on {1}'.format(key_name, key))
