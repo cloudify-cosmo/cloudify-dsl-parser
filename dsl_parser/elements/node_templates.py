@@ -60,9 +60,6 @@ class NodeTemplateProperties(Element):
     def parse(self, node_types):
         properties = self.initial_value or {}
         node_type_name = self.sibling(NodeTemplateType).value
-        # TODO fix exception tests so this workaround is not required
-        if node_type_name not in node_types:
-            return properties
         node_type = node_types[node_type_name]
         return utils.merge_schema_and_instance_properties(
             instance_properties=properties,
