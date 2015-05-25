@@ -304,7 +304,6 @@ class NodeTemplate(Element):
         node.update({
             'name': self.name,
             'id': self.name,
-            'plugins': {},
             old_parser.TYPE_HIERARCHY: node_type[old_parser.TYPE_HIERARCHY]
         })
 
@@ -320,7 +319,6 @@ class NodeTemplate(Element):
             partial_error_message=partial_error_message,
             interfaces=node[old_parser.INTERFACES],
             plugins=plugins,
-            node_plugins=node[old_parser.PLUGINS],
             error_code=10,
             resource_base=resource_base)
         node['operations'] = operations
@@ -360,12 +358,13 @@ class NodeTemplates(Element):
     ]
 
     def parse(self, host_types, plugins):
-        processed_nodes = [node.value for node in self.children()]
-        _post_process_nodes(
+        processed_nodes = dict((node.name, node.value)
+                               for node in self.children())
+        _process_nodes_plugins(
             processed_nodes=processed_nodes,
             host_types=host_types,
             plugins=plugins)
-        return processed_nodes
+        return processed_nodes.values()
 
     def calculate_provided(self, **kwargs):
         return {
@@ -374,58 +373,13 @@ class NodeTemplates(Element):
         }
 
     def _create_plan_deployment_plugins(self):
-        deployment_plugins = []
-        deployment_plugin_names = set()
+        deployment_plugins = {}
         for node in self.value:
-            if constants.DEPLOYMENT_PLUGINS_TO_INSTALL in node:
-                for deployment_plugin in \
-                        node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
-                    if deployment_plugin[constants.PLUGIN_NAME_KEY] \
-                            not in deployment_plugin_names:
-                        deployment_plugins.append(deployment_plugin)
-                        deployment_plugin_names \
-                            .add(deployment_plugin[constants.PLUGIN_NAME_KEY])
-        return deployment_plugins
-
-
-def _post_process_nodes(processed_nodes,
-                        host_types,
-                        plugins):
-    for node in processed_nodes:
-        # fix plugins for all nodes
-        node[old_parser.PLUGINS] = _get_plugins_from_operations(
-            node=node,
-            processed_plugins=plugins)
-
-    # set plugins_to_install property for nodes
-    for node in processed_nodes:
-        if node['type'] in host_types:
-            plugins_to_install = {}
-            for another_node in processed_nodes:
-                # going over all other nodes, to accumulate plugins
-                # from different nodes whose host is the current node
-                if another_node.get('host_id') == node['id'] \
-                        and old_parser.PLUGINS in another_node:
-                    # ok to override here since we assume it is the same plugin
-                    for plugin in another_node[old_parser.PLUGINS]:
-                        if plugin[constants.PLUGIN_EXECUTOR_KEY] \
-                                == constants.HOST_AGENT:
-                            plugin_name = plugin['name']
-                            plugins_to_install[plugin_name] = plugin
-            node['plugins_to_install'] = plugins_to_install.values()
-
-    # set deployment_plugins_to_install property for nodes
-    for node in processed_nodes:
-        deployment_plugins_to_install = {}
-        for plugin in node[old_parser.PLUGINS]:
-            if plugin[constants.PLUGIN_EXECUTOR_KEY] \
-                    == constants.CENTRAL_DEPLOYMENT_AGENT:
-                plugin_name = plugin['name']
-                deployment_plugins_to_install[plugin_name] = plugin
-        node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] = \
-            deployment_plugins_to_install.values()
-
-    _validate_agent_plugins_on_host_nodes(processed_nodes)
+            for deployment_plugin in \
+                    node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
+                plugin_name = deployment_plugin[constants.PLUGIN_NAME_KEY]
+                deployment_plugins[plugin_name] = deployment_plugin
+        return deployment_plugins.values()
 
 
 def _post_process_node_relationships(processed_node,
@@ -453,7 +407,6 @@ def _post_process_node_relationships(processed_node,
 def _process_operations(partial_error_message,
                         interfaces,
                         plugins,
-                        node_plugins,
                         error_code,
                         resource_base):
     operations = {}
@@ -468,10 +421,7 @@ def _process_operations(partial_error_message,
                                                   partial_error_message)),
                 resource_base=resource_base)
         for operation in interface_operations:
-            plugin_name = operation['plugin']
             operation_name = operation.pop('name')
-            if plugin_name:
-                node_plugins[plugin_name] = plugins[plugin_name]
             operation = operation.copy()
             if operation_name in operations:
                 # Indicate this implicit operation name needs to be
@@ -501,15 +451,77 @@ def _process_node_relationships_operations(relationship,
         partial_error_message=partial_error_message,
         interfaces=relationship[interfaces_attribute],
         plugins=plugins,
-        node_plugins=node_for_plugins[old_parser.PLUGINS],
         error_code=19,
         resource_base=resource_base)
 
     relationship[operations_attribute] = operations
 
 
+def _process_nodes_plugins(processed_nodes,
+                           host_types,
+                           plugins):
+    # extract node plugins based on node operations
+    nodes_operations = dict((name, []) for name in processed_nodes.iterkeys())
+    for node_name, node in processed_nodes.iteritems():
+        node_operations = nodes_operations[node_name]
+        node_operations.append(node['operations'])
+        for rel in node['relationships']:
+            nodes_operations[rel['target_id']].append(rel['target_operations'])
+            node_operations.append(rel['source_operations'])
+    for node_name, node in processed_nodes.iteritems():
+        node[old_parser.PLUGINS] = _get_plugins_from_operations(
+            operations_lists=nodes_operations[node_name],
+            processed_plugins=plugins)
+
+    for node in processed_nodes.itervalues():
+        # set plugins_to_install property for nodes
+        if node['type'] in host_types:
+            plugins_to_install = {}
+            for another_node in processed_nodes.itervalues():
+                # going over all other nodes, to accumulate plugins
+                # from different nodes whose host is the current node
+                if another_node.get('host_id') == node['id'] \
+                        and old_parser.PLUGINS in another_node:
+                    # ok to override here since we assume it is the same plugin
+                    for plugin in another_node[old_parser.PLUGINS]:
+                        if plugin[constants.PLUGIN_EXECUTOR_KEY] \
+                                == constants.HOST_AGENT:
+                            plugins_to_install[plugin['name']] = plugin
+            node[constants.PLUGINS_TO_INSTALL] = plugins_to_install.values()
+
+        # set deployment_plugins_to_install property for nodes
+        deployment_plugins_to_install = {}
+        for plugin in node[old_parser.PLUGINS]:
+            if plugin[constants.PLUGIN_EXECUTOR_KEY] \
+                    == constants.CENTRAL_DEPLOYMENT_AGENT:
+                deployment_plugins_to_install[plugin['name']] = plugin
+        node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] = \
+            deployment_plugins_to_install.values()
+
+    _validate_agent_plugins_on_host_nodes(processed_nodes)
+
+
+def _get_plugins_from_operations(operations_lists,
+                                 processed_plugins):
+    plugins = {}
+    for operations in operations_lists:
+        for operation in operations.values():
+            plugin_name = operation['plugin']
+            if not plugin_name:
+                # no-op
+                continue
+            plugin = processed_plugins[plugin_name]
+            operation_executor = operation['executor']
+            plugin_key = (plugin_name, operation_executor)
+            if plugin_key not in plugins:
+                plugin = copy.deepcopy(plugin)
+                plugin['executor'] = operation_executor
+                plugins[plugin_key] = plugin
+    return plugins.values()
+
+
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
-    for node in processed_nodes:
+    for node in processed_nodes.itervalues():
         if 'host_id' not in node:
             for plugin in node[old_parser.PLUGINS]:
                 if plugin[constants.PLUGIN_EXECUTOR_KEY] \
@@ -522,78 +534,3 @@ def _validate_agent_plugins_on_host_nodes(processed_nodes):
                             "installed on a host".format(node['id'],
                                                          plugin['name'],
                                                          constants.HOST_AGENT))
-
-
-def _get_plugins_from_operations(node, processed_plugins):
-    added_plugins = set()
-    plugins = []
-    node_operations = node['operations']
-    plugins_from_operations = _get_plugins_from_operations_helper(
-        operations=node_operations,
-        processed_plugins=processed_plugins)
-    _add_plugins(
-        plugins=plugins,
-        new_plugins=plugins_from_operations,
-        added_plugins=added_plugins)
-    plugins_from_node = node['plugins'].values()
-    _add_plugins(
-        plugins=plugins,
-        new_plugins=plugins_from_node,
-        added_plugins=added_plugins)
-    for relationship in node['relationships']:
-        source_operations = relationship['source_operations']
-        target_operations = relationship['target_operations']
-        _set_operations_executor(
-            operations=target_operations,
-            processed_plugins=processed_plugins)
-        _set_operations_executor(
-            operations=source_operations,
-            processed_plugins=processed_plugins)
-    return plugins
-
-
-def _add_plugins(plugins, new_plugins, added_plugins):
-    for plugin in new_plugins:
-        plugin_key = (plugin['name'], plugin['executor'])
-        if plugin_key not in added_plugins:
-            plugins.append(plugin)
-            added_plugins.add(plugin_key)
-
-
-def _get_plugins_from_operations_helper(operations, processed_plugins):
-    plugins = []
-    for operation in operations.values():
-        real_executor = _set_operation_executor(
-            operation=operation,
-            processed_plugins=processed_plugins)
-        plugin_name = operation['plugin']
-        if not plugin_name:
-            # no-op
-            continue
-        plugin = copy.deepcopy(processed_plugins[plugin_name])
-        plugin['executor'] = real_executor
-        plugins.append(plugin)
-    return plugins
-
-
-def _set_operations_executor(operations, processed_plugins):
-    for operation in operations.values():
-        _set_operation_executor(operation=operation,
-                                processed_plugins=processed_plugins)
-
-
-def _set_operation_executor(operation, processed_plugins):
-    operation_executor = operation['executor']
-    plugin_name = operation['plugin']
-    if not plugin_name:
-        # no-op
-        return
-    if operation_executor is None:
-        real_executor = processed_plugins[plugin_name]['executor']
-    else:
-        real_executor = operation_executor
-
-    # set actual executor for the operation
-    operation['executor'] = real_executor
-
-    return real_executor

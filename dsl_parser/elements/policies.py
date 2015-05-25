@@ -21,6 +21,7 @@ from dsl_parser.framework.requirements import Value
 from dsl_parser.framework.elements import (DictElement,
                                            Element,
                                            Leaf,
+                                           List,
                                            Dict)
 
 
@@ -174,33 +175,36 @@ class GroupPolicy(DictElement):
     }
 
 
-class GroupMembers(Element):
+class GroupMember(Element):
 
-    required = True
-    schema = Leaf(type=list)
+    schema = Leaf(type=basestring)
     requires = {
         node_templates.NodeTemplates: ['node_template_names']
     }
 
     def validate(self, node_template_names):
-        if len(self.initial_value) < 1:
+        if self.initial_value not in node_template_names:
+            raise exceptions.DSLParsingLogicException(
+                40,
+                'member "{0}" of group "{1}" does not '
+                'match any defined node'.format(
+                    self.initial_value,
+                    self.ancestor(Group).name))
+
+
+class GroupMembers(Element):
+
+    required = True
+    schema = List(type=GroupMember)
+
+    def validate(self):
+        if len(self.children()) < 1:
             raise exceptions.DSLParsingFormatException(
                 1, "at least one member should be specified")
 
-        for member in self.initial_value:
-            if not isinstance(member, basestring):
-                raise exceptions.DSLParsingFormatException(
-                    1, "bad member type: {0}".format(member))
-            if member not in node_template_names:
-                raise exceptions.DSLParsingLogicException(
-                    40,
-                    'member "{0}" of group "{1}" does not '
-                    'match any defined node'.format(
-                        member, self.ancestor(Group).name))
-
-    def parse(self, **kwargs):
+    def parse(self):
         # ensure uniqueness
-        return list(set(self.initial_value))
+        return list(set([c.value for c in self.children()]))
 
 
 class GroupPolicies(DictElement):

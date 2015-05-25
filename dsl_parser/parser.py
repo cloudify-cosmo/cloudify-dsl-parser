@@ -172,6 +172,8 @@ def _process_operation(
                 workflow_mapping=mapping,
                 workflow_parameters=operation_payload)
         else:
+            if not operation_executor:
+                operation_executor = plugins[plugin_name]['executor']
             return _operation(
                 name=operation_name,
                 plugin_name=plugin_name,
@@ -218,6 +220,9 @@ def _process_operation(
                 workflow_mapping=operation_mapping,
                 workflow_parameters=operation_payload)
         else:
+            if not operation_executor:
+                operation_executor = plugins[constants.SCRIPT_PLUGIN_NAME][
+                    'executor']
             return _operation(
                 name=operation_name,
                 plugin_name=constants.SCRIPT_PLUGIN_NAME,

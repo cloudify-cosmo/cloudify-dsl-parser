@@ -106,7 +106,8 @@ class TestParserApi(AbstractTestParser):
     def _assert_blueprint(self, result):
         node = result['nodes'][0]
         self.assertEquals('test_type', node['type'])
-        plugin_props = node['plugins'][0]
+        plugin_props = [p for p in node['plugins']
+                        if p['name'] == 'test_plugin'][0]
         self.assertEquals(5, len(plugin_props))
         self.assertEquals('test_plugin',
                           plugin_props[constants.PLUGIN_NAME_KEY])
@@ -3192,6 +3193,38 @@ plugins:
         deployment_plugins_to_install_for_plan = \
             result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
+
+    def test_one_central_overrides_host_plugin(self):
+        yaml = """
+node_types:
+    test_type: {}
+node_templates:
+    test_node1:
+        type: test_type
+        interfaces:
+            test_interface:
+                start:
+                    implementation: test_plugin.start
+                    executor: central_deployment_agent
+plugins:
+    test_plugin:
+        executor: host_agent
+        source: dummy
+"""
+        result = self.parse(yaml)
+        node = result['nodes'][0]
+        deployment_plugins_to_install_for_node = \
+            node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(1, len(deployment_plugins_to_install_for_node))
+        plugin = deployment_plugins_to_install_for_node[0]
+        self.assertEquals('test_plugin', plugin['name'])
+        self.assertIsNone(node.get('plugins_to_install'))
+        # check the property on the plan is correct
+        deployment_plugins_to_install_for_plan = \
+            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
+        self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
+        plugin = deployment_plugins_to_install_for_plan[0]
+        self.assertEquals('test_plugin', plugin['name'])
 
     def test_node_plugins_to_install_no_host(self):
         yaml = """
