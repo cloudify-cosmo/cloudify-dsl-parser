@@ -461,13 +461,14 @@ def _process_nodes_plugins(processed_nodes,
                            host_types,
                            plugins):
     # extract node plugins based on node operations
+    # do we really need node.plugins?
     nodes_operations = dict((name, []) for name in processed_nodes.iterkeys())
     for node_name, node in processed_nodes.iteritems():
         node_operations = nodes_operations[node_name]
         node_operations.append(node['operations'])
         for rel in node['relationships']:
-            nodes_operations[rel['target_id']].append(rel['target_operations'])
             node_operations.append(rel['source_operations'])
+            nodes_operations[rel['target_id']].append(rel['target_operations'])
     for node_name, node in processed_nodes.iteritems():
         node[old_parser.PLUGINS] = _get_plugins_from_operations(
             operations_lists=nodes_operations[node_name],
