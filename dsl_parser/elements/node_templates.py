@@ -419,7 +419,6 @@ def _process_operations(partial_error_message,
                 resource_base=resource_base)
         for operation in interface_operations:
             operation_name = operation.pop('name')
-            operation = operation.copy()
             if operation_name in operations:
                 # Indicate this implicit operation name needs to be
                 # removed as we can only

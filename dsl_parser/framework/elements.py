@@ -13,6 +13,8 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import copy
+
 from dsl_parser import exceptions
 
 
@@ -45,15 +47,15 @@ class Element(object):
 
     def __init__(self, context, initial_value, name=None):
         self.context = context
-        self.initial_value = initial_value
+        self._initial_value = initial_value
         self._parsed_value = None
         self._provided = None
         self.name = name
 
     def __str__(self):
         return '{0}(name={1}, initial_value={2}, value={3})'.format(
-            self.__class__, self.name, self.initial_value,
-            self.value)
+            self.__class__, self.name, self._initial_value,
+            self._parsed_value)
 
     __repr__ = __str__
 
@@ -64,8 +66,12 @@ class Element(object):
         return self.initial_value
 
     @property
+    def initial_value(self):
+        return copy.deepcopy(self._initial_value)
+
+    @property
     def value(self):
-        return self._parsed_value
+        return copy.deepcopy(self._parsed_value)
 
     @value.setter
     def value(self, val):
@@ -76,7 +82,7 @@ class Element(object):
 
     @property
     def provided(self):
-        return self._provided
+        return copy.deepcopy(self._provided)
 
     @provided.setter
     def provided(self, value):

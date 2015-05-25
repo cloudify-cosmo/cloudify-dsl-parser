@@ -13,8 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import copy
-
 from dsl_parser import (parser as old_parser,
                         utils)
 from dsl_parser.interfaces import interfaces_parser
@@ -65,11 +63,10 @@ class Relationship(types.Type):
             plugins=plugins,
             rel_name=relationship_type_name,
             resource_base=resource_base)
-        complete_rel_obj_copy = copy.deepcopy(relationship_type)
-        complete_rel_obj_copy['name'] = relationship_type_name
-        complete_rel_obj_copy[
+        relationship_type['name'] = relationship_type_name
+        relationship_type[
             old_parser.TYPE_HIERARCHY] = self.create_type_hierarchy(super_type)
-        return complete_rel_obj_copy
+        return relationship_type
 
 
 class Relationships(types.Types):
