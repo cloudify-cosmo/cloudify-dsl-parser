@@ -73,11 +73,12 @@ class Blueprint(Element):
         'outputs': misc.Outputs,
     }
     requires = {
-        node_templates.NodeTemplates: ['plan_deployment_plugins'],
+        node_templates.NodeTemplates: ['deployment_plugins_to_install'],
         workflows.Workflows: ['workflow_plugins_to_install']
     }
 
-    def parse(self, workflow_plugins_to_install, plan_deployment_plugins):
+    def parse(self, workflow_plugins_to_install,
+              deployment_plugins_to_install):
         return models.Plan({
             constants.NODES: self.child(node_templates.NodeTemplates).value,
             parser.RELATIONSHIPS: self.child(
@@ -88,7 +89,8 @@ class Blueprint(Element):
             parser.GROUPS: self.child(policies.Groups).value,
             parser.INPUTS: self.child(misc.Inputs).value,
             parser.OUTPUTS: self.child(misc.Outputs).value,
-            constants.DEPLOYMENT_PLUGINS_TO_INSTALL: plan_deployment_plugins,
+            constants.DEPLOYMENT_PLUGINS_TO_INSTALL:
+                deployment_plugins_to_install,
             constants.WORKFLOW_PLUGINS_TO_INSTALL: workflow_plugins_to_install,
             constants.VERSION: self.child(misc.ToscaDefinitionsVersion).value
         })

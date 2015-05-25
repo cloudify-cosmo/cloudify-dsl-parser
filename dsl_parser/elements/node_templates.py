@@ -351,7 +351,7 @@ class NodeTemplates(Element):
     }
     provides = [
         'node_template_names',
-        'plan_deployment_plugins'
+        'deployment_plugins_to_install'
     ]
 
     def parse(self, host_types, plugins):
@@ -366,10 +366,10 @@ class NodeTemplates(Element):
     def calculate_provided(self, **kwargs):
         return {
             'node_template_names': set(c.name for c in self.children()),
-            'plan_deployment_plugins': self._create_plan_deployment_plugins()
+            'deployment_plugins_to_install': self._deployment_plugins()
         }
 
-    def _create_plan_deployment_plugins(self):
+    def _deployment_plugins(self):
         deployment_plugins = {}
         for node in self.value:
             for deployment_plugin in \
