@@ -15,8 +15,9 @@
 
 
 from dsl_parser import constants
-from dsl_parser.parser import DSLParsingLogicException, parse_from_path
+from dsl_parser.parser import parse_from_path
 from dsl_parser.parser import parse as dsl_parse
+from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser import version
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 

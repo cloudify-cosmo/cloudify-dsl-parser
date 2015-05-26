@@ -78,7 +78,7 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
     for interfaces in [old_parser.SOURCE_INTERFACES,
                        old_parser.TARGET_INTERFACES]:
         for interface_name, interface in rel_obj[interfaces].items():
-            old_parser._process_interface_operations(
+            operation._process_interface_operations(
                 interface,
                 plugins,
                 19,

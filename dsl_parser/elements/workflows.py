@@ -13,9 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser import parser as old_parser
 from dsl_parser.elements import (properties,
-                                 plugins as _plugins)
+                                 plugins as _plugins,
+                                 operation)
 from dsl_parser.framework.requirements import Value, Requirement
 from dsl_parser.framework.elements import (DictElement,
                                            Element,
@@ -50,7 +50,7 @@ class Workflow(Element):
                                  'parameters': {}}
         else:
             operation_content = self.build_dict_result()
-        return old_parser._process_operation(
+        return operation._process_operation(
             plugins=plugins,
             operation_name=self.name,
             operation_content=operation_content,
