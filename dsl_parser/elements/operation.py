@@ -176,22 +176,22 @@ class NodeTypeInterfaces(DictElement):
     schema = Dict(type=NodeTypeInterface)
 
 
-def _process_interface_operations(
+def process_interface_operations(
         interface,
         plugins,
         error_code,
         partial_error_message,
         resource_base):
-    return [_process_operation(plugins=plugins,
-                               operation_name=operation_name,
-                               operation_content=operation_content,
-                               error_code=error_code,
-                               partial_error_message=partial_error_message,
-                               resource_base=resource_base)
+    return [process_operation(plugins=plugins,
+                              operation_name=operation_name,
+                              operation_content=operation_content,
+                              error_code=error_code,
+                              partial_error_message=partial_error_message,
+                              resource_base=resource_base)
             for operation_name, operation_content in interface.items()]
 
 
-def _process_operation(
+def process_operation(
         plugins,
         operation_name,
         operation_content,

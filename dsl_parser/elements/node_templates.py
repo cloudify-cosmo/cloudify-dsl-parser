@@ -408,7 +408,7 @@ def _process_operations(partial_error_message,
     operations = {}
     for interface_name, interface in interfaces.items():
         interface_operations = \
-            _operation._process_interface_operations(
+            _operation.process_interface_operations(
                 interface=interface,
                 plugins=plugins,
                 error_code=error_code,

@@ -78,7 +78,7 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
     for interfaces in [constants.SOURCE_INTERFACES,
                        constants.TARGET_INTERFACES]:
         for interface_name, interface in rel_obj[interfaces].items():
-            operation._process_interface_operations(
+            operation.process_interface_operations(
                 interface,
                 plugins,
                 19,

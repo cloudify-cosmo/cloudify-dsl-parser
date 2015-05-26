@@ -50,7 +50,7 @@ class Workflow(Element):
                                  'parameters': {}}
         else:
             operation_content = self.build_dict_result()
-        return operation._process_operation(
+        return operation.process_operation(
             plugins=plugins,
             operation_name=self.name,
             operation_content=operation_content,
