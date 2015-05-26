@@ -13,8 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser import (parser,
-                        constants,
+from dsl_parser import (constants,
                         models)
 from dsl_parser.elements import (imports,
                                  misc,
@@ -81,14 +80,15 @@ class Blueprint(Element):
               deployment_plugins_to_install):
         return models.Plan({
             constants.NODES: self.child(node_templates.NodeTemplates).value,
-            parser.RELATIONSHIPS: self.child(
+            constants.RELATIONSHIPS: self.child(
                 relationships.Relationships).value,
-            parser.WORKFLOWS: self.child(workflows.Workflows).value,
-            parser.POLICY_TYPES: self.child(policies.PolicyTypes).value,
-            parser.POLICY_TRIGGERS: self.child(policies.PolicyTriggers).value,
-            parser.GROUPS: self.child(policies.Groups).value,
-            parser.INPUTS: self.child(misc.Inputs).value,
-            parser.OUTPUTS: self.child(misc.Outputs).value,
+            constants.WORKFLOWS: self.child(workflows.Workflows).value,
+            constants.POLICY_TYPES: self.child(policies.PolicyTypes).value,
+            constants.POLICY_TRIGGERS:
+                self.child(policies.PolicyTriggers).value,
+            constants.GROUPS: self.child(policies.Groups).value,
+            constants.INPUTS: self.child(misc.Inputs).value,
+            constants.OUTPUTS: self.child(misc.Outputs).value,
             constants.DEPLOYMENT_PLUGINS_TO_INSTALL:
                 deployment_plugins_to_install,
             constants.WORKFLOW_PLUGINS_TO_INSTALL: workflow_plugins_to_install,

@@ -14,7 +14,7 @@
 #    * limitations under the License.
 
 
-from dsl_parser import (parser as old_parser,
+from dsl_parser import (constants,
                         utils)
 from dsl_parser.interfaces import interfaces_parser
 from dsl_parser.elements import (operation,
@@ -42,15 +42,15 @@ class NodeType(types.Type):
         if not node_type.get('derived_from'):
             node_type.pop('derived_from', None)
         if super_type:
-            node_type[old_parser.PROPERTIES] = utils.merge_sub_dicts(
+            node_type[constants.PROPERTIES] = utils.merge_sub_dicts(
                 overridden_dict=super_type,
                 overriding_dict=node_type,
-                sub_dict_key=old_parser.PROPERTIES)
-            node_type[old_parser.INTERFACES] = interfaces_parser. \
+                sub_dict_key=constants.PROPERTIES)
+            node_type[constants.INTERFACES] = interfaces_parser. \
                 merge_node_type_interfaces(
-                    overridden_interfaces=super_type[old_parser.INTERFACES],
-                    overriding_interfaces=node_type[old_parser.INTERFACES])
-        node_type[old_parser.TYPE_HIERARCHY] = self.create_type_hierarchy(
+                    overridden_interfaces=super_type[constants.INTERFACES],
+                    overriding_interfaces=node_type[constants.INTERFACES])
+        node_type[constants.TYPE_HIERARCHY] = self.create_type_hierarchy(
             super_type)
         return node_type
 
@@ -62,9 +62,9 @@ class NodeTypes(types.Types):
 
     def calculate_provided(self):
         return {
-            'host_types': self._types_derived_from(old_parser.HOST_TYPE)
+            'host_types': self._types_derived_from(constants.HOST_TYPE)
         }
 
     def _types_derived_from(self, derived_from):
         return set(type_name for type_name, _type in self.value.items()
-                   if derived_from in _type[old_parser.TYPE_HIERARCHY])
+                   if derived_from in _type[constants.TYPE_HIERARCHY])

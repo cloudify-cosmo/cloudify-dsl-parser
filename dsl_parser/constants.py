@@ -13,6 +13,28 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+NODE_TEMPLATES = 'node_templates'
+IMPORTS = 'imports'
+NODE_TYPES = 'node_types'
+PLUGINS = 'plugins'
+INTERFACES = 'interfaces'
+SOURCE_INTERFACES = 'source_interfaces'
+TARGET_INTERFACES = 'target_interfaces'
+WORKFLOWS = 'workflows'
+RELATIONSHIPS = 'relationships'
+PROPERTIES = 'properties'
+PARAMETERS = 'parameters'
+TYPE_HIERARCHY = 'type_hierarchy'
+POLICY_TRIGGERS = 'policy_triggers'
+POLICY_TYPES = 'policy_types'
+GROUPS = 'groups'
+INPUTS = 'inputs'
+OUTPUTS = 'outputs'
+
+HOST_TYPE = 'cloudify.nodes.Compute'
+DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
+CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
+CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
 
 CENTRAL_DEPLOYMENT_AGENT = 'central_deployment_agent'
 HOST_AGENT = 'host_agent'
@@ -35,4 +57,3 @@ FUNCTION_NAME_PATH_SEPARATOR = '__sep__'
 
 NODES = 'nodes'
 NODE_INSTANCES = 'node_instances'
-INTERFACES = 'interfaces'

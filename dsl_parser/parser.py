@@ -13,37 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-
 import contextlib
 import urllib2
 
 from dsl_parser import (functions,
                         utils)
 from dsl_parser.framework import parser
-
-
-NODE_TEMPLATES = 'node_templates'
-IMPORTS = 'imports'
-NODE_TYPES = 'node_types'
-PLUGINS = 'plugins'
-INTERFACES = 'interfaces'
-SOURCE_INTERFACES = 'source_interfaces'
-TARGET_INTERFACES = 'target_interfaces'
-WORKFLOWS = 'workflows'
-RELATIONSHIPS = 'relationships'
-PROPERTIES = 'properties'
-PARAMETERS = 'parameters'
-TYPE_HIERARCHY = 'type_hierarchy'
-POLICY_TRIGGERS = 'policy_triggers'
-POLICY_TYPES = 'policy_types'
-GROUPS = 'groups'
-INPUTS = 'inputs'
-OUTPUTS = 'outputs'
-
-HOST_TYPE = 'cloudify.nodes.Compute'
-DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
-CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
-CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
+from dsl_parser.elements import blueprint
 
 
 def parse_from_path(dsl_file_path, resources_base_url=None):
@@ -72,8 +48,6 @@ def parse(dsl_string, resources_base_url=None):
 
 
 def _parse(dsl_string, resources_base_url, dsl_location=None):
-    from dsl_parser.elements import blueprint
-
     parsed_dsl = utils.load_yaml(raw_yaml=dsl_string,
                                  error_message='Failed to parse DSL')
 

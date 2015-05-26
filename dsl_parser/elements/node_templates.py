@@ -16,7 +16,6 @@
 import copy
 
 from dsl_parser import (exceptions,
-                        parser as old_parser,
                         utils,
                         constants)
 from dsl_parser.interfaces import interfaces_parser
@@ -191,15 +190,15 @@ class NodeTemplateRelationship(Element):
 
     def parse(self, relationship_type):
         result = self.build_dict_result()
-        for interfaces in [old_parser.SOURCE_INTERFACES,
-                           old_parser.TARGET_INTERFACES]:
+        for interfaces in [constants.SOURCE_INTERFACES,
+                           constants.TARGET_INTERFACES]:
             result[interfaces] = interfaces_parser. \
                 merge_relationship_type_and_instance_interfaces(
                     relationship_type_interfaces=relationship_type[interfaces],
                     relationship_instance_interfaces=result[interfaces])
 
-        result[old_parser.TYPE_HIERARCHY] = relationship_type[
-            old_parser.TYPE_HIERARCHY]
+        result[constants.TYPE_HIERARCHY] = relationship_type[
+            constants.TYPE_HIERARCHY]
 
         result['target_id'] = result['target']
         del result['target']
@@ -223,8 +222,8 @@ class NodeTemplateRelationships(Element):
                 NodeTemplateRelationshipTarget).value
             relationship_type = relationship.child(
                 NodeTemplateRelationshipType).value
-            type_hierarchy = relationship.value[old_parser.TYPE_HIERARCHY]
-            if old_parser.CONTAINED_IN_REL_TYPE in type_hierarchy:
+            type_hierarchy = relationship.value[constants.TYPE_HIERARCHY]
+            if constants.CONTAINED_IN_REL_TYPE in type_hierarchy:
                 contained_in_relationships.append(relationship_type)
                 contained_in_targets.append(relationship_target)
 
@@ -233,7 +232,7 @@ class NodeTemplateRelationships(Element):
                 112, 'Node {0} has more than one relationship that is derived'
                      ' from {1} relationship. Found: {2} for targets: {3}'
                      .format(self.ancestor(NodeTemplate).name,
-                             old_parser.CONTAINED_IN_REL_TYPE,
+                             constants.CONTAINED_IN_REL_TYPE,
                              contained_in_relationships,
                              contained_in_targets))
             ex.relationship_types = contained_in_relationships
@@ -246,8 +245,8 @@ class NodeTemplateRelationships(Element):
     def calculate_provided(self, **kwargs):
         contained_in_list = [r.child(NodeTemplateRelationshipTarget).value
                              for r in self.children()
-                             if old_parser.CONTAINED_IN_REL_TYPE in
-                             r.value[old_parser.TYPE_HIERARCHY]]
+                             if constants.CONTAINED_IN_REL_TYPE in
+                             r.value[constants.TYPE_HIERARCHY]]
         contained_in = contained_in_list[0] if contained_in_list else None
         return {
             'contained_in': contained_in
@@ -301,20 +300,20 @@ class NodeTemplate(Element):
         node.update({
             'name': self.name,
             'id': self.name,
-            old_parser.TYPE_HIERARCHY: node_type[old_parser.TYPE_HIERARCHY]
+            constants.TYPE_HIERARCHY: node_type[constants.TYPE_HIERARCHY]
         })
 
         interfaces = interfaces_parser.\
             merge_node_type_and_node_template_interfaces(
-                node_type_interfaces=node_type[old_parser.INTERFACES],
-                node_template_interfaces=node[old_parser.INTERFACES])
-        node[old_parser.INTERFACES] = interfaces
+                node_type_interfaces=node_type[constants.INTERFACES],
+                node_template_interfaces=node[constants.INTERFACES])
+        node[constants.INTERFACES] = interfaces
 
         partial_error_message = 'in node {0} of type {1}' \
             .format(node['id'], node['type'])
         operations = _process_operations(
             partial_error_message=partial_error_message,
-            interfaces=node[old_parser.INTERFACES],
+            interfaces=node[constants.INTERFACES],
             plugins=plugins,
             error_code=10,
             resource_base=resource_base)
@@ -383,7 +382,7 @@ def _post_process_node_relationships(processed_node,
                                      node_name_to_node,
                                      plugins,
                                      resource_base):
-    for relationship in processed_node[old_parser.RELATIONSHIPS]:
+    for relationship in processed_node[constants.RELATIONSHIPS]:
         target_node = node_name_to_node[relationship['target_id']]
         _process_node_relationships_operations(
             relationship=relationship,
@@ -466,7 +465,7 @@ def _process_nodes_plugins(processed_nodes,
             node_operations.append(rel['source_operations'])
             nodes_operations[rel['target_id']].append(rel['target_operations'])
     for node_name, node in processed_nodes.iteritems():
-        node[old_parser.PLUGINS] = _get_plugins_from_operations(
+        node[constants.PLUGINS] = _get_plugins_from_operations(
             operations_lists=nodes_operations[node_name],
             processed_plugins=plugins)
 
@@ -478,9 +477,9 @@ def _process_nodes_plugins(processed_nodes,
                 # going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
                 if another_node.get('host_id') == node['id'] \
-                        and old_parser.PLUGINS in another_node:
+                        and constants.PLUGINS in another_node:
                     # ok to override here since we assume it is the same plugin
-                    for plugin in another_node[old_parser.PLUGINS]:
+                    for plugin in another_node[constants.PLUGINS]:
                         if plugin[constants.PLUGIN_EXECUTOR_KEY] \
                                 == constants.HOST_AGENT:
                             plugins_to_install[plugin['name']] = plugin
@@ -488,7 +487,7 @@ def _process_nodes_plugins(processed_nodes,
 
         # set deployment_plugins_to_install property for nodes
         deployment_plugins_to_install = {}
-        for plugin in node[old_parser.PLUGINS]:
+        for plugin in node[constants.PLUGINS]:
             if plugin[constants.PLUGIN_EXECUTOR_KEY] \
                     == constants.CENTRAL_DEPLOYMENT_AGENT:
                 deployment_plugins_to_install[plugin['name']] = plugin
@@ -520,7 +519,7 @@ def _get_plugins_from_operations(operations_lists,
 def _validate_agent_plugins_on_host_nodes(processed_nodes):
     for node in processed_nodes.itervalues():
         if 'host_id' not in node:
-            for plugin in node[old_parser.PLUGINS]:
+            for plugin in node[constants.PLUGINS]:
                 if plugin[constants.PLUGIN_EXECUTOR_KEY] \
                         == constants.HOST_AGENT:
                     raise exceptions.DSLParsingLogicException(

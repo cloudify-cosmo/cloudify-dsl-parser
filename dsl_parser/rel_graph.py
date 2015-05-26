@@ -19,13 +19,13 @@ import random
 
 import networkx as nx
 
-from dsl_parser import parser
+from dsl_parser import constants
 
 NODES = 'nodes'
 RELATIONSHIPS = 'relationships'
-DEPENDS_ON_REL_TYPE = parser.DEPENDS_ON_REL_TYPE
-CONNECTED_TO_REL_TYPE = parser.CONNECTED_TO_REL_TYPE
-CONTAINED_IN_REL_TYPE = parser.CONTAINED_IN_REL_TYPE
+DEPENDS_ON_REL_TYPE = constants.DEPENDS_ON_REL_TYPE
+CONNECTED_TO_REL_TYPE = constants.CONNECTED_TO_REL_TYPE
+CONTAINED_IN_REL_TYPE = constants.CONTAINED_IN_REL_TYPE
 CONNECTION_TYPE = 'connection_type'
 ALL_TO_ALL = 'all_to_all'
 ALL_TO_ONE = 'all_to_one'

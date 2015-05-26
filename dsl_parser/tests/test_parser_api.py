@@ -21,11 +21,12 @@ from dsl_parser import constants
 from urllib import pathname2url
 from dsl_parser.interfaces.constants import NO_OP
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.parser import TYPE_HIERARCHY, parse_from_path, parse_from_url
+from dsl_parser.parser import parse_from_path, parse_from_url
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser import version
 from dsl_parser import models
 from dsl_parser.interfaces.utils import operation_mapping
+from dsl_parser.constants import TYPE_HIERARCHY
 
 
 def op_struct(plugin_name,

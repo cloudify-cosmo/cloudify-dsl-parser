@@ -13,7 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser import (parser as old_parser,
+from dsl_parser import (constants,
                         utils)
 from dsl_parser.interfaces import interfaces_parser
 from dsl_parser.elements import (properties,
@@ -47,12 +47,12 @@ class Relationship(types.Type):
         relationship_type_name = self.name
 
         if super_type:
-            relationship_type[old_parser.PROPERTIES] = utils.merge_sub_dicts(
+            relationship_type[constants.PROPERTIES] = utils.merge_sub_dicts(
                 overridden_dict=super_type,
                 overriding_dict=relationship_type,
-                sub_dict_key=old_parser.PROPERTIES)
-            for interfaces in [old_parser.SOURCE_INTERFACES,
-                               old_parser.TARGET_INTERFACES]:
+                sub_dict_key=constants.PROPERTIES)
+            for interfaces in [constants.SOURCE_INTERFACES,
+                               constants.TARGET_INTERFACES]:
                 relationship_type[interfaces] = interfaces_parser. \
                     merge_relationship_type_interfaces(
                         overriding_interfaces=relationship_type[interfaces],
@@ -65,7 +65,7 @@ class Relationship(types.Type):
             resource_base=resource_base)
         relationship_type['name'] = relationship_type_name
         relationship_type[
-            old_parser.TYPE_HIERARCHY] = self.create_type_hierarchy(super_type)
+            constants.TYPE_HIERARCHY] = self.create_type_hierarchy(super_type)
         return relationship_type
 
 
@@ -75,8 +75,8 @@ class Relationships(types.Types):
 
 
 def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
-    for interfaces in [old_parser.SOURCE_INTERFACES,
-                       old_parser.TARGET_INTERFACES]:
+    for interfaces in [constants.SOURCE_INTERFACES,
+                       constants.TARGET_INTERFACES]:
         for interface_name, interface in rel_obj[interfaces].items():
             operation._process_interface_operations(
                 interface,

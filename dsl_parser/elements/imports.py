@@ -20,7 +20,7 @@ import urllib
 import urllib2
 
 from dsl_parser import (exceptions,
-                        parser as old_parser,
+                        constants,
                         version,
                         utils)
 from dsl_parser.framework.elements import (Element,
@@ -28,14 +28,14 @@ from dsl_parser.framework.elements import (Element,
                                            List)
 
 MERGE_NO_OVERRIDE = set([
-    old_parser.INTERFACES,
-    old_parser.NODE_TYPES,
-    old_parser.PLUGINS,
-    old_parser.WORKFLOWS,
-    old_parser.RELATIONSHIPS,
-    old_parser.POLICY_TYPES,
-    old_parser.GROUPS,
-    old_parser.POLICY_TRIGGERS])
+    constants.INTERFACES,
+    constants.NODE_TYPES,
+    constants.PLUGINS,
+    constants.WORKFLOWS,
+    constants.RELATIONSHIPS,
+    constants.POLICY_TYPES,
+    constants.GROUPS,
+    constants.POLICY_TRIGGERS])
 
 
 class Import(Element):
@@ -153,8 +153,8 @@ def _combine_imports(parsed_dsl, dsl_location, resources_base_url):
         _merge_parsed_into_combined(combined_parsed_dsl,
                                     parsed_imported_dsl)
 
-    if old_parser.IMPORTS in combined_parsed_dsl:
-        del combined_parsed_dsl[old_parser.IMPORTS]
+    if constants.IMPORTS in combined_parsed_dsl:
+        del combined_parsed_dsl[constants.IMPORTS]
     return combined_parsed_dsl
 
 
@@ -170,7 +170,7 @@ def _build_ordered_imports(parsed_dsl,
                 'parsed': _current_parsed_dsl,
             })
         imports = [i['import'] for i in ordered_imports]
-        for another_import in _current_parsed_dsl.get(old_parser.IMPORTS, []):
+        for another_import in _current_parsed_dsl.get(constants.IMPORTS, []):
             import_url = _get_resource_location(another_import,
                                                 resources_base_url,
                                                 _current_import)
@@ -210,7 +210,7 @@ def _validate_version(dsl_version,
 
 def _merge_parsed_into_combined(combined_parsed_dsl, parsed_imported_dsl):
     for key, value in parsed_imported_dsl.iteritems():
-        if key in [old_parser.IMPORTS, version.VERSION]:
+        if key in [constants.IMPORTS, version.VERSION]:
             pass
         elif key not in combined_parsed_dsl:
             combined_parsed_dsl[key] = value
@@ -241,7 +241,7 @@ def _fetch_import(import_url):
         with contextlib.closing(urllib2.urlopen(import_url)) as f:
             return f.read()
     except urllib2.URLError, ex:
-        ex = old_parser.DSLParsingLogicException(
+        ex = exceptions.DSLParsingLogicException(
             13, 'Failed on import - Unable to open import url '
                 '{0}; {1}'.format(import_url, ex.message))
         ex.failed_import = import_url
