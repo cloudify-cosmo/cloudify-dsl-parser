@@ -209,12 +209,9 @@ class NodeTemplateRelationship(Element):
 class NodeTemplateRelationships(Element):
 
     schema = List(type=NodeTemplateRelationship)
-    requires = {
-        _relationships.Relationships: [Value('relationships')],
-    }
     provides = ['contained_in']
 
-    def validate(self, relationships):
+    def validate(self):
         contained_in_relationships = []
         contained_in_targets = []
         for relationship in self.children():
@@ -238,11 +235,11 @@ class NodeTemplateRelationships(Element):
             ex.relationship_types = contained_in_relationships
             raise ex
 
-    def parse(self, **kwargs):
+    def parse(self):
         return [c.value for c in sorted(self.children(),
                                         key=lambda child: child.name)]
 
-    def calculate_provided(self, **kwargs):
+    def calculate_provided(self):
         contained_in_list = [r.child(NodeTemplateRelationshipTarget).value
                              for r in self.children()
                              if constants.CONTAINED_IN_REL_TYPE in
@@ -303,21 +300,18 @@ class NodeTemplate(Element):
             constants.TYPE_HIERARCHY: node_type[constants.TYPE_HIERARCHY]
         })
 
-        interfaces = interfaces_parser.\
+        node[constants.INTERFACES] = interfaces_parser.\
             merge_node_type_and_node_template_interfaces(
                 node_type_interfaces=node_type[constants.INTERFACES],
                 node_template_interfaces=node[constants.INTERFACES])
-        node[constants.INTERFACES] = interfaces
 
-        partial_error_message = 'in node {0} of type {1}' \
-            .format(node['id'], node['type'])
-        operations = _process_operations(
-            partial_error_message=partial_error_message,
+        node['operations'] = _process_operations(
+            partial_error_message='in node {0} of type {1}'
+                                  .format(node['id'], node['type']),
             interfaces=node[constants.INTERFACES],
             plugins=plugins,
             error_code=10,
             resource_base=resource_base)
-        node['operations'] = operations
 
         node_name_to_node = dict((node['id'], node)
                                  for node in related_node_templates)
@@ -338,44 +332,6 @@ class NodeTemplate(Element):
                 node['host_id'] = self.name
 
         return node
-
-
-class NodeTemplates(Element):
-
-    required = True
-    schema = Dict(type=NodeTemplate)
-    requires = {
-        _plugins.Plugins: [Value('plugins')],
-        _node_types.NodeTypes: ['host_types']
-    }
-    provides = [
-        'node_template_names',
-        'deployment_plugins_to_install'
-    ]
-
-    def parse(self, host_types, plugins):
-        processed_nodes = dict((node.name, node.value)
-                               for node in self.children())
-        _process_nodes_plugins(
-            processed_nodes=processed_nodes,
-            host_types=host_types,
-            plugins=plugins)
-        return processed_nodes.values()
-
-    def calculate_provided(self, **kwargs):
-        return {
-            'node_template_names': set(c.name for c in self.children()),
-            'deployment_plugins_to_install': self._deployment_plugins()
-        }
-
-    def _deployment_plugins(self):
-        deployment_plugins = {}
-        for node in self.value:
-            for deployment_plugin in \
-                    node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
-                plugin_name = deployment_plugin[constants.PLUGIN_NAME_KEY]
-                deployment_plugins[plugin_name] = deployment_plugin
-        return deployment_plugins.values()
 
 
 def _post_process_node_relationships(processed_node,
@@ -452,6 +408,44 @@ def _process_node_relationships_operations(relationship,
     relationship[operations_attribute] = operations
 
 
+class NodeTemplates(Element):
+
+    required = True
+    schema = Dict(type=NodeTemplate)
+    requires = {
+        _plugins.Plugins: [Value('plugins')],
+        _node_types.NodeTypes: ['host_types']
+    }
+    provides = [
+        'node_template_names',
+        'deployment_plugins_to_install'
+    ]
+
+    def parse(self, host_types, plugins):
+        processed_nodes = dict((node.name, node.value)
+                               for node in self.children())
+        _process_nodes_plugins(
+            processed_nodes=processed_nodes,
+            host_types=host_types,
+            plugins=plugins)
+        return processed_nodes.values()
+
+    def calculate_provided(self, **kwargs):
+        return {
+            'node_template_names': set(c.name for c in self.children()),
+            'deployment_plugins_to_install': self._deployment_plugins()
+        }
+
+    def _deployment_plugins(self):
+        deployment_plugins = {}
+        for node in self.value:
+            for deployment_plugin in \
+                    node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]:
+                plugin_name = deployment_plugin[constants.PLUGIN_NAME_KEY]
+                deployment_plugins[plugin_name] = deployment_plugin
+        return deployment_plugins.values()
+
+
 def _process_nodes_plugins(processed_nodes,
                            host_types,
                            plugins):
@@ -476,8 +470,7 @@ def _process_nodes_plugins(processed_nodes,
             for another_node in processed_nodes.itervalues():
                 # going over all other nodes, to accumulate plugins
                 # from different nodes whose host is the current node
-                if another_node.get('host_id') == node['id'] \
-                        and constants.PLUGINS in another_node:
+                if another_node.get('host_id') == node['id']:
                     # ok to override here since we assume it is the same plugin
                     for plugin in another_node[constants.PLUGINS]:
                         if plugin[constants.PLUGIN_EXECUTOR_KEY] \
