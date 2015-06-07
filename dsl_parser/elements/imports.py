@@ -63,9 +63,7 @@ class ImportsLoader(Element):
                    'blueprint_location']
     }
 
-    def __init__(self, *args, **kwargs):
-        super(ImportsLoader, self).__init__(*args, **kwargs)
-        self.resource_base = None
+    resource_base = None
 
     def validate(self, **kwargs):
         imports = [i.value for i in self.children()]

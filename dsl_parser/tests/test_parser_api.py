@@ -14,6 +14,8 @@
 #    * limitations under the License.
 
 import os
+import socket
+import StringIO
 from urllib2 import HTTPError
 import yaml as yml
 
@@ -98,11 +100,29 @@ class TestParserApi(AbstractTestParser):
         self._assert_minimal_blueprint(result)
 
     def test_parse_dsl_from_bad_url(self):
+
+        class MockSocket(object):
+            def __init__(self, *args):
+                pass
+
+            def sendall(self, *args):
+                pass
+
+            def makefile(self, *args):
+                return StringIO.StringIO('HTTP/1.1 404\r\n')
+
+            def close(self):
+                pass
+
+        original_create_connection = socket.create_connection
         try:
+            socket.create_connection = MockSocket
             parse_from_url('http://www.google.com/bad-dsl')
         except HTTPError as e:
             self.assertIn('http://www.google.com/bad-dsl', str(e))
             self.assertEqual(404, e.code)
+        finally:
+            socket.create_connection = original_create_connection
 
     def _assert_blueprint(self, result):
         node = result['nodes'][0]
