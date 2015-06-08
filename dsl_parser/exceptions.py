@@ -54,3 +54,14 @@ class DSLParsingLogicException(DSLParsingException):
 
 class DSLParsingFormatException(DSLParsingException):
     pass
+
+
+class DSLParsingElementMatchException(DSLParsingException):
+    pass
+
+
+class DSLParsingSchemaAPIException(DSLParsingException):
+    pass
+
+
+ERROR_CODE_CYCLE = 100

@@ -13,9 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser.interfaces.utils import no_op
+from dsl_parser.interfaces import utils
 
 INTERFACES = 'interfaces'
 SOURCE_INTERFACES = 'source_interfaces'
 TARGET_INTERFACES = 'target_interfaces'
-NO_OP = no_op()
+NO_OP = utils.no_op()

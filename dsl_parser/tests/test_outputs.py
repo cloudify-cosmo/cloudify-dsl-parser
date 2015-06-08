@@ -15,7 +15,6 @@
 
 from dsl_parser import exceptions
 from dsl_parser import functions
-from dsl_parser.parser import DSLParsingFormatException
 from dsl_parser.tasks import prepare_deployment_plan
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
@@ -73,7 +72,8 @@ outputs:
     port:
         description: p0
 """
-        self.assertRaises(DSLParsingFormatException, self.parse, yaml)
+        self.assertRaises(exceptions.DSLParsingFormatException,
+                          self.parse, yaml)
 
     def test_valid_get_attribute(self):
         yaml = """

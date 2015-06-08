@@ -19,7 +19,6 @@ from setuptools import setup
 
 install_requires = [
     'PyYAML==3.10',
-    'jsonschema==2.3.0',
     'networkx==1.8.1',
 ]
 

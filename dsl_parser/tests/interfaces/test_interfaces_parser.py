@@ -14,97 +14,52 @@
 #    * limitations under the License.
 
 import testtools
-from jsonschema import validate
-from dsl_parser.constants import INTERFACES
 from dsl_parser.interfaces.constants import NO_OP
 
-from dsl_parser.interfaces.interfaces_parser import \
-    merge_node_type_interfaces
-from dsl_parser.interfaces.interfaces_parser import \
-    merge_relationship_type_and_instance_interfaces
-from dsl_parser.interfaces.interfaces_parser import \
-    merge_node_type_and_node_template_interfaces
-from dsl_parser.interfaces.interfaces_parser import \
-    merge_relationship_type_interfaces
-from dsl_parser.parser import SOURCE_INTERFACES, TARGET_INTERFACES
-from dsl_parser.schemas import (
-    NODE_TYPE_INTERFACES_SCHEMA,
-    RELATIONSHIP_TYPE_INTERFACES_SCHEMA,
-    RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA
-)
-from dsl_parser.schemas import NODE_TEMPLATE_INTERFACES_SCHEMA
+from dsl_parser.interfaces.interfaces_parser import (
+    merge_node_type_interfaces,
+    merge_relationship_type_and_instance_interfaces,
+    merge_node_type_and_node_template_interfaces,
+    merge_relationship_type_interfaces)
+from dsl_parser.elements import operation
+
+from dsl_parser.tests.interfaces import validate
 
 
 class InterfacesParserTest(testtools.TestCase):
 
-    def _create_node_type(self, interfaces):
-        validate(interfaces, NODE_TYPE_INTERFACES_SCHEMA)
-        return {
-            INTERFACES: interfaces
-        }
+    def _validate_type_interfaces(self, interfaces):
+        validate(interfaces, operation.NodeTypeInterfaces)
 
-    def _create_node_template(self, interfaces):
-        validate(interfaces, NODE_TEMPLATE_INTERFACES_SCHEMA)
-        return {
-            INTERFACES: interfaces
-        }
-
-    def _create_relationship_type(self,
-                                  source_interfaces=None,
-                                  target_interfaces=None):
-        result = {}
-        if source_interfaces:
-            validate(source_interfaces, RELATIONSHIP_TYPE_INTERFACES_SCHEMA)
-            result[SOURCE_INTERFACES] = source_interfaces
-        if target_interfaces:
-            validate(target_interfaces, RELATIONSHIP_TYPE_INTERFACES_SCHEMA)
-            result[TARGET_INTERFACES] = target_interfaces
-        return result
-
-    def _create_relationship_instance(self,
-                                      source_interfaces=None,
-                                      target_interfaces=None):
-        result = {}
-        if source_interfaces:
-            validate(source_interfaces,
-                     RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA)
-            result[SOURCE_INTERFACES] = source_interfaces
-        if target_interfaces:
-            validate(target_interfaces,
-                     RELATIONSHIP_INSTANCE_INTERFACES_SCHEMA)
-            result[TARGET_INTERFACES] = target_interfaces
-        return result
+    def _validate_instance_interfaces(self, interfaces):
+        validate(interfaces, operation.NodeTemplateInterfaces)
 
     def test_merge_node_type_interfaces(self):
 
-        overriding_node_type = self._create_node_type(
-            interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
+        overriding_interfaces = {
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start'
+                },
+                'stop': {
+                    'implementation': 'mock.tasks.stop',
+                    'inputs': {
+                        'key': {
+                            'default': 'value'
                         }
                     }
                 }
             }
-        )
-        overridden_node_type = self._create_node_type(
-            interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
+        }
+        overridden_interfaces = {
+            'interface1': {
+                'start': {},
+                'stop': {}
+            },
+            'interface2': {
+                'start': {}
             }
-        )
+        }
 
         expected_merged_interfaces = {
             'interface1': {
@@ -138,27 +93,27 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
+        self._validate_type_interfaces(overriding_interfaces)
+        self._validate_type_interfaces(overridden_interfaces)
         actual_merged_interfaces = merge_node_type_interfaces(
-            overriding_node_type=overriding_node_type,
-            overridden_node_type=overridden_node_type
-        )
+            overriding_interfaces=overriding_interfaces,
+            overridden_interfaces=overridden_interfaces)
+
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
     def test_merge_node_type_interfaces_no_interfaces_on_overriding(self):
 
-        overriding_node_type = {}
-        overridden_node_type = self._create_node_type(
-            interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
+        overriding_interfaces = {}
+        overridden_interfaces = {
+            'interface1': {
+                'start': {},
+                'stop': {}
+            },
+            'interface2': {
+                'start': {}
             }
-        )
+        }
 
         expected_merged_interfaces = {
             'interface1': {
@@ -170,27 +125,27 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
+        self._validate_type_interfaces(overridden_interfaces)
+        self._validate_type_interfaces(overriding_interfaces)
         actual_merged_interfaces = merge_node_type_interfaces(
-            overriding_node_type=overriding_node_type,
-            overridden_node_type=overridden_node_type
-        )
+            overriding_interfaces=overriding_interfaces,
+            overridden_interfaces=overridden_interfaces)
+
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
     def test_merge_node_type_interfaces_no_interfaces_on_overridden(self):
 
-        overriding_node_type = self._create_node_type(
-            interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
+        overriding_interfaces = {
+            'interface1': {
+                'start': {},
+                'stop': {}
+            },
+            'interface2': {
+                'start': {}
             }
-        )
-        overridden_node_type = {}
+        }
+        overridden_interfaces = {}
 
         expected_merged_interfaces = {
             'interface1': {
@@ -202,40 +157,38 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
+        self._validate_type_interfaces(overridden_interfaces)
+        self._validate_type_interfaces(overriding_interfaces)
         actual_merged_interfaces = merge_node_type_interfaces(
-            overriding_node_type=overriding_node_type,
-            overridden_node_type=overridden_node_type
-        )
+            overriding_interfaces=overriding_interfaces,
+            overridden_interfaces=overridden_interfaces)
+
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
     def test_merge_node_type_and_node_template_interfaces(self):
 
-        node_type = self._create_node_type(
-            interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
+        node_type_interfaces = {
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start'
+                },
+                'stop': {
+                    'implementation': 'mock.tasks.stop',
+                    'inputs': {
+                        'key': {
+                            'default': 'value'
                         }
                     }
                 }
             }
-        )
+        }
 
-        node_template = self._create_node_template(
-            interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start-overridden'
-                }
+        node_template_interfaces = {
+            'interface1': {
+                'start': 'mock.tasks.start-overridden'
             }
-        )
+        }
 
         expected_merged_interfaces = {
             'interface1': {
@@ -258,25 +211,24 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
+        self._validate_type_interfaces(node_type_interfaces)
+        self._validate_instance_interfaces(node_template_interfaces)
         actual_merged_interfaces = \
             merge_node_type_and_node_template_interfaces(
-                node_type=node_type,
-                node_template=node_template
-            )
+                node_type_interfaces=node_type_interfaces,
+                node_template_interfaces=node_template_interfaces)
 
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
     def test_merge_node_type_no_interfaces_and_node_template_interfaces(self):
 
-        node_type = {}
-        node_template = self._create_node_template(
-            interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start'
-                }
+        node_type_interfaces = {}
+        node_template_interfaces = {
+            'interface1': {
+                'start': 'mock.tasks.start'
             }
-        )
+        }
 
         expected_merged_interfaces = {
             'interface1': {
@@ -290,27 +242,26 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
+        self._validate_type_interfaces(node_type_interfaces)
+        self._validate_instance_interfaces(node_template_interfaces)
         actual_merged_interfaces = \
             merge_node_type_and_node_template_interfaces(
-                node_type=node_type,
-                node_template=node_template
-            )
+                node_type_interfaces=node_type_interfaces,
+                node_template_interfaces=node_template_interfaces)
 
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
     def test_merge_node_type_interfaces_and_node_template_no_interfaces(self):
 
-        node_type = self._create_node_type(
-            interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    }
+        node_type_interfaces = {
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start'
                 }
             }
-        )
-        node_template = {}
+        }
+        node_template_interfaces = {}
 
         expected_merged_interfaces = {
             'interface1': {
@@ -324,887 +275,282 @@ class InterfacesParserTest(testtools.TestCase):
             }
         }
 
+        self._validate_type_interfaces(node_type_interfaces)
+        self._validate_instance_interfaces(node_template_interfaces)
         actual_merged_interfaces = \
             merge_node_type_and_node_template_interfaces(
-                node_type=node_type,
-                node_template=node_template
-            )
+                node_type_interfaces=node_type_interfaces,
+                node_template_interfaces=node_template_interfaces)
 
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
     def test_merge_relationship_type_interfaces(self):
 
-        overriding_relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
+        overriding_interfaces = {
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start'
+                },
+                'stop': {
+                    'implementation': 'mock.tasks.stop',
+                    'inputs': {
+                        'key': {
+                            'default': 'value'
                         }
-                    }
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            }
-        )
-        overridden_relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
-            }
-        )
-
-        expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                },
-                'interface2': {
-                    'start': {
-                        'implementation': '',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                }
-            },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                },
-                'interface2': {
-                    'start': {
-                        'implementation': '',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
                     }
                 }
             }
         }
+
+        overridden_interfaces = {
+            'interface1': {
+                'start': {},
+                'stop': {}
+            },
+            'interface2': {
+                'start': {}
+            }
+        }
+
+        expected_merged_interfaces = {
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start',
+                    'inputs': {},
+                    'executor': None,
+                    'max_retries': None,
+                    'retry_interval': None
+                },
+                'stop': {
+                    'implementation': 'mock.tasks.stop',
+                    'inputs': {
+                        'key': {
+                            'default': 'value'
+                        }
+                    },
+                    'executor': None,
+                    'max_retries': None,
+                    'retry_interval': None
+                }
+            },
+            'interface2': {
+                'start': {
+                    'implementation': '',
+                    'inputs': {},
+                    'executor': None,
+                    'max_retries': None,
+                    'retry_interval': None
+                }
+            }
+        }
+
+        self._validate_type_interfaces(overriding_interfaces)
+        self._validate_type_interfaces(overridden_interfaces)
         actual_merged_interfaces = merge_relationship_type_interfaces(
-            overriding_relationship_type=overriding_relationship_type,
-            overridden_relationship_type=overridden_relationship_type
-        )
+            overriding_interfaces=overriding_interfaces,
+            overridden_interfaces=overridden_interfaces)
 
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
-    def test_merge_relationship_type_interfaces_no_source_interfaces_on_overriding(self):  # NOQA
+    def test_merge_relationship_type_interfaces_no_interfaces_on_overriding(self):  # NOQA
 
-        overriding_relationship_type = self._create_relationship_type(
-            target_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            }
-        )
-        overridden_relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
+        overriding_interfaces = {}
+        overridden_interfaces = {
+            'interface1': {
+                'start': {},
+                'stop': {}
             },
-            target_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
-            }
-        )
-
-        expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': NO_OP,
-                    'stop': NO_OP
-                },
-                'interface2': {
-                    'start': NO_OP
-                }
-            },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                },
-                'interface2': {
-                    'start': {
-                        'implementation': '',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                }
+            'interface2': {
+                'start': {}
             }
         }
+
+        expected_merged_interfaces = {
+            'interface1': {
+                'start': NO_OP,
+                'stop': NO_OP
+            },
+            'interface2': {
+                'start': NO_OP
+            }
+        }
+
+        self._validate_type_interfaces(overriding_interfaces)
+        self._validate_type_interfaces(overridden_interfaces)
         actual_merged_interfaces = merge_relationship_type_interfaces(
-            overriding_relationship_type=overriding_relationship_type,
-            overridden_relationship_type=overridden_relationship_type
-        )
+            overriding_interfaces=overriding_interfaces,
+            overridden_interfaces=overridden_interfaces)
 
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
-    def test_merge_relationship_type_interfaces_no_source_interfaces_on_overridden(self):  # NOQA
+    def test_merge_relationship_type_interfaces_no_interfaces_on_overridden(self):  # NOQA
 
-        overriding_relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
+        overriding_interfaces = {
+            'interface1': {
+                'start': {},
+                'stop': {}
             },
-            target_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
-            }
-        )
-
-        overridden_relationship_type = self._create_relationship_type(
-            target_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            }
-        )
-
-        expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': NO_OP,
-                    'stop': NO_OP
-                },
-                'interface2': {
-                    'start': NO_OP
-                }
-            },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': NO_OP,
-                    'stop': NO_OP
-                },
-                'interface2': {
-                    'start': NO_OP
-                }
+            'interface2': {
+                'start': {}
             }
         }
-        actual_merged_interfaces = merge_relationship_type_interfaces(
-            overriding_relationship_type=overriding_relationship_type,
-            overridden_relationship_type=overridden_relationship_type
-        )
-
-        self.assertEqual(actual_merged_interfaces,
-                         expected_merged_interfaces)
-
-    def test_merge_relationship_type_interfaces_no_target_interfaces_on_overriding(self):  # NOQA
-
-        overriding_relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            }
-        )
-        overridden_relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
-            }
-        )
+        overridden_interfaces = {}
 
         expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                },
-                'interface2': {
-                    'start': NO_OP
-                }
+            'interface1': {
+                'start': NO_OP,
+                'stop': NO_OP
             },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': NO_OP,
-                    'stop': NO_OP
-                },
-                'interface2': {
-                    'start': NO_OP
-                }
+            'interface2': {
+                'start': NO_OP
             }
         }
+
+        self._validate_type_interfaces(overriding_interfaces)
+        self._validate_type_interfaces(overridden_interfaces)
         actual_merged_interfaces = merge_relationship_type_interfaces(
-            overriding_relationship_type=overriding_relationship_type,
-            overridden_relationship_type=overridden_relationship_type
-        )
-
-        self.assertEqual(actual_merged_interfaces,
-                         expected_merged_interfaces)
-
-    def test_merge_relationship_type_interfaces_no_target_interfaces_on_overridden(self):  # NOQA
-
-        overriding_relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': {},
-                    'stop': {}
-                },
-                'interface2': {
-                    'start': {}
-                }
-            }
-        )
-
-        overridden_relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            }
-        )
-
-        expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': NO_OP,
-                    'stop': NO_OP
-                },
-                'interface2': {
-                    'start': NO_OP
-                }
-            },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': NO_OP,
-                    'stop': NO_OP
-                },
-                'interface2': {
-                    'start': NO_OP
-                }
-            }
-        }
-        actual_merged_interfaces = merge_relationship_type_interfaces(
-            overriding_relationship_type=overriding_relationship_type,
-            overridden_relationship_type=overridden_relationship_type
-        )
+            overriding_interfaces=overriding_interfaces,
+            overridden_interfaces=overridden_interfaces)
 
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
     def test_merge_relationship_type_and_instance_interfaces(self):
 
-        relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
+        relationship_type_interfaces = {
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start'
+                },
+                'stop': {
+                    'implementation': 'mock.tasks.stop',
+                    'inputs': {
+                        'key': {
+                            'default': 'value'
                         }
-                    }
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            }
-        )
-        relationship_instance = self._create_relationship_instance(
-            source_interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start-overridden'
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start-overridden'
-                }
-            }
-        )
-
-        expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': 'value'
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                }
-            },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': 'value'
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
                     }
                 }
             }
         }
 
+        relationship_instance_interfaces = {
+            'interface1': {
+                'start': 'mock.tasks.start-overridden'
+            }
+        }
+
+        expected_merged_interfaces = {
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start-overridden',
+                    'inputs': {},
+                    'executor': None,
+                    'max_retries': None,
+                    'retry_interval': None
+                },
+                'stop': {
+                    'implementation': 'mock.tasks.stop',
+                    'inputs': {
+                        'key': 'value'
+                    },
+                    'executor': None,
+                    'max_retries': None,
+                    'retry_interval': None
+                }
+            }
+        }
+
+        self._validate_type_interfaces(relationship_type_interfaces)
+        self._validate_instance_interfaces(relationship_instance_interfaces)
         actual_merged_interfaces = \
             merge_relationship_type_and_instance_interfaces(
-                relationship_type=relationship_type,
-                relationship_instance=relationship_instance
-            )
+                relationship_type_interfaces=relationship_type_interfaces,
+                relationship_instance_interfaces=relationship_instance_interfaces)  # noqa
 
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
-    def test_merge_relationship_type_no_source_interfaces_and_instance_interfaces(self):  # NOQA
+    def test_merge_relationship_type_no_interfaces_and_instance_interfaces(self):  # NOQA
 
-        relationship_type = self._create_relationship_type(
-            target_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
+        relationship_type_interfaces = {}
+        relationship_instance_interfaces = {
+            'interface1': {
+                'start': 'mock.tasks.start-overridden'
             }
-        )
-        relationship_instance = self._create_relationship_instance(
-            source_interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start-overridden'
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start-overridden'
-                }
-            }
-        )
+        }
 
         expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                }
-            },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': 'value'
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start-overridden',
+                    'inputs': {},
+                    'executor': None,
+                    'max_retries': None,
+                    'retry_interval': None
                 }
             }
         }
 
+        self._validate_type_interfaces(relationship_type_interfaces)
+        self._validate_instance_interfaces(relationship_instance_interfaces)
         actual_merged_interfaces = \
             merge_relationship_type_and_instance_interfaces(
-                relationship_type=relationship_type,
-                relationship_instance=relationship_instance
-            )
+                relationship_type_interfaces=relationship_type_interfaces,
+                relationship_instance_interfaces=relationship_instance_interfaces)  # noqa
 
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)
 
-    def test_merge_relationship_no_target_interfaces_type_and_instance_interfaces(self):  # NOQA
+    def test_merge_relationship_type_and_instance_no_interfaces(self):
 
-        relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
+        relationship_type_interfaces = {
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start'
+                },
+                'stop': {
+                    'implementation': 'mock.tasks.stop',
+                    'inputs': {
+                        'key': {
+                            'default': 'value'
                         }
-                    }
-                }
-            }
-        )
-        relationship_instance = self._create_relationship_instance(
-            source_interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start-overridden'
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start-overridden'
-                }
-            }
-        )
-
-        expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': 'value'
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                }
-            },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
                     }
                 }
             }
         }
 
-        actual_merged_interfaces = \
-            merge_relationship_type_and_instance_interfaces(
-                relationship_type=relationship_type,
-                relationship_instance=relationship_instance
-            )
-
-        self.assertEqual(actual_merged_interfaces,
-                         expected_merged_interfaces)
-
-    def test_merge_relationship_type_and_instance_no_source_interfaces(self):
-
-        relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            }
-        )
-        relationship_instance = self._create_relationship_instance(
-            target_interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start-overridden'
-                }
-            }
-        )
+        relationship_instance_interfaces = {}
 
         expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
+            'interface1': {
+                'start': {
+                    'implementation': 'mock.tasks.start',
+                    'inputs': {},
+                    'executor': None,
+                    'max_retries': None,
+                    'retry_interval': None
+                },
+                'stop': {
+                    'implementation': 'mock.tasks.stop',
+                    'inputs': {
+                        'key': 'value'
                     },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': 'value'
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                }
-            },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': 'value'
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
+                    'executor': None,
+                    'max_retries': None,
+                    'retry_interval': None
                 }
             }
         }
 
+        self._validate_type_interfaces(relationship_type_interfaces)
+        self._validate_instance_interfaces(relationship_instance_interfaces)
         actual_merged_interfaces = \
             merge_relationship_type_and_instance_interfaces(
-                relationship_type=relationship_type,
-                relationship_instance=relationship_instance
-            )
-
-        self.assertEqual(actual_merged_interfaces,
-                         expected_merged_interfaces)
-
-    def test_merge_relationship_type_and_instance_no_target_interfaces(self):
-
-        relationship_type = self._create_relationship_type(
-            source_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            },
-            target_interfaces={
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start'
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': {
-                                'default': 'value'
-                            }
-                        }
-                    }
-                }
-            }
-        )
-        relationship_instance = self._create_relationship_instance(
-            source_interfaces={
-                'interface1': {
-                    'start': 'mock.tasks.start-overridden'
-                }
-            }
-        )
-
-        expected_merged_interfaces = {
-            SOURCE_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start-overridden',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': 'value'
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                }
-            },
-            TARGET_INTERFACES: {
-                'interface1': {
-                    'start': {
-                        'implementation': 'mock.tasks.start',
-                        'inputs': {},
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    },
-                    'stop': {
-                        'implementation': 'mock.tasks.stop',
-                        'inputs': {
-                            'key': 'value'
-                        },
-                        'executor': None,
-                        'max_retries': None,
-                        'retry_interval': None
-                    }
-                }
-            }
-        }
-
-        actual_merged_interfaces = \
-            merge_relationship_type_and_instance_interfaces(
-                relationship_type=relationship_type,
-                relationship_instance=relationship_instance
-            )
+                relationship_type_interfaces=relationship_type_interfaces,
+                relationship_instance_interfaces=relationship_instance_interfaces)  # noqa
 
         self.assertEqual(actual_merged_interfaces,
                          expected_merged_interfaces)

@@ -14,9 +14,9 @@
 #    * limitations under the License.
 
 
-from dsl_parser import functions
+from dsl_parser import (functions,
+                        utils)
 from dsl_parser.exceptions import DSLParsingLogicException
-from dsl_parser.utils import flatten_schema
 
 
 def validate_missing_inputs(inputs):
@@ -67,7 +67,7 @@ def validate_inputs_types(inputs, inputs_schema):
 def merge_schema_and_instance_inputs(schema_inputs,
                                      instance_inputs):
 
-    flattened_schema_inputs = flatten_schema(schema_inputs)
+    flattened_schema_inputs = utils.flatten_schema(schema_inputs)
     merged_inputs = dict(
         flattened_schema_inputs.items() +
         instance_inputs.items())

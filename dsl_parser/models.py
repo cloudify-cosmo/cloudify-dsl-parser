@@ -39,7 +39,7 @@ class Plan(dict):
 
     @property
     def version(self):
-        return Version(self['version'])
+        return self['version']
 
     @property
     def inputs(self):

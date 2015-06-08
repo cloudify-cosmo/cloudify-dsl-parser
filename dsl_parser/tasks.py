@@ -14,12 +14,11 @@
 #    * limitations under the License.
 
 
-import parser
-import multi_instance
-
-from dsl_parser import functions
-from dsl_parser import exceptions
-from dsl_parser import scan
+from dsl_parser import (functions,
+                        exceptions,
+                        scan,
+                        parser,
+                        multi_instance)
 
 
 def parse_dsl(dsl_location, resources_base_url, **kwargs):
