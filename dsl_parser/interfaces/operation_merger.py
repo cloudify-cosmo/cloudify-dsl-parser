@@ -13,9 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser.interfaces.utils import operation_mapping
 from dsl_parser.interfaces.constants import NO_OP
-from dsl_parser.interfaces.utils import merge_schema_and_instance_inputs
+from dsl_parser.interfaces.utils import (operation_mapping,
+                                         merge_schema_and_instance_inputs)
 
 
 class OperationMerger(object):

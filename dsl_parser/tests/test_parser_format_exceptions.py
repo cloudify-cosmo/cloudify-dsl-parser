@@ -13,7 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser.parser import DSLParsingFormatException
+from dsl_parser.exceptions import DSLParsingFormatException
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
@@ -56,19 +56,17 @@ node_templates:
             yaml, 1, DSLParsingFormatException)
 
     def test_name_field_under_node_templates(self):
-        yaml = """
+        yaml = self.MINIMAL_BLUEPRINT + """
 node_templates:
     name: my_blueprint
     test_node:
         type: test_type
-        properties:
-            key: "val"
         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
     def test_illegal_first_level_property(self):
-        yaml = """
+        yaml = self.MINIMAL_BLUEPRINT + """
 node_templates:
     test_node:
         type: test_type
@@ -83,12 +81,12 @@ illegal_property:
 
     def test_node_with_name(self):
         yaml = """
+node_types:
+    test_type: {}
 node_templates:
     test_node:
         name: my_node_name
         type: test_type
-        properties:
-            key: "val"
         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -110,16 +108,6 @@ node_templates:
     test_node:
         properties:
             key: "val"
-        """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_interface_with_no_operations(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-node_types:
-    my_type:
-        interfaces:
-            my_interface: {}
         """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -157,19 +145,10 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_type_with_empty_interfaces_declaration(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-node_types:
-    test_type:
-        interfaces: {}
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
     def test_node_extra_properties(self):
         # testing for additional properties directly under node
         # (i.e. not within the node's 'properties' section)
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+        yaml = self.MINIMAL_BLUEPRINT + """
         extra_property: "val"
         """
         self._assert_dsl_parsing_exception_error_code(
@@ -180,7 +159,7 @@ node_types:
 imports: fake-file.yaml
         """
         self._assert_dsl_parsing_exception_error_code(
-            yaml, 2, DSLParsingFormatException)
+            yaml, 1, DSLParsingFormatException)
 
     def test_import_bad_syntax2(self):
         yaml = """
@@ -188,7 +167,7 @@ imports:
     first_file: fake-file.yaml
         """
         self._assert_dsl_parsing_exception_error_code(
-            yaml, 2, DSLParsingFormatException)
+            yaml, 1, DSLParsingFormatException)
 
     def test_import_bad_syntax3(self):
         yaml = """
@@ -196,7 +175,7 @@ imports:
     -   first_file: fake-file.yaml
         """
         self._assert_dsl_parsing_exception_error_code(
-            yaml, 2, DSLParsingFormatException)
+            yaml, 1, DSLParsingFormatException)
 
     def test_duplicate_import_in_same_file(self):
         yaml = """
@@ -268,25 +247,6 @@ relationships:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_top_level_relationships_empty_interface(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        source_interfaces: {}
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_top_level_relationships_interface_without_operations(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-relationships:
-    test_relationship:
-        source_interfaces:
-            my_interface: {}
-                """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
     def test_top_level_relationships_interface_with_operations_string(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
@@ -310,7 +270,9 @@ node_types:
     def test_instance_relationships_relationship_without_type(self):
         yaml = self.MINIMAL_BLUEPRINT + """
         relationships:
-            -   target: "fake_node"
+            -   target: test_node2
+    test_node2:
+        type: test_type
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -318,7 +280,9 @@ node_types:
     def test_instance_relationships_relationship_without_target(self):
         yaml = self.MINIMAL_BLUEPRINT + """
         relationships:
-            -   type: "fake_relationship"
+            -   type: relationship
+relationships:
+    relationship: {}
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -326,9 +290,13 @@ node_types:
     def test_instance_relationships_relationship_extra_prop(self):
         yaml = self.MINIMAL_BLUEPRINT + """
         relationships:
-            -   type: "fake_relationship"
-                target: "fake_node"
+            -   type: relationship
+                target: "test_node2"
                 extra_prop: "value"
+    test_node2:
+        type: test_type
+relationships:
+    relationship: {}
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -338,9 +306,13 @@ node_types:
         # definition
         yaml = self.MINIMAL_BLUEPRINT + """
         relationships:
-            -   type: "fake_relationship"
-                target: "fake_node"
+            -   type: relationship
+                target: test_node2
                 derived_from: "relationship"
+    test_node2:
+        type: test_type
+relationships:
+    relationship: {}
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -357,48 +329,6 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_instance_relationships_relationship_with_empty_source_interfaces(self):  # NOQA
-        yaml = self.MINIMAL_BLUEPRINT + """
-        relationships:
-            -   type: "fake_relationship"
-                target: "fake_node"
-                source_interfaces: {}
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationships_relationship_with_empty_target_interfaces(self):  # NOQA
-        yaml = self.MINIMAL_BLUEPRINT + """
-        relationships:
-            -   type: "fake_relationship"
-                target: "fake_node"
-                target_interfaces: {}
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationships_relationship_with_source_interface_without_operations(self):  # NOQA
-        yaml = self.MINIMAL_BLUEPRINT + """
-        relationships:
-            -   type: "fake_relationship"
-                target: "fake_node"
-                source_interfaces:
-                    my_interface: {}
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_instance_relationships_relationship_with_target_interface_without_operations(self):  # NOQA
-        yaml = self.MINIMAL_BLUEPRINT + """
-        relationships:
-            -   type: "fake_relationship"
-                target: "fake_node"
-                target_interfaces:
-                    my_interface: {}
-            """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
     def test_multiple_instances_with_extra_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
         instances:
@@ -410,7 +340,7 @@ node_types:
 
     def test_multiple_instances_without_deploy_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
-        instances:
+        instances: {}
             """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -450,15 +380,6 @@ workflows:
     workflow1:
         parameters:
             param: {}
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_workflow_mapping_no_parameters(self):
-        yaml = self.BLUEPRINT_WITH_INTERFACES_AND_PLUGINS + """
-workflows:
-    workflow1:
-        mapping: test_plugin.workflow1
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -578,69 +499,6 @@ node_types:
                 default: val1
                 description: property_desc1
                 extra_property: this_is_not_allowed
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_type_implementation_no_ref(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-type_implementations:
-    impl:
-        type: test_type
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_type_implementation_no_derived_from(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-type_implementations:
-    impl:
-        node_ref: test_node
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_type_implementation_properties_as_schema(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-type_implementations:
-    impl:
-        type: test_type
-        node_ref: test_node
-        properties:
-            - new_key: default
-
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_type_implementation_with_interfaces(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-type_implementations:
-    impl:
-        type: test_type
-        node_ref: test_node
-        interfaces:
-            test_interface1:
-                install:
-                  implementation: test_plugin.install
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_relationship_implementation_no_ref(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-relationship_implementations:
-    impl:
-        type: test_relationship
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_relationship_no_derived_from(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + self.BASIC_PLUGIN + """
-relationship_implementations:
-    impl:
-        node_ref: test_node
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -874,14 +732,15 @@ groups:
         policies:
             policy:
                 type: type
-                properties:
-                    key: value
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
     def test_groups_missing_policies(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+node_templates:
+    member:
+        type: test_type
 policy_types:
     type:
         properties: {}
@@ -895,6 +754,9 @@ groups:
 
     def test_groups_extra_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+node_templates:
+    member:
+        type: test_type
 policy_types:
     type:
         properties: {}
@@ -905,8 +767,6 @@ groups:
         policies:
             policy:
                 type: type
-                properties:
-                    key: value
         extra_property: extra_property
 """
         self._assert_dsl_parsing_exception_error_code(
@@ -914,6 +774,9 @@ groups:
 
     def test_groups_policy_missing_type(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+node_templates:
+    member:
+        type: test_type
 policy_types:
     type:
         properties: {}
@@ -931,6 +794,9 @@ groups:
 
     def test_groups_policy_extra_property(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+node_templates:
+    member:
+        type: test_type
 policy_types:
     type:
         properties: {}
@@ -941,27 +807,7 @@ groups:
         policies:
             policy:
                 type: type
-                properties:
-                    key: value
                 extra_property: extra_property
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
-    def test_group_members_non_unique(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
-policy_types:
-    type:
-        properties: {}
-        source: source
-groups:
-    group:
-        members: [member, member]
-        policies:
-            policy:
-                type: type
-                properties:
-                    key: value
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -978,8 +824,6 @@ groups:
         policies:
             policy:
                 type: type
-                properties:
-                    key: value
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
@@ -996,14 +840,15 @@ groups:
         policies:
             policy:
                 type: type
-                properties:
-                    key: value
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
     def test_group_policy_type_bad_type(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+node_templates:
+    vm:
+        type: test_type
 groups:
     group:
         members: [vm]
@@ -1018,6 +863,9 @@ groups:
 
     def test_group_policy_type_bad_properties(self):
         yaml = self.MINIMAL_BLUEPRINT + """
+node_templates:
+    vm:
+        type: test_type
 policy_types:
     type:
         properties: {}
