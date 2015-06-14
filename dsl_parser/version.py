@@ -31,14 +31,14 @@ def parse_dsl_version(dsl_version):
     if dsl_version.startswith(DSL_VERSION_PREFIX):
         short_dsl_version = dsl_version[len(DSL_VERSION_PREFIX):]
     else:
-        raise DSLParsingLogicException(73, 'Invalid {0}: "{1}", expected a '
-                                           'value following this format: "{2}"'
+        raise DSLParsingLogicException(73, "Invalid {0}: '{1}', expected a "
+                                           "value following this format: '{2}'"
                                        .format(VERSION, dsl_version,
                                                DSL_VERSION_1_0))
 
     if not short_dsl_version.__contains__("_"):
-        raise DSLParsingLogicException(73, 'Invalid {0}: "{1}", expected a '
-                                           'value following this format: "{2}"'
+        raise DSLParsingLogicException(73, "Invalid {0}: '{1}', expected a "
+                                           "value following this format: '{2}'"
                                        .format(VERSION, dsl_version,
                                                DSL_VERSION_1_0))
 
@@ -53,20 +53,20 @@ def parse_dsl_version(dsl_version):
 
     if not major.isdigit():
         raise DSLParsingLogicException(74,
-                                       'Invalid {0}: "{1}", major version '
-                                       'is "{2}" while expected to be a number'
+                                       "Invalid {0}: '{1}', major version "
+                                       "is '{2}' while expected to be a number"
                                        .format(VERSION, dsl_version, major))
 
     if not minor.isdigit():
         raise DSLParsingLogicException(75,
-                                       'Invalid {0}: "{1}", minor version '
-                                       'is "{2}" while expected to be a number'
+                                       "Invalid {0}: '{1}', minor version "
+                                       "is '{2}' while expected to be a number"
                                        .format(VERSION, dsl_version, minor))
 
     if micro and not micro.isdigit():
         raise DSLParsingLogicException(76,
-                                       'Invalid {0}: "{1}", micro version '
-                                       'is "{2}" while expected to be a number'
+                                       "Invalid {0}: '{1}', micro version "
+                                       "is '{2}' while expected to be a number"
                                        .format(VERSION, dsl_version, micro))
 
     return version_details(int(major), int(minor),

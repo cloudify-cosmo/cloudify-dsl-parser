@@ -41,10 +41,10 @@ class NodeTemplateType(Element):
 
     def validate(self, node_types):
         if self.initial_value not in node_types:
-            err_message = 'Could not locate node type: {0}; existing types: ' \
-                          '{1}' \
-                .format(self.initial_value,
-                        node_types.keys())
+            err_message = ("Could not locate node type: '{0}'; "
+                           "existing types: {1}"
+                           .format(self.initial_value,
+                                   node_types.keys()))
             raise exceptions.DSLParsingLogicException(7, err_message)
 
 
@@ -64,13 +64,13 @@ class NodeTemplateProperties(Element):
             instance_properties=properties,
             schema_properties=node_type['properties'],
             undefined_property_error_message=(
-                '{0} node \'{1}\' property is not part of the derived'
-                ' type properties schema'),
+                "'{0}' node '{1}' property is not part of the derived"
+                " type properties schema"),
             missing_property_error_message=(
-                '{0} node does not provide a '
-                'value for mandatory  '
-                '\'{1}\' property which is '
-                'part of its type schema'),
+                "'{0}' node does not provide a "
+                "value for mandatory "
+                "'{1}' property which is "
+                "part of its type schema"),
             node_name=self.ancestor(NodeTemplate).name)
 
 
@@ -85,8 +85,8 @@ class NodeTemplateRelationshipType(Element):
     def validate(self, relationships):
         if self.initial_value not in relationships:
             raise exceptions.DSLParsingLogicException(
-                26, 'a relationship instance under node {0} declares an '
-                    'undefined relationship type {1}'
+                26, "A relationship instance under node '{0}' declares an "
+                    "undefined relationship type '{1}'"
                     .format(self.ancestor(NodeTemplate).name,
                             self.initial_value))
 
@@ -102,17 +102,16 @@ class NodeTemplateRelationshipTarget(Element):
         node_template_names = self.ancestor(NodeTemplates).initial_value.keys()
         if self.initial_value not in node_template_names:
             raise exceptions.DSLParsingLogicException(
-                25, 'a relationship instance under node {0} of type {1} '
-                    'declares an undefined target node {2}'
+                25, "A relationship instance under node '{0}' of type '{1}' "
+                    "declares an undefined target node '{2}'"
                     .format(node_name,
                             relationship_type,
                             self.initial_value))
         if self.initial_value == node_name:
             raise exceptions.DSLParsingLogicException(
-                23, 'a relationship instance under node {0} of type {1} '
-                    'illegally declares the source node as the target node'
-                    .format(node_name,
-                            relationship_type))
+                23, "A relationship instance under node '{0}' of type '{1}' "
+                    "illegally declares the source node as the target node"
+                    .format(node_name, relationship_type))
 
 
 class NodeTemplateRelationshipProperties(Element):
@@ -132,12 +131,12 @@ class NodeTemplateRelationshipProperties(Element):
             schema_properties=relationships[relationship_type_name][
                 'properties'],
             undefined_property_error_message=(
-                '{0} node relationship \'{1}\' property is not part of '
-                'the derived relationship type properties schema'),
+                "'{0}' node relationship '{1}' property is not part of "
+                "the derived relationship type properties schema"),
             missing_property_error_message=(
-                '{0} node relationship does not provide a '
-                'value for mandatory  '
-                '\'{1}\' property which is '
+                "'{0}' node relationship does not provide a "
+                "value for mandatory "
+                "'{1}' property which is "
                 'part of its relationship type schema'),
             node_name=self.ancestor(NodeTemplate).name)
 
@@ -149,7 +148,8 @@ class NodeTemplateInstancesDeploy(Element):
 
     def validate(self):
         if self.initial_value <= 0:
-            raise ValueError('deploy instances must be a positive number')
+            raise exceptions.DSLParsingFormatException(
+                1, 'deploy instances must be a positive number')
 
 
 class NodeTemplateInstances(DictElement):
@@ -226,8 +226,9 @@ class NodeTemplateRelationships(Element):
 
         if len(contained_in_relationships) > 1:
             ex = exceptions.DSLParsingLogicException(
-                112, 'Node {0} has more than one relationship that is derived'
-                     ' from {1} relationship. Found: {2} for targets: {3}'
+                112, "Node '{0}' has more than one relationship that is "
+                     "derived from '{1}' relationship. Found: {2} for targets:"
+                     " {3}"
                      .format(self.ancestor(NodeTemplate).name,
                              constants.CONTAINED_IN_REL_TYPE,
                              contained_in_relationships,
@@ -306,7 +307,7 @@ class NodeTemplate(Element):
                 node_template_interfaces=node[constants.INTERFACES])
 
         node['operations'] = _process_operations(
-            partial_error_message='in node {0} of type {1}'
+            partial_error_message="in node '{0}' of type '{1}'"
                                   .format(node['id'], node['type']),
             interfaces=node[constants.INTERFACES],
             plugins=plugins,
@@ -369,8 +370,8 @@ def _process_operations(partial_error_message,
                 plugins=plugins,
                 error_code=error_code,
                 partial_error_message=(
-                    'In interface {0} {1}'.format(interface_name,
-                                                  partial_error_message)),
+                    "In interface '{0}' {1}".format(interface_name,
+                                                    partial_error_message)),
                 resource_base=resource_base)
         for operation in interface_operations:
             operation_name = operation.pop('name')
@@ -394,7 +395,7 @@ def _process_node_relationships_operations(relationship,
                                            node_for_plugins,
                                            plugins,
                                            resource_base):
-    partial_error_message = 'in relationship of type {0} in node {1}' \
+    partial_error_message = "in relationship of type '{0}' in node '{1}'" \
         .format(relationship['type'],
                 node_for_plugins['id'])
 
@@ -516,9 +517,9 @@ def _validate_agent_plugins_on_host_nodes(processed_nodes):
                 if plugin[constants.PLUGIN_EXECUTOR_KEY] \
                         == constants.HOST_AGENT:
                     raise exceptions.DSLParsingLogicException(
-                        24, "node {0} has no relationship which makes it "
+                        24, "node '{0}' has no relationship which makes it "
                             "contained within a host and it has a "
-                            "plugin[{1}] with '{2}' as an executor. "
+                            "plugin '{1}' with '{2}' as an executor. "
                             "These types of plugins must be "
                             "installed on a host".format(node['id'],
                                                          plugin['name'],

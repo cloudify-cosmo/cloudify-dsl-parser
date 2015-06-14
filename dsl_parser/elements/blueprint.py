@@ -24,6 +24,7 @@ from dsl_parser.elements import (imports,
                                  workflows,
                                  policies)
 from dsl_parser.framework.elements import Element
+from dsl_parser.framework.requirements import Value
 
 
 class BlueprintVersionExtractor(Element):
@@ -32,11 +33,15 @@ class BlueprintVersionExtractor(Element):
         'tosca_definitions_version': misc.ToscaDefinitionsVersion
     }
     requires = {
-        misc.ToscaDefinitionsVersion: ['version']
+        misc.ToscaDefinitionsVersion: ['version',
+                                       Value('plan_version')]
     }
 
-    def parse(self, version):
-        return version
+    def parse(self, version, plan_version):
+        return {
+            'version': version,
+            'plan_version': plan_version
+        }
 
 
 class BlueprintImporter(Element):

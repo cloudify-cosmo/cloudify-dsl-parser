@@ -328,7 +328,7 @@ node_types:
         self.assertEquals('val2', node['properties']['key2'])
 
     def test_type_properties_empty_properties(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+        yaml = """
 node_templates:
     test_node:
         type: test_type
@@ -2486,7 +2486,7 @@ workflows:
                          workflow_plugins_to_install[1]['name'])
 
     def test_relationship_type_properties_empty_properties(self):
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
+        yaml = """
 node_templates:
     test_node:
         type: test_type
@@ -3038,12 +3038,6 @@ plugins:
         executor: central_deployment_agent
         install: false
 
-node_templates:
-    node:
-        type: type
-        interfaces:
-            test:
-                op3: stub.py
 node_types:
     type:
         interfaces:

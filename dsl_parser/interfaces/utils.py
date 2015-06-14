@@ -24,7 +24,7 @@ def validate_missing_inputs(inputs):
         if value is None:
             raise DSLParsingLogicException(
                 107,
-                'Input {0} is missing a value'.format(key))
+                "Input '{0}' is missing a value".format(key))
 
 
 def validate_inputs_types(inputs, inputs_schema):
@@ -54,13 +54,13 @@ def validate_inputs_types(inputs, inputs_schema):
             continue
         else:
             raise DSLParsingLogicException(
-                80, 'Unexpected type defined in inputs schema '
-                    'for input {0} - unknown type is {1}'
+                80, "Unexpected type defined in inputs schema "
+                    "for input '{0}' - unknown type is {1}"
                     .format(input_key, input_type))
 
         raise DSLParsingLogicException(
-            50, 'Input type validation failed: Input {0} type '
-                'is {1}, yet it was assigned with the value {2}'
+            50, "Input type validation failed: Input '{0}' type "
+                "is '{1}', yet it was assigned with the value '{2}'"
                 .format(input_key, input_type, input_val))
 
 

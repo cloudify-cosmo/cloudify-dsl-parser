@@ -141,6 +141,8 @@ class Context(object):
         elif isinstance(schema, list):
             self._traverse_list_schema(schema=schema,
                                        parent_element=parent_element)
+        elif isinstance(schema, elements.UnknownSchema):
+            pass
         else:
             raise ValueError('Illegal state should have been identified'
                              ' by schema API validation')
@@ -148,15 +150,25 @@ class Context(object):
     def _traverse_dict_schema(self, schema,  parent_element):
         if not isinstance(parent_element.initial_value, dict):
             return
+
+        parsed_names = set()
         for name, element_cls in schema.items():
-            if name not in parent_element.initial_value:
+            if name not in parent_element.initial_value_holder:
                 value = None
             else:
-                value = parent_element.initial_value[name]
+                name, value = \
+                    parent_element.initial_value_holder.get_item(name)
+                parsed_names.add(name.value)
             self._traverse_element_cls(element_cls=element_cls,
                                        name=name,
                                        value=value,
                                        parent_element=parent_element)
+        for k_holder, v_holder in parent_element.initial_value_holder.value.\
+                iteritems():
+            if k_holder.value not in parsed_names:
+                self._traverse_element_cls(element_cls=elements.UnknownElement,
+                                           name=k_holder, value=v_holder,
+                                           parent_element=parent_element)
 
     def _traverse_element_type_schema(self, schema, parent_element):
         if isinstance(schema, elements.Leaf):
@@ -166,18 +178,20 @@ class Context(object):
         if isinstance(schema, elements.Dict):
             if not isinstance(parent_element.initial_value, dict):
                 return
-            for name, value in parent_element.initial_value.items():
+            for name_holder, value_holder in parent_element.\
+                    initial_value_holder.value.items():
                 self._traverse_element_cls(element_cls=element_cls,
-                                           name=name,
-                                           value=value,
+                                           name=name_holder,
+                                           value=value_holder,
                                            parent_element=parent_element)
         elif isinstance(schema, elements.List):
             if not isinstance(parent_element.initial_value, list):
                 return
-            for index, value in enumerate(parent_element.initial_value):
+            for index, value_holder in enumerate(
+                    parent_element.initial_value_holder.value):
                 self._traverse_element_cls(element_cls=element_cls,
                                            name=index,
-                                           value=value,
+                                           value=value_holder,
                                            parent_element=parent_element)
         else:
             raise ValueError('Illegal state should have been identified'
@@ -226,7 +240,7 @@ class Context(object):
             names.append(str(names[0]))
             ex = exceptions.DSLParsingLogicException(
                 exceptions.ERROR_CODE_CYCLE,
-                'Failed parsing. Circular dependency detected: {0}'
+                'Parsing failed. Circular dependency detected: {0}'
                 .format(' --> '.join(names)))
             ex.circular_dependency = names
             raise ex
@@ -246,54 +260,57 @@ class Parser(object):
             element_name=element_name,
             inputs=inputs)
         for element in context.elements_graph_topological_sort():
-            required_args = self._extract_element_requirements(element)
-            self._validate_element(element, required_args, strict=strict)
-            self._parse_element(element, required_args)
+            try:
+                self._validate_element_schema(element, strict=strict)
+                self._process_element(element)
+            except exceptions.DSLParsingException as e:
+                if not e.element:
+                    e.element = element
+                raise
         return context.parsed_value
 
     @staticmethod
-    def _validate_element(element, required_args, strict):
+    def _validate_element_schema(element, strict):
         value = element.initial_value
         if element.required and value is None:
             raise exceptions.DSLParsingFormatException(
-                1,
-                'Missing required value for {0}'.format(element.name))
+                1, "'{0}' key is required but it is currently missing"
+                   .format(element.name))
 
         def validate_schema(schema):
             if isinstance(schema, (dict, elements.Dict)):
                 if not isinstance(value, dict):
                     raise exceptions.DSLParsingFormatException(
-                        1, 'Expected dict value for {0} but found {1}'
-                           .format(element.name, value))
+                        1, _expected_type_message(value, dict))
                 for key in value.keys():
                     if not isinstance(key, basestring):
                         raise exceptions.DSLParsingFormatException(
-                            1, 'Dict keys must be strings for {0} but'
-                               ' found {1}'.format(element.name, key))
+                            1, "Dict keys must be strings but"
+                               " found '{0}' of type '{1}'"
+                               .format(key, _py_type_to_user_type(type(key))))
 
             if strict and isinstance(schema, dict):
                 for key in value.keys():
                     if key not in schema:
-                        raise exceptions.DSLParsingFormatException(
-                            1, '{0} is not permitted'.format(key))
+                        ex = exceptions.DSLParsingFormatException(
+                            1, "'{0}' is not in schema. "
+                               "Valid schema values: {1}"
+                               .format(key, schema.keys()))
+                        for child_element in element.children():
+                            if child_element.name == key:
+                                ex.element = child_element
+                                break
+                        raise ex
 
             if (isinstance(schema, elements.List) and
                     not isinstance(value, list)):
                 raise exceptions.DSLParsingFormatException(
-                    1, 'Expected list value for {0} but found {1}'
-                       .format(element.name, value))
+                    1, _expected_type_message(value, list))
 
             if (isinstance(schema, elements.Leaf) and
                     not isinstance(value, schema.type)):
-                if isinstance(schema.type, tuple):
-                    type_name = [t.__name__ for t in schema.type]
-                else:
-                    type_name = schema.type.__name__
                 raise exceptions.DSLParsingFormatException(
-                    1, 'Expected {0} value for {1} but found {2}'
-                       .format(type_name,
-                               element.name,
-                               value))
+                    1, _expected_type_message(value, schema.type))
         if value is not None:
             if isinstance(element.schema, list):
                 validated = False
@@ -315,10 +332,9 @@ class Parser(object):
             else:
                 validate_schema(element.schema)
 
+    def _process_element(self, element):
+        required_args = self._extract_element_requirements(element)
         element.validate(**required_args)
-
-    @staticmethod
-    def _parse_element(element, required_args):
         element.value = element.parse(**required_args)
         element.provided = element.calculate_provided(**required_args)
 
@@ -336,8 +352,9 @@ class Parser(object):
                 for input in requirements:
                     if input.name not in context.inputs and input.required:
                         raise exceptions.DSLParsingFormatException(
-                            1, 'Missing required input: {0}'.format(
-                                input.name))
+                            1, "Missing required input '{0}'. "
+                               "Existing inputs: "
+                               .format(input.name, context.inputs.keys()))
                     required_args[input.name] = context.inputs.get(input.name)
             else:
                 if required_type == 'self':
@@ -355,9 +372,16 @@ class Parser(object):
                         else:
                             if (requirement.name not in
                                     required_element.provided):
+                                provided = required_element.provided.keys()
                                 if requirement.required:
                                     raise exceptions.DSLParsingFormatException(
-                                        1, 'Missing required value')
+                                        1,
+                                        "Required value '{0}' is not "
+                                        "provided by '{1}'. Provided values "
+                                        "are: {2}"
+                                        .format(requirement.name,
+                                                required_element.name,
+                                                provided))
                                 else:
                                     continue
                             result.append(required_element.provided[
@@ -366,9 +390,10 @@ class Parser(object):
                     if len(result) != 1 and not requirement.multiple_results:
                         if requirement.required:
                             raise exceptions.DSLParsingFormatException(
-                                1, 'Expected exactly one result for '
-                                   'requirement: {0}'
-                                   .format(requirement.name))
+                                1, "Expected exactly one result for "
+                                   "requirement '{0}' but found {1}"
+                                   .format(requirement.name,
+                                           'none' if not result else result))
                         elif not result:
                             result = [None]
                         else:
@@ -397,3 +422,28 @@ def parse(value,
                          element_name=element_name,
                          inputs=inputs,
                          strict=strict)
+
+
+def _expected_type_message(value, expected_type):
+    return ("Expected '{0}' type but found '{1}' type"
+            .format(_py_type_to_user_type(expected_type),
+                    _py_type_to_user_type(type(value))))
+
+
+def _py_type_to_user_type(_type):
+    if isinstance(_type, tuple):
+        return list(set(_py_type_to_user_type(t) for t in _type))
+    elif issubclass(_type, basestring):
+        return 'string'
+    elif issubclass(_type, bool):
+        return 'boolean'
+    elif issubclass(_type, int) or issubclass(_type, long):
+        return 'integer'
+    elif issubclass(_type, float):
+        return 'float'
+    elif issubclass(_type, dict):
+        return 'dict'
+    elif issubclass(_type, list):
+        return 'list'
+    else:
+        raise ValueError('Unexpected type: {0}'.format(_type))

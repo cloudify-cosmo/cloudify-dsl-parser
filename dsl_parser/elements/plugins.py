@@ -33,9 +33,9 @@ class PluginExecutor(Element):
         if self.initial_value not in [constants.CENTRAL_DEPLOYMENT_AGENT,
                                       constants.HOST_AGENT]:
             raise exceptions.DSLParsingLogicException(
-                18, 'plugin {0} has an illegal '
-                    '{1} value {2}; value '
-                    'must be either {3} or {4}'
+                18, "Plugin '{0}' has an illegal "
+                    "'{1}' value '{2}'; value "
+                    "must be either '{3}' or '{4}'"
                     .format(self.ancestor(Plugin).name,
                             self.name,
                             self.initial_value,
@@ -71,8 +71,8 @@ class PluginInstallArguments(Element):
         if version.definitions_version < (1, 1):
             raise exceptions.DSLParsingLogicException(
                 70,
-                'plugin property "{0}" is not supported for {1} earlier than '
-                '"{2}". You are currently using version "{3}"'.format(
+                "Plugin property '{0}' is not supported for {1} earlier than "
+                "'{2}'. You are currently using version '{3}'".format(
                     self.name,
                     _version.VERSION,
                     _version.DSL_VERSION_1_1,
@@ -93,7 +93,7 @@ class Plugin(DictElement):
                 not self.child(PluginSource).value):
             raise exceptions.DSLParsingLogicException(
                 50,
-                "plugin {0} needs to be installed, "
+                "Plugin '{0}' needs to be installed, "
                 "but does not declare a source property"
                 .format(self.name))
 

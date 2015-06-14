@@ -56,7 +56,9 @@ node_templates:
             yaml, 1, DSLParsingFormatException)
 
     def test_name_field_under_node_templates(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
+        yaml = """
+node_types:
+    test_type: {}
 node_templates:
     name: my_blueprint
     test_node:
@@ -66,7 +68,12 @@ node_templates:
             yaml, 1, DSLParsingFormatException)
 
     def test_illegal_first_level_property(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
+        yaml = """
+node_types:
+    test_type:
+        properties:
+            key:
+                default: 'default'
 node_templates:
     test_node:
         type: test_type
@@ -737,7 +744,9 @@ groups:
             yaml, 1, DSLParsingFormatException)
 
     def test_groups_missing_policies(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
+        yaml = """
+node_types:
+    test_type: {}
 node_templates:
     member:
         type: test_type
@@ -753,7 +762,9 @@ groups:
             yaml, 1, DSLParsingFormatException)
 
     def test_groups_extra_property(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
+        yaml = """
+node_types:
+    test_type: {}
 node_templates:
     member:
         type: test_type
@@ -773,7 +784,9 @@ groups:
             yaml, 1, DSLParsingFormatException)
 
     def test_groups_policy_missing_type(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
+        yaml = """
+node_types:
+    test_type: {}
 node_templates:
     member:
         type: test_type
@@ -793,7 +806,9 @@ groups:
             yaml, 1, DSLParsingFormatException)
 
     def test_groups_policy_extra_property(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
+        yaml = """
+node_types:
+    test_type: {}
 node_templates:
     member:
         type: test_type
@@ -845,7 +860,9 @@ groups:
             yaml, 1, DSLParsingFormatException)
 
     def test_group_policy_type_bad_type(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
+        yaml = """
+node_types:
+    test_type: {}
 node_templates:
     vm:
         type: test_type
@@ -862,7 +879,9 @@ groups:
             yaml, 1, DSLParsingFormatException)
 
     def test_group_policy_type_bad_properties(self):
-        yaml = self.MINIMAL_BLUEPRINT + """
+        yaml = """
+node_types:
+    test_type: {}
 node_templates:
     vm:
         type: test_type

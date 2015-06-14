@@ -42,7 +42,8 @@ class SchemaPropertyType(Element):
                                       'boolean']:
             raise exceptions.DSLParsingFormatException(
                 1,
-                'Illegal type: {0}'.format(self.initial_value))
+                "Illegal property schema type '{0}'".format(
+                    self.initial_value))
 
 
 class SchemaProperty(Element):
