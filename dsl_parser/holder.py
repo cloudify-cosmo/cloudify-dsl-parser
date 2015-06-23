@@ -43,17 +43,13 @@ class Holder(object):
         return self.__str__()
 
     def __contains__(self, key):
-        if not isinstance(self.value, dict):
-            raise ValueError('Value is expected to be of type dict while it'
-                             'is in face of type {0}'
-                             .format(type(self.value).__name__))
         key_holder, value_holder = self.get_item(key)
         return value_holder is not None
 
     def get_item(self, key):
         if not isinstance(self.value, dict):
             raise ValueError('Value is expected to be of type dict while it'
-                             'is in face of type {0}'
+                             'is in fact of type {0}'
                              .format(type(self.value).__name__))
         for key_holder, value_holder in self.value.iteritems():
             if key_holder.value == key:
