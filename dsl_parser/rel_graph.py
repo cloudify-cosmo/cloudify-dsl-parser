@@ -336,8 +336,8 @@ def _extract_contained(node, node_instance):
         if (node_instance_relationship['type'] ==
                 contained_node_relationship['type']):
             return node_instance_relationship
-    raise RuntimeError('Failed extracting contained node instance '
-                       'relationships for node instance: {0}'
+    raise RuntimeError("Failed extracting contained node instance "
+                       "relationships for node instance '{0}'"
                        .format(node_instance['id']))
 
 
@@ -385,10 +385,10 @@ def _handle_connected_to_and_depends_on(ctx):
                 target_ids = relationship_target_ids[key]
                 if len(target_ids) != 1:
                     raise IllegalAllToOneState(
-                        'Expected exactly one target id for relationship '
-                        '{0}->{1} ({2})'.format(source_node_id,
-                                                target_node_id,
-                                                relationship['type']))
+                        "Expected exactly one target id for relationship "
+                        "{0}->{1} of type '{2}')".format(source_node_id,
+                                                         target_node_id,
+                                                         relationship['type']))
                 target_node_instance_id = target_ids.copy().pop()
             else:
                 target_node_instance_id = min(target_node_instance_ids)

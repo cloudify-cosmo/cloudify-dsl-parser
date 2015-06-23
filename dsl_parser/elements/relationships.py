@@ -79,8 +79,8 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
                        constants.TARGET_INTERFACES]:
         for interface_name, interface in rel_obj[interfaces].items():
             operation.process_interface_operations(
-                interface,
-                plugins,
-                19,
-                'Relationship: {0}'.format(rel_name),
+                interface=interface,
+                plugins=plugins,
+                error_code=19,
+                partial_error_message="Relationship '{0}'".format(rel_name),
                 resource_base=resource_base)

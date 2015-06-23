@@ -49,8 +49,8 @@ class OperationExecutor(Element):
                 self.ancestor(Interface).name,
                 self.ancestor(Operation).name)
             raise exceptions.DSLParsingLogicException(
-                28, 'Operation {0} has an illegal executor value: {1}. '
-                    'valid values are [{2}]'
+                28, "Operation '{0}' has an illegal executor value '{1}'. "
+                    "valid values are [{2}]"
                     .format(full_operation_name,
                             value,
                             ','.join(valid_executors)))
@@ -82,8 +82,9 @@ class OperationMaxRetries(Element):
                 'is only supported in dsl versions greater or equal to'
                 'cloudify_dsl_1_1')
         if value < -1:
-            raise ValueError('{0} value must be either -1 to specify unlimited'
-                             ' retries or a non negative number but got {1}.'
+            raise ValueError("'{0}' value must be either -1 to specify "
+                             "unlimited retries or a non negative number but "
+                             "got {1}."
                              .format(self.name, value))
 
 
@@ -105,8 +106,8 @@ class OperationRetryInterval(Element):
                 'is only supported in dsl versions greater or equal to'
                 'cloudify_dsl_1_1')
         if value is not None and value < 0:
-            raise ValueError('{0} value must be a non negative number but got'
-                             ' {1}.'.format(self.name, value))
+            raise ValueError("'{0}' value must be a non negative number but "
+                             "got {1}.".format(self.name, value))
 
 
 class Operation(Element):
@@ -251,7 +252,7 @@ def process_operation(
     elif resource_base and _resource_exists(resource_base, operation_mapping):
         operation_payload = copy.deepcopy(operation_payload or {})
         if constants.SCRIPT_PATH_PROPERTY in operation_payload:
-            message = 'Cannot define {0} property in {1} for {2} "{3}"' \
+            message = "Cannot define '{0}' property in '{1}' for {2} '{3}'" \
                 .format(constants.SCRIPT_PATH_PROPERTY,
                         operation_mapping,
                         'workflow' if is_workflows else 'operation',
@@ -273,8 +274,8 @@ def process_operation(
                 constants.SCRIPT_PATH_PROPERTY: script_path
             })
         if constants.SCRIPT_PLUGIN_NAME not in plugins:
-            message = 'Script plugin is not defined but it is required for' \
-                      ' mapping: {0} of {1} "{2}"' \
+            message = "Script plugin is not defined but it is required for" \
+                      " mapping '{0}' of {1} '{2}'" \
                 .format(operation_mapping,
                         'workflow' if is_workflows else 'operation',
                         operation_name)
@@ -300,12 +301,12 @@ def process_operation(
     else:
         # This is an error for validation done somewhere down the
         # current stack trace
-        base_error_message = 'Could not extract plugin from {2} ' \
-                             'mapping {0}, which is declared for {2} ' \
-                             '{1}.'\
+        base_error_message = (
+            "Could not extract plugin from {2} "
+            "mapping '{0}', which is declared for {2} '{1}'. "
             .format(operation_mapping,
                     operation_name,
-                    'workflow' if is_workflows else 'operation')
+                    'workflow' if is_workflows else 'operation'))
         error_message = base_error_message + partial_error_message
         raise exceptions.DSLParsingLogicException(error_code, error_message)
 

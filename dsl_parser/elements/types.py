@@ -46,8 +46,8 @@ class DerivedFrom(Element):
         if self.initial_value not in self.ancestor(Types).initial_value:
             raise exceptions.DSLParsingLogicException(
                 14,
-                'Missing definition for {0} {1} which is declared as derived '
-                'by {0} {2}'
+                "Missing definition for {0} '{1}' which is declared as "
+                "derived by {0} '{2}'"
                 .format(self.descriptor,
                         self.initial_value,
                         self.ancestor(Type).name))
@@ -55,12 +55,12 @@ class DerivedFrom(Element):
 
 class RelationshipDerivedFrom(DerivedFrom):
 
-    descriptor = 'type'
+    descriptor = 'relationship'
 
 
 class TypeDerivedFrom(DerivedFrom):
 
-    descriptor = 'relationship'
+    descriptor = 'type'
 
 
 def derived_from_predicate(source, target):

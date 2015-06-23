@@ -46,6 +46,13 @@ class DSLParsingException(Exception):
     def __init__(self, err_code, *args):
         super(DSLParsingException, self).__init__(*args)
         self.err_code = err_code
+        self.element = None
+
+    def __str__(self):
+        message = super(DSLParsingException, self).__str__()
+        if not self.element:
+            return message
+        return '{0} {1}'.format(message, self.element)
 
 
 class DSLParsingLogicException(DSLParsingException):

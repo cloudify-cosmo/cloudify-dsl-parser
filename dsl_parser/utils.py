@@ -16,9 +16,9 @@
 import contextlib
 import urllib2
 
-import yaml
 import yaml.parser
 
+from dsl_parser import yaml_loader
 from dsl_parser import functions
 from dsl_parser.exceptions import (DSLParsingLogicException,
                                    DSLParsingFormatException)
@@ -102,23 +102,18 @@ def _validate_properties_types(properties, properties_schema):
             continue
         else:
             raise RuntimeError(
-                'Unexpected type defined in property schema for property {0} -'
-                ' unknown type is {1}'.format(prop_key, prop_type))
+                "Unexpected type defined in property schema for property '{0}'"
+                " - unknown type is '{1}'".format(prop_key, prop_type))
 
         raise DSLParsingLogicException(
-            50, 'Property type validation failed: Property {0} type '
-                'is {1}, yet it was assigned with the value {2}'
+            50, "Property type validation failed: Property '{0}' type "
+                "is '{1}', yet it was assigned with the value '{2}'"
                 .format(prop_key, prop_type, prop_val))
 
 
-def load_yaml(raw_yaml, error_message):
+def load_yaml(raw_yaml, error_message, filename=None):
     try:
-        result = yaml.safe_load(raw_yaml)
-        if result is None:
-            # load of empty string returns None so we convert it to an empty
-            # dict
-            result = {}
-        return result
+        return yaml_loader.load(raw_yaml, filename)
     except yaml.parser.ParserError, ex:
         raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'
                                         .format(error_message, ex))

@@ -48,30 +48,33 @@ def parse(dsl_string, resources_base_url=None):
 
 
 def _parse(dsl_string, resources_base_url, dsl_location=None):
-    parsed_dsl = utils.load_yaml(raw_yaml=dsl_string,
-                                 error_message='Failed to parse DSL')
+    parsed_dsl_holder = utils.load_yaml(raw_yaml=dsl_string,
+                                        error_message='Failed to parse DSL',
+                                        filename=dsl_location)
 
     # validate version
-    parser.parse(parsed_dsl,
-                 element_cls=blueprint.BlueprintVersionExtractor,
-                 strict=False)
+    result = parser.parse(parsed_dsl_holder,
+                          element_cls=blueprint.BlueprintVersionExtractor,
+                          strict=False)
+    version = result['plan_version']
 
     # handle imports
     result = parser.parse(
-        value=parsed_dsl,
+        value=parsed_dsl_holder,
         inputs={
-            'main_blueprint': parsed_dsl,
+            'main_blueprint_holder': parsed_dsl_holder,
             'resources_base_url': resources_base_url,
-            'blueprint_location': dsl_location
+            'blueprint_location': dsl_location,
+            'version': version
         },
         element_cls=blueprint.BlueprintImporter,
         strict=False)
     resource_base = result['resource_base']
-    merged_blueprint = result['merged_blueprint']
+    merged_blueprint_holder = result['merged_blueprint']
 
     # parse blueprint
     plan = parser.parse(
-        value=merged_blueprint,
+        value=merged_blueprint_holder,
         inputs={
             'resource_base': resource_base
         },

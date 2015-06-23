@@ -14,8 +14,10 @@
 #    * limitations under the License.
 
 import copy
+from StringIO import StringIO
 
 from dsl_parser import exceptions
+from dsl_parser import holder
 
 
 class Unparsed(object):
@@ -52,17 +54,38 @@ class Element(object):
 
     def __init__(self, context, initial_value, name=None):
         self.context = context
-        self._initial_value = initial_value
+        initial_value = holder.Holder.of(initial_value)
+        self.initial_value_holder = initial_value
+        self._initial_value = initial_value.restore()
+        self.start_line = initial_value.start_line
+        self.start_column = initial_value.start_column
+        self.end_line = initial_value.end_line
+        self.end_column = initial_value.end_column
+        self.filename = initial_value.filename
+        name = holder.Holder.of(name)
+        self.name = name.restore()
+        self.name_start_line = name.start_line
+        self.name_start_column = name.start_column
+        self.name_end_line = name.end_line
+        self.name_end_column = name.end_column
         self._parsed_value = UNPARSED
         self._provided = None
-        self.name = name
 
     def __str__(self):
-        return '{0}(name={1}, initial_value={2}, value={3})'.format(
-            self.__class__, self.name, self._initial_value,
-            self._parsed_value)
+        message = StringIO()
+        if self.filename:
+            message.write('\n  in: {0}'.format(self.filename))
+        if self.name_start_line >= 0:
+            message.write('\n  in line: {0}, column: {1}'
+                          .format(self.name_start_line + 1,
+                                  self.name_start_column))
+        elif self.start_line >= 0:
+            message.write('\n  in line {0}, column {1}'
+                          .format(self.start_line + 1, self.start_column))
+        message.write('\n  path: {0}'.format(self.path))
+        message.write('\n  value: {0}'.format(self._initial_value))
 
-    __repr__ = __str__
+        return message.getvalue()
 
     def validate(self, **kwargs):
         pass
@@ -102,6 +125,15 @@ class Element(object):
     def provided(self, value):
         self._provided = value
 
+    @property
+    def path(self):
+        elements = [str(e.name) for e in self.context.ancestors_iter(self)]
+        if elements:
+            elements.pop()
+        elements.reverse()
+        elements.append(str(self.name))
+        return '.'.join(elements)
+
     def _parent(self):
         return next(self.context.ancestors_iter(self))
 
@@ -110,10 +142,10 @@ class Element(object):
                    if isinstance(e, element_type)]
         if not matches:
             raise exceptions.DSLParsingElementMatchException(
-                'No matches found for {0}'.format(element_type))
+                "No matches found for '{0}'".format(element_type))
         if len(matches) > 1:
             raise exceptions.DSLParsingElementMatchException(
-                'Multiple matches found for {0}'.format(element_type))
+                "Multiple matches found for '{0}'".format(element_type))
         return matches[0]
 
     def descendants(self, element_type):
@@ -125,10 +157,10 @@ class Element(object):
                    if isinstance(e, element_type)]
         if not matches:
             raise exceptions.DSLParsingElementMatchException(
-                'No matches found for {0}'.format(element_type))
+                "No matches found for '{0}'".format(element_type))
         if len(matches) > 1:
             raise exceptions.DSLParsingElementMatchException(
-                'Multiple matches found for {0}'.format(element_type))
+                "Multiple matches found for '{0}'".format(element_type))
         return matches[0]
 
     def build_dict_result(self):
@@ -146,3 +178,12 @@ class DictElement(Element):
 
     def parse(self, **kwargs):
         return self.build_dict_result()
+
+
+class UnknownSchema(object):
+    pass
+
+
+class UnknownElement(Element):
+
+    schema = UnknownSchema()
