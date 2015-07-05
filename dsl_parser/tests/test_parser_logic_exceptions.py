@@ -17,6 +17,7 @@
 from dsl_parser import constants
 from dsl_parser.parser import parse_from_path
 from dsl_parser.parser import parse as dsl_parse
+from dsl_parser import exceptions
 from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser import version
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
@@ -763,3 +764,27 @@ node_templates:
         self._assert_dsl_parsing_exception_error_code(
             yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_0),
             81, DSLParsingLogicException)
+
+    def test_dsl_definitions_version_validation(self):
+        yaml_template = """{0}
+dsl_definitions:
+    def: &def
+        key: value
+node_types:
+    type:
+        properties:
+            prop:
+                default: 1
+node_templates:
+    node:
+        type: type
+"""
+        self.parse(yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_2))
+        self._assert_dsl_parsing_exception_error_code(
+            yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_1),
+            exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+            DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_0),
+            exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+            DSLParsingLogicException)

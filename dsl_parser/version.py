@@ -6,7 +6,12 @@ VERSION = 'tosca_definitions_version'
 DSL_VERSION_PREFIX = 'cloudify_dsl_'
 DSL_VERSION_1_0 = DSL_VERSION_PREFIX + '1_0'
 DSL_VERSION_1_1 = DSL_VERSION_PREFIX + '1_1'
-SUPPORTED_VERSIONS = [DSL_VERSION_1_0, DSL_VERSION_1_1]
+DSL_VERSION_1_2 = DSL_VERSION_PREFIX + '1_2'
+SUPPORTED_VERSIONS = [
+    DSL_VERSION_1_0,
+    DSL_VERSION_1_1,
+    DSL_VERSION_1_2
+]
 
 
 def validate_dsl_version(dsl_version):
@@ -84,7 +89,3 @@ def process_dsl_version(dsl_version):
         'definitions_name': version_definitions_name,
         'definitions_version': tuple(version_definitions_version)
     }
-
-
-v1_0 = parse_dsl_version(DSL_VERSION_1_0)
-v1_1 = parse_dsl_version(DSL_VERSION_1_1)
