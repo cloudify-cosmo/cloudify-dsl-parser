@@ -3138,38 +3138,171 @@ node_templates:
                   expected=(1, 0))
         assertion(self.BASIC_VERSION_SECTION_DSL_1_1,
                   expected=(1, 1))
+        assertion(self.BASIC_VERSION_SECTION_DSL_1_2,
+                  expected=(1, 2))
 
     def test_version_comparison(self):
-        v1_0 = version.parse_dsl_version('cloudify_dsl_1_0')
-        v1_0_0 = version.parse_dsl_version('cloudify_dsl_1_0_0')
-        v1_0_1 = version.parse_dsl_version('cloudify_dsl_1_0_1')
-        v1_1 = version.parse_dsl_version('cloudify_dsl_1_1')
-        v2_0 = version.parse_dsl_version('cloudify_dsl_2_0')
 
-        def assert_greater_than_equal(left, right):
-            self.assertGreaterEqual(left, right)
+        def parse_version(ver):
+            parsed = version.parse_dsl_version('cloudify_dsl_{0}'.format(ver))
+            major, minor, micro = parsed
+            if micro is None:
+                micro = 0
+            return major, minor, micro
 
-        assert_greater_than_equal(v2_0, v2_0)
-        assert_greater_than_equal(v2_0, v1_1)
-        assert_greater_than_equal(v2_0, v1_0_1)
-        assert_greater_than_equal(v2_0, v1_0_0)
-        assert_greater_than_equal(v2_0, v1_0)
+        versions = [
+            (1, '1_0'),
+            (1, '1_0_0'),
+            (2, '1_0_1'),
+            (3, '1_1'),
+            (3, '1_1_0'),
+            (4, '1_2'),
+            (4, '1_2_0'),
+            (5, '2_0'),
+        ]
 
-        assert_greater_than_equal(v1_1, v1_1)
-        assert_greater_than_equal(v1_1, v1_0_1)
-        assert_greater_than_equal(v1_1, v1_0_0)
-        assert_greater_than_equal(v1_1, v1_0)
+        for ord1, ver1 in versions:
+            parsed_ver1 = parse_version(ver1)
+            for ord2, ver2 in versions:
+                parsed_ver2 = parse_version(ver2)
+                if ord1 == ord2:
+                    comp_func = self.assertEqual
+                elif ord1 < ord2:
+                    comp_func = self.assertLess
+                else:
+                    comp_func = self.assertGreater
+                comp_func(parsed_ver1, parsed_ver2)
 
-        assert_greater_than_equal(v1_0_1, v1_0_1)
-        assert_greater_than_equal(v1_0_1, v1_0_0)
-        assert_greater_than_equal(v1_0_1, v1_0)
+    def test_dsl_definitions(self):
+        yaml = """
+dsl_definitions:
+  def1: &def1
+    prop1: val1
+    prop2: val2
+  def2: &def2
+    prop3: val3
+    prop4: val4
+node_types:
+  type1:
+    properties:
+      prop1:
+        default: default_val1
+      prop2:
+        default: default_val2
+      prop3:
+        default: default_val3
+      prop4:
+        default: default_val4
+node_templates:
+  node1:
+    type: type1
+    properties:
+      <<: *def1
+      <<: *def2
+  node2:
+    type: type1
+    properties: *def1
+  node3:
+    type: type1
+    properties: *def2
+"""
+        plan = self.parse_1_2(yaml)
+        self.assertNotIn('dsl_definitions', plan)
+        node1 = self.get_node_by_name(plan, 'node1')
+        node2 = self.get_node_by_name(plan, 'node2')
+        node3 = self.get_node_by_name(plan, 'node3')
+        self.assertEqual({
+            'prop1': 'val1',
+            'prop2': 'val2',
+            'prop3': 'val3',
+            'prop4': 'val4',
+        }, node1['properties'])
+        self.assertEqual({
+            'prop1': 'val1',
+            'prop2': 'val2',
+            'prop3': 'default_val3',
+            'prop4': 'default_val4',
+        }, node2['properties'])
+        self.assertEqual({
+            'prop1': 'default_val1',
+            'prop2': 'default_val2',
+            'prop3': 'val3',
+            'prop4': 'val4',
+        }, node3['properties'])
 
-        assert_greater_than_equal(v1_0_0, v1_0_0)
-        assert_greater_than_equal(v1_0_0, v1_0)
-        assert_greater_than_equal(v1_0, v1_0)
-        # the v1_0 is (1, 0, None) which is considered
-        # smaller than (1, 0, 0)
-        # assert_greater_than_equal(v1_0, v1_0_0)
+    def test_dsl_definitions_as_list(self):
+        yaml = """
+dsl_definitions:
+  - &def1
+    prop1: val1
+    prop2: val2
+  - &def2
+    prop3: val3
+    prop4: val4
+node_types:
+  type1:
+    properties:
+      prop1:
+        default: default_val1
+      prop2:
+        default: default_val2
+      prop3:
+        default: default_val3
+      prop4:
+        default: default_val4
+node_templates:
+  node1:
+    type: type1
+    properties:
+      <<: *def1
+      <<: *def2
+"""
+        plan = self.parse_1_2(yaml)
+        self.assertNotIn('dsl_definitions', plan)
+        node1 = self.get_node_by_name(plan, 'node1')
+        self.assertEqual({
+            'prop1': 'val1',
+            'prop2': 'val2',
+            'prop3': 'val3',
+            'prop4': 'val4',
+        }, node1['properties'])
+
+    def test_dsl_definitions_in_imports(self):
+        imported_yaml = self.BASIC_VERSION_SECTION_DSL_1_2 + """
+dsl_definitions:
+  - &def1
+    prop1:
+        default: val1
+node_types:
+  type1:
+    properties: *def1
+
+"""
+        imported_yaml_filename = self.make_yaml_file(imported_yaml)
+        yaml = """
+dsl_definitions:
+  - &def1
+    prop1: val2
+imports:
+    - {0}
+node_templates:
+  node1:
+    type: type1
+  node2:
+    type: type1
+    properties: *def1
+""".format(imported_yaml_filename)
+
+        plan = self.parse_1_2(yaml)
+        self.assertNotIn('dsl_definitions', plan)
+        node1 = self.get_node_by_name(plan, 'node1')
+        node2 = self.get_node_by_name(plan, 'node2')
+        self.assertEqual({
+            'prop1': 'val1',
+        }, node1['properties'])
+        self.assertEqual({
+            'prop1': 'val2',
+        }, node2['properties'])
 
 
 class DeploymentPluginsToInstallTest(AbstractTestParser):

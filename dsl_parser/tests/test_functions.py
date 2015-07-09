@@ -50,6 +50,45 @@ node_templates:
         server = self.get_node_by_name(parsed, 'server')
         self.assertEqual('10.0.0.1', server['properties']['endpoint'])
 
+    def test_node_template_properties_with_dsl_definitions(self):
+        yaml = """
+dsl_definitions:
+    props: &props
+        prop2: { get_property: [SELF, prop1] }
+        prop3:
+            nested: { get_property: [SELF, prop1] }
+node_types:
+    type1:
+        properties:
+            prop1: {}
+            prop2: {}
+            prop3: {}
+node_templates:
+    node1:
+        type: type1
+        properties:
+            <<: *props
+            prop1: value1
+    node2:
+        type: type1
+        properties:
+            <<: *props
+            prop1: value2
+"""
+        plan = prepare_deployment_plan(self.parse_1_2(yaml))
+        props1 = self.get_node_by_name(plan, 'node1')['properties']
+        props2 = self.get_node_by_name(plan, 'node2')['properties']
+        self.assertEqual({
+            'prop1': 'value1',
+            'prop2': 'value1',
+            'prop3': {'nested': 'value1'}
+        }, props1)
+        self.assertEqual({
+            'prop1': 'value2',
+            'prop2': 'value2',
+            'prop3': {'nested': 'value2'}
+        }, props2)
+
     def test_illegal_property_in_property(self):
         yaml = """
 node_types:
@@ -99,6 +138,47 @@ node_templates:
         self.assertEqual('10.0.0.1', vm['operations']['op']['inputs']['x'])
         self.assertEqual('10.0.0.1',
                          vm['operations']['interface.op']['inputs']['x'])
+
+    def test_node_template_interfaces_with_dsl_definitions(self):
+        yaml = """
+dsl_definitions:
+    op: &op
+        implementation: plugin.op
+        inputs:
+            x: { get_property: [SELF, prop1] }
+plugins:
+    plugin:
+        executor: central_deployment_agent
+        install: false
+node_types:
+    type1:
+        properties:
+            prop1: {}
+node_templates:
+    node1:
+        type: type1
+        properties:
+            prop1: value1
+        interfaces:
+            interface:
+                op: *op
+    node2:
+        type: type1
+        properties:
+            prop1: value2
+        interfaces:
+            interface:
+                op: *op
+"""
+        parsed = prepare_deployment_plan(self.parse_1_2(yaml))
+        node1 = self.get_node_by_name(parsed, 'node1')
+        node2 = self.get_node_by_name(parsed, 'node2')
+        self.assertEqual('value1', node1['operations']['op']['inputs']['x'])
+        self.assertEqual('value1',
+                         node1['operations']['interface.op']['inputs']['x'])
+        self.assertEqual('value2', node2['operations']['op']['inputs']['x'])
+        self.assertEqual('value2',
+                         node2['operations']['interface.op']['inputs']['x'])
 
     def test_illegal_property_in_interface(self):
         yaml = """

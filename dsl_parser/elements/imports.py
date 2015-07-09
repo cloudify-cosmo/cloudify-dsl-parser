@@ -38,6 +38,12 @@ MERGE_NO_OVERRIDE = set([
     constants.GROUPS,
     constants.POLICY_TRIGGERS])
 
+IGNORE = set([
+    constants.DSL_DEFINITIONS,
+    constants.IMPORTS,
+    _version.VERSION
+])
+
 
 class Import(Element):
 
@@ -220,7 +226,7 @@ def _merge_parsed_into_combined(combined_parsed_dsl_holder,
                                 parsed_imported_dsl_holder):
     for key_holder, value_holder in parsed_imported_dsl_holder.value.\
             iteritems():
-        if key_holder.value in [constants.IMPORTS, _version.VERSION]:
+        if key_holder.value in IGNORE:
             pass
         elif key_holder.value not in combined_parsed_dsl_holder:
             combined_parsed_dsl_holder.value[key_holder] = value_holder

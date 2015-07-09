@@ -30,7 +30,9 @@ from dsl_parser.framework.requirements import Value
 class BlueprintVersionExtractor(Element):
 
     schema = {
-        'tosca_definitions_version': misc.ToscaDefinitionsVersion
+        'tosca_definitions_version': misc.ToscaDefinitionsVersion,
+        # here so it gets version validated
+        'dsl_definitions': misc.DSLDefinitions,
     }
     requires = {
         misc.ToscaDefinitionsVersion: ['version',
@@ -65,6 +67,7 @@ class Blueprint(Element):
     schema = {
         'tosca_definitions_version': misc.ToscaDefinitionsVersion,
         'imports': imports.Imports,
+        'dsl_definitions': misc.DSLDefinitions,
         'inputs': misc.Inputs,
         'plugins': plugins.Plugins,
         'node_types': node_types.NodeTypes,

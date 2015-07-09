@@ -54,6 +54,10 @@ tosca_definitions_version: cloudify_dsl_1_0
 tosca_definitions_version: cloudify_dsl_1_1
     """
 
+    BASIC_VERSION_SECTION_DSL_1_2 = """
+tosca_definitions_version: cloudify_dsl_1_2
+    """
+
     BASIC_NODE_TEMPLATES_SECTION = """
 node_templates:
     test_node:
@@ -161,6 +165,10 @@ imports:"""
     def parse_1_1(self, dsl_string, resources_base_url=None):
         return self.parse(dsl_string, resources_base_url,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_1)
+
+    def parse_1_2(self, dsl_string, resources_base_url=None):
+        return self.parse(dsl_string, resources_base_url,
+                          dsl_version=self.BASIC_VERSION_SECTION_DSL_1_2)
 
     def parse_from_path(self, dsl_path, resources_base_url=None):
         return dsl_parse_from_path(dsl_path,
