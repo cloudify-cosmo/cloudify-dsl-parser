@@ -58,3 +58,8 @@ FUNCTION_NAME_PATH_SEPARATOR = '__sep__'
 
 NODES = 'nodes'
 NODE_INSTANCES = 'node_instances'
+
+URL_RESOLVER_KEY = 'url_resolver'
+RESOLVER_IMPLEMENTATION_KEY = 'implementation'
+RESLOVER_PARAMETERS_KEY = 'parameters'
+DEFAULT_RESLOVER_RULES_KEY = 'rules'

@@ -152,11 +152,11 @@ imports:"""
         return yaml
 
     def parse(self, dsl_string, resources_base_url=None,
-              dsl_version=BASIC_VERSION_SECTION_DSL_1_0):
+              dsl_version=BASIC_VERSION_SECTION_DSL_1_0, resolver=None):
         # add dsl version if missing
         if DSL_VERSION_PREFIX not in dsl_string:
             dsl_string = dsl_version + dsl_string
-        return dsl_parse(dsl_string, resources_base_url)
+        return dsl_parse(dsl_string, resources_base_url, resolver)
 
     def parse_1_0(self, dsl_string, resources_base_url=None):
         return self.parse(dsl_string, resources_base_url,
@@ -189,3 +189,4 @@ imports:"""
 
     def get_node_by_name(self, plan, name):
         return [x for x in plan.node_templates if x['name'] == name][0]
+
