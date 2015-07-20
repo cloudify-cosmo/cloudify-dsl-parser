@@ -17,10 +17,10 @@ import urllib2
 import mock
 
 import unittest
+
 from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.url_resolver.abstract_url_resolver import AbstractUrlResolver
-
 from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
 
 ORIGINAL_V1_URL = 'http://www.original_v1.org/cloudify/types.yaml'

@@ -65,7 +65,8 @@ class DefaultUrlResolver(AbstractUrlResolver):
                 urls.append(resolved_url)
                 # trying to resolve the resolved_url
                 try:
-                    with contextlib.closing(urllib2.urlopen(resolved_url)) as f:
+                    with contextlib.closing(
+                            urllib2.urlopen(resolved_url)) as f:
                         self.logger.info("replacing url '{0}' with '{1}'"
                                          .format(url, resolved_url))
                         return f.read()

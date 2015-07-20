@@ -189,4 +189,3 @@ imports:"""
 
     def get_node_by_name(self, plan, name):
         return [x for x in plan.node_templates if x['name'] == name][0]
-
