@@ -16,16 +16,16 @@
 import abc
 
 
-class AbstractUrlResolver(object):
+class AbstractImportResolver(object):
     """
     This class is abstract and should be inherited by concrete
     implementations of URL resolver.
-    The only mandatory implementation is of get_user, which is expected
-    to return an object that inherits security.models.UserModel
+    The only mandatory implementation is of resolve, which is expected
+    to open the import url and return its data.
     """
 
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def resolve(self, url):
+    def resolve(self, import_url):
         raise NotImplementedError

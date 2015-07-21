@@ -20,7 +20,8 @@ import unittest
 
 from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.url_resolver.abstract_url_resolver import AbstractUrlResolver
+from dsl_parser.url_resolver.abstract_url_resolver import \
+    AbstractImportResolver
 from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
 
 ORIGINAL_V1_URL = 'http://www.original_v1.org/cloudify/types.yaml'
@@ -70,7 +71,7 @@ class DefaultResolverTests(unittest.TestCase):
             {ORIGINAL_V1_PREFIX: VALID_V1_PREFIX},
         ]
         self._test_default_resolver(
-            url=ORIGINAL_V1_URL, rules=rules,
+            import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[
                 INVALID_V1_URL, ILLEGAL_URL, VALID_V1_URL])
 
@@ -79,7 +80,7 @@ class DefaultResolverTests(unittest.TestCase):
             {ORIGINAL_V1_PREFIX: ORIGINAL_V2_PREFIX}
             ]
         self._test_default_resolver(
-            url=ORIGINAL_V1_URL, rules=rules,
+            import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[ORIGINAL_V2_URL, ORIGINAL_V1_URL],
             expected_exception_class=DSLParsingLogicException)
 
@@ -88,7 +89,7 @@ class DefaultResolverTests(unittest.TestCase):
             {ORIGINAL_V1_PREFIX: ILLEGAL_URL_PREFIX}
             ]
         self._test_default_resolver(
-            url=ORIGINAL_V1_URL, rules=rules,
+            import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[ILLEGAL_URL, ORIGINAL_V1_URL],
             expected_exception_class=DSLParsingLogicException)
 
@@ -97,7 +98,7 @@ class DefaultResolverTests(unittest.TestCase):
             {'prefix': VALID_V2_PREFIX}
         ]
         self._test_default_resolver(
-            url=VALID_V1_URL, rules=rules,
+            import_url=VALID_V1_URL, rules=rules,
             expected_urls_to_resolve=[VALID_V1_URL])
 
     def test_no_rule_matches_not_accesible_url(self):
@@ -106,7 +107,7 @@ class DefaultResolverTests(unittest.TestCase):
             {'prefix2': VALID_V2_PREFIX}
         ]
         self._test_default_resolver(
-            url=ORIGINAL_V1_URL, rules=rules,
+            import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[ORIGINAL_V1_URL],
             expected_exception_class=DSLParsingLogicException)
 
@@ -116,28 +117,28 @@ class DefaultResolverTests(unittest.TestCase):
             {'prefix2': VALID_V2_PREFIX}
         ]
         self._test_default_resolver(
-            url=ILLEGAL_URL, rules=rules,
+            import_url=ILLEGAL_URL, rules=rules,
             expected_urls_to_resolve=[ILLEGAL_URL],
             expected_exception_class=DSLParsingLogicException)
 
     def test_no_rules(self):
         self._test_default_resolver(
-            url=VALID_V1_URL, rules=[],
+            import_url=VALID_V1_URL, rules=[],
             expected_urls_to_resolve=[VALID_V1_URL])
 
     def test_no_rules_not_accesible_url(self):
         self._test_default_resolver(
-            url=ORIGINAL_V1_URL, rules=[],
+            import_url=ORIGINAL_V1_URL, rules=[],
             expected_urls_to_resolve=[ORIGINAL_V1_URL],
             expected_exception_class=DSLParsingLogicException)
 
     def test_no_rules_illegal_url(self):
         self._test_default_resolver(
-            url=ILLEGAL_URL, rules=[],
+            import_url=ILLEGAL_URL, rules=[],
             expected_urls_to_resolve=[ILLEGAL_URL],
             expected_exception_class=DSLParsingLogicException)
 
-    def _test_default_resolver(self, url, rules,
+    def _test_default_resolver(self, import_url, rules,
                                expected_urls_to_resolve=[],
                                expected_exception_class=None):
 
@@ -155,9 +156,10 @@ class DefaultResolverTests(unittest.TestCase):
 
         resolver = DefaultUrlResolver(rules=rules)
         if not expected_exception_class:
-            resolver.resolve(url=url)
+            resolver.resolve(import_url=import_url)
         else:
-            self.assertRaises(DSLParsingLogicException, resolver.resolve, url)
+            self.assertRaises(
+                DSLParsingLogicException, resolver.resolve, import_url)
 
         self.assertEqual(len(expected_urls_to_resolve), len(urls_to_resolve))
         for resolved_url in expected_urls_to_resolve:
@@ -175,7 +177,7 @@ imports:
 
         urls = []
 
-        class CustomResolver(AbstractUrlResolver):
+        class CustomResolver(AbstractImportResolver):
             def resolve(self, url):
                 urls.append(url)
                 if len(urls) == 2:
