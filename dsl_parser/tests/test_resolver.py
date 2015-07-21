@@ -22,7 +22,7 @@ from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.url_resolver.abstract_url_resolver import \
     AbstractImportResolver
-from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
+from dsl_parser.url_resolver.default_url_resolver import DefaultImportResolver
 
 ORIGINAL_V1_URL = 'http://www.original_v1.org/cloudify/types.yaml'
 ORIGINAL_V1_PREFIX = 'http://www.original_v1.org'
@@ -154,7 +154,7 @@ class DefaultResolverTests(unittest.TestCase):
                 return mock.MagicMock()
         urllib2.urlopen = mock_urlopen
 
-        resolver = DefaultUrlResolver(rules=rules)
+        resolver = DefaultImportResolver(rules=rules)
         if not expected_exception_class:
             resolver.resolve(import_url=import_url)
         else:

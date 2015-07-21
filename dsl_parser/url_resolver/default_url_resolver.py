@@ -13,11 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import contextlib
-import logging
-import urllib2
-
-from dsl_parser import exceptions
 from dsl_parser.url_resolver.abstract_url_resolver \
     import AbstractImportResolver, _read_import
 
@@ -29,7 +24,7 @@ class DefaultResolverValidationException(Exception):
     pass
 
 
-class DefaultUrlResolver(AbstractImportResolver):
+class DefaultImportResolver(AbstractImportResolver):
     """
     This class is a default implementation of an import resolver.
     This resolver uses the rules to replace URL's prefix with another prefix
@@ -75,26 +70,16 @@ class DefaultUrlResolver(AbstractImportResolver):
         a DSLParsingLogicException will be raise.
     """
 
-    def __init__(self, rules=[]):
-        # set the logger
-        logging.basicConfig(level=logging.DEBUG)
-        self.logger = logging.getLogger('DefaultUrlResolver')
+    def __init__(self, rules=None):
         # set the rules
         self.rules = rules
         if not rules:
-            self.logger.debug(
-                "setting the default resolver's rules to: {0}"
-                .format(DEFAULT_RULES))
             self.rules = DEFAULT_RULES
-        self.logger.debug(
-            'initializing the default resolver and validating its rules: {0}'
-            .format(self.rules))
         self._validate_rules()
 
     def resolve(self, import_url):
         urls = []
         # trying to find a matching rule that can resolve this url
-        self.logger.debug('trying to resolve url {0}'.format(import_url))
         for rule in self.rules:
             key = rule.keys()[0]
             value = rule.values()[0]
@@ -105,8 +90,6 @@ class DefaultUrlResolver(AbstractImportResolver):
                 resolved_url = value + import_url[prefix_len:]
                 urls.append(resolved_url)
                 # trying to resolve the resolved_url
-                self.logger.info("replacing url '{0}' with '{1}'"
-                                 .format(import_url, resolved_url))
                 try:
                     return _read_import(resolved_url)
                 except Exception, ex:
@@ -114,25 +97,8 @@ class DefaultUrlResolver(AbstractImportResolver):
                     self.logger.debug(str(ex))
 
         # failed to resolve the url using the rules
-        if urls:
-            rules_message = "None of the matching rules " \
-                            "yielded an accessible url." \
-                .format(urls)
-        else:
-            rules_message = "None of the rules matches the url."
-        self.logger.debug("{0}"
-                          "Trying to read the original url '{1}'"
-                          .format(rules_message, import_url))
-        # trying to open the original url
-        try:
-            with contextlib.closing(urllib2.urlopen(import_url)) as f:
-                return f.read()
-        except Exception, ex:
-            ex = exceptions.DSLParsingLogicException(
-                13, "Failed to resolve url '{0}' ; {1}"
-                .format(import_url, str(ex)))
-            ex.failed_import = import_url
-            raise ex
+        # trying to read the original url
+        return _read_import(import_url)
 
     def _validate_rules(self):
         if not isinstance(self.rules, list):

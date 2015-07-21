@@ -21,12 +21,15 @@ from dsl_parser import exceptions
 from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser import version
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
+from dsl_parser.url_resolver.default_url_resolver import DefaultImportResolver
 
 
 class TestParserLogicExceptions(AbstractTestParser):
 
     def test_parse_dsl_from_file_bad_path(self):
-        self.assertRaises(EnvironmentError, parse_from_path, 'fake-file.yaml')
+        self.assertRaises(
+            EnvironmentError, parse_from_path, 'fake-file.yaml',
+            DefaultImportResolver())
 
     def test_no_type_definition(self):
         self._assert_dsl_parsing_exception_error_code(
@@ -680,6 +683,7 @@ node_templates:
             yaml, 70, parsing_method=self.parse_1_0)
         self.assertRaisesRegex(DSLParsingLogicException,
                                expected_err_msg, self.parse, yaml,
+                               resolver=DefaultImportResolver(),
                                dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0)
 
     def test_parse_empty_or_none_dsl_version(self):

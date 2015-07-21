@@ -26,6 +26,7 @@ import testtools
 from dsl_parser.exceptions import DSLParsingException
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.parser import parse_from_path as dsl_parse_from_path
+from dsl_parser.url_resolver.default_url_resolver import DefaultImportResolver
 from dsl_parser.version import DSL_VERSION_PREFIX
 
 
@@ -156,11 +157,14 @@ imports:"""
         # add dsl version if missing
         if DSL_VERSION_PREFIX not in dsl_string:
             dsl_string = dsl_version + dsl_string
-        return dsl_parse(dsl_string, resources_base_url, resolver)
+            if not resolver:
+                resolver = DefaultImportResolver()
+        return dsl_parse(dsl_string, resolver, resources_base_url)
 
-    def parse_1_0(self, dsl_string, resources_base_url=None):
+    def parse_1_0(self, dsl_string, resolver=None, resources_base_url=None):
         return self.parse(dsl_string, resources_base_url,
-                          dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0)
+                          dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0,
+                          resolver=resolver)
 
     def parse_1_1(self, dsl_string, resources_base_url=None):
         return self.parse(dsl_string, resources_base_url,
@@ -170,9 +174,10 @@ imports:"""
         return self.parse(dsl_string, resources_base_url,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_2)
 
-    def parse_from_path(self, dsl_path, resources_base_url=None):
-        return dsl_parse_from_path(dsl_path,
-                                   resources_base_url)
+    def parse_from_path(self, dsl_path, resolver=None,
+                        resources_base_url=None):
+        resolver = resolver or DefaultImportResolver()
+        return dsl_parse_from_path(dsl_path, resolver, resources_base_url)
 
     def _assert_dsl_parsing_exception_error_code(
             self, dsl,
@@ -181,7 +186,7 @@ imports:"""
         if not parsing_method:
             parsing_method = self.parse
         try:
-            parsing_method(dsl)
+            parsing_method(dsl, resolver=DefaultImportResolver())
             self.fail()
         except exception_type, ex:
             self.assertEquals(expected_error_code, ex.err_code)

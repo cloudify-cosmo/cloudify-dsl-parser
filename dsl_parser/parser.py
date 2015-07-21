@@ -22,10 +22,10 @@ from dsl_parser.framework import parser
 from dsl_parser.elements import blueprint
 
 
-def parse_from_path(dsl_file_path, resources_base_url=None):
+def parse_from_path(dsl_file_path, resolver, resources_base_url=None):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-    return _parse(dsl_string, resources_base_url, dsl_file_path)
+    return _parse(dsl_string, resources_base_url, resolver, dsl_file_path)
 
 
 def parse_from_url(dsl_url, resolver, resources_base_url=None):
