@@ -146,7 +146,7 @@ class DefaultResolverTests(unittest.TestCase):
 
         def mock_urlopen(url):
             urls_to_resolve.append(url)
-            if url in [ORIGINAL_V1_URL, ORIGINAL_V2_URL]:
+            if url in [ORIGINAL_V1_URL, ORIGINAL_V2_URL, INVALID_V1_URL]:
                 raise urllib2.URLError('invalid url: {0}'.format(url))
             elif url == ILLEGAL_URL:
                 raise ValueError('unknown url type: {0}'.format(url))

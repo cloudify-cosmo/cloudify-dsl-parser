@@ -14,12 +14,15 @@
 #  * limitations under the License.
 
 import abc
+import contextlib
+import urllib2
+from dsl_parser import exceptions
 
 
 class AbstractImportResolver(object):
     """
     This class is abstract and should be inherited by concrete
-    implementations of URL resolver.
+    implementations of import resolver.
     The only mandatory implementation is of resolve, which is expected
     to open the import url and return its data.
     """
@@ -29,3 +32,21 @@ class AbstractImportResolver(object):
     @abc.abstractmethod
     def resolve(self, import_url):
         raise NotImplementedError
+
+    def fetch_import(self, import_url):
+        url_parts = import_url.split(':')
+        if url_parts[0] in ['http', 'https', 'ftp']:
+            return self.resolve(import_url)
+        _read_import(import_url)
+
+
+def _read_import(import_url):
+    try:
+        with contextlib.closing(urllib2.urlopen(import_url)) as f:
+            return f.read()
+    except Exception, ex:
+        ex = exceptions.DSLParsingLogicException(
+            13, "Import failed: Unable to open import url "
+            "'{0}'; {1}".format(import_url, str(ex)))
+        ex.failed_import = import_url
+        raise ex

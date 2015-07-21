@@ -196,7 +196,7 @@ def _build_ordered_imports(parsed_dsl_holder,
                 imports_graph.add_graph_dependency(import_url,
                                                    location(_current_import))
             else:
-                raw_imported_dsl = _fetch_import(import_url, resolver)
+                raw_imported_dsl = resolver.fetch_import(import_url)
                 imported_dsl_holder = utils.load_yaml(
                     raw_yaml=raw_imported_dsl,
                     error_message="Failed to parse import '{0}' (via '{1}')"
@@ -256,21 +256,6 @@ def _merge_into_dict_or_throw_on_duplicate(from_dict_holder, to_dict_holder,
             raise exceptions.DSLParsingLogicException(
                 4, "Import failed: Could not merge '{0}' due to conflict "
                    "on '{1}'".format(key_name, key_holder.value))
-
-
-def _fetch_import(import_url, resolver):
-    url_parts = import_url.split(':')
-    if url_parts[0] in ['http', 'https', 'ftp']:
-        return resolver.resolve(import_url)
-    try:
-        with contextlib.closing(urllib2.urlopen(import_url)) as f:
-            return f.read()
-    except urllib2.URLError, ex:
-        ex = exceptions.DSLParsingLogicException(
-            13, "Import failed: Unable to open import url "
-                "'{0}'; {1}".format(import_url, str(ex)))
-        ex.failed_import = import_url
-        raise ex
 
 
 class ImportsGraph(object):

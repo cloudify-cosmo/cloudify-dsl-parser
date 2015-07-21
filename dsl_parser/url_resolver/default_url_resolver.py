@@ -19,7 +19,7 @@ import urllib2
 
 from dsl_parser import exceptions
 from dsl_parser.url_resolver.abstract_url_resolver \
-    import AbstractImportResolver
+    import AbstractImportResolver, _read_import
 
 DEFAULT_RULES = [{'http://www.getcloudify.org': 'http://localhost'}]
 DEFAULT_RESLOVER_RULES_KEY = 'rules'
@@ -31,7 +31,7 @@ class DefaultResolverValidationException(Exception):
 
 class DefaultUrlResolver(AbstractImportResolver):
     """
-    This class is a default implementation of an URL resolver.
+    This class is a default implementation of an import resolver.
     This resolver uses the rules to replace URL's prefix with another prefix
     and tries to resolve the new URL (after that the prefix has been replaced).
     If none of the prefix replacements works,
@@ -105,16 +105,13 @@ class DefaultUrlResolver(AbstractImportResolver):
                 resolved_url = value + import_url[prefix_len:]
                 urls.append(resolved_url)
                 # trying to resolve the resolved_url
+                self.logger.info("replacing url '{0}' with '{1}'"
+                                 .format(import_url, resolved_url))
                 try:
-                    with contextlib.closing(
-                            urllib2.urlopen(resolved_url)) as f:
-                        self.logger.info("replacing url '{0}' with '{1}'"
-                                         .format(import_url, resolved_url))
-                        return f.read()
+                    return _read_import(resolved_url)
                 except Exception, ex:
-                    self.logger.debug(
-                        "Failed to resolve url '{0}'; {1}"
-                        .format(resolved_url, ex.message))
+                    # write to the log and continue with the next rule
+                    self.logger.debug(str(ex))
 
         # failed to resolve the url using the rules
         if urls:
