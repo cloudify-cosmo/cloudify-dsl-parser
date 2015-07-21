@@ -19,7 +19,8 @@ import urllib2
 
 from dsl_parser import constants
 from dsl_parser import exceptions
-from dsl_parser.url_resolver.abstract_url_resolver import AbstractImportResolver
+from dsl_parser.url_resolver.abstract_url_resolver \
+    import AbstractImportResolver
 
 DEFAULT_RULES = [{'http://www.getcloudify.org': 'http://localhost'}]
 
@@ -37,10 +38,12 @@ class DefaultUrlResolver(AbstractImportResolver):
     the resolver will try to use the original URL.
 
     Each rule in the ``rules`` list is expected to be
-    a dictionary with one (key, value) pair which represents URL's prefixes and replacements.
+    a dictionary with one (key, value) pair which represents
+    the prefixes and replacements that can be used to resolve the import url.
 
-    The resolver will go over the rules and for each matching rule (its key is a prefix of the url)
-    it will replace the prefix with the value and will try to resolve the new url.
+    The resolver will go over the rules and for each matching rule
+    (its key is a prefix of the url) it will replace the prefix
+    with the value and will try to resolve the new url.
 
     For example:
         The rules list: [
@@ -61,13 +64,15 @@ class DefaultUrlResolver(AbstractImportResolver):
         In case this url cannot be resolved, it will try to apply
         the third rule by replacing the url's prefix with
         the third rule value ('http://prefix2_replacement2')
-        and will try to resolve the url: 'http://prefix2_replacement2.suffix2.org'.
+        and will try to resolve the url:
+        'http://prefix2_replacement2.suffix2.org'.
 
         If this url, also, cannot be resolved,
         it will try to resolve the original url,
         i.e. http://prefix2.suffix2.org'
 
-        In case that all the resolve attempts will fail, a DSLParsingLogicException will be raise.
+        In case that all the resolve attempts will fail,
+        a DSLParsingLogicException will be raise.
     """
 
     def __init__(self, rules=[]):
