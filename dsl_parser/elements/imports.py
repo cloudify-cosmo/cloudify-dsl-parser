@@ -268,7 +268,7 @@ def _fetch_import(import_url, resolver):
     except urllib2.URLError, ex:
         ex = exceptions.DSLParsingLogicException(
             13, "Import failed: Unable to open import url "
-                "'{0}'; {1}".format(import_url, ex.message))
+                "'{0}'; {1}".format(import_url, str(ex)))
         ex.failed_import = import_url
         raise ex
 

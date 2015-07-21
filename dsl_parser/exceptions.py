@@ -59,10 +59,6 @@ class DSLParsingLogicException(DSLParsingException):
     pass
 
 
-class DSLParsingResolverException(DSLParsingException):
-    pass
-
-
 class DSLParsingFormatException(DSLParsingException):
     pass
 

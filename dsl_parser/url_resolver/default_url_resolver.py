@@ -17,15 +17,15 @@ import contextlib
 import logging
 import urllib2
 
-from dsl_parser import constants
 from dsl_parser import exceptions
 from dsl_parser.url_resolver.abstract_url_resolver \
     import AbstractImportResolver
 
 DEFAULT_RULES = [{'http://www.getcloudify.org': 'http://localhost'}]
+DEFAULT_RESLOVER_RULES_KEY = 'rules'
 
 
-class ResolverValidationException(Exception):
+class DefaultResolverValidationException(Exception):
     pass
 
 
@@ -76,13 +76,16 @@ class DefaultUrlResolver(AbstractImportResolver):
     """
 
     def __init__(self, rules=[]):
-        # set the rules
-        self.rules = rules
-        if not rules:
-            self.rules = DEFAULT_RULES
         # set the logger
         logging.basicConfig(level=logging.DEBUG)
         self.logger = logging.getLogger('DefaultUrlResolver')
+        # set the rules
+        self.rules = rules
+        if not rules:
+            self.logger.debug(
+                "setting the default resolver's rules to: {0}"
+                .format(DEFAULT_RULES))
+            self.rules = DEFAULT_RULES
         self.logger.debug(
             'initializing the default resolver and validating its rules: {0}'
             .format(self.rules))
@@ -130,26 +133,26 @@ class DefaultUrlResolver(AbstractImportResolver):
         except Exception, ex:
             ex = exceptions.DSLParsingLogicException(
                 13, "Failed to resolve url '{0}' ; {1}"
-                .format(import_url, ex.message))
+                .format(import_url, str(ex)))
             ex.failed_import = import_url
             raise ex
 
     def _validate_rules(self):
         if not isinstance(self.rules, list):
-            raise ResolverValidationException(
+            raise DefaultResolverValidationException(
                 'The `{0}` parameter must be a list but it is of type {1}.'
                 .format(
-                    constants.DEFAULT_RESLOVER_RULES_KEY,
-                    type(self.rules)))
+                    DEFAULT_RESLOVER_RULES_KEY,
+                    type(self.rules).__name__))
         for rule in self.rules:
             if not isinstance(rule, dict):
-                raise ResolverValidationException(
-                    'Each rule must be a dictionary but the rule: '
+                raise DefaultResolverValidationException(
+                    'Each rule must be a dictionary but the rule '
                     '[{0}] is of type {1}.'
-                    .format(rule, type(rule)))
+                    .format(rule, type(rule).__name__))
             keys = rule.keys()
             if not len(keys) == 1:
-                raise ResolverValidationException(
+                raise DefaultResolverValidationException(
                     'Each rule must be a dictionary with one (key,value) pair '
-                    'but the rule: [{0}] has {1} keys.'
+                    'but the rule [{0}] has {1} keys.'
                     .format(rule, len(keys)))
