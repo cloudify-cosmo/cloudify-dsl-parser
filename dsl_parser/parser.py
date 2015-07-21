@@ -20,9 +20,12 @@ from dsl_parser import (functions,
                         utils)
 from dsl_parser.framework import parser
 from dsl_parser.elements import blueprint
+from dsl_parser.url_resolver.default_url_resolver import DefaultImportResolver
 
 
-def parse_from_path(dsl_file_path, resolver, resources_base_url=None):
+def parse_from_path(dsl_file_path, resolver=None, resources_base_url=None):
+    if not resolver:
+        resolver = DefaultImportResolver()
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
     return _parse(dsl_string, resources_base_url, resolver, dsl_file_path)
