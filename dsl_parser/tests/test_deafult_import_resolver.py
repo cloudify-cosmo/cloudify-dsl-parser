@@ -19,9 +19,6 @@ import mock
 import unittest
 
 from dsl_parser.exceptions import DSLParsingLogicException
-from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.url_resolver.abstract_url_resolver import \
-    AbstractImportResolver
 from dsl_parser.url_resolver.default_import_resolver import \
     DefaultImportResolver
 
@@ -41,26 +38,6 @@ INVALID_URL_PREFIX = 'http://www.not-exist-url.org'
 ILLEGAL_URL = 'illegal-url/cloudify/types.yaml'
 ILLEGAL_URL_PREFIX = 'illegal-url'
 
-BLUEPRINT_1 = """
-node_types:
-    resolver_type_1:
-        properties:
-            key:
-                default: 'default'
-node_templates:
-    resolver_1:
-        type: resolver_type_1
-        properties:
-            key: value_1
-"""
-BLUEPRINT_2 = """
-node_types:
-    resolver_type_2:
-        properties:
-            key:
-                default: 'default'
-"""
-
 
 class DefaultResolverTests(unittest.TestCase):
 
@@ -70,7 +47,7 @@ class DefaultResolverTests(unittest.TestCase):
             {ORIGINAL_V1_PREFIX: INVALID_URL_PREFIX},
             {ORIGINAL_V1_PREFIX: ILLEGAL_URL_PREFIX},
             {ORIGINAL_V1_PREFIX: VALID_V1_PREFIX},
-        ]
+            ]
         self._test_default_resolver(
             import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[
@@ -79,7 +56,7 @@ class DefaultResolverTests(unittest.TestCase):
     def test_not_accesible_url_from_rules(self):
         rules = [
             {ORIGINAL_V1_PREFIX: ORIGINAL_V2_PREFIX}
-            ]
+        ]
         self._test_default_resolver(
             import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[ORIGINAL_V2_URL, ORIGINAL_V1_URL],
@@ -88,7 +65,7 @@ class DefaultResolverTests(unittest.TestCase):
     def test_illegal_resolved_url_from_rules(self):
         rules = [
             {ORIGINAL_V1_PREFIX: ILLEGAL_URL_PREFIX}
-            ]
+        ]
         self._test_default_resolver(
             import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[ILLEGAL_URL, ORIGINAL_V1_URL],
@@ -165,28 +142,3 @@ class DefaultResolverTests(unittest.TestCase):
         self.assertEqual(len(expected_urls_to_resolve), len(urls_to_resolve))
         for resolved_url in expected_urls_to_resolve:
             self.assertIn(resolved_url, urls_to_resolve)
-
-
-class ParseWithResolverTests(AbstractTestParser):
-
-    def test_parse_using_resolver(self):
-
-        yaml_to_parse = """
-imports:
-    -   {0}
-    -   {1}""".format(ORIGINAL_V1_URL, ORIGINAL_V2_URL)
-
-        urls = []
-
-        class CustomResolver(AbstractImportResolver):
-            def resolve(self, url):
-                urls.append(url)
-                if len(urls) == 2:
-                    return BLUEPRINT_2
-                return BLUEPRINT_1
-        custom_resolver = CustomResolver()
-        self.parse(yaml_to_parse, resolver=custom_resolver)
-
-        self.assertEqual(len(urls), 2)
-        self.assertIn(ORIGINAL_V1_URL, urls)
-        self.assertIn(ORIGINAL_V2_URL, urls)
