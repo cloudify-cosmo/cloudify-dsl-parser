@@ -16,7 +16,7 @@
 import urllib2
 import mock
 
-import unittest
+import testtools
 
 from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.url_resolver.default_import_resolver import \
@@ -39,7 +39,7 @@ ILLEGAL_URL = 'illegal-url/cloudify/types.yaml'
 ILLEGAL_URL_PREFIX = 'illegal-url'
 
 
-class DefaultResolverTests(unittest.TestCase):
+class DefaultResolverTests(testtools.TestCase):
 
     def test_several_matching_rules(self):
         rules = [
@@ -130,14 +130,14 @@ class DefaultResolverTests(unittest.TestCase):
                 raise ValueError('unknown url type: {0}'.format(url))
             elif url in [VALID_V1_URL, VALID_V2_URL]:
                 return mock.MagicMock()
-        urllib2.urlopen = mock_urlopen
 
         resolver = DefaultImportResolver(rules=rules)
-        if not expected_exception_class:
-            resolver.resolve(import_url=import_url)
-        else:
-            self.assertRaises(
-                DSLParsingLogicException, resolver.resolve, import_url)
+        with mock.patch('urllib2.urlopen', new=mock_urlopen):
+            if not expected_exception_class:
+                resolver.resolve(import_url=import_url)
+            else:
+                self.assertRaises(
+                    DSLParsingLogicException, resolver.resolve, import_url)
 
         self.assertEqual(len(expected_urls_to_resolve), len(urls_to_resolve))
         for resolved_url in expected_urls_to_resolve:

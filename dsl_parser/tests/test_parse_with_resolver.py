@@ -13,9 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import unittest
-
-from dsl_parser.parser import parse as dsl_parse
+from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.url_resolver.abstract_import_resolver import \
     AbstractImportResolver
 
@@ -40,12 +38,11 @@ node_types:
 """
 
 
-class ParseWithResolverTests(unittest.TestCase):
+class TestParseWithResolver(AbstractTestParser):
 
     def test_parse_using_resolver(self):
 
         yaml_to_parse = """
-tosca_definitions_version: cloudify_dsl_1_0
 imports:
     -   http://url1
     -   http://url2"""
@@ -59,7 +56,7 @@ imports:
                     return BLUEPRINT_2
                 return BLUEPRINT_1
         custom_resolver = CustomResolver()
-        dsl_parse(yaml_to_parse, resolver=custom_resolver)
+        self.parse(yaml_to_parse, resolver=custom_resolver)
 
         self.assertEqual(len(urls), 2)
         self.assertIn('http://url1', urls)
