@@ -26,7 +26,8 @@ import testtools
 from dsl_parser.exceptions import DSLParsingException
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.parser import parse_from_path as dsl_parse_from_path
-from dsl_parser.url_resolver.default_url_resolver import DefaultImportResolver
+from dsl_parser.url_resolver.default_import_resolver import \
+    DefaultImportResolver
 from dsl_parser.version import DSL_VERSION_PREFIX
 
 

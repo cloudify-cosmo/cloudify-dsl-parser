@@ -22,7 +22,8 @@ from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.url_resolver.abstract_url_resolver import \
     AbstractImportResolver
-from dsl_parser.url_resolver.default_url_resolver import DefaultImportResolver
+from dsl_parser.url_resolver.default_import_resolver import \
+    DefaultImportResolver
 
 ORIGINAL_V1_URL = 'http://www.original_v1.org/cloudify/types.yaml'
 ORIGINAL_V1_PREFIX = 'http://www.original_v1.org'

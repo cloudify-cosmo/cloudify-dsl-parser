@@ -29,7 +29,8 @@ from dsl_parser import version
 from dsl_parser import models
 from dsl_parser.interfaces.utils import operation_mapping
 from dsl_parser.constants import TYPE_HIERARCHY
-from dsl_parser.url_resolver.default_url_resolver import DefaultImportResolver
+from dsl_parser.url_resolver.default_import_resolver import \
+    DefaultImportResolver
 
 
 def op_struct(plugin_name,

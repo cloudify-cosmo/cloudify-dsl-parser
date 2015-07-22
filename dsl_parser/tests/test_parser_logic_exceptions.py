@@ -21,7 +21,8 @@ from dsl_parser import exceptions
 from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser import version
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.url_resolver.default_url_resolver import DefaultImportResolver
+from dsl_parser.url_resolver.default_import_resolver import \
+    DefaultImportResolver
 
 
 class TestParserLogicExceptions(AbstractTestParser):
