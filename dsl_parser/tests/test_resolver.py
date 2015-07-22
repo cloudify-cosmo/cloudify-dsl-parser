@@ -184,8 +184,8 @@ imports:
                     return BLUEPRINT_2
                 return BLUEPRINT_1
         custom_resolver = CustomResolver()
-        self.parse(yaml_to_parse, custom_resolver)
+        self.parse(yaml_to_parse, resolver=custom_resolver)
 
+        self.assertEqual(len(urls), 2)
         self.assertIn(ORIGINAL_V1_URL, urls)
         self.assertIn(ORIGINAL_V2_URL, urls)
-        self.assertEqual(len(urls), 2)
