@@ -16,7 +16,7 @@
 import unittest
 
 from dsl_parser.parser import parse as dsl_parse
-from dsl_parser.url_resolver.abstract_url_resolver import \
+from dsl_parser.url_resolver.abstract_import_resolver import \
     AbstractImportResolver
 
 BLUEPRINT_1 = """
