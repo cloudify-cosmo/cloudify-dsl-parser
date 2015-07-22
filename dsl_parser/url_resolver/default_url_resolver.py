@@ -92,9 +92,9 @@ class DefaultImportResolver(AbstractImportResolver):
                 # trying to resolve the resolved_url
                 try:
                     return _read_import(resolved_url)
-                except Exception, ex:
-                    # write to the log and continue with the next rule
-                    self.logger.debug(str(ex))
+                except Exception:
+                    # failed to resolve current rule, continue to the next one
+                    pass
 
         # failed to resolve the url using the rules
         # trying to read the original url
