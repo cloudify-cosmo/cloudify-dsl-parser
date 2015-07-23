@@ -14,7 +14,7 @@
 #    * limitations under the License.
 
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.url_resolver.abstract_import_resolver import \
+from dsl_parser.import_resolver.abstract_import_resolver import \
     AbstractImportResolver
 
 BLUEPRINT_1 = """

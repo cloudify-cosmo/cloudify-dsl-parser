@@ -20,7 +20,7 @@ from dsl_parser import (functions,
                         utils)
 from dsl_parser.framework import parser
 from dsl_parser.elements import blueprint
-from dsl_parser.url_resolver.default_import_resolver import \
+from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 
 

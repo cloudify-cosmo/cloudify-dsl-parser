@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from dsl_parser.url_resolver.abstract_import_resolver \
+from dsl_parser.import_resolver.abstract_import_resolver \
     import AbstractImportResolver, _read_import
 
 DEFAULT_RULES = [{'http://www.getcloudify.org': 'http://localhost'}]

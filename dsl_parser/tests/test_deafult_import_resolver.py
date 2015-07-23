@@ -19,7 +19,7 @@ import mock
 import testtools
 
 from dsl_parser.exceptions import DSLParsingLogicException
-from dsl_parser.url_resolver.default_import_resolver import \
+from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 
 ORIGINAL_V1_URL = 'http://www.original_v1.org/cloudify/types.yaml'
