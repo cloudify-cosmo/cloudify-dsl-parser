@@ -28,13 +28,13 @@ class DefaultImportResolver(AbstractImportResolver):
     """
     This class is a default implementation of an import resolver.
     This resolver uses the rules to replace URL's prefix with another prefix
-    and tries to resolve the new URL (after that the prefix has been replaced).
+    and tries to resolve the new URL (after the prefix has been replaced).
     If none of the prefix replacements works,
     the resolver will try to use the original URL.
 
     Each rule in the ``rules`` list is expected to be
     a dictionary with one (key, value) pair which represents
-    the prefixes and replacements that can be used to resolve the import url.
+    a prefix and its replacement which can be used to resolve the import url.
 
     The resolver will go over the rules and for each matching rule
     (its key is a prefix of the url) it will replace the prefix
