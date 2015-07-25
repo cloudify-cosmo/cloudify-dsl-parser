@@ -12,11 +12,12 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from dsl_parser.exceptions import DSLParsingLogicException
 
 from dsl_parser.import_resolver.abstract_import_resolver \
-    import AbstractImportResolver, _read_import
+    import AbstractImportResolver, read_import
 
-DEFAULT_RULES = [{'http://www.getcloudify.org': 'http://localhost'}]
+DEFAULT_RULES = []
 DEFAULT_RESLOVER_RULES_KEY = 'rules'
 
 
@@ -29,7 +30,8 @@ class DefaultImportResolver(AbstractImportResolver):
     This class is a default implementation of an import resolver.
     This resolver uses the rules to replace URL's prefix with another prefix
     and tries to resolve the new URL (after the prefix has been replaced).
-    If none of the prefix replacements works,
+    If there aren't any rules, none of the rules matches or
+    none of the prefix replacements works,
     the resolver will try to use the original URL.
 
     Each rule in the ``rules`` list is expected to be
@@ -73,12 +75,12 @@ class DefaultImportResolver(AbstractImportResolver):
     def __init__(self, rules=None):
         # set the rules
         self.rules = rules
-        if not rules:
+        if rules is None:
             self.rules = DEFAULT_RULES
         self._validate_rules()
 
     def resolve(self, import_url):
-        urls = []
+        failed_urls = {}
         # trying to find a matching rule that can resolve this url
         for rule in self.rules:
             key = rule.keys()[0]
@@ -87,18 +89,37 @@ class DefaultImportResolver(AbstractImportResolver):
             prefix_len = len(key)
             if prefix == import_url[:prefix_len]:
                 # found a matching rule
-                resolved_url = value + import_url[prefix_len:]
-                urls.append(resolved_url)
+                url_to_resolve = value + import_url[prefix_len:]
                 # trying to resolve the resolved_url
-                try:
-                    return _read_import(resolved_url)
-                except Exception:
-                    # failed to resolve current rule, continue to the next one
-                    pass
+                if url_to_resolve not in failed_urls.keys():
+                    # there is no point to try to resolve the same url twice
+                    try:
+                        return read_import(url_to_resolve)
+                    except DSLParsingLogicException, ex:
+                        # failed to resolve current rule,
+                        # continue to the next one
+                        failed_urls[url_to_resolve] = str(ex)
 
         # failed to resolve the url using the rules
-        # trying to read the original url
-        return _read_import(import_url)
+        # trying to open the original url
+        try:
+            return read_import(import_url)
+        except DSLParsingLogicException, ex:
+            if not self.rules:
+                raise ex
+            if not failed_urls:
+                # no matching rules
+                msg = 'None of the resolver rules {0} was applicable, ' \
+                      'failed to resolve the original import url: {1} '\
+                    .format(self.rules, str(ex))
+            else:
+                # all urls failed to be resolved
+                msg = 'Failed to resolve the following urls: {0}. ' \
+                      'In addition, failed to resolve the original ' \
+                      'import url - {1}'.format(failed_urls, str(ex))
+            ex = DSLParsingLogicException(13, msg)
+            ex.failed_import = import_url
+            raise ex
 
     def _validate_rules(self):
         if not isinstance(self.rules, list):

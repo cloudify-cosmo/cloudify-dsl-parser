@@ -16,6 +16,7 @@
 import abc
 import contextlib
 import urllib2
+
 from dsl_parser import exceptions
 
 
@@ -37,16 +38,16 @@ class AbstractImportResolver(object):
         url_parts = import_url.split(':')
         if url_parts[0] in ['http', 'https', 'ftp']:
             return self.resolve(import_url)
-        return _read_import(import_url)
+        return read_import(import_url)
 
 
-def _read_import(import_url):
+def read_import(import_url):
     try:
         with contextlib.closing(urllib2.urlopen(import_url)) as f:
             return f.read()
     except Exception, ex:
         ex = exceptions.DSLParsingLogicException(
-            13, "Import failed: Unable to open import url "
-            "'{0}'; {1}".format(import_url, str(ex)))
+            13, 'Import failed: Unable to open import url '
+            '{0}; {1}'.format(import_url, str(ex)))
         ex.failed_import = import_url
         raise ex

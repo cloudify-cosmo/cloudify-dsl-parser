@@ -39,7 +39,7 @@ ILLEGAL_URL = 'illegal-url/cloudify/types.yaml'
 ILLEGAL_URL_PREFIX = 'illegal-url'
 
 
-class DefaultResolverTests(testtools.TestCase):
+class TestDefaultResolver(testtools.TestCase):
 
     def test_several_matching_rules(self):
         rules = [
@@ -57,19 +57,40 @@ class DefaultResolverTests(testtools.TestCase):
         rules = [
             {ORIGINAL_V1_PREFIX: ORIGINAL_V2_PREFIX}
         ]
+        expected_failed_urls = {
+            ORIGINAL_V2_URL:
+                'Import failed: Unable to open import url {0}'
+                '; <urlopen error invalid url: {0}>'.format(ORIGINAL_V2_URL)
+        }
         self._test_default_resolver(
             import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[ORIGINAL_V2_URL, ORIGINAL_V1_URL],
-            expected_exception_class=DSLParsingLogicException)
+            expected_failure=True,
+            partial_err_msg='Failed to resolve the following urls: {0}. '
+                            "In addition, failed to resolve the original "
+                            "import url - Import failed: "
+                            "Unable to open import url {1}"
+            .format(str(expected_failed_urls), ORIGINAL_V1_URL))
 
     def test_illegal_resolved_url_from_rules(self):
         rules = [
             {ORIGINAL_V1_PREFIX: ILLEGAL_URL_PREFIX}
         ]
+        expected_failed_urls = {
+            ILLEGAL_URL:
+                'Import failed: Unable to open import url {0}'
+                '; unknown url type: {0}'.format(ILLEGAL_URL)
+        }
+
         self._test_default_resolver(
             import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[ILLEGAL_URL, ORIGINAL_V1_URL],
-            expected_exception_class=DSLParsingLogicException)
+            expected_failure=True,
+            partial_err_msg='Failed to resolve the following urls: {0}. '
+                            "In addition, failed to resolve the original "
+                            "import url - Import failed: "
+                            "Unable to open import url {1}"
+            .format(str(expected_failed_urls), ORIGINAL_V1_URL))
 
     def test_no_rule_matches(self):
         rules = [
@@ -87,7 +108,11 @@ class DefaultResolverTests(testtools.TestCase):
         self._test_default_resolver(
             import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[ORIGINAL_V1_URL],
-            expected_exception_class=DSLParsingLogicException)
+            expected_failure=True,
+            partial_err_msg="None of the resolver rules {0} was applicable, "
+                            "failed to resolve the original import url: "
+                            "Import failed: Unable to open import url {1}"
+            .format(rules, ORIGINAL_V1_URL))
 
     def test_no_rule_matches_illegal_url(self):
         rules = [
@@ -97,7 +122,11 @@ class DefaultResolverTests(testtools.TestCase):
         self._test_default_resolver(
             import_url=ILLEGAL_URL, rules=rules,
             expected_urls_to_resolve=[ILLEGAL_URL],
-            expected_exception_class=DSLParsingLogicException)
+            expected_failure=True,
+            partial_err_msg="None of the resolver rules {0} was applicable, "
+                            "failed to resolve the original import url: "
+                            "Import failed: Unable to open import url {1}"
+            .format(rules, ILLEGAL_URL))
 
     def test_no_rules(self):
         self._test_default_resolver(
@@ -108,17 +137,22 @@ class DefaultResolverTests(testtools.TestCase):
         self._test_default_resolver(
             import_url=ORIGINAL_V1_URL, rules=[],
             expected_urls_to_resolve=[ORIGINAL_V1_URL],
-            expected_exception_class=DSLParsingLogicException)
+            expected_failure=True,
+            partial_err_msg="Unable to open import url {0}"
+            .format(ORIGINAL_V1_URL))
 
     def test_no_rules_illegal_url(self):
         self._test_default_resolver(
             import_url=ILLEGAL_URL, rules=[],
             expected_urls_to_resolve=[ILLEGAL_URL],
-            expected_exception_class=DSLParsingLogicException)
+            expected_failure=True,
+            partial_err_msg="Unable to open import url {0}"
+            .format(ILLEGAL_URL))
 
     def _test_default_resolver(self, import_url, rules,
                                expected_urls_to_resolve=[],
-                               expected_exception_class=None):
+                               expected_failure=False,
+                               partial_err_msg=None):
 
         urls_to_resolve = []
 
@@ -133,11 +167,19 @@ class DefaultResolverTests(testtools.TestCase):
 
         resolver = DefaultImportResolver(rules=rules)
         with mock.patch('urllib2.urlopen', new=mock_urlopen):
-            if not expected_exception_class:
+            try:
                 resolver.resolve(import_url=import_url)
-            else:
-                self.assertRaises(
-                    DSLParsingLogicException, resolver.resolve, import_url)
+                if expected_failure:
+                    err_msg = 'resolve should have been failed'
+                    if partial_err_msg:
+                        err_msg = '{0} with error message that contains: {1}'\
+                            .format(err_msg, partial_err_msg)
+                    raise AssertionError(err_msg)
+            except DSLParsingLogicException, ex:
+                if not expected_failure:
+                    raise ex
+                if partial_err_msg:
+                    self.assertIn(partial_err_msg, str(ex))
 
         self.assertEqual(len(expected_urls_to_resolve), len(urls_to_resolve))
         for resolved_url in expected_urls_to_resolve:
