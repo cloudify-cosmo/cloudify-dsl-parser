@@ -24,15 +24,13 @@ from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 
 
-def parse_from_path(dsl_file_path, resolver=None, resources_base_url=None):
-    if not resolver:
-        resolver = DefaultImportResolver()
+def parse_from_path(dsl_file_path, resources_base_url=None, resolver=None):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-    return _parse(dsl_string, resources_base_url, resolver, dsl_file_path)
+    return _parse(dsl_string, resources_base_url, dsl_file_path, resolver)
 
 
-def parse_from_url(dsl_url, resolver, resources_base_url=None):
+def parse_from_url(dsl_url, resources_base_url=None, resolver=None):
     try:
         with contextlib.closing(urllib2.urlopen(dsl_url)) as f:
             dsl_string = f.read()
@@ -44,17 +42,20 @@ def parse_from_url(dsl_url, resolver, resources_base_url=None):
             # that specifies the missing url.
             e.msg = '{0} not found'.format(e.filename)
         raise
-    return _parse(dsl_string, resources_base_url, resolver, dsl_url)
+    return _parse(dsl_string, resources_base_url, dsl_url, resolver)
 
 
-def parse(dsl_string, resolver, resources_base_url=None):
-    return _parse(dsl_string, resources_base_url, resolver)
+def parse(dsl_string, resources_base_url=None, resolver=None):
+    return _parse(dsl_string, resources_base_url, resolver=resolver)
 
 
-def _parse(dsl_string, resources_base_url, resolver, dsl_location=None):
+def _parse(dsl_string, resources_base_url, dsl_location=None, resolver=None):
     parsed_dsl_holder = utils.load_yaml(raw_yaml=dsl_string,
                                         error_message='Failed to parse DSL',
                                         filename=dsl_location)
+
+    if not resolver:
+        resolver = DefaultImportResolver()
 
     # validate version
     result = parser.parse(parsed_dsl_holder,

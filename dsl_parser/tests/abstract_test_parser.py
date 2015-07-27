@@ -160,12 +160,11 @@ imports:"""
             dsl_string = dsl_version + dsl_string
             if not resolver:
                 resolver = DefaultImportResolver()
-        return dsl_parse(dsl_string, resolver, resources_base_url)
+        return dsl_parse(dsl_string, resources_base_url, resolver)
 
     def parse_1_0(self, dsl_string, resolver=None, resources_base_url=None):
         return self.parse(dsl_string, resources_base_url,
-                          dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0,
-                          resolver=resolver)
+                          dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0)
 
     def parse_1_1(self, dsl_string, resources_base_url=None):
         return self.parse(dsl_string, resources_base_url,
@@ -175,10 +174,8 @@ imports:"""
         return self.parse(dsl_string, resources_base_url,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_2)
 
-    def parse_from_path(self, dsl_path, resolver=None,
-                        resources_base_url=None):
-        resolver = resolver or DefaultImportResolver()
-        return dsl_parse_from_path(dsl_path, resolver, resources_base_url)
+    def parse_from_path(self, dsl_path, resources_base_url=None):
+        return dsl_parse_from_path(dsl_path, resources_base_url)
 
     def _assert_dsl_parsing_exception_error_code(
             self, dsl,
@@ -187,7 +184,7 @@ imports:"""
         if not parsing_method:
             parsing_method = self.parse
         try:
-            parsing_method(dsl, resolver=DefaultImportResolver())
+            parsing_method(dsl)
             self.fail()
         except exception_type, ex:
             self.assertEquals(expected_error_code, ex.err_code)

@@ -29,8 +29,6 @@ from dsl_parser import version
 from dsl_parser import models
 from dsl_parser.interfaces.utils import operation_mapping
 from dsl_parser.constants import TYPE_HIERARCHY
-from dsl_parser.import_resolver.default_import_resolver import \
-    DefaultImportResolver
 
 
 def op_struct(plugin_name,
@@ -119,8 +117,7 @@ class TestParserApi(AbstractTestParser):
         original_create_connection = socket.create_connection
         try:
             socket.create_connection = MockSocket
-            parse_from_url('http://www.google.com/bad-dsl',
-                           DefaultImportResolver())
+            parse_from_url('http://www.google.com/bad-dsl')
         except HTTPError as e:
             self.assertIn('http://www.google.com/bad-dsl', str(e))
             self.assertEqual(404, e.code)
@@ -277,13 +274,13 @@ imports:
     def test_parse_dsl_from_file(self):
         filename = self.make_yaml_file(self.BASIC_VERSION_SECTION_DSL_1_0 +
                                        self.MINIMAL_BLUEPRINT)
-        result = parse_from_path(filename, DefaultImportResolver())
+        result = parse_from_path(filename)
         self._assert_minimal_blueprint(result)
 
     def test_parse_dsl_from_url(self):
         filename_url = self.make_yaml_file(self.BASIC_VERSION_SECTION_DSL_1_0 +
                                            self.MINIMAL_BLUEPRINT, True)
-        result = parse_from_url(filename_url, DefaultImportResolver())
+        result = parse_from_url(filename_url)
         self._assert_minimal_blueprint(result)
 
     def test_import_empty_list(self):
@@ -2187,7 +2184,7 @@ imports:
     -   {0}""".format(resource_file_name)
         top_file = self.make_yaml_file(yaml, True)
         result = parse_from_url(
-            top_file, resolver=DefaultImportResolver(),
+            top_file,
             resources_base_url=file_url[:-len(resource_file_name)])
         self._assert_minimal_blueprint(result)
 
@@ -2233,7 +2230,7 @@ imports:
     -   {0}""".format(mid_file_name)
         top_file_name = self.make_file_with_name(
             top_level_yaml, 'top_level.yaml')
-        result = parse_from_path(top_file_name, DefaultImportResolver())
+        result = parse_from_path(top_file_name)
         self._assert_blueprint(result)
 
     def test_node_without_host_id(self):
@@ -3010,7 +3007,7 @@ node_types:
 
     def test_version_field(self):
         yaml = self.MINIMAL_BLUEPRINT + self.BASIC_VERSION_SECTION_DSL_1_0
-        result = dsl_parse(yaml, DefaultImportResolver())
+        result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)
 
     def test_version_field_with_versionless_imports(self):
@@ -3021,7 +3018,7 @@ imports:
     -   {0}""".format(imported_yaml_filename) + \
                self.BASIC_VERSION_SECTION_DSL_1_0 + \
                self.MINIMAL_BLUEPRINT
-        result = dsl_parse(yaml, DefaultImportResolver())
+        result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)
 
     def test_version_field_with_imports_with_version(self):
@@ -3032,7 +3029,7 @@ imports:
     -   {0}""".format(imported_yaml_filename) + \
                self.BASIC_VERSION_SECTION_DSL_1_0 + \
                self.MINIMAL_BLUEPRINT
-        result = dsl_parse(yaml, DefaultImportResolver())
+        result = dsl_parse(yaml)
         self._assert_minimal_blueprint(result)
 
     def test_script_mapping(self):
