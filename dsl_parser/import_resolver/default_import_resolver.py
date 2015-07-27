@@ -106,17 +106,17 @@ class DefaultImportResolver(AbstractImportResolver):
             return read_import(import_url)
         except DSLParsingLogicException, ex:
             if not self.rules:
-                raise ex
+                raise
             if not failed_urls:
                 # no matching rules
                 msg = 'None of the resolver rules {0} was applicable, ' \
                       'failed to resolve the original import url: {1} '\
-                    .format(self.rules, str(ex))
+                    .format(self.rules, ex)
             else:
                 # all urls failed to be resolved
                 msg = 'Failed to resolve the following urls: {0}. ' \
                       'In addition, failed to resolve the original ' \
-                      'import url - {1}'.format(failed_urls, str(ex))
+                      'import url - {1}'.format(failed_urls, ex)
             ex = DSLParsingLogicException(13, msg)
             ex.failed_import = import_url
             raise ex
