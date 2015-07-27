@@ -26,6 +26,8 @@ import testtools
 from dsl_parser.exceptions import DSLParsingException
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.parser import parse_from_path as dsl_parse_from_path
+from dsl_parser.import_resolver.default_import_resolver import \
+    DefaultImportResolver
 from dsl_parser.version import DSL_VERSION_PREFIX
 
 
@@ -152,13 +154,15 @@ imports:"""
         return yaml
 
     def parse(self, dsl_string, resources_base_url=None,
-              dsl_version=BASIC_VERSION_SECTION_DSL_1_0):
+              dsl_version=BASIC_VERSION_SECTION_DSL_1_0, resolver=None):
         # add dsl version if missing
         if DSL_VERSION_PREFIX not in dsl_string:
             dsl_string = dsl_version + dsl_string
-        return dsl_parse(dsl_string, resources_base_url)
+            if not resolver:
+                resolver = DefaultImportResolver()
+        return dsl_parse(dsl_string, resources_base_url, resolver)
 
-    def parse_1_0(self, dsl_string, resources_base_url=None):
+    def parse_1_0(self, dsl_string, resolver=None, resources_base_url=None):
         return self.parse(dsl_string, resources_base_url,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0)
 
@@ -171,8 +175,7 @@ imports:"""
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_2)
 
     def parse_from_path(self, dsl_path, resources_base_url=None):
-        return dsl_parse_from_path(dsl_path,
-                                   resources_base_url)
+        return dsl_parse_from_path(dsl_path, resources_base_url)
 
     def _assert_dsl_parsing_exception_error_code(
             self, dsl,

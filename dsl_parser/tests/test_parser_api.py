@@ -2184,7 +2184,8 @@ imports:
     -   {0}""".format(resource_file_name)
         top_file = self.make_yaml_file(yaml, True)
         result = parse_from_url(
-            top_file, resources_base_url=file_url[:-len(resource_file_name)])
+            top_file,
+            resources_base_url=file_url[:-len(resource_file_name)])
         self._assert_minimal_blueprint(result)
 
     def test_recursive_imports_with_inner_circular(self):

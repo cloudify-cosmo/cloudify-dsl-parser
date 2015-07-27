@@ -48,6 +48,7 @@ PLUGINS_TO_INSTALL = 'plugins_to_install'
 DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
 WORKFLOW_PLUGINS_TO_INSTALL = 'workflow_plugins_to_install'
 VERSION = 'version'
+CLOUDIFY = 'cloudify'
 
 SCRIPT_PLUGIN_NAME = 'script'
 SCRIPT_PLUGIN_RUN_TASK = 'script_runner.tasks.run'
@@ -58,3 +59,7 @@ FUNCTION_NAME_PATH_SEPARATOR = '__sep__'
 
 NODES = 'nodes'
 NODE_INSTANCES = 'node_instances'
+
+IMPORT_RESOLVER_KEY = 'import_resolver'
+RESOLVER_IMPLEMENTATION_KEY = 'implementation'
+RESLOVER_PARAMETERS_KEY = 'parameters'

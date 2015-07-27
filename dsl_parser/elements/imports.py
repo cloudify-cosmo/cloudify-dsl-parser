@@ -13,10 +13,8 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import contextlib
 import os
 import urllib
-import urllib2
 
 import networkx as nx
 
@@ -68,7 +66,8 @@ class ImportsLoader(Element):
         'inputs': ['main_blueprint_holder',
                    'resources_base_url',
                    'blueprint_location',
-                   'version']
+                   'version',
+                   'resolver']
     }
 
     resource_base = None
@@ -86,7 +85,8 @@ class ImportsLoader(Element):
               main_blueprint_holder,
               resources_base_url,
               blueprint_location,
-              version):
+              version,
+              resolver):
         if blueprint_location:
             blueprint_location = _dsl_location_to_url(
                 dsl_location=blueprint_location,
@@ -96,7 +96,8 @@ class ImportsLoader(Element):
         return _combine_imports(parsed_dsl_holder=main_blueprint_holder,
                                 dsl_location=blueprint_location,
                                 resources_base_url=resources_base_url,
-                                version=version)
+                                version=version,
+                                resolver=resolver)
 
     def calculate_provided(self, **kwargs):
         return {
@@ -143,10 +144,11 @@ def _get_resource_location(resource_name,
 
 
 def _combine_imports(parsed_dsl_holder, dsl_location,
-                     resources_base_url, version):
+                     resources_base_url, version, resolver):
     ordered_imports = _build_ordered_imports(parsed_dsl_holder,
                                              dsl_location,
-                                             resources_base_url)
+                                             resources_base_url,
+                                             resolver)
     holder_result = parsed_dsl_holder.copy()
     version_key_holder, version_value_holder = parsed_dsl_holder.get_item(
         _version.VERSION)
@@ -162,7 +164,8 @@ def _combine_imports(parsed_dsl_holder, dsl_location,
 
 def _build_ordered_imports(parsed_dsl_holder,
                            dsl_location,
-                           resources_base_url):
+                           resources_base_url,
+                           resolver):
 
     def location(value):
         return value or 'root'
@@ -191,7 +194,7 @@ def _build_ordered_imports(parsed_dsl_holder,
                 imports_graph.add_graph_dependency(import_url,
                                                    location(_current_import))
             else:
-                raw_imported_dsl = _fetch_import(import_url)
+                raw_imported_dsl = resolver.fetch_import(import_url)
                 imported_dsl_holder = utils.load_yaml(
                     raw_yaml=raw_imported_dsl,
                     error_message="Failed to parse import '{0}' (via '{1}')"
@@ -251,18 +254,6 @@ def _merge_into_dict_or_throw_on_duplicate(from_dict_holder, to_dict_holder,
             raise exceptions.DSLParsingLogicException(
                 4, "Import failed: Could not merge '{0}' due to conflict "
                    "on '{1}'".format(key_name, key_holder.value))
-
-
-def _fetch_import(import_url):
-    try:
-        with contextlib.closing(urllib2.urlopen(import_url)) as f:
-            return f.read()
-    except urllib2.URLError, ex:
-        ex = exceptions.DSLParsingLogicException(
-            13, "Import failed: Unable to open import url "
-                "'{0}'; {1}".format(import_url, ex.message))
-        ex.failed_import = import_url
-        raise ex
 
 
 class ImportsGraph(object):
