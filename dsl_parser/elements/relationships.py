@@ -16,7 +16,7 @@
 from dsl_parser import (constants,
                         utils)
 from dsl_parser.interfaces import interfaces_parser
-from dsl_parser.elements import (properties,
+from dsl_parser.elements import (data_types as _data_types,
                                  operation,
                                  plugins as _plugins,
                                  types)
@@ -28,7 +28,7 @@ class Relationship(types.Type):
 
     schema = {
         'derived_from': types.RelationshipDerivedFrom,
-        'properties': properties.Schema,
+        'properties': _data_types.SchemaWithInitialDefault,
         'source_interfaces': operation.NodeTypeInterfaces,
         'target_interfaces': operation.NodeTypeInterfaces,
     }
@@ -37,20 +37,21 @@ class Relationship(types.Type):
         _plugins.Plugins: [Value('plugins')],
         'self': [Value('super_type',
                        predicate=types.derived_from_predicate,
-                       required=False)]
+                       required=False)],
+        _data_types.DataTypes: [Value('data_types')]
     }
 
-    def parse(self, super_type, plugins, resource_base):
+    def parse(self, super_type, plugins, resource_base, data_types):
         relationship_type = self.build_dict_result()
         if not relationship_type.get('derived_from'):
             relationship_type.pop('derived_from', None)
         relationship_type_name = self.name
 
         if super_type:
-            relationship_type[constants.PROPERTIES] = utils.merge_sub_dicts(
-                overridden_dict=super_type,
-                overriding_dict=relationship_type,
-                sub_dict_key=constants.PROPERTIES)
+            relationship_type[constants.PROPERTIES] = utils.merge_schemas(
+                overridden_schema=super_type.get('properties', {}),
+                overriding_schema=relationship_type.get('properties', {}),
+                data_types=data_types)
             for interfaces in [constants.SOURCE_INTERFACES,
                                constants.TARGET_INTERFACES]:
                 relationship_type[interfaces] = interfaces_parser. \
@@ -66,6 +67,7 @@ class Relationship(types.Type):
         relationship_type['name'] = relationship_type_name
         relationship_type[
             constants.TYPE_HIERARCHY] = self.create_type_hierarchy(super_type)
+        self.fix_properties(relationship_type)
         return relationship_type
 
 

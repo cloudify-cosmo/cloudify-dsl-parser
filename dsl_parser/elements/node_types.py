@@ -18,7 +18,7 @@ from dsl_parser import (constants,
                         utils)
 from dsl_parser.interfaces import interfaces_parser
 from dsl_parser.elements import (operation,
-                                 properties,
+                                 data_types as _data_types,
                                  types)
 from dsl_parser.framework import requirements
 from dsl_parser.framework.elements import Dict
@@ -29,29 +29,31 @@ class NodeType(types.Type):
     schema = {
         'derived_from': types.TypeDerivedFrom,
         'interfaces': operation.NodeTypeInterfaces,
-        'properties': properties.Schema,
+        'properties': _data_types.SchemaWithInitialDefault,
     }
     requires = {
         'self': [requirements.Value('super_type',
                                     predicate=types.derived_from_predicate,
-                                    required=False)]
+                                    required=False)],
+        _data_types.DataTypes: [requirements.Value('data_types')]
     }
 
-    def parse(self, super_type):
+    def parse(self, super_type, data_types):
         node_type = self.build_dict_result()
         if not node_type.get('derived_from'):
             node_type.pop('derived_from', None)
         if super_type:
-            node_type[constants.PROPERTIES] = utils.merge_sub_dicts(
-                overridden_dict=super_type,
-                overriding_dict=node_type,
-                sub_dict_key=constants.PROPERTIES)
+            node_type[constants.PROPERTIES] = utils.merge_schemas(
+                overridden_schema=super_type.get('properties', {}),
+                overriding_schema=node_type.get('properties', {}),
+                data_types=data_types)
             node_type[constants.INTERFACES] = interfaces_parser. \
                 merge_node_type_interfaces(
                     overridden_interfaces=super_type[constants.INTERFACES],
                     overriding_interfaces=node_type[constants.INTERFACES])
         node_type[constants.TYPE_HIERARCHY] = self.create_type_hierarchy(
             super_type)
+        self.fix_properties(node_type)
         return node_type
 
 

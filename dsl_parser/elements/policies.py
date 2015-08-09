@@ -16,7 +16,7 @@
 from dsl_parser import (exceptions,
                         utils)
 from dsl_parser.elements import (node_templates,
-                                 properties)
+                                 data_types)
 from dsl_parser.framework.requirements import Value
 from dsl_parser.framework.elements import (DictElement,
                                            Element,
@@ -34,7 +34,7 @@ class PolicyTriggerSource(Element):
 class PolicyTrigger(DictElement):
 
     schema = {
-        'parameters': properties.Schema,
+        'parameters': data_types.Schema,
         'source': PolicyTriggerSource,
     }
 
@@ -48,7 +48,7 @@ class PolicyTypeSource(Element):
 class PolicyType(DictElement):
 
     schema = {
-        'properties': properties.Schema,
+        'properties': data_types.Schema,
         'source': PolicyTypeSource,
     }
 
@@ -87,15 +87,17 @@ class GroupPolicyProperties(Element):
     schema = Leaf(type=dict)
     requires = {
         GroupPolicyType: [],
-        PolicyTypes: [Value('policy_types')]
+        PolicyTypes: [Value('policy_types')],
+        data_types.DataTypes: [Value('data_types')]
     }
 
-    def parse(self, policy_types):
+    def parse(self, policy_types, data_types):
         policy_type = policy_types[self.sibling(GroupPolicyType).value]
         policy_type_properties = policy_type.get('properties', {})
         return utils.merge_schema_and_instance_properties(
             self.initial_value or {},
             policy_type_properties,
+            data_types,
             "{0} '{1}' property is not part of "
             "the policy type properties schema",
             "{0} does not provide a value for mandatory "
@@ -132,16 +134,18 @@ class GroupPolicyTriggerParameters(Element):
     schema = Leaf(type=dict)
     requires = {
         GroupPolicyTriggerType: [],
-        PolicyTriggers: [Value('policy_triggers')]
+        PolicyTriggers: [Value('policy_triggers')],
+        data_types.DataTypes: [Value('data_types')]
     }
 
-    def parse(self, policy_triggers):
+    def parse(self, policy_triggers, data_types):
         trigger_type = policy_triggers[
             self.sibling(GroupPolicyTriggerType).value]
         policy_trigger_parameters = trigger_type.get('parameters', {})
         return utils.merge_schema_and_instance_properties(
             self.initial_value or {},
             policy_trigger_parameters,
+            data_types,
             "{0} '{1}' property is not part of "
             "the policy type properties schema",
             "{0} does not provide a value for mandatory "

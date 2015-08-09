@@ -89,3 +89,14 @@ def process_dsl_version(dsl_version):
         'definitions_name': version_definitions_name,
         'definitions_version': tuple(version_definitions_version)
     }
+
+
+def version_description(dsl_version_tuple):
+    version = []
+    for i in range(2):
+        if i < len(dsl_version_tuple):
+            version.append(dsl_version_tuple[i])
+        else:
+            version.append(0)
+    major, minor = version
+    return '{0}{1}_{2}'.format(DSL_VERSION_PREFIX, major, minor)

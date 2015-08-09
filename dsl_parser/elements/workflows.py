@@ -13,7 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser.elements import (properties,
+from dsl_parser.elements import (data_types,
                                  plugins as _plugins,
                                  operation)
 from dsl_parser.framework.requirements import Value, Requirement
@@ -36,7 +36,7 @@ class Workflow(Element):
         Leaf(type=str),
         {
             'mapping': WorkflowMapping,
-            'parameters': properties.Schema
+            'parameters': data_types.Schema
         }
     ]
     requires = {

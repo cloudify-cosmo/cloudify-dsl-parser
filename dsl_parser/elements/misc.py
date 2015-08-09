@@ -13,61 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from dsl_parser import (version as _version,
-                        exceptions,
-                        models)
 from dsl_parser import elements
-from dsl_parser.elements import properties
+from dsl_parser.elements import (
+    data_types,
+    version as element_version)
 from dsl_parser.framework.elements import (DictElement,
                                            Element,
                                            Leaf,
                                            Dict)
-from dsl_parser.framework.requirements import Value
-
-
-class ToscaDefinitionsVersion(Element):
-
-    schema = Leaf(type=str)
-    provides = ['version']
-
-    def validate(self):
-        if self.initial_value is None:
-            raise exceptions.DSLParsingLogicException(
-                27, '{0} field must appear in the main blueprint file'.format(
-                    _version.VERSION))
-
-        _version.validate_dsl_version(self.initial_value)
-
-    def parse(self):
-        return models.Version(_version.process_dsl_version(self.initial_value))
-
-    def calculate_provided(self):
-        return {
-            'version': _version.parse_dsl_version(self.initial_value)
-        }
-
-
-class Description(Element):
-
-    schema = Leaf(type=str)
-
-    requires = {
-        ToscaDefinitionsVersion: [Value('version')]
-    }
-
-    def validate(self, version):
-        value = self.initial_value
-        if value is None:
-            return
-        if version.definitions_version < (1, 2):
-            raise exceptions.DSLParsingLogicException(
-                exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
-                "'{0} is not supported for {1} earlier than "
-                "'{2}'. You are currently using version '{3}'".format(
-                    self.name,
-                    _version.VERSION,
-                    _version.DSL_VERSION_1_2,
-                    version.raw))
 
 
 class OutputDescription(Element):
@@ -94,7 +47,7 @@ class Outputs(DictElement):
     schema = Dict(type=Output)
 
 
-class Inputs(properties.Schema):
+class Inputs(data_types.Schema):
     pass
 
 
@@ -102,19 +55,20 @@ class DSLDefinitions(Element):
 
     schema = Leaf(type=[dict, list])
     requires = {
-        ToscaDefinitionsVersion: [Value('version')]
+        element_version.ToscaDefinitionsVersion: ['version']
     }
 
     def validate(self, version):
-        value = self.initial_value
-        if value is None:
-            return
-        if version.definitions_version < (1, 2):
-            raise exceptions.DSLParsingLogicException(
-                exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
-                "'{0} is not supported for {1} earlier than "
-                "'{2}'. You are currently using version '{3}'".format(
-                    self.name,
-                    _version.VERSION,
-                    _version.DSL_VERSION_1_2,
-                    version.raw))
+        self.validate_version(version, (1, 2))
+
+
+class Description(Element):
+
+    schema = Leaf(type=str)
+
+    requires = {
+        element_version.ToscaDefinitionsVersion: ['version']
+    }
+
+    def validate(self, version):
+        self.validate_version(version, (1, 2))

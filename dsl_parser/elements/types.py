@@ -33,6 +33,11 @@ class Type(Element):
         type_hierarchy.append(self.name)
         return type_hierarchy
 
+    @staticmethod
+    def fix_properties(value):
+        for key, value in value['properties'].iteritems():
+            value.pop('initial_default', None)
+
 
 class DerivedFrom(Element):
 
@@ -45,7 +50,7 @@ class DerivedFrom(Element):
 
         if self.initial_value not in self.ancestor(Types).initial_value:
             raise exceptions.DSLParsingLogicException(
-                14,
+                exceptions.ERROR_UNKNOWN_TYPE,
                 "Missing definition for {0} '{1}' which is declared as "
                 "derived by {0} '{2}'"
                 .format(self.descriptor,
@@ -61,6 +66,11 @@ class RelationshipDerivedFrom(DerivedFrom):
 class TypeDerivedFrom(DerivedFrom):
 
     descriptor = 'type'
+
+
+class DataTypeDerivedFrom(DerivedFrom):
+
+    descriptor = 'data type'
 
 
 def derived_from_predicate(source, target):
