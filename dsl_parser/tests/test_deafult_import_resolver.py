@@ -13,14 +13,16 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import urllib2
 import mock
+import requests
 
 import testtools
 
 from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver, DefaultResolverValidationException
+from dsl_parser.import_resolver.abstract_import_resolver import \
+    DEFAULT_NUMBER_RETRIES
 
 ORIGINAL_V1_URL = 'http://www.original_v1.org/cloudify/types.yaml'
 ORIGINAL_V1_PREFIX = 'http://www.original_v1.org'
@@ -37,6 +39,11 @@ INVALID_URL_PREFIX = 'http://www.not-exist-url.org'
 
 ILLEGAL_URL = 'illegal-url/cloudify/types.yaml'
 ILLEGAL_URL_PREFIX = 'illegal-url'
+TIMEOUT_URL = 'timeout'
+BAD_RESPONSE_CODE_URL = 'bad_response_code'
+RETRY_URL = 'retry_url'
+
+RETRY_DELAY = 0
 
 
 class TestDefaultResolver(testtools.TestCase):
@@ -60,7 +67,7 @@ class TestDefaultResolver(testtools.TestCase):
         expected_failed_urls = {
             ORIGINAL_V2_URL:
                 'Import failed: Unable to open import url {0}'
-                '; <urlopen error invalid url: {0}>'.format(ORIGINAL_V2_URL)
+                '; invalid url: {0}'.format(ORIGINAL_V2_URL)
         }
         self._test_default_resolver(
             import_url=ORIGINAL_V1_URL, rules=rules,
@@ -128,10 +135,29 @@ class TestDefaultResolver(testtools.TestCase):
                             "Import failed: Unable to open import url {1}"
             .format(rules, ILLEGAL_URL))
 
+    def test_timeout(self):
+        self._test_default_resolver(
+            import_url=TIMEOUT_URL, rules=[],
+            expected_urls_to_resolve=[TIMEOUT_URL],
+            expected_failure=True,
+            partial_err_msg="Timeout")
+
+    def test_bad_response_code(self):
+        self._test_default_resolver(
+            import_url=BAD_RESPONSE_CODE_URL, rules=[],
+            expected_urls_to_resolve=[BAD_RESPONSE_CODE_URL],
+            expected_failure=True,
+            partial_err_msg="status code: 404")
+
     def test_no_rules(self):
         self._test_default_resolver(
             import_url=VALID_V1_URL, rules=[],
             expected_urls_to_resolve=[VALID_V1_URL])
+
+    def test_retry(self):
+        self._test_default_resolver(
+            import_url=RETRY_URL, rules=[],
+            expected_urls_to_resolve=[RETRY_URL])
 
     def test_no_rules_not_accesible_url(self):
         self._test_default_resolver(
@@ -155,35 +181,67 @@ class TestDefaultResolver(testtools.TestCase):
                                partial_err_msg=None):
 
         urls_to_resolve = []
+        number_of_attempts = []
 
-        def mock_urlopen(url):
-            urls_to_resolve.append(url)
-            if url in [ORIGINAL_V1_URL, ORIGINAL_V2_URL, INVALID_V1_URL]:
-                raise urllib2.URLError('invalid url: {0}'.format(url))
-            elif url == ILLEGAL_URL:
-                raise ValueError('unknown url type: {0}'.format(url))
-            elif url in [VALID_V1_URL, VALID_V2_URL]:
-                return mock.MagicMock()
+        class mock_requests_get(object):
 
-        resolver = DefaultImportResolver(rules)
-        with mock.patch('urllib2.urlopen', new=mock_urlopen):
-            try:
-                resolver.resolve(import_url=import_url)
-                if expected_failure:
-                    err_msg = 'resolve should have been failed'
+            def __init__(self, url, timeout):
+                self.status_code = 200
+                self.text = 200
+                number_of_attempts.append(1)
+                if url not in urls_to_resolve:
+                    urls_to_resolve.append(url)
+                if url in [ORIGINAL_V1_URL, ORIGINAL_V2_URL, INVALID_V1_URL]:
+                    raise requests.URLRequired(
+                        'invalid url: {0}'.format(url))
+                elif url == ILLEGAL_URL:
+                    raise requests.URLRequired(
+                        'unknown url type: {0}'.format(
+                            url))
+                elif url in [VALID_V1_URL, VALID_V2_URL]:
+                    return None
+                elif url == TIMEOUT_URL:
+                    raise requests.ConnectionError(
+                        'Timeout while trying to import')
+                elif url == BAD_RESPONSE_CODE_URL:
+                    self.status_code = 404
+                    self.text = 404
+                elif url == RETRY_URL:
+                    if len(number_of_attempts) < DEFAULT_NUMBER_RETRIES:
+                        raise requests.ConnectionError(
+                            'Timeout while trying to import')
+                    else:
+                        return None
+
+        resolver = DefaultImportResolver(rules=rules)
+        with mock.patch('requests.get', new=mock_requests_get,
+                        create=True):
+            with mock.patch(
+                    'dsl_parser.import_resolver.abstract_import_resolver.'
+                    'DEFAULT_RETRY_DELAY', new=RETRY_DELAY):
+                try:
+                    resolver.resolve(import_url=import_url)
+                    if expected_failure:
+                        err_msg = 'resolve should have been failed'
+                        if partial_err_msg:
+                            err_msg = \
+                                '{0} with error message that contains: {1}'\
+                                .format(err_msg, partial_err_msg)
+                        raise AssertionError(err_msg)
+                except DSLParsingLogicException, ex:
+                    if not expected_failure:
+                        raise ex
                     if partial_err_msg:
-                        err_msg = '{0} with error message that contains: {1}'\
-                            .format(err_msg, partial_err_msg)
-                    raise AssertionError(err_msg)
-            except DSLParsingLogicException, ex:
-                if not expected_failure:
-                    raise ex
-                if partial_err_msg:
-                    self.assertIn(partial_err_msg, str(ex))
+                        self.assertIn(partial_err_msg, str(ex))
 
         self.assertEqual(len(expected_urls_to_resolve), len(urls_to_resolve))
         for resolved_url in expected_urls_to_resolve:
             self.assertIn(resolved_url, urls_to_resolve)
+        # expected to be 1 initial attempt + 4 retries
+        if import_url == RETRY_URL:
+            self.assertEqual(DEFAULT_NUMBER_RETRIES, len(number_of_attempts))
+        if import_url == TIMEOUT_URL:
+            self.assertEqual(DEFAULT_NUMBER_RETRIES+1, len(number_of_attempts))
 
 
 class TestDefaultResolverValidations(testtools.TestCase):
