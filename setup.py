@@ -27,6 +27,10 @@ try:
 except ImportError, e:
     install_requires.append('ordereddict==1.1')
 
+try:
+    import importlib  # NOQA
+except ImportError:
+    install_requires.append('importlib')
 
 setup(
     name='cloudify-dsl-parser',
