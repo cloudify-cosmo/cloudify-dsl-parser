@@ -18,6 +18,7 @@ from StringIO import StringIO
 
 from dsl_parser import exceptions
 from dsl_parser import holder
+from dsl_parser import version as _version
 
 
 class Unparsed(object):
@@ -134,7 +135,7 @@ class Element(object):
         elements.append(str(self.name))
         return '.'.join(elements)
 
-    def _parent(self):
+    def parent(self):
         return next(self.context.ancestors_iter(self))
 
     def ancestor(self, element_type):
@@ -171,7 +172,18 @@ class Element(object):
         return list(self.context.child_elements_iter(self))
 
     def sibling(self, element_type):
-        return self._parent().child(element_type)
+        return self.parent().child(element_type)
+
+    def validate_version(self, version, min_version, name):
+        if self.initial_value is not None and version < min_version:
+            raise exceptions.DSLParsingLogicException(
+                exceptions.ERROR_FEATURE_NOT_SUPPORTED_IN_THIS_VERSION,
+                '{0} not supported in version {1}, it was added in {2}'.format(
+                    name,
+                    _version.version_description(version),
+                    _version.version_description(min_version)
+                )
+            )
 
 
 class DictElement(Element):
@@ -187,3 +199,8 @@ class UnknownSchema(object):
 class UnknownElement(Element):
 
     schema = UnknownSchema()
+
+
+class StringElement(Element):
+
+    schema = Leaf(type=str)

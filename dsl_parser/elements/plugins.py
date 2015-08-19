@@ -16,7 +16,7 @@
 from dsl_parser import (constants,
                         exceptions,
                         version as _version)
-from dsl_parser.elements import misc
+from dsl_parser.elements import version as element_version
 from dsl_parser.framework.requirements import Value
 from dsl_parser.framework.elements import (DictElement,
                                            Element,
@@ -61,7 +61,7 @@ class PluginInstallArguments(Element):
 
     schema = Leaf(type=str)
     requires = {
-        misc.ToscaDefinitionsVersion: [Value('version')]
+        element_version.ToscaDefinitionsVersion: [Value('version')]
     }
 
     def validate(self, version):

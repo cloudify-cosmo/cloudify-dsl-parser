@@ -14,37 +14,16 @@
 #    * limitations under the License.
 
 from dsl_parser import (version as _version,
-                        exceptions,
-                        models)
+                        exceptions)
 from dsl_parser import elements
-from dsl_parser.elements import properties
+from dsl_parser.elements import (
+    data_types,
+    version as element_version)
 from dsl_parser.framework.elements import (DictElement,
                                            Element,
                                            Leaf,
                                            Dict)
 from dsl_parser.framework.requirements import Value
-
-
-class ToscaDefinitionsVersion(Element):
-
-    schema = Leaf(type=str)
-    provides = ['version']
-
-    def validate(self):
-        if self.initial_value is None:
-            raise exceptions.DSLParsingLogicException(
-                27, '{0} field must appear in the main blueprint file'.format(
-                    _version.VERSION))
-
-        _version.validate_dsl_version(self.initial_value)
-
-    def parse(self):
-        return models.Version(_version.process_dsl_version(self.initial_value))
-
-    def calculate_provided(self):
-        return {
-            'version': _version.parse_dsl_version(self.initial_value)
-        }
 
 
 class OutputDescription(Element):
@@ -71,7 +50,7 @@ class Outputs(DictElement):
     schema = Dict(type=Output)
 
 
-class Inputs(properties.Schema):
+class Inputs(data_types.Schema):
     pass
 
 
@@ -79,7 +58,7 @@ class DSLDefinitions(Element):
 
     schema = Leaf(type=[dict, list])
     requires = {
-        ToscaDefinitionsVersion: [Value('version')]
+        element_version.ToscaDefinitionsVersion: [Value('version')]
     }
 
     def validate(self, version):

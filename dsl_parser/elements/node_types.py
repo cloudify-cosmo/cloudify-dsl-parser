@@ -18,7 +18,7 @@ from dsl_parser import (constants,
                         utils)
 from dsl_parser.interfaces import interfaces_parser
 from dsl_parser.elements import (operation,
-                                 properties,
+                                 data_types,
                                  types)
 from dsl_parser.framework import requirements
 from dsl_parser.framework.elements import Dict
@@ -29,7 +29,7 @@ class NodeType(types.Type):
     schema = {
         'derived_from': types.TypeDerivedFrom,
         'interfaces': operation.NodeTypeInterfaces,
-        'properties': properties.Schema,
+        'properties': data_types.Schema,
     }
     requires = {
         'self': [requirements.Value('super_type',

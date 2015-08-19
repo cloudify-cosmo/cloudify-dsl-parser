@@ -16,7 +16,7 @@
 from dsl_parser import (constants,
                         utils)
 from dsl_parser.interfaces import interfaces_parser
-from dsl_parser.elements import (properties,
+from dsl_parser.elements import (data_types,
                                  operation,
                                  plugins as _plugins,
                                  types)
@@ -28,7 +28,7 @@ class Relationship(types.Type):
 
     schema = {
         'derived_from': types.RelationshipDerivedFrom,
-        'properties': properties.Schema,
+        'properties': data_types.Schema,
         'source_interfaces': operation.NodeTypeInterfaces,
         'target_interfaces': operation.NodeTypeInterfaces,
     }

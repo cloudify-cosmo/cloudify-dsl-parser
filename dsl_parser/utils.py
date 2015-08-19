@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import copy
 import contextlib
 import urllib2
 
@@ -20,6 +21,7 @@ import yaml.parser
 
 from dsl_parser import yaml_loader
 from dsl_parser import functions
+from dsl_parser import exceptions
 from dsl_parser.exceptions import (DSLParsingLogicException,
                                    DSLParsingFormatException)
 
@@ -40,12 +42,25 @@ def flatten_schema(schema):
     return flattened_schema_props
 
 
+def _property_description(path, name=None):
+    if not path:
+        return name
+    if name is not None:
+        path = copy.copy(path)
+        path.append(name)
+    return '.'.join(path)
+
+
 def merge_schema_and_instance_properties(
         instance_properties,
         schema_properties,
+        data_types,
         undefined_property_error_message,
         missing_property_error_message,
-        node_name):
+        node_name,
+        path=None):
+    if path is None:
+        path = []
     flattened_schema_props = flatten_schema(schema_properties)
 
     # validate instance properties don't
@@ -56,59 +71,92 @@ def merge_schema_and_instance_properties(
         if key not in flattened_schema_props:
             ex = DSLParsingLogicException(
                 106,
-                undefined_property_error_message.format(node_name, key))
+                undefined_property_error_message.format(
+                    node_name,
+                    _property_description(path, key)))
             ex.property = key
             raise ex
 
     merged_properties = dict(flattened_schema_props.items() +
                              instance_properties.items())
-
+    result = {}
     for key, value in merged_properties.iteritems():
         if value is None:
             ex = DSLParsingLogicException(
                 107,
-                missing_property_error_message.format(node_name, key))
+                missing_property_error_message.format(
+                    node_name,
+                    _property_description(path, key)))
             ex.property = key
             raise ex
+        prop_path = copy.copy(path)
+        prop_path.append(key)
+        result[key] = parse_value(
+            value=value,
+            type_name=schema_properties.get(key).get('type'),
+            data_types=data_types,
+            undefined_property_error_message=undefined_property_error_message,
+            missing_property_error_message=missing_property_error_message,
+            node_name=node_name,
+            path=prop_path)
 
-    _validate_properties_types(merged_properties, schema_properties)
-
-    return merged_properties
+    return result
 
 
-def _validate_properties_types(properties, properties_schema):
-    for prop_key, prop in properties_schema.iteritems():
-        prop_type = prop.get('type')
-        if prop_type is None:
-            continue
-        prop_val = properties[prop_key]
+def parse_value(
+        value,
+        type_name,
+        data_types,
+        undefined_property_error_message,
+        missing_property_error_message,
+        node_name,
+        path):
+    if type_name is None:
+        return value
+    if functions.parse(value) != value:
+        # intrinsic function - not validated at the moment
+        return value
+    if type_name == 'integer':
+        if isinstance(value, (int, long)) and not isinstance(
+                value, bool):
+            return value
+    elif type_name == 'float':
+        if isinstance(value, (int, float, long)) and not isinstance(
+                value, bool):
+            return value
+    elif type_name == 'boolean':
+        if isinstance(value, bool):
+            return value
+    elif type_name == 'string':
+        return value
+    elif type_name in data_types:
+        if isinstance(value, dict):
+            data_schema = data_types[type_name]['properties']
+            undef_msg = undefined_property_error_message
+            return merge_schema_and_instance_properties(
+                value,
+                data_schema,
+                data_types=data_types,
+                undefined_property_error_message=undef_msg,
+                missing_property_error_message=missing_property_error_message,
+                node_name=node_name,
+                path=path)
+    else:
+        raise RuntimeError(
+            "Unexpected type defined in property schema for property '{0}'"
+            " - unknown type is '{1}'".format(
+                _property_description(path),
+                type_name))
 
-        if functions.parse(prop_val) != prop_val:
-            # intrinsic function - not validated at the moment
-            continue
-
-        if prop_type == 'integer':
-            if isinstance(prop_val, (int, long)) and not isinstance(
-                    prop_val, bool):
-                continue
-        elif prop_type == 'float':
-            if isinstance(prop_val, (int, float, long)) and not isinstance(
-                    prop_val, bool):
-                continue
-        elif prop_type == 'boolean':
-            if isinstance(prop_val, bool):
-                continue
-        elif prop_type == 'string':
-            continue
-        else:
-            raise RuntimeError(
-                "Unexpected type defined in property schema for property '{0}'"
-                " - unknown type is '{1}'".format(prop_key, prop_type))
-
-        raise DSLParsingLogicException(
-            50, "Property type validation failed: Property '{0}' type "
-                "is '{1}', yet it was assigned with the value '{2}'"
-                .format(prop_key, prop_type, prop_val))
+    raise DSLParsingLogicException(
+        exceptions.ERROR_VALUE_DOES_NOT_MATCH_TYPE,
+        "Property type validation failed in '{0}': property "
+        "'{1}' type is '{2}', yet it was assigned with the "
+        "value '{3}'".format(
+            node_name,
+            _property_description(path),
+            type_name,
+            value))
 
 
 def load_yaml(raw_yaml, error_message, filename=None):

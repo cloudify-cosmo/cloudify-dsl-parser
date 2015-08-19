@@ -22,7 +22,8 @@ from dsl_parser.interfaces import interfaces_parser
 from dsl_parser.elements import (node_types as _node_types,
                                  plugins as _plugins,
                                  relationships as _relationships,
-                                 operation as _operation)
+                                 operation as _operation,
+                                 data_types as _data_types)
 from dsl_parser.framework.requirements import Value, Requirement
 from dsl_parser.framework.elements import (DictElement,
                                            Element,
@@ -53,16 +54,18 @@ class NodeTemplateProperties(Element):
     schema = Leaf(type=dict)
     requires = {
         NodeTemplateType: [],
-        _node_types.NodeTypes: [Value('node_types')]
+        _node_types.NodeTypes: [Value('node_types')],
+        _data_types.DataTypes: [Value('data_types')]
     }
 
-    def parse(self, node_types):
+    def parse(self, node_types, data_types):
         properties = self.initial_value or {}
         node_type_name = self.sibling(NodeTemplateType).value
         node_type = node_types[node_type_name]
         return utils.merge_schema_and_instance_properties(
             instance_properties=properties,
             schema_properties=node_type['properties'],
+            data_types=data_types,
             undefined_property_error_message=(
                 "'{0}' node '{1}' property is not part of the derived"
                 " type properties schema"),
@@ -120,9 +123,10 @@ class NodeTemplateRelationshipProperties(Element):
     requires = {
         NodeTemplateRelationshipType: [],
         _relationships.Relationships: [Value('relationships')],
+        _data_types.DataTypes: [Value('data_types')]
     }
 
-    def parse(self, relationships):
+    def parse(self, relationships, data_types):
         relationship_type_name = self.sibling(
             NodeTemplateRelationshipType).value
         properties = self.initial_value or {}
@@ -130,6 +134,7 @@ class NodeTemplateRelationshipProperties(Element):
             instance_properties=properties,
             schema_properties=relationships[relationship_type_name][
                 'properties'],
+            data_types=data_types,
             undefined_property_error_message=(
                 "'{0}' node relationship '{1}' property is not part of "
                 "the derived relationship type properties schema"),

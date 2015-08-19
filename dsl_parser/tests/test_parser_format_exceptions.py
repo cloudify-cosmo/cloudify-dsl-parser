@@ -12,8 +12,11 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+import dsl_parser.exceptions as exceptions
 
-from dsl_parser.exceptions import DSLParsingFormatException
+from dsl_parser.exceptions import (
+    DSLParsingFormatException,
+    DSLParsingLogicException)
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
@@ -926,7 +929,7 @@ node_types:
                 type: unknown-type
                 """
         self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
+            yaml, exceptions.ERROR_UNKNOWN_TYPE, DSLParsingLogicException)
 
     def test_invalid_version_field_format(self):
         yaml = self.MINIMAL_BLUEPRINT + """
