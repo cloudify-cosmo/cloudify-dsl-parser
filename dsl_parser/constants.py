@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 DSL_DEFINITIONS = 'dsl_definitions'
+DESCRIPTION = 'description'
 NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
 NODE_TYPES = 'node_types'

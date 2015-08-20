@@ -290,6 +290,23 @@ imports: []
         result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
 
+    def test_blueprint_description_field(self):
+        yaml = self.MINIMAL_BLUEPRINT + self.BASIC_VERSION_SECTION_DSL_1_2 +\
+            """
+description: sample description
+        """
+        result = self.parse(yaml)
+        self._assert_minimal_blueprint(result)
+        self.assertIn('description', result)
+        self.assertEquals('sample description', result['description'])
+
+    def test_blueprint_description_field_omitted(self):
+        yaml = self.MINIMAL_BLUEPRINT + self.BASIC_VERSION_SECTION_DSL_1_2
+        result = self.parse(yaml)
+        self._assert_minimal_blueprint(result)
+        self.assertIn('description', result)
+        self.assertEquals(None, result['description'])
+
     def test_diamond_imports(self):
         bottom_level_yaml = self.BASIC_TYPE
         bottom_file_name = self.make_yaml_file(bottom_level_yaml)
