@@ -934,3 +934,11 @@ tosca_definitions_version: [cloudify_dsl_1_0]
     """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException, dsl_parse)
+
+    def test_invalid_blueprint_description_field_format(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+description:
+  nested_key: value
+  """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 1, DSLParsingFormatException)

@@ -793,3 +793,18 @@ node_templates:
             yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_0),
             exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
             DSLParsingLogicException)
+
+    def test_blueprint_description_version_validation(self):
+        yaml = self.MINIMAL_BLUEPRINT + """
+{0}
+description: sample description
+        """
+        self.parse(yaml.format(self.BASIC_VERSION_SECTION_DSL_1_2))
+        self._assert_dsl_parsing_exception_error_code(
+            yaml.format(self.BASIC_VERSION_SECTION_DSL_1_1),
+            exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+            DSLParsingLogicException)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml.format(self.BASIC_VERSION_SECTION_DSL_1_0),
+            exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+            DSLParsingLogicException)

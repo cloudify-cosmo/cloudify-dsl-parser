@@ -47,6 +47,29 @@ class ToscaDefinitionsVersion(Element):
         }
 
 
+class Description(Element):
+
+    schema = Leaf(type=str)
+
+    requires = {
+        ToscaDefinitionsVersion: [Value('version')]
+    }
+
+    def validate(self, version):
+        value = self.initial_value
+        if value is None:
+            return
+        if version.definitions_version < (1, 2):
+            raise exceptions.DSLParsingLogicException(
+                exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+                "'{0} is not supported for {1} earlier than "
+                "'{2}'. You are currently using version '{3}'".format(
+                    self.name,
+                    _version.VERSION,
+                    _version.DSL_VERSION_1_2,
+                    version.raw))
+
+
 class OutputDescription(Element):
 
     schema = Leaf(type=str)

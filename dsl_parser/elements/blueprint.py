@@ -66,6 +66,7 @@ class Blueprint(Element):
 
     schema = {
         'tosca_definitions_version': misc.ToscaDefinitionsVersion,
+        'description': misc.Description,
         'imports': imports.Imports,
         'dsl_definitions': misc.DSLDefinitions,
         'inputs': misc.Inputs,
@@ -87,6 +88,7 @@ class Blueprint(Element):
     def parse(self, workflow_plugins_to_install,
               deployment_plugins_to_install):
         return models.Plan({
+            constants.DESCRIPTION: self.child(misc.Description).value,
             constants.NODES: self.child(node_templates.NodeTemplates).value,
             constants.RELATIONSHIPS: self.child(
                 relationships.Relationships).value,
