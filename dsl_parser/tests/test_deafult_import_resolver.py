@@ -20,7 +20,7 @@ import testtools
 
 from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.import_resolver.default_import_resolver import \
-    DefaultImportResolver
+    DefaultImportResolver, DefaultResolverValidationException
 
 ORIGINAL_V1_URL = 'http://www.original_v1.org/cloudify/types.yaml'
 ORIGINAL_V1_PREFIX = 'http://www.original_v1.org'
@@ -165,7 +165,7 @@ class TestDefaultResolver(testtools.TestCase):
             elif url in [VALID_V1_URL, VALID_V2_URL]:
                 return mock.MagicMock()
 
-        resolver = DefaultImportResolver(rules=rules)
+        resolver = DefaultImportResolver(rules)
         with mock.patch('urllib2.urlopen', new=mock_urlopen):
             try:
                 resolver.resolve(import_url=import_url)
@@ -184,3 +184,59 @@ class TestDefaultResolver(testtools.TestCase):
         self.assertEqual(len(expected_urls_to_resolve), len(urls_to_resolve))
         for resolved_url in expected_urls_to_resolve:
             self.assertIn(resolved_url, urls_to_resolve)
+
+
+class TestDefaultResolverValidations(testtools.TestCase):
+
+    def test_illegal_default_resolver_rules_type(self):
+        # wrong rules configuration - string instead of list
+        params = {
+            'rules': 'this should be a list'
+        }
+        try:
+            DefaultImportResolver(**params)
+        except DefaultResolverValidationException, ex:
+            self.assertIn(
+                'The `rules` parameter must be a list but it is of type str',
+                str(ex))
+
+    def test_illegal_default_resolver_rule_type(self):
+        # wrong rule type - should be dictionary
+        rule = 'this should be a dict'
+        rules = [rule]
+        params = {
+            'rules': rules
+        }
+        try:
+            DefaultImportResolver(**params)
+        except DefaultResolverValidationException, ex:
+            self.assertIn(
+                'Each rule must be a dictionary but the rule '
+                '[{0}] is of type {1}'.format(rule, type(rule).__name__),
+                str(ex))
+
+    def test_get_default_resolver_illegal_rule_size(self):
+        # wrong rule dictionary size - should be only one pair of key, value
+        rules = [{'rule1_1': 'rule1_value1', 'rule1_2': 'rule1_value2'}]
+        params = {
+            'rules': rules
+        }
+        try:
+            DefaultImportResolver(**params)
+        except DefaultResolverValidationException, ex:
+            self.assertIn(
+                'Each rule must be a dictionary with one (key,value) '
+                'pair but the rule {0} has 2 keys'
+                .format(rules), str(ex))
+
+    def test_illegal_default_resolver_parameters(self):
+        # illegal initialization of the default resolver
+        params = {
+            'wrong_param_name': ''
+        }
+        try:
+            DefaultImportResolver(**params)
+        except TypeError, ex:
+            self.assertIn(
+                'got an unexpected keyword argument \'wrong_param_name\'',
+                str(ex))

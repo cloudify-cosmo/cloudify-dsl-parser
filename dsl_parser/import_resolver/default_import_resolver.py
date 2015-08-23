@@ -75,7 +75,7 @@ class DefaultImportResolver(AbstractImportResolver):
     def __init__(self, rules=None):
         # set the rules
         self.rules = rules
-        if rules is None:
+        if self.rules is None:
             self.rules = DEFAULT_RULES
         self._validate_rules()
 
@@ -124,6 +124,7 @@ class DefaultImportResolver(AbstractImportResolver):
     def _validate_rules(self):
         if not isinstance(self.rules, list):
             raise DefaultResolverValidationException(
+                'Invalid parameters supplied for the default resolver: '
                 'The `{0}` parameter must be a list but it is of type {1}.'
                 .format(
                     DEFAULT_RESLOVER_RULES_KEY,
@@ -131,12 +132,14 @@ class DefaultImportResolver(AbstractImportResolver):
         for rule in self.rules:
             if not isinstance(rule, dict):
                 raise DefaultResolverValidationException(
+                    'Invalid parameters supplied for the default resolver: '
                     'Each rule must be a dictionary but the rule '
                     '[{0}] is of type {1}.'
                     .format(rule, type(rule).__name__))
             keys = rule.keys()
             if not len(keys) == 1:
                 raise DefaultResolverValidationException(
+                    'Invalid parameters supplied for the default resolver: '
                     'Each rule must be a dictionary with one (key,value) pair '
                     'but the rule [{0}] has {1} keys.'
                     .format(rule, len(keys)))
