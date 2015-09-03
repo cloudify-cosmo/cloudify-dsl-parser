@@ -135,6 +135,10 @@ class Element(object):
         elements.append(str(self.name))
         return '.'.join(elements)
 
+    @property
+    def defined(self):
+        return self.value is not None or self.start_line is not None
+
     def parent(self):
         return next(self.context.ancestors_iter(self))
 

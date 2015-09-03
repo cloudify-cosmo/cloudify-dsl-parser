@@ -3322,6 +3322,28 @@ node_templates:
             'prop1': 'val2',
         }, node2['properties'])
 
+    def test_null_default(self):
+        yaml = """
+plugins:
+  p:
+    install: false
+    executor: central_deployment_agent
+node_types:
+  type: {}
+node_templates:
+  node:
+    type: type
+workflows:
+  workflow:
+    mapping: p.workflow
+    parameters:
+      parameter:
+        default: null
+"""
+        workflow = self.parse(yaml)['workflows']['workflow']
+        parameter = workflow['parameters']['parameter']
+        self.assertIn('default', parameter)
+
 
 class DeploymentPluginsToInstallTest(AbstractTestParser):
 

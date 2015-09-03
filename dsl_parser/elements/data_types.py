@@ -100,13 +100,13 @@ class SchemaProperty(Element):
     }
 
     def parse(self):
-        result = self.build_dict_result()
+        result = dict((child.name, child.value) for child in self.children()
+                      if child.defined)
         if isinstance(self.parent(), SchemaWithInitialDefault):
             initial_default = self.child(SchemaPropertyDefault).initial_value
             result.update({
                 'initial_default': initial_default
             })
-        result = dict((k, v) for k, v in result.iteritems() if v is not None)
         return result
 
 
