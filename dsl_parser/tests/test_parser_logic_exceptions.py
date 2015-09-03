@@ -63,7 +63,7 @@ node_types:
         derived_from: "non_existing_type_parent"
         """
         self._assert_dsl_parsing_exception_error_code(
-            yaml, 14, DSLParsingLogicException)
+            yaml, exceptions.ERROR_UNKNOWN_TYPE, DSLParsingLogicException)
 
     def test_import_bad_path(self):
         yaml = """
@@ -565,7 +565,9 @@ node_types:
         """.format(prop_val, prop_type)
 
             self._assert_dsl_parsing_exception_error_code(
-                yaml, 50, DSLParsingLogicException)
+                yaml,
+                exceptions.ERROR_VALUE_DOES_NOT_MATCH_TYPE,
+                DSLParsingLogicException)
 
         test_type_with_value('boolean', 'not-a-boolean')
         test_type_with_value('boolean', '"True"')
@@ -673,19 +675,9 @@ node_templates:
 
     def test_plugin_with_install_args_wrong_dsl_version(self):
         yaml = self.PLUGIN_WITH_INTERFACES_AND_PLUGINS_WITH_INSTALL_ARGS
-        expected_err_msg = "Plugin property '{0}' is not " \
-                           "supported for tosca_definitions_version earlier" \
-                           " than '{1}'. You are currently using" \
-                           " version '{2}'" \
-            .format(constants.PLUGIN_INSTALL_ARGUMENTS_KEY,
-                    version.DSL_VERSION_1_1,
-                    version.DSL_VERSION_1_0)
         self._assert_dsl_parsing_exception_error_code(
-            yaml, 70, parsing_method=self.parse_1_0)
-        self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg, self.parse, yaml,
-                               resolver=DefaultImportResolver(),
-                               dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0)
+            yaml, exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+            parsing_method=self.parse_1_0)
 
     def test_parse_empty_or_none_dsl_version(self):
         expected_err_msg = 'tosca_definitions_version is missing or empty'
@@ -756,7 +748,8 @@ node_templates:
         self.parse(yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_1))
         self._assert_dsl_parsing_exception_error_code(
             yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_0),
-            81, DSLParsingLogicException)
+            exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+            DSLParsingLogicException)
 
     def test_retry_interval_version_validation(self):
         yaml_template = '{0}' + self.MINIMAL_BLUEPRINT + """
@@ -768,7 +761,8 @@ node_templates:
         self.parse(yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_1))
         self._assert_dsl_parsing_exception_error_code(
             yaml_template.format(self.BASIC_VERSION_SECTION_DSL_1_0),
-            81, DSLParsingLogicException)
+            exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+            DSLParsingLogicException)
 
     def test_dsl_definitions_version_validation(self):
         yaml_template = """{0}

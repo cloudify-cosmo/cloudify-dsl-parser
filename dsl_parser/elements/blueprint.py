@@ -22,7 +22,9 @@ from dsl_parser.elements import (imports,
                                  node_templates,
                                  relationships,
                                  workflows,
-                                 policies)
+                                 policies,
+                                 data_types,
+                                 version as _version)
 from dsl_parser.framework.elements import Element
 from dsl_parser.framework.requirements import Value
 
@@ -30,13 +32,13 @@ from dsl_parser.framework.requirements import Value
 class BlueprintVersionExtractor(Element):
 
     schema = {
-        'tosca_definitions_version': misc.ToscaDefinitionsVersion,
+        'tosca_definitions_version': _version.ToscaDefinitionsVersion,
         # here so it gets version validated
         'dsl_definitions': misc.DSLDefinitions,
     }
     requires = {
-        misc.ToscaDefinitionsVersion: ['version',
-                                       Value('plan_version')]
+        _version.ToscaDefinitionsVersion: ['version',
+                                           Value('plan_version')]
     }
 
     def parse(self, version, plan_version):
@@ -65,7 +67,7 @@ class BlueprintImporter(Element):
 class Blueprint(Element):
 
     schema = {
-        'tosca_definitions_version': misc.ToscaDefinitionsVersion,
+        'tosca_definitions_version': _version.ToscaDefinitionsVersion,
         'description': misc.Description,
         'imports': imports.Imports,
         'dsl_definitions': misc.DSLDefinitions,
@@ -79,7 +81,9 @@ class Blueprint(Element):
         'groups': policies.Groups,
         'workflows': workflows.Workflows,
         'outputs': misc.Outputs,
+        'data_types': data_types.DataTypes
     }
+
     requires = {
         node_templates.NodeTemplates: ['deployment_plugins_to_install'],
         workflows.Workflows: ['workflow_plugins_to_install']
@@ -102,5 +106,6 @@ class Blueprint(Element):
             constants.DEPLOYMENT_PLUGINS_TO_INSTALL:
                 deployment_plugins_to_install,
             constants.WORKFLOW_PLUGINS_TO_INSTALL: workflow_plugins_to_install,
-            constants.VERSION: self.child(misc.ToscaDefinitionsVersion).value
+            constants.VERSION: self.child(
+                _version.ToscaDefinitionsVersion).value
         })

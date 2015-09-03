@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import copy
 import contextlib
 import importlib
 import urllib2
@@ -22,8 +23,10 @@ import yaml.parser
 
 from dsl_parser import yaml_loader
 from dsl_parser import functions
+from dsl_parser import constants
 from dsl_parser.constants import RESOLVER_IMPLEMENTATION_KEY, \
     RESLOVER_PARAMETERS_KEY
+from dsl_parser import exceptions
 from dsl_parser.exceptions import (DSLParsingLogicException,
                                    DSLParsingFormatException)
 from dsl_parser.import_resolver.default_import_resolver import \
@@ -34,10 +37,39 @@ class ResolverInstantiationError(Exception):
     pass
 
 
-def merge_sub_dicts(overridden_dict, overriding_dict, sub_dict_key):
-    overridden_sub_dict = overridden_dict.get(sub_dict_key, {})
-    overriding_sub_dict = overriding_dict.get(sub_dict_key, {})
-    return dict(overridden_sub_dict.items() + overriding_sub_dict.items())
+def merge_schemas(overridden_schema,
+                  overriding_schema,
+                  data_types):
+    merged = overriding_schema.copy()
+    for key, overridden_property in overridden_schema.items():
+        if key not in overriding_schema:
+            merged[key] = overridden_property
+        else:
+            overriding_property = overriding_schema[key]
+            overriding_type = overriding_property.get('type')
+            overridden_type = overridden_property.get('type')
+            overridden_default = overridden_property.get('default')
+            overriding_initial_default = overriding_property.get(
+                'initial_default')
+            if (overriding_type is not None and
+                overriding_type == overridden_type and
+                overriding_type in data_types and
+                overriding_type not in constants.USER_PRIMITIVE_TYPES and
+                    overridden_default is not None):
+                if overriding_initial_default is None:
+                    overriding_initial_default = {}
+                default_value = parse_value(
+                    value=overriding_initial_default,
+                    derived_value=overridden_default,
+                    type_name=overridden_type,
+                    data_types=data_types,
+                    undefined_property_error_message='illegal state',
+                    missing_property_error_message='illegal state',
+                    node_name='illegal state',
+                    path=[])
+                if default_value:
+                    merged[key]['default'] = default_value
+    return merged
 
 
 def flatten_schema(schema):
@@ -50,75 +82,145 @@ def flatten_schema(schema):
     return flattened_schema_props
 
 
+def _property_description(path, name=None):
+    if not path:
+        return name
+    if name is not None:
+        path = copy.copy(path)
+        path.append(name)
+    return '.'.join(path)
+
+
 def merge_schema_and_instance_properties(
         instance_properties,
         schema_properties,
+        data_types,
         undefined_property_error_message,
         missing_property_error_message,
-        node_name):
+        node_name,
+        path=None):
     flattened_schema_props = flatten_schema(schema_properties)
+    return _merge_flattened_schema_and_instance_properties(
+        instance_properties=instance_properties,
+        schema_properties=schema_properties,
+        flattened_schema_properties=flattened_schema_props,
+        data_types=data_types,
+        undefined_property_error_message=undefined_property_error_message,
+        missing_property_error_message=missing_property_error_message,
+        node_name=node_name,
+        path=path)
+
+
+def _merge_flattened_schema_and_instance_properties(
+        instance_properties,
+        schema_properties,
+        flattened_schema_properties,
+        data_types,
+        undefined_property_error_message,
+        missing_property_error_message,
+        node_name,
+        path):
+    path = path or []
 
     # validate instance properties don't
     # contain properties that are not defined
     # in the schema.
-
     for key in instance_properties.iterkeys():
-        if key not in flattened_schema_props:
+        if key not in flattened_schema_properties:
             ex = DSLParsingLogicException(
                 106,
-                undefined_property_error_message.format(node_name, key))
+                undefined_property_error_message.format(
+                    node_name,
+                    _property_description(path, key)))
             ex.property = key
             raise ex
 
-    merged_properties = dict(flattened_schema_props.items() +
+    merged_properties = dict(flattened_schema_properties.items() +
                              instance_properties.items())
-
+    result = {}
     for key, value in merged_properties.iteritems():
         if value is None:
             ex = DSLParsingLogicException(
                 107,
-                missing_property_error_message.format(node_name, key))
+                missing_property_error_message.format(
+                    node_name,
+                    _property_description(path, key)))
             ex.property = key
             raise ex
+        prop_path = copy.copy(path)
+        prop_path.append(key)
+        result[key] = parse_value(
+            value=value,
+            derived_value=flattened_schema_properties.get(key),
+            type_name=schema_properties.get(key).get('type'),
+            data_types=data_types,
+            undefined_property_error_message=undefined_property_error_message,
+            missing_property_error_message=missing_property_error_message,
+            node_name=node_name,
+            path=prop_path)
 
-    _validate_properties_types(merged_properties, schema_properties)
-
-    return merged_properties
+    return result
 
 
-def _validate_properties_types(properties, properties_schema):
-    for prop_key, prop in properties_schema.iteritems():
-        prop_type = prop.get('type')
-        if prop_type is None:
-            continue
-        prop_val = properties[prop_key]
+def parse_value(
+        value,
+        type_name,
+        data_types,
+        undefined_property_error_message,
+        missing_property_error_message,
+        node_name,
+        path,
+        derived_value=None):
+    if type_name is None:
+        return value
+    if functions.parse(value) != value:
+        # intrinsic function - not validated at the moment
+        return value
+    if type_name == 'integer':
+        if isinstance(value, (int, long)) and not isinstance(
+                value, bool):
+            return value
+    elif type_name == 'float':
+        if isinstance(value, (int, float, long)) and not isinstance(
+                value, bool):
+            return value
+    elif type_name == 'boolean':
+        if isinstance(value, bool):
+            return value
+    elif type_name == 'string':
+        return value
+    elif type_name in data_types:
+        if isinstance(value, dict):
+            data_schema = data_types[type_name]['properties']
+            flattened_data_schema = flatten_schema(data_schema)
+            if isinstance(derived_value, dict):
+                flattened_data_schema.update(derived_value)
+            undef_msg = undefined_property_error_message
+            return _merge_flattened_schema_and_instance_properties(
+                instance_properties=value,
+                schema_properties=data_schema,
+                flattened_schema_properties=flattened_data_schema,
+                data_types=data_types,
+                undefined_property_error_message=undef_msg,
+                missing_property_error_message=missing_property_error_message,
+                node_name=node_name,
+                path=path)
+    else:
+        raise RuntimeError(
+            "Unexpected type defined in property schema for property '{0}'"
+            " - unknown type is '{1}'".format(
+                _property_description(path),
+                type_name))
 
-        if functions.parse(prop_val) != prop_val:
-            # intrinsic function - not validated at the moment
-            continue
-
-        if prop_type == 'integer':
-            if isinstance(prop_val, (int, long)) and not isinstance(
-                    prop_val, bool):
-                continue
-        elif prop_type == 'float':
-            if isinstance(prop_val, (int, float, long)) and not isinstance(
-                    prop_val, bool):
-                continue
-        elif prop_type == 'boolean':
-            if isinstance(prop_val, bool):
-                continue
-        elif prop_type == 'string':
-            continue
-        else:
-            raise RuntimeError(
-                "Unexpected type defined in property schema for property '{0}'"
-                " - unknown type is '{1}'".format(prop_key, prop_type))
-
-        raise DSLParsingLogicException(
-            50, "Property type validation failed: Property '{0}' type "
-                "is '{1}', yet it was assigned with the value '{2}'"
-                .format(prop_key, prop_type, prop_val))
+    raise DSLParsingLogicException(
+        exceptions.ERROR_VALUE_DOES_NOT_MATCH_TYPE,
+        "Property type validation failed in '{0}': property "
+        "'{1}' type is '{2}', yet it was assigned with the "
+        "value '{3}'".format(
+            node_name,
+            _property_description(path),
+            type_name,
+            value))
 
 
 def load_yaml(raw_yaml, error_message, filename=None):

@@ -41,3 +41,7 @@ class Value(Requirement):
                                     multiple_results=multiple_results,
                                     required=required,
                                     predicate=predicate)
+
+
+def sibling_predicate(source, target):
+    return source.parent() == target.parent()

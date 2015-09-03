@@ -32,6 +32,7 @@ POLICY_TYPES = 'policy_types'
 GROUPS = 'groups'
 INPUTS = 'inputs'
 OUTPUTS = 'outputs'
+DERIVED_FROM = 'derived_from'
 
 HOST_TYPE = 'cloudify.nodes.Compute'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
@@ -64,3 +65,5 @@ NODE_INSTANCES = 'node_instances'
 IMPORT_RESOLVER_KEY = 'import_resolver'
 RESOLVER_IMPLEMENTATION_KEY = 'implementation'
 RESLOVER_PARAMETERS_KEY = 'parameters'
+
+USER_PRIMITIVE_TYPES = ['string', 'integer', 'float', 'boolean']

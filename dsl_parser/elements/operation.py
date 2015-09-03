@@ -18,8 +18,8 @@ import copy
 from dsl_parser import (constants,
                         exceptions,
                         utils)
-from dsl_parser.elements import (properties,
-                                 misc)
+from dsl_parser.elements import (data_types,
+                                 version as _version)
 from dsl_parser.framework.elements import (DictElement,
                                            Element,
                                            Leaf,
@@ -68,19 +68,14 @@ class OperationMaxRetries(Element):
 
     schema = Leaf(type=int)
     requires = {
-        misc.ToscaDefinitionsVersion: ['version']
+        _version.ToscaDefinitionsVersion: ['version']
     }
 
     def validate(self, version):
         value = self.initial_value
         if value is None:
             return
-        if version < (1, 1):
-            raise exceptions.DSLParsingLogicException(
-                81,
-                'operation max_retries '
-                'is only supported in dsl versions greater or equal to'
-                'cloudify_dsl_1_1')
+        self.validate_version(version, (1, 1))
         if value < -1:
             raise ValueError("'{0}' value must be either -1 to specify "
                              "unlimited retries or a non negative number but "
@@ -92,19 +87,14 @@ class OperationRetryInterval(Element):
 
     schema = Leaf(type=(int, float, long))
     requires = {
-        misc.ToscaDefinitionsVersion: ['version']
+        _version.ToscaDefinitionsVersion: ['version']
     }
 
     def validate(self, version):
         value = self.initial_value
         if value is None:
             return
-        if version < (1, 1):
-            raise exceptions.DSLParsingLogicException(
-                81,
-                'operation retry_interval '
-                'is only supported in dsl versions greater or equal to'
-                'cloudify_dsl_1_1')
+        self.validate_version(version, (1, 1))
         if value is not None and value < 0:
             raise ValueError("'{0}' value must be a non negative number but "
                              "got {1}.".format(self.name, value))
@@ -131,7 +121,7 @@ class NodeTypeOperation(Operation):
         Leaf(type=str),
         {
             'implementation': OperationImplementation,
-            'inputs': properties.Schema,
+            'inputs': data_types.Schema,
             'executor': OperationExecutor,
             'max_retries': OperationMaxRetries,
             'retry_interval': OperationRetryInterval,
