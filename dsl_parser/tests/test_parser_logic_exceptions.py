@@ -802,3 +802,40 @@ description: sample description
             yaml.format(self.BASIC_VERSION_SECTION_DSL_1_0),
             exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
             DSLParsingLogicException)
+
+    def test_required_property_validation(self):
+        yaml = """
+node_types:
+  type:
+    properties:
+      property:
+        required: false
+node_templates:
+  node:
+    type: type
+"""
+        self.parse_1_2(yaml)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml,
+            exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+            DSLParsingLogicException,
+            self.parse_1_1)
+        self._assert_dsl_parsing_exception_error_code(
+            yaml,
+            exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+            DSLParsingLogicException,
+            self.parse_1_0)
+
+    def test_missing_required_property(self):
+        yaml = """
+node_types:
+  type:
+    properties:
+      property:
+        required: true
+node_templates:
+  node:
+    type: type
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 107, DSLParsingLogicException, self.parse_1_2)

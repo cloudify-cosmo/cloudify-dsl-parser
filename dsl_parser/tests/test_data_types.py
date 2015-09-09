@@ -424,6 +424,7 @@ data_types:
         type: data2_inner
         default:
           inner2_2: inner2_2_override
+      inner7: {}
   data2_inner:
     properties:
       inner2_1:
@@ -458,6 +459,7 @@ node_types:
             inner5: inner5_override
             inner6:
               inner2_5: inner2_5_override
+            inner7: inner7_override
   type3:
     derived_from: type1
     properties:
@@ -468,6 +470,7 @@ node_types:
             inner5: inner5_override
             inner6:
               inner2_5: inner2_5_override
+            inner7: inner7_override
 
 node_templates:
   node1:
@@ -478,6 +481,7 @@ node_templates:
           inner2: inner2_override
           inner6:
             inner2_6: inner2_6_override
+          inner7: inner7_override
   node2:
     type: type2
     properties:
@@ -510,6 +514,7 @@ node_templates:
                        'inner3': 'inner3_override',
                        'inner4': 'inner4_override',
                        'inner5': 'inner5_default',
+                       'inner7': 'inner7_override',
                        'inner6': {'inner2_1': 'inner2_1_default',
                                   'inner2_2': 'inner2_2_override',
                                   'inner2_3': 'inner2_3_override',
@@ -523,6 +528,7 @@ node_templates:
                        'inner3': 'inner3_override',
                        'inner4': 'inner4_override',
                        'inner5': 'inner5_override',
+                       'inner7': 'inner7_override',
                        'inner6': {'inner2_1': 'inner2_1_default',
                                   'inner2_2': 'inner2_2_override',
                                   'inner2_3': 'inner2_3_override',
@@ -536,12 +542,75 @@ node_templates:
                        'inner3': 'inner3_override',
                        'inner4': 'inner4_override',
                        'inner5': 'inner5_override',
+                       'inner7': 'inner7_override',
                        'inner6': {'inner2_1': 'inner2_1_default',
                                   'inner2_2': 'inner2_2_override',
                                   'inner2_3': 'inner2_3_override',
                                   'inner2_4': 'inner2_4_override',
                                   'inner2_5': 'inner2_5_override',
                                   'inner2_6': 'inner2_6_override'}}})
+
+    def test_partial_default_validation_in_node_template(self):
+        yaml = """
+data_types:
+  datatype:
+    properties:
+      prop1: {}
+      prop2: {}
+node_types:
+  type:
+    properties:
+      prop:
+        type: datatype
+        default:
+          prop1: value
+node_templates:
+  node:
+    type: type
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 107, DSLParsingLogicException, self.parse_1_2)
+
+    def test_additional_fields_validation(self):
+        yaml = """
+data_types:
+  datatype:
+    properties:
+      prop1:
+        required: false
+node_types:
+  type:
+    properties:
+      prop:
+        type: datatype
+        default:
+          prop2: value
+node_templates:
+  node:
+    type: type
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 106, DSLParsingLogicException, self.parse_1_2)
+
+    def test_nested_required_false(self):
+        yaml = """
+data_types:
+  a:
+    properties:
+      b: {}
+
+node_types:
+  type:
+    properties:
+      a:
+        type: a
+        required: false
+node_templates:
+  node1:
+    type: type
+"""
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, 107, DSLParsingLogicException, self.parse_1_2)
 
     def test_nested_merge_with_inheritance(self):
         yaml = """
