@@ -66,7 +66,8 @@ def merge_schemas(overridden_schema,
                     undefined_property_error_message='illegal state',
                     missing_property_error_message='illegal state',
                     node_name='illegal state',
-                    path=[])
+                    path=[],
+                    raise_on_missing_property=False)
                 if default_value:
                     merged[key]['default'] = default_value
     return merged
@@ -77,8 +78,6 @@ def flatten_schema(schema):
     for prop_key, prop in schema.iteritems():
         if 'default' in prop:
             flattened_schema_props[prop_key] = prop['default']
-        else:
-            flattened_schema_props[prop_key] = None
     return flattened_schema_props
 
 
@@ -98,7 +97,8 @@ def merge_schema_and_instance_properties(
         undefined_property_error_message,
         missing_property_error_message,
         node_name,
-        path=None):
+        path=None,
+        raise_on_missing_property=True):
     flattened_schema_props = flatten_schema(schema_properties)
     return _merge_flattened_schema_and_instance_properties(
         instance_properties=instance_properties,
@@ -108,7 +108,8 @@ def merge_schema_and_instance_properties(
         undefined_property_error_message=undefined_property_error_message,
         missing_property_error_message=missing_property_error_message,
         node_name=node_name,
-        path=path)
+        path=path,
+        raise_on_missing_property=raise_on_missing_property)
 
 
 def _merge_flattened_schema_and_instance_properties(
@@ -119,14 +120,15 @@ def _merge_flattened_schema_and_instance_properties(
         undefined_property_error_message,
         missing_property_error_message,
         node_name,
-        path):
+        path,
+        raise_on_missing_property):
     path = path or []
 
     # validate instance properties don't
     # contain properties that are not defined
     # in the schema.
     for key in instance_properties.iterkeys():
-        if key not in flattened_schema_properties:
+        if key not in schema_properties:
             ex = DSLParsingLogicException(
                 106,
                 undefined_property_error_message.format(
@@ -138,27 +140,31 @@ def _merge_flattened_schema_and_instance_properties(
     merged_properties = dict(flattened_schema_properties.items() +
                              instance_properties.items())
     result = {}
-    for key, value in merged_properties.iteritems():
-        if value is None:
-            ex = DSLParsingLogicException(
-                107,
-                missing_property_error_message.format(
-                    node_name,
-                    _property_description(path, key)))
-            ex.property = key
-            raise ex
+    for key, property_schema in schema_properties.iteritems():
+        if key not in merged_properties:
+            required = property_schema.get('required', True)
+            if required and raise_on_missing_property:
+                ex = DSLParsingLogicException(
+                    107,
+                    missing_property_error_message.format(
+                        node_name,
+                        _property_description(path, key)))
+                ex.property = key
+                raise ex
+            else:
+                continue
         prop_path = copy.copy(path)
         prop_path.append(key)
         result[key] = parse_value(
-            value=value,
+            value=merged_properties.get(key),
             derived_value=flattened_schema_properties.get(key),
-            type_name=schema_properties.get(key).get('type'),
+            type_name=property_schema.get('type'),
             data_types=data_types,
             undefined_property_error_message=undefined_property_error_message,
             missing_property_error_message=missing_property_error_message,
             node_name=node_name,
-            path=prop_path)
-
+            path=prop_path,
+            raise_on_missing_property=raise_on_missing_property)
     return result
 
 
@@ -170,7 +176,8 @@ def parse_value(
         missing_property_error_message,
         node_name,
         path,
-        derived_value=None):
+        derived_value=None,
+        raise_on_missing_property=True):
     if type_name is None:
         return value
     if functions.parse(value) != value:
@@ -204,7 +211,8 @@ def parse_value(
                 undefined_property_error_message=undef_msg,
                 missing_property_error_message=missing_property_error_message,
                 node_name=node_name,
-                path=path)
+                path=path,
+                raise_on_missing_property=raise_on_missing_property)
     else:
         raise RuntimeError(
             "Unexpected type defined in property schema for property '{0}'"

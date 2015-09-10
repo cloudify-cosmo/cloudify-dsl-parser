@@ -3344,6 +3344,51 @@ workflows:
         parameter = workflow['parameters']['parameter']
         self.assertIn('default', parameter)
 
+    def test_required_property(self):
+        yaml = """
+node_types:
+  type:
+    properties:
+      none_required_prop:
+        required: false
+      required_prop:
+        required: true
+node_templates:
+  node:
+    type: type
+    properties:
+      required_prop: value
+"""
+        properties = self.parse_1_2(yaml)['nodes'][0]['properties']
+        self.assertEqual(len(properties), 1)
+        self.assertEqual(properties['required_prop'], 'value')
+
+    def test_null_property_value(self):
+        yaml = """
+node_types:
+  type:
+    properties:
+      prop1:
+        default: null
+      prop2:
+        default: some_value
+      prop3: {}
+      prop4:
+        required: false
+node_templates:
+  node:
+    type: type
+    properties:
+      prop1: null
+      prop2: null
+      prop3: null
+      prop4: null
+"""
+        properties = self.parse_1_2(yaml)['nodes'][0]['properties']
+        self.assertEqual(len(properties), 4)
+        for value in properties.values():
+            self.assertIsNone(value)
+
 
 class DeploymentPluginsToInstallTest(AbstractTestParser):
 

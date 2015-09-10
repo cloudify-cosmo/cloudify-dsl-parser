@@ -66,34 +66,46 @@ class SchemaPropertyDefault(Element):
 
     def parse(self, component_types):
         type_name = self.sibling(SchemaPropertyType).value
-        if self.initial_value is None:
+        initial_value = self.initial_value
+        if initial_value is None:
             if type_name is not None \
-                    and type_name not in constants.USER_PRIMITIVE_TYPES \
-                    and 'default' in component_types[type_name]:
-                return component_types[type_name]['default']
+                    and type_name not in constants.USER_PRIMITIVE_TYPES:
+                initial_value = {}
             else:
                 return None
         component_types = component_types or {}
         prop_name = self.ancestor(SchemaProperty).name
         undefined_property_error = 'Undefined property {1} in default' \
                                    ' value of type {0}'
-        missing_property_error = 'Property {1} is missing in default' \
-                                 ' value of type {0}'
         current_type = self.ancestor(Schema).parent().name
         return utils.parse_value(
-            value=self.initial_value,
+            value=initial_value,
             type_name=type_name,
             data_types=component_types,
             undefined_property_error_message=undefined_property_error,
-            missing_property_error_message=missing_property_error,
+            missing_property_error_message='illegal state',
             node_name=current_type,
-            path=[prop_name]
+            path=[prop_name],
+            raise_on_missing_property=False
         )
+
+
+class SchemaPropertyRequired(Element):
+
+    schema = Leaf(type=bool)
+
+    requires = {
+        _version.ToscaDefinitionsVersion: ['version']
+    }
+
+    def validate(self, version):
+        self.validate_version(version, (1, 2))
 
 
 class SchemaProperty(Element):
 
     schema = {
+        'required': SchemaPropertyRequired,
         'default': SchemaPropertyDefault,
         'description': SchemaPropertyDescription,
         'type': SchemaPropertyType,
@@ -178,15 +190,6 @@ class DataType(types.Type):
                 overridden_schema=super_type.get('properties', {}),
                 overriding_schema=result.get('properties', {}),
                 data_types=merged_component_types)
-        default_value = {}
-        for prop, val in result[constants.PROPERTIES].iteritems():
-            if 'default' in val:
-                default_value[prop] = val['default']
-            else:
-                default_value = None
-                break
-        if default_value is not None:
-            result['default'] = default_value
         self.fix_properties(result)
         self.component_types[self.name] = result
         return result
