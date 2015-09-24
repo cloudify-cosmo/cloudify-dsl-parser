@@ -33,6 +33,7 @@ GROUPS = 'groups'
 INPUTS = 'inputs'
 OUTPUTS = 'outputs'
 DERIVED_FROM = 'derived_from'
+DATA_TYPES = 'data_types'
 
 HOST_TYPE = 'cloudify.nodes.Compute'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
@@ -63,6 +64,7 @@ NODES = 'nodes'
 NODE_INSTANCES = 'node_instances'
 
 IMPORT_RESOLVER_KEY = 'import_resolver'
+VALIDATE_DEFINITIONS_VERSION = 'validate_definitions_version'
 RESOLVER_IMPLEMENTATION_KEY = 'implementation'
 RESLOVER_PARAMETERS_KEY = 'parameters'
 

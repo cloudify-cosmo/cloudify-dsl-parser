@@ -95,11 +95,13 @@ class SchemaPropertyRequired(Element):
     schema = Leaf(type=bool)
 
     requires = {
-        _version.ToscaDefinitionsVersion: ['version']
+        _version.ToscaDefinitionsVersion: ['version'],
+        'inputs': ['validate_version']
     }
 
-    def validate(self, version):
-        self.validate_version(version, (1, 2))
+    def validate(self, version, validate_version):
+        if validate_version:
+            self.validate_version(version, (1, 2))
 
 
 class SchemaProperty(Element):
@@ -215,11 +217,13 @@ class DataTypes(types.Types):
     schema = Dict(type=DataType)
 
     requires = {
-        _version.ToscaDefinitionsVersion: ['version']
+        _version.ToscaDefinitionsVersion: ['version'],
+        'inputs': ['validate_version']
     }
 
-    def validate(self, version):
-        self.validate_version(version, (1, 2))
+    def validate(self, version, validate_version):
+        if validate_version:
+            self.validate_version(version, (1, 2))
 
 
 # source: element describing data_type name

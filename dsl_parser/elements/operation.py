@@ -68,14 +68,16 @@ class OperationMaxRetries(Element):
 
     schema = Leaf(type=int)
     requires = {
-        _version.ToscaDefinitionsVersion: ['version']
+        _version.ToscaDefinitionsVersion: ['version'],
+        'inputs': ['validate_version']
     }
 
-    def validate(self, version):
+    def validate(self, version, validate_version):
         value = self.initial_value
         if value is None:
             return
-        self.validate_version(version, (1, 1))
+        if validate_version:
+            self.validate_version(version, (1, 1))
         if value < -1:
             raise ValueError("'{0}' value must be either -1 to specify "
                              "unlimited retries or a non negative number but "
@@ -87,14 +89,16 @@ class OperationRetryInterval(Element):
 
     schema = Leaf(type=(int, float, long))
     requires = {
-        _version.ToscaDefinitionsVersion: ['version']
+        _version.ToscaDefinitionsVersion: ['version'],
+        'inputs': ['validate_version']
     }
 
-    def validate(self, version):
+    def validate(self, version, validate_version):
         value = self.initial_value
         if value is None:
             return
-        self.validate_version(version, (1, 1))
+        if validate_version:
+            self.validate_version(version, (1, 1))
         if value is not None and value < 0:
             raise ValueError("'{0}' value must be a non negative number but "
                              "got {1}.".format(self.name, value))

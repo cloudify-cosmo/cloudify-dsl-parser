@@ -673,3 +673,35 @@ node_templates:
         node1 = parsed['nodes'][0]
         self.assertEqual(node1['properties']['prop1']['inner'],
                          'inner_default')
+
+    def test_imports_merging(self):
+        file1 = """
+data_types:
+    data1:
+        properties:
+            prop1:
+                default: value1
+"""
+        import_path = self.make_yaml_file(file1)
+        yaml = """
+imports:
+  - {0}
+data_types:
+    data2:
+        properties:
+            prop2:
+                default: value2
+node_types:
+    type:
+        properties:
+            prop1:
+                type: data1
+            prop2:
+                type: data2
+node_templates:
+    node:
+        type: type
+""".format(import_path)
+        properties = self.parse_1_2(yaml)['nodes'][0]['properties']
+        self.assertEqual(properties['prop1']['prop1'], 'value1')
+        self.assertEqual(properties['prop2']['prop2'], 'value2')
