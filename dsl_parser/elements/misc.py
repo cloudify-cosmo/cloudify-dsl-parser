@@ -55,11 +55,13 @@ class DSLDefinitions(Element):
 
     schema = Leaf(type=[dict, list])
     requires = {
-        element_version.ToscaDefinitionsVersion: ['version']
+        element_version.ToscaDefinitionsVersion: ['version'],
+        'inputs': ['validate_version']
     }
 
-    def validate(self, version):
-        self.validate_version(version, (1, 2))
+    def validate(self, version, validate_version):
+        if validate_version:
+            self.validate_version(version, (1, 2))
 
 
 class Description(Element):
@@ -67,8 +69,10 @@ class Description(Element):
     schema = Leaf(type=str)
 
     requires = {
-        element_version.ToscaDefinitionsVersion: ['version']
+        element_version.ToscaDefinitionsVersion: ['version'],
+        'inputs': ['validate_version']
     }
 
-    def validate(self, version):
-        self.validate_version(version, (1, 2))
+    def validate(self, version, validate_version):
+        if validate_version:
+            self.validate_version(version, (1, 2))

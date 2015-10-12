@@ -29,4 +29,9 @@ def validate(obj, element_cls):
         'tosca_definitions_version': 'cloudify_dsl_1_1',
         'test': obj
     }
-    parser.parse(obj, element_cls=TestElement, strict=True)
+    parser.parse(obj,
+                 element_cls=TestElement,
+                 inputs={
+                     'validate_version': True
+                 },
+                 strict=True)

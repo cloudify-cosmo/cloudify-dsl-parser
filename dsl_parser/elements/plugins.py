@@ -59,11 +59,13 @@ class PluginInstallArguments(Element):
 
     schema = Leaf(type=str)
     requires = {
-        element_version.ToscaDefinitionsVersion: ['version']
+        element_version.ToscaDefinitionsVersion: ['version'],
+        'inputs': ['validate_version']
     }
 
-    def validate(self, version):
-        self.validate_version(version, (1, 1))
+    def validate(self, version, validate_version):
+        if validate_version:
+            self.validate_version(version, (1, 1))
 
 
 class Plugin(DictElement):

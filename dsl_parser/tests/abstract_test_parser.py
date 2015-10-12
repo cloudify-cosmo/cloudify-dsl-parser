@@ -153,16 +153,22 @@ imports:"""
     -   {0}""".format(filename if not as_uri else self._path2url(filename))
         return yaml
 
-    def parse(self, dsl_string, resources_base_url=None,
-              dsl_version=BASIC_VERSION_SECTION_DSL_1_0, resolver=None):
+    def parse(self, dsl_string,
+              resources_base_url=None,
+              dsl_version=BASIC_VERSION_SECTION_DSL_1_0,
+              resolver=None,
+              validate_version=True):
         # add dsl version if missing
         if DSL_VERSION_PREFIX not in dsl_string:
             dsl_string = dsl_version + dsl_string
             if not resolver:
                 resolver = DefaultImportResolver()
-        return dsl_parse(dsl_string, resources_base_url, resolver)
+        return dsl_parse(dsl_string,
+                         resources_base_url=resources_base_url,
+                         resolver=resolver,
+                         validate_version=validate_version)
 
-    def parse_1_0(self, dsl_string, resolver=None, resources_base_url=None):
+    def parse_1_0(self, dsl_string, resources_base_url=None):
         return self.parse(dsl_string, resources_base_url,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0)
 

@@ -21,10 +21,14 @@ from dsl_parser import (functions,
                         multi_instance)
 
 
-def parse_dsl(dsl_location, resources_base_url, resolver=None, **kwargs):
+def parse_dsl(dsl_location,
+              resources_base_url,
+              resolver=None,
+              validate_version=True):
     return parser.parse_from_url(dsl_url=dsl_location,
                                  resources_base_url=resources_base_url,
-                                 resolver=resolver)
+                                 resolver=resolver,
+                                 validate_version=validate_version)
 
 
 def _set_plan_inputs(plan, inputs=None):

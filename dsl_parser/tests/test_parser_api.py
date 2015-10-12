@@ -16,17 +16,18 @@
 import os
 import socket
 import StringIO
-from urllib2 import HTTPError
 import yaml as yml
-
-from dsl_parser import constants
+from urllib2 import HTTPError
 from urllib import pathname2url
-from dsl_parser.interfaces.constants import NO_OP
+
+from dsl_parser import exceptions
+from dsl_parser import constants
+from dsl_parser import version
+from dsl_parser import models
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.parser import parse_from_path, parse_from_url
 from dsl_parser.parser import parse as dsl_parse
-from dsl_parser import version
-from dsl_parser import models
+from dsl_parser.interfaces.constants import NO_OP
 from dsl_parser.interfaces.utils import operation_mapping
 from dsl_parser.constants import TYPE_HIERARCHY
 
@@ -3388,6 +3389,63 @@ node_templates:
         self.assertEqual(len(properties), 4)
         for value in properties.values():
             self.assertIsNone(value)
+
+    def test_validate_version_false(self):
+        yaml = """
+description: description
+dsl_definitions:
+  definition: value
+plugins:
+  plugin:
+    executor: central_deployment_agent
+    install: false
+    install_arguments: --arg
+node_types:
+  type:
+    interfaces:
+      interface:
+        op:
+          implementation: plugin.task.op
+          max_retries: 1
+          retry_interval: 1
+data_types:
+  type:
+    properties:
+      prop:
+        required: false
+node_templates:
+  node:
+    type: type
+"""
+        self.assertRaises(exceptions.DSLParsingException,
+                          self.parse, yaml,
+                          dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0,
+                          validate_version=True)
+        self.parse(yaml,
+                   dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0,
+                   validate_version=False)
+
+    def test_validate_version_false_different_versions_in_imports(self):
+        imported1 = self.BASIC_VERSION_SECTION_DSL_1_0
+        imported2 = self.BASIC_VERSION_SECTION_DSL_1_1
+        imported3 = self.BASIC_VERSION_SECTION_DSL_1_2
+        yaml = self.create_yaml_with_imports([imported1,
+                                              imported2,
+                                              imported3])
+        yaml += """
+node_types:
+  type: {}
+node_templates:
+  node:
+    type: type
+"""
+        self.assertRaises(exceptions.DSLParsingException,
+                          self.parse, yaml,
+                          dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0,
+                          validate_version=True)
+        self.parse(yaml,
+                   dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0,
+                   validate_version=False)
 
 
 class DeploymentPluginsToInstallTest(AbstractTestParser):

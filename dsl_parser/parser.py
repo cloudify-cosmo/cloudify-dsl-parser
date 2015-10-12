@@ -24,13 +24,23 @@ from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 
 
-def parse_from_path(dsl_file_path, resources_base_url=None, resolver=None):
+def parse_from_path(dsl_file_path,
+                    resources_base_url=None,
+                    resolver=None,
+                    validate_version=True):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
-    return _parse(dsl_string, resources_base_url, dsl_file_path, resolver)
+    return _parse(dsl_string,
+                  resources_base_url=resources_base_url,
+                  dsl_location=dsl_file_path,
+                  resolver=resolver,
+                  validate_version=validate_version)
 
 
-def parse_from_url(dsl_url, resources_base_url=None, resolver=None):
+def parse_from_url(dsl_url,
+                   resources_base_url=None,
+                   resolver=None,
+                   validate_version=True):
     try:
         with contextlib.closing(urllib2.urlopen(dsl_url)) as f:
             dsl_string = f.read()
@@ -42,14 +52,28 @@ def parse_from_url(dsl_url, resources_base_url=None, resolver=None):
             # that specifies the missing url.
             e.msg = '{0} not found'.format(e.filename)
         raise
-    return _parse(dsl_string, resources_base_url, dsl_url, resolver)
+    return _parse(dsl_string,
+                  resources_base_url=resources_base_url,
+                  dsl_location=dsl_url,
+                  resolver=resolver,
+                  validate_version=validate_version)
 
 
-def parse(dsl_string, resources_base_url=None, resolver=None):
-    return _parse(dsl_string, resources_base_url, resolver=resolver)
+def parse(dsl_string,
+          resources_base_url=None,
+          resolver=None,
+          validate_version=True):
+    return _parse(dsl_string,
+                  resources_base_url=resources_base_url,
+                  resolver=resolver,
+                  validate_version=validate_version)
 
 
-def _parse(dsl_string, resources_base_url, dsl_location=None, resolver=None):
+def _parse(dsl_string,
+           resources_base_url,
+           dsl_location=None,
+           resolver=None,
+           validate_version=True):
     parsed_dsl_holder = utils.load_yaml(raw_yaml=dsl_string,
                                         error_message='Failed to parse DSL',
                                         filename=dsl_location)
@@ -57,10 +81,14 @@ def _parse(dsl_string, resources_base_url, dsl_location=None, resolver=None):
     if not resolver:
         resolver = DefaultImportResolver()
 
-    # validate version
-    result = parser.parse(parsed_dsl_holder,
-                          element_cls=blueprint.BlueprintVersionExtractor,
-                          strict=False)
+    # validate version schema and extract actual version used
+    result = parser.parse(
+        parsed_dsl_holder,
+        element_cls=blueprint.BlueprintVersionExtractor,
+        inputs={
+            'validate_version': validate_version
+        },
+        strict=False)
     version = result['plan_version']
 
     # handle imports
@@ -71,7 +99,8 @@ def _parse(dsl_string, resources_base_url, dsl_location=None, resolver=None):
             'resources_base_url': resources_base_url,
             'blueprint_location': dsl_location,
             'version': version,
-            'resolver': resolver
+            'resolver': resolver,
+            'validate_version': validate_version
         },
         element_cls=blueprint.BlueprintImporter,
         strict=False)
@@ -82,7 +111,8 @@ def _parse(dsl_string, resources_base_url, dsl_location=None, resolver=None):
     plan = parser.parse(
         value=merged_blueprint_holder,
         inputs={
-            'resource_base': resource_base
+            'resource_base': resource_base,
+            'validate_version': validate_version
         },
         element_cls=blueprint.Blueprint)
 

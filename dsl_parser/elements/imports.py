@@ -34,7 +34,8 @@ MERGE_NO_OVERRIDE = set([
     constants.RELATIONSHIPS,
     constants.POLICY_TYPES,
     constants.GROUPS,
-    constants.POLICY_TRIGGERS])
+    constants.POLICY_TRIGGERS,
+    constants.DATA_TYPES])
 
 IGNORE = set([
     constants.DSL_DEFINITIONS,
@@ -67,7 +68,8 @@ class ImportsLoader(Element):
                    'resources_base_url',
                    'blueprint_location',
                    'version',
-                   'resolver']
+                   'resolver',
+                   'validate_version']
     }
 
     resource_base = None
@@ -86,7 +88,8 @@ class ImportsLoader(Element):
               resources_base_url,
               blueprint_location,
               version,
-              resolver):
+              resolver,
+              validate_version):
         if blueprint_location:
             blueprint_location = _dsl_location_to_url(
                 dsl_location=blueprint_location,
@@ -97,7 +100,8 @@ class ImportsLoader(Element):
                                 dsl_location=blueprint_location,
                                 resources_base_url=resources_base_url,
                                 version=version,
-                                resolver=resolver)
+                                resolver=resolver,
+                                validate_version=validate_version)
 
     def calculate_provided(self, **kwargs):
         return {
@@ -144,7 +148,8 @@ def _get_resource_location(resource_name,
 
 
 def _combine_imports(parsed_dsl_holder, dsl_location,
-                     resources_base_url, version, resolver):
+                     resources_base_url, version, resolver,
+                     validate_version):
     ordered_imports = _build_ordered_imports(parsed_dsl_holder,
                                              dsl_location,
                                              resources_base_url,
@@ -156,7 +161,9 @@ def _combine_imports(parsed_dsl_holder, dsl_location,
     for imported in ordered_imports:
         import_url = imported['import']
         parsed_imported_dsl_holder = imported['parsed']
-        _validate_version(version.raw, import_url, parsed_imported_dsl_holder)
+        if validate_version:
+            _validate_version(version.raw, import_url,
+                              parsed_imported_dsl_holder)
         _merge_parsed_into_combined(holder_result, parsed_imported_dsl_holder)
     holder_result.value[version_key_holder] = version_value_holder
     return holder_result
