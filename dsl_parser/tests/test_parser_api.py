@@ -75,22 +75,6 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('val', node['properties']['key'])
         self.assertEquals(1, node['instances']['deploy'])
 
-    @staticmethod
-    def _sort_result_nodes(result_nodes, ordered_nodes_ids):
-        ordered_nodes = []
-
-        for node_id in ordered_nodes_ids:
-            for result_node in result_nodes:
-                if result_node['id'] == node_id:
-                    ordered_nodes.append(result_node)
-                    break
-
-        return ordered_nodes
-
-    def _get_plugin_to_install_from_node(self, node, plugin_name):
-        return next(plugin for plugin in node['plugins_to_install']
-                    if plugin['name'] == plugin_name)
-
     def test_minimal_blueprint(self):
         result = self.parse(self.MINIMAL_BLUEPRINT)
         self._assert_minimal_blueprint(result)
@@ -130,7 +114,7 @@ class TestParserApi(AbstractTestParser):
         self.assertEquals('test_type', node['type'])
         plugin_props = [p for p in node['plugins']
                         if p['name'] == 'test_plugin'][0]
-        self.assertEquals(5, len(plugin_props))
+        self.assertEquals(11, len(plugin_props))
         self.assertEquals('test_plugin',
                           plugin_props[constants.PLUGIN_NAME_KEY])
         operations = node['operations']
@@ -190,7 +174,13 @@ node_types:
             constants.PLUGIN_SOURCE_KEY: 'dummy',
             constants.PLUGIN_INSTALL_KEY: True,
             constants.PLUGIN_EXECUTOR_KEY: constants.CENTRAL_DEPLOYMENT_AGENT,
-            constants.PLUGIN_INSTALL_ARGUMENTS_KEY: None
+            constants.PLUGIN_INSTALL_ARGUMENTS_KEY: None,
+            constants.PLUGIN_PACKAGE_NAME: None,
+            constants.PLUGIN_PACKAGE_VERSION: None,
+            constants.PLUGIN_SUPPORTED_PLATFORM: None,
+            constants.PLUGIN_DISTRIBUTION: None,
+            constants.PLUGIN_DISTRIBUTION_VERSION: None,
+            constants.PLUGIN_DISTRIBUTION_RELEASE: None
         }]
         self.assertEquals(parsed_plugins, expected_plugins)
 
@@ -206,7 +196,13 @@ node_types:
             constants.PLUGIN_SOURCE_KEY: 'dummy',
             constants.PLUGIN_INSTALL_KEY: True,
             constants.PLUGIN_EXECUTOR_KEY: constants.CENTRAL_DEPLOYMENT_AGENT,
-            constants.PLUGIN_INSTALL_ARGUMENTS_KEY: '-r requirements.txt'
+            constants.PLUGIN_INSTALL_ARGUMENTS_KEY: '-r requirements.txt',
+            constants.PLUGIN_PACKAGE_NAME: None,
+            constants.PLUGIN_PACKAGE_VERSION: None,
+            constants.PLUGIN_SUPPORTED_PLATFORM: None,
+            constants.PLUGIN_DISTRIBUTION: None,
+            constants.PLUGIN_DISTRIBUTION_VERSION: None,
+            constants.PLUGIN_DISTRIBUTION_RELEASE: None
         }]
         self.assertEquals(parsed_plugins, expected_plugins)
 
@@ -1903,282 +1899,6 @@ plugins:
         self.assertEquals(1, len(result['nodes'][0][
             'plugins_to_install']))
 
-    def test_no_duplicate_node_plugins_to_install_field_from_relationship(self):  # NOQA
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_plugin.start
-                    inputs: {}
-        relationships:
-            - type: cloudify.relationships.my_relationship
-              target: test_node2
-    test_node2:
-        type: cloudify.nodes.Compute
-
-node_types:
-    cloudify.nodes.Compute: {}
-
-plugins:
-    test_plugin:
-        executor: host_agent
-        source: dummy
-
-relationships:
-    cloudify.relationships.my_relationship:
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                postconfigure:
-                    implementation: test_plugin.task.postconfigure
-                    inputs: {}
-"""
-        result = self.parse(yaml)
-        node = [n for n in result['nodes'] if n['name'] == 'test_node1'][0]
-        plugin = node['plugins_to_install'][0]
-        self.assertEquals('test_plugin', plugin['name'])
-        self.assertEquals(1, len(node['plugins_to_install']))
-
-    def test_node_plugins_to_install_field_from_relationship(self):  # NOQA
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
-        relationships:
-            - type: cloudify.relationships.my_relationship
-              target: test_node2
-    test_node2:
-        type: cloudify.nodes.Compute
-
-node_types:
-    cloudify.nodes.Compute: {}
-
-plugins:
-    test_plugin:
-        executor: host_agent
-        source: dummy
-
-relationships:
-    cloudify.relationships.my_relationship:
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                postconfigure:
-                    implementation: test_plugin.task.postconfigure
-                    inputs: {}
-"""
-        result = self.parse(yaml)
-        node = [n for n in result['nodes'] if n['name'] == 'test_node1'][0]
-        plugin = node['plugins_to_install'][0]
-        self.assertEquals('test_plugin', plugin['name'])
-        self.assertEquals(1, len(node['plugins_to_install']))
-
-    def test_node_plugins_to_install_field(self):
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
-node_types:
-    cloudify.nodes.Compute:
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_plugin.start
-                    inputs: {}
-plugins:
-    test_plugin:
-        executor: host_agent
-        source: dummy
-"""
-        result = self.parse(yaml)
-        plugin = result['nodes'][0]['plugins_to_install'][0]
-        self.assertEquals('test_plugin', plugin['name'])
-        self.assertEquals(1, len(result['nodes'][0]['plugins_to_install']))
-
-    def test_plugin_with_install_true_existing_source(self):
-
-        """
-        install: True and source given. all good
-        """
-
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-        install: true
-        source: dummy
-
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                install:
-                    implementation: test_plugin.install
-                    inputs: {}
-
-        """
-        result = self.parse(yaml)
-        plugin = result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL][0]
-        self.assertTrue(plugin['install'])
-        self.assertEqual('dummy', plugin['source'])
-
-    def test_plugin_with_install_false_existing_source(self):
-
-        """
-        install: False, we don't care about the source
-        """
-
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-        install: false
-        source: dummy
-
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                install:
-                    implementation: test_plugin.install
-                    inputs: {}
-
-        """
-        result = self.parse(yaml)
-        plugin = result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL][0]
-        self.assertFalse(plugin['install'])
-        self.assertEqual('dummy', plugin['source'])
-
-    def test_plugin_with_install_false_missing_source(self):
-
-        """
-        install: False, we don't care about the source
-        """
-
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-        install: false
-
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                install:
-                    implementation: test_plugin.install
-                    inputs: {}
-
-        """
-        result = self.parse(yaml)
-        plugin = result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL][0]
-        self.assertFalse(plugin['install'])
-
-    def test_plugin_with_missing_install_existing_source(self):
-
-        """
-        Assumes install true, source is given, all good.
-        """
-
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-        source: dummy
-
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                install:
-                    implementation: test_plugin.install
-                    inputs: {}
-
-        """
-        result = self.parse(yaml)
-        plugin = result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL][0]
-        self.assertTrue(plugin['install'])
-        self.assertEqual('dummy', plugin['source'])
-
-    def test_node_plugins_to_install_field_plugins_from_contained_nodes(self):
-        # testing to ensure plugins from nodes with contained_in relationships
-        #  to a host node (whether direct
-        # or recursive) also get added to the plugins_to_install field.
-        # this test also ensures there's no problem with a "duplicate" plugin
-        # on the plugins_to_install field,
-        # as test_plugin should be added from both test_node2 and test_node4
-        # [only one should remain in the end]
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
-    test_node2:
-        type: test_type
-        relationships:
-            -   type: cloudify.relationships.contained_in
-                target: test_node1
-    test_node3:
-        type: test_type2
-        relationships:
-            -   type: cloudify.relationships.contained_in
-                target: test_node2
-    test_node4:
-        type: test_type
-        relationships:
-            -   type: cloudify.relationships.contained_in
-                target: test_node3
-node_types:
-    cloudify.nodes.Compute: {}
-    test_type:
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_plugin.start
-                    inputs: {}
-    test_type2:
-        interfaces:
-            test_interface2:
-                install:
-                    implementation: test_plugin2.install
-                    inputs: {}
-relationships:
-    cloudify.relationships.contained_in: {}
-plugins:
-    test_plugin:
-        executor: host_agent
-        source: dummy
-    test_plugin2:
-        executor: host_agent
-        source: dummy
-"""
-        result = self.parse(yaml)
-
-        self.assertEquals(4, len(result['nodes']))
-        nodes = self._sort_result_nodes(
-            result['nodes'],
-            ['test_node1', 'test_node2', 'test_node3', 'test_node4'])
-
-        # ensuring non-host nodes don't have this field
-        self.assertTrue('plugins_to_install' not in nodes[1])
-
-        node = nodes[0]
-        test_plugin = self._get_plugin_to_install_from_node(
-            node, 'test_plugin')
-        test_plugin2 = self._get_plugin_to_install_from_node(
-            node, 'test_plugin2')
-        self.assertEquals('test_plugin', test_plugin['name'])
-        self.assertEquals('test_plugin2', test_plugin2['name'])
-        self.assertEquals(2, len(nodes[0]['plugins_to_install']))
-
     def test_import_resources(self):
         resource_file_name = 'resource_file.yaml'
         file_name = self.make_file_with_name(
@@ -2267,75 +1987,6 @@ node_types:
                                                           'test_node2'])
         self.assertFalse('host_id' in nodes[0])
         self.assertEquals('test_node2', nodes[1]['host_id'])
-
-    def test_instance_relationships_target_node_plugins(self):
-        # tests that plugins defined on instance relationships as
-        # "run_on_node"="target" will
-        # indeed appear in the output on the target node's plugins section
-        yaml = self.MINIMAL_BLUEPRINT + """
-    test_node2:
-        type: test_type
-        relationships:
-            -   type: test_relationship
-                target: test_node
-                source_interfaces:
-                    test_interface1:
-                        install: test_plugin1.install
-            -   type: test_relationship
-                target: test_node
-                target_interfaces:
-                    test_interface1:
-                        install: test_plugin2.install
-relationships:
-    test_relationship: {}
-plugins:
-    test_plugin1:
-        executor: central_deployment_agent
-        source: dummy
-    test_plugin2:
-        executor: central_deployment_agent
-        source: dummy
-"""
-
-        result = self.parse(yaml)
-        self.assertEquals(2, len(result['nodes']))
-        nodes = self._sort_result_nodes(result['nodes'], ['test_node',
-                                                          'test_node2'])
-        self.assertEquals('test_node2', nodes[1]['id'])
-        self.assertEquals(2, len(nodes[1]['relationships']))
-
-        relationship1 = nodes[1]['relationships'][0]
-        self.assertEquals('test_relationship', relationship1['type'])
-        self.assertEquals('test_node', relationship1['target_id'])
-        rel1_source_ops = relationship1['source_operations']
-        self.assertEqual(op_struct('test_plugin1', 'install',
-                                   executor='central_deployment_agent'),
-                         rel1_source_ops['install'])
-        self.assertEqual(op_struct('test_plugin1', 'install',
-                                   executor='central_deployment_agent'),
-                         rel1_source_ops['test_interface1.install'])
-        self.assertEquals(2, len(rel1_source_ops))
-        self.assertEquals(8, len(relationship1))
-        plugin1_def = nodes[1]['plugins'][0]
-        self.assertEquals('test_plugin1', plugin1_def['name'])
-
-        relationship2 = nodes[1]['relationships'][1]
-        self.assertEquals('test_relationship', relationship2['type'])
-        self.assertEquals('test_node', relationship2['target_id'])
-        rel2_source_ops = relationship2['target_operations']
-        self.assertEqual(op_struct('test_plugin2', 'install',
-                                   executor='central_deployment_agent'),
-                         rel2_source_ops['install'])
-        self.assertEqual(op_struct('test_plugin2', 'install',
-                                   executor='central_deployment_agent'),
-                         rel2_source_ops['test_interface1.install'])
-        self.assertEquals(2, len(rel2_source_ops))
-        self.assertEquals(8, len(relationship2))
-
-        # expecting the other plugin to be under test_node rather than
-        # test_node2:
-        plugin2_def = nodes[0]['plugins'][0]
-        self.assertEquals('test_plugin2', plugin2_def['name'])
 
     def test_multiple_instances(self):
         yaml = self.MINIMAL_BLUEPRINT + """
@@ -3447,234 +3098,55 @@ node_templates:
                    dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0,
                    validate_version=False)
 
-
-class DeploymentPluginsToInstallTest(AbstractTestParser):
-
-    def test_one_central_one_host_plugin_on_same_node(self):
+    def test_plugin_fields(self):
         yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
+tosca_definitions_version: cloudify_dsl_1_2
 node_types:
-    cloudify.nodes.Compute:
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_plugin.start
-                    inputs: {}
-                create:
-                    implementation: test_management_plugin.create
-                    inputs: {}
-plugins:
-    test_plugin:
-        executor: host_agent
-        source: dummy
-    test_management_plugin:
-        executor: central_deployment_agent
-        source: dummy
-"""
-        result = self.parse(yaml)
-        deployment_plugins_to_install_for_node = \
-            result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(1, len(deployment_plugins_to_install_for_node))
-        plugin = deployment_plugins_to_install_for_node[0]
-        self.assertEquals('test_management_plugin', plugin['name'])
-
-        # check the property on the plan is correct
-        deployment_plugins_to_install_for_plan = \
-            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
-
-    def test_one_central_overrides_host_plugin(self):
-        yaml = """
-node_types:
-    test_type: {}
+  type:
+    properties:
+      prop1:
+        default: value
+  cloudify.nodes.Compute:
+    properties:
+      prop1:
+        default: value
 node_templates:
-    test_node1:
-        type: test_type
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_plugin.start
-                    executor: central_deployment_agent
-plugins:
-    test_plugin:
-        executor: host_agent
-        source: dummy
+  node1:
+    type: type
+    interfaces:
+     interface:
+       op: plugin1.op
+  node2:
+    type: cloudify.nodes.Compute
+    interfaces:
+     interface:
+       op: plugin2.op
 """
-        result = self.parse(yaml)
-        node = result['nodes'][0]
-        deployment_plugins_to_install_for_node = \
-            node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(1, len(deployment_plugins_to_install_for_node))
-        plugin = deployment_plugins_to_install_for_node[0]
-        self.assertEquals('test_plugin', plugin['name'])
-        self.assertIsNone(node.get('plugins_to_install'))
-        # check the property on the plan is correct
-        deployment_plugins_to_install_for_plan = \
-            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
-        plugin = deployment_plugins_to_install_for_plan[0]
-        self.assertEquals('test_plugin', plugin['name'])
-
-    def test_node_plugins_to_install_no_host(self):
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Root
-node_types:
-    cloudify.nodes.Root:
-        interfaces:
-            test_interface:
-                start:
-                    implementation: cloud.server.start
-                    inputs: {}
-plugins:
-    cloud:
-        executor: central_deployment_agent
-        source: dummy
-"""
-        result = self.parse(yaml)
-        self.assertEquals(1,
-                          len(result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]))
-
-    def test_same_plugin_one_two_nodes(self):
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
-    test_node2:
-        type: cloudify.nodes.Compute
-
-node_types:
-    cloudify.nodes.Compute:
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_management_plugin.start
-                    inputs: {}
-
-plugins:
-    test_management_plugin:
-        executor: central_deployment_agent
-        source: dummy
-"""
-        result = self.parse(yaml)
-        for node in result['nodes']:
-            deployment_plugins_to_install_for_node = \
-                node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-            self.assertEquals(1, len(deployment_plugins_to_install_for_node))
-            plugin = deployment_plugins_to_install_for_node[0]
-            self.assertEquals('test_management_plugin', plugin['name'])
-
-        # check the property on the plan is correct
-        deployment_plugins_to_install_for_plan = \
-            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
-
-    def test_two_plugins_on_one_node(self):
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
-
-node_types:
-    cloudify.nodes.Compute:
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_management_plugin1.start
-                    inputs: {}
-                create:
-                    implementation: test_management_plugin2.create
-                    inputs: {}
-
-plugins:
-    test_management_plugin1:
-        executor: central_deployment_agent
-        source: dummy
-    test_management_plugin2:
-        executor: central_deployment_agent
-        source: dummy
-"""
-        result = self.parse(yaml)
-        deployment_plugins_to_install_for_node = \
-            result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(2, len(deployment_plugins_to_install_for_node))
-
-        # check the property on the plan is correct
-        deployment_plugins_to_install_for_plan = \
-            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(2, len(deployment_plugins_to_install_for_plan))
-
-    def test_no_operation_mapping_no_plugin(self):
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
-
-node_types:
-    cloudify.nodes.Compute:
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_plugin.start
-                    inputs: {}
-
-plugins:
-    test_management_plugin:
-        executor: central_deployment_agent
-        source: dummy
-    test_plugin:
-        executor: host_agent
-        source: dummy
-"""
-        result = self.parse(yaml)
-        deployment_plugins_to_install_for_node = \
-            result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(0, len(deployment_plugins_to_install_for_node))
-
-        # check the property on the plan is correct
-        deployment_plugins_to_install_for_plan = \
-            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(0, len(deployment_plugins_to_install_for_plan))
-
-    def test_two_identical_plugins_on_node(self):
-        yaml = """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
-
-node_types:
-    cloudify.nodes.Compute:
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_management_plugin.start
-                    inputs: {}
-                create:
-                    implementation: test_management_plugin.create
-                    inputs: {}
-
-plugins:
-    test_management_plugin:
-        executor: central_deployment_agent
-        source: dummy
-"""
-        result = self.parse(yaml)
-        deployment_plugins_to_install_for_node = \
-            result['nodes'][0][constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(1, len(deployment_plugins_to_install_for_node))
-
-        # check the property on the plan is correct
-        deployment_plugins_to_install_for_plan = \
-            result[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(1, len(deployment_plugins_to_install_for_plan))
-
-##############################################
-# NOTE!!!
-# This file has 2 test case, please notice
-# this when you are adding a new test a you
-# probably want the first test and not the one
-# right above this notice
-#############################################
+        base_plugin_def = {'distribution': 'dist',
+                           'distribution_release': 'release',
+                           'distribution_version': 'version',
+                           'install': True,
+                           'install_arguments': '123',
+                           'package_name': 'name',
+                           'package_version': 'version',
+                           'source': 'source',
+                           'supported_platform': 'any'}
+        deployment_plugin_def = base_plugin_def.copy()
+        deployment_plugin_def['executor'] = 'central_deployment_agent'
+        host_plugin_def = base_plugin_def.copy()
+        host_plugin_def['executor'] = 'host_agent'
+        raw_parsed = yml.safe_load(yaml)
+        raw_parsed['plugins'] = {
+            'plugin1': deployment_plugin_def,
+            'plugin2': host_plugin_def
+        }
+        parsed = self.parse_1_2(yml.safe_dump(raw_parsed))
+        expected_plugin1 = deployment_plugin_def.copy()
+        expected_plugin1['name'] = 'plugin1'
+        expected_plugin2 = host_plugin_def.copy()
+        expected_plugin2['name'] = 'plugin2'
+        plugin1 = parsed['deployment_plugins_to_install'][0]
+        node2 = self.get_node_by_name(parsed, 'node2')
+        plugin2 = node2['plugins_to_install'][0]
+        self.assertEqual(expected_plugin1, plugin1)
+        self.assertEqual(expected_plugin2, plugin2)
