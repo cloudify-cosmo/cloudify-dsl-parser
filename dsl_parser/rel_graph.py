@@ -505,8 +505,11 @@ def _node_id_from_node_instance(instance):
 
 
 def _number_of_instances(node):
-    return (node.get('instances', {}).get('deploy') or
-            node.get('number_of_instances'))
+    num_of_instances_to_deploy = node.get('instances', {}).get('deploy')
+    if num_of_instances_to_deploy is None:
+        return node.get('number_of_instances')
+    else:
+        return num_of_instances_to_deploy
 
 
 class IllegalConnectedToConnectionType(Exception):
