@@ -152,9 +152,9 @@ class NodeTemplateInstancesDeploy(Element):
     schema = Leaf(type=int)
 
     def validate(self):
-        if self.initial_value <= 0:
+        if self.initial_value < 0:
             raise exceptions.DSLParsingFormatException(
-                1, 'deploy instances must be a positive number')
+                1, 'deploy instances must be a non-negative number')
 
 
 class NodeTemplateInstances(DictElement):
