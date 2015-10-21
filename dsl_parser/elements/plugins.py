@@ -55,17 +55,48 @@ class PluginInstall(Element):
         return value if value is not None else True
 
 
-class PluginInstallArguments(Element):
+class PluginVersionValidatedElement(Element):
 
     schema = Leaf(type=str)
     requires = {
         element_version.ToscaDefinitionsVersion: ['version'],
         'inputs': ['validate_version']
     }
+    min_version = None
 
     def validate(self, version, validate_version):
+        if not self.min_version:
+            raise RuntimeError('Illegal state, please specify min_version')
         if validate_version:
-            self.validate_version(version, (1, 1))
+            self.validate_version(version, self.min_version)
+
+
+class PluginInstallArguments(PluginVersionValidatedElement):
+    min_version = (1, 1)
+
+
+class PluginPackageName(PluginVersionValidatedElement):
+    min_version = (1, 2)
+
+
+class PluginPackageVersion(PluginVersionValidatedElement):
+    min_version = (1, 2)
+
+
+class PluginSupportedPlatform(PluginVersionValidatedElement):
+    min_version = (1, 2)
+
+
+class PluginDistribution(PluginVersionValidatedElement):
+    min_version = (1, 2)
+
+
+class PluginDistributionVersion(PluginVersionValidatedElement):
+    min_version = (1, 2)
+
+
+class PluginDistributionRelease(PluginVersionValidatedElement):
+    min_version = (1, 2)
 
 
 class Plugin(DictElement):
@@ -75,16 +106,23 @@ class Plugin(DictElement):
         'executor': PluginExecutor,
         'install': PluginInstall,
         'install_arguments': PluginInstallArguments,
+        'package_name': PluginPackageName,
+        'package_version': PluginPackageVersion,
+        'supported_platform': PluginSupportedPlatform,
+        'distribution': PluginDistribution,
+        'distribution_version': PluginDistributionVersion,
+        'distribution_release': PluginDistributionRelease
     }
 
     def validate(self):
-        if (self.child(PluginInstall).value and
-                not self.child(PluginSource).value):
-            raise exceptions.DSLParsingLogicException(
-                50,
-                "Plugin '{0}' needs to be installed, "
-                "but does not declare a source property"
-                .format(self.name))
+        if self.child(PluginInstall).value:
+            if not (self.child(PluginSource).value or
+                    self.child(PluginPackageName).value):
+                raise exceptions.DSLParsingLogicException(
+                    50,
+                    "Plugin '{0}' needs to be installed, "
+                    "but does not declare a source or package_name property"
+                    .format(self.name))
 
     def parse(self):
         result = super(Plugin, self).parse()

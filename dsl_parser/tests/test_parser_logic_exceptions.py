@@ -134,59 +134,6 @@ node_types:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 28, DSLParsingLogicException)
 
-    def test_plugin_with_missing_install_missing_source(self):
-
-        """
-        Assumes install: True, but no source is defined
-        so it should fail
-
-        """
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                install:
-                    implementation: test_plugin.install
-                    inputs: {}
-
-        """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 50, DSLParsingLogicException)
-
-    def test_plugin_with_install_true_missing_source(self):
-
-        """
-        install: True, but no source is defined
-        so it should fail
-
-        """
-        yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
-plugins:
-    test_plugin:
-        executor: central_deployment_agent
-        install: true
-
-node_types:
-    test_type:
-        properties:
-            key: {}
-        interfaces:
-            test_interface1:
-                install:
-                    implementation: test_plugin.install
-                    inputs: {}
-
-        """
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 50, DSLParsingLogicException)
-
     def test_top_level_relationships_relationship_with_undefined_plugin(self):
         yaml = self.MINIMAL_BLUEPRINT + """
 relationships:
@@ -803,7 +750,7 @@ description: sample description
             exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
             DSLParsingLogicException)
 
-    def test_required_property_validation(self):
+    def test_required_property_version_validation(self):
         yaml = """
 node_types:
   type:
@@ -839,3 +786,44 @@ node_templates:
 """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 107, DSLParsingLogicException, self.parse_1_2)
+
+    def test_plugin_fields_version_validation(self):
+        base_yaml = """
+node_types:
+  type:
+    properties:
+      prop:
+        default: value
+node_templates:
+  node:
+    type: type
+plugins:
+  plugin:
+    install: false
+    executor: central_deployment_agent
+    {0}: {1}
+"""
+
+        def test_field(_key, _value):
+            yaml = base_yaml.format(_key, _value)
+            self.parse_1_2(yaml)
+            self._assert_dsl_parsing_exception_error_code(
+                yaml,
+                exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+                DSLParsingLogicException,
+                self.parse_1_1)
+            self._assert_dsl_parsing_exception_error_code(
+                yaml,
+                exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
+                DSLParsingLogicException,
+                self.parse_1_0)
+        fields = {
+            'package_name': 'name',
+            'package_version': 'version',
+            'supported_platform': 'any',
+            'distribution': 'dist',
+            'distribution_version': 'version',
+            'distribution_release': 'release'
+        }
+        for key, value in fields.items():
+            test_field(key, value)

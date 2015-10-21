@@ -198,3 +198,15 @@ imports:"""
 
     def get_node_by_name(self, plan, name):
         return [x for x in plan.node_templates if x['name'] == name][0]
+
+    @staticmethod
+    def _sort_result_nodes(result_nodes, ordered_nodes_ids):
+        ordered_nodes = []
+
+        for node_id in ordered_nodes_ids:
+            for result_node in result_nodes:
+                if result_node['id'] == node_id:
+                    ordered_nodes.append(result_node)
+                    break
+
+        return ordered_nodes
