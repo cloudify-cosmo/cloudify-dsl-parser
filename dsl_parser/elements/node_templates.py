@@ -328,14 +328,13 @@ class NodeTemplate(Element):
 
         contained_in = self.child(NodeTemplateRelationships).provided[
             'contained_in']
-        if contained_in:
+        if self.child(NodeTemplateType).value in host_types:
+            node['host_id'] = self.name
+        elif contained_in:
             containing_node = [n for n in related_node_templates
                                if n['name'] == contained_in][0]
             if 'host_id' in containing_node:
                 node['host_id'] = containing_node['host_id']
-        else:
-            if self.child(NodeTemplateType).value in host_types:
-                node['host_id'] = self.name
 
         return node
 

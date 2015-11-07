@@ -1686,6 +1686,39 @@ relationships:
         self.assertEqual('rel2', type_hierarchy[1])
         self.assertEqual('rel3', type_hierarchy[2])
 
+    def test_agent_plugin_in_node_contained_in_host_contained_in_container(self):  # noqa
+        yaml = """
+plugins:
+  plugin:
+    executor: host_agent
+    source: source
+node_templates:
+  compute:
+    type: cloudify.nodes.Compute
+    relationships:
+      - target: container
+        type: cloudify.relationships.contained_in
+  container:
+    type: container
+  app:
+    type: app
+    interfaces:
+      interface:
+        operation: plugin.operation
+    relationships:
+      - target: compute
+        type: cloudify.relationships.contained_in
+node_types:
+  cloudify.nodes.Compute: {}
+  container: {}
+  app: {}
+relationships:
+  cloudify.relationships.contained_in: {}
+"""
+        result = self.parse(yaml)
+        self.assertEqual('compute',
+                         self.get_node_by_name(result, 'compute')['host_id'])
+
     def test_node_host_id_field(self):
         yaml = """
 node_templates:
