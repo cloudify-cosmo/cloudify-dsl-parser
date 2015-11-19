@@ -1,0 +1,23 @@
+machine:
+  environment: 
+    TOX_ENV: docs
+    TOX_ENV: flake8
+    TOX_ENV: py27
+    TOX_ENV: py26
+  python:
+    version: 2.7.6
+    version: 2.6.8
+
+dependencies:
+  override:
+    - pip install tox==1.6.1
+test:
+  override:
+    - tox -e $TOX_ENV
+
+# notify:
+#   flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
+#
+#
+#
+#
