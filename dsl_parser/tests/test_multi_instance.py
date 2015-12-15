@@ -14,6 +14,9 @@
 #    * limitations under the License.
 
 import itertools
+import random
+
+from mock import patch
 
 from dsl_parser import rel_graph
 
@@ -56,12 +59,6 @@ node_templates:
         return modify_deployment(plan['nodes'],
                                  plan['node_instances'],
                                  modified_nodes)
-
-    def setUp(self):
-        AbstractTestParser.setUp(self)
-
-    def tearDown(self):
-        AbstractTestParser.tearDown(self)
 
     def test_single_node(self):
 
@@ -1162,3 +1159,19 @@ node_templates:
                          len(added))
         self.assertEqual(expected_removed_count,
                          len(removed))
+
+    def test_small_id_range(self):
+        instances = 10
+        blueprint = '''
+node_templates:
+  node:
+    instances:
+      deploy: {0}
+    type: type
+node_types:
+  type: {1}
+'''.format(instances, '{}')
+        with patch('dsl_parser.rel_graph._generate_id',
+                   lambda: random.randint(1, instances)):
+            plan = self.parse_multi(blueprint)
+        self.assertEqual(instances, len(plan['node_instances']))
