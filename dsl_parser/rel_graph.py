@@ -442,6 +442,7 @@ def _node_instance_id(node_id, ctx):
     while new_node_instance_id in ctx.node_instance_ids:
         generated_id = _generate_id()
         new_node_instance_id = '{0}_{1}'.format(node_id, generated_id)
+    ctx.node_instance_ids.add(new_node_instance_id)
     return new_node_instance_id
 
 
