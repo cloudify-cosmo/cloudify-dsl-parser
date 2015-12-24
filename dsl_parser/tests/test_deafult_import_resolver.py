@@ -22,7 +22,7 @@ from dsl_parser.exceptions import DSLParsingLogicException
 from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver, DefaultResolverValidationException
 from dsl_parser.import_resolver.abstract_import_resolver import \
-    DEFAULT_NUMBER_RETRIES
+    MAX_NUMBER_RETRIES
 
 ORIGINAL_V1_URL = 'http://www.original_v1.org/cloudify/types.yaml'
 ORIGINAL_V1_PREFIX = 'http://www.original_v1.org'
@@ -54,7 +54,7 @@ class TestDefaultResolver(testtools.TestCase):
             {ORIGINAL_V1_PREFIX: INVALID_URL_PREFIX},
             {ORIGINAL_V1_PREFIX: ILLEGAL_URL_PREFIX},
             {ORIGINAL_V1_PREFIX: VALID_V1_PREFIX},
-            ]
+        ]
         self._test_default_resolver(
             import_url=ORIGINAL_V1_URL, rules=rules,
             expected_urls_to_resolve=[
@@ -207,7 +207,7 @@ class TestDefaultResolver(testtools.TestCase):
                     self.status_code = 404
                     self.text = 404
                 elif url == RETRY_URL:
-                    if len(number_of_attempts) < DEFAULT_NUMBER_RETRIES:
+                    if len(number_of_attempts) < MAX_NUMBER_RETRIES:
                         raise requests.ConnectionError(
                             'Timeout while trying to import')
                     else:
@@ -239,9 +239,9 @@ class TestDefaultResolver(testtools.TestCase):
             self.assertIn(resolved_url, urls_to_resolve)
         # expected to be 1 initial attempt + 4 retries
         if import_url == RETRY_URL:
-            self.assertEqual(DEFAULT_NUMBER_RETRIES, len(number_of_attempts))
+            self.assertEqual(MAX_NUMBER_RETRIES, len(number_of_attempts))
         if import_url == TIMEOUT_URL:
-            self.assertEqual(DEFAULT_NUMBER_RETRIES+1, len(number_of_attempts))
+            self.assertEqual(MAX_NUMBER_RETRIES + 1, len(number_of_attempts))
 
 
 class TestDefaultResolverValidations(testtools.TestCase):
