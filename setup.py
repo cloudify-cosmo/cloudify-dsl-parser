@@ -21,6 +21,7 @@ install_requires = [
     'PyYAML==3.10',
     'networkx==1.8.1',
     'requests==2.7.0',
+    'retrying==1.3.3'
 ]
 
 try:
