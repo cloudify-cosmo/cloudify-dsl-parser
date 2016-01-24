@@ -26,6 +26,7 @@ from dsl_parser.framework.elements import (Element,
                                            Leaf,
                                            List)
 
+
 MERGE_NO_OVERRIDE = set([
     constants.INTERFACES,
     constants.NODE_TYPES,
@@ -36,6 +37,12 @@ MERGE_NO_OVERRIDE = set([
     constants.GROUPS,
     constants.POLICY_TRIGGERS,
     constants.DATA_TYPES])
+
+MERGEABLE_FROM_DSL_VERSION_1_3 = [
+    constants.INPUTS,
+    constants.OUTPUTS,
+    constants.NODE_TEMPLATES
+]
 
 IGNORE = set([
     constants.DSL_DEFINITIONS,
@@ -164,7 +171,8 @@ def _combine_imports(parsed_dsl_holder, dsl_location,
         if validate_version:
             _validate_version(version.raw, import_url,
                               parsed_imported_dsl_holder)
-        _merge_parsed_into_combined(holder_result, parsed_imported_dsl_holder)
+        _merge_parsed_into_combined(
+            holder_result, parsed_imported_dsl_holder, version)
     holder_result.value[version_key_holder] = version_value_holder
     return holder_result
 
@@ -233,23 +241,32 @@ def _validate_version(dsl_version,
 
 
 def _merge_parsed_into_combined(combined_parsed_dsl_holder,
-                                parsed_imported_dsl_holder):
+                                parsed_imported_dsl_holder,
+                                version):
+    merge_no_override = MERGE_NO_OVERRIDE.copy()
+    if version['definitions_version'] > (1, 2):
+        merge_no_override.update(MERGEABLE_FROM_DSL_VERSION_1_3)
     for key_holder, value_holder in parsed_imported_dsl_holder.value.\
             iteritems():
         if key_holder.value in IGNORE:
             pass
         elif key_holder.value not in combined_parsed_dsl_holder:
             combined_parsed_dsl_holder.value[key_holder] = value_holder
-        elif key_holder.value in MERGE_NO_OVERRIDE:
+        elif key_holder.value in merge_no_override:
             _, to_dict = combined_parsed_dsl_holder.get_item(key_holder.value)
             _merge_into_dict_or_throw_on_duplicate(
                 from_dict_holder=value_holder,
                 to_dict_holder=to_dict,
                 key_name=key_holder.value)
         else:
+            if key_holder.value in MERGEABLE_FROM_DSL_VERSION_1_3:
+                msg = ("Import failed: non-mergeable field: '{0}'. "
+                       "{0} can be imported multiple times only from "
+                       "cloudify_dsl_1_3 and above.")
+            else:
+                msg = "Import failed: non-mergeable field: '{0}'"
             raise exceptions.DSLParsingLogicException(
-                3, "Import failed: non-mergeable field: '{0}'"
-                   .format(key_holder.value))
+                3, msg.format(key_holder.value))
 
 
 def _merge_into_dict_or_throw_on_duplicate(from_dict_holder, to_dict_holder,

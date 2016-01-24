@@ -60,6 +60,10 @@ tosca_definitions_version: cloudify_dsl_1_1
 tosca_definitions_version: cloudify_dsl_1_2
     """
 
+    BASIC_VERSION_SECTION_DSL_1_3 = """
+tosca_definitions_version: cloudify_dsl_1_3
+    """
+
     BASIC_NODE_TEMPLATES_SECTION = """
 node_templates:
     test_node:
@@ -99,6 +103,19 @@ node_types:
                 default: 'false'
             key: {}
             """
+
+    BASIC_INPUTS = """
+inputs:
+    test_input:
+        type: string
+        default: test_input_default_value
+"""
+
+    BASIC_OUTPUTS = """
+outputs:
+    test_output:
+        value: test_output_value
+"""
 
     # note that some tests extend the BASIC_NODE_TEMPLATES 'inline',
     # which is why it's appended in the end
@@ -180,6 +197,10 @@ imports:"""
         return self.parse(dsl_string, resources_base_url,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_2)
 
+    def parse_1_3(self, dsl_string, resources_base_url=None):
+        return self.parse(dsl_string, resources_base_url,
+                          dsl_version=self.BASIC_VERSION_SECTION_DSL_1_3)
+
     def parse_from_path(self, dsl_path, resources_base_url=None):
         return dsl_parse_from_path(dsl_path, resources_base_url)
 
@@ -192,7 +213,7 @@ imports:"""
         try:
             parsing_method(dsl)
             self.fail()
-        except exception_type, ex:
+        except exception_type as ex:
             self.assertEquals(expected_error_code, ex.err_code)
             return ex
 
