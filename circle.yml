@@ -21,7 +21,6 @@ test:
 
 deployment:
   release:
-    tag: .*
-    owner: circleci
+    tag: /.*/
     commands:
-      - "true" 
+      - (true)
