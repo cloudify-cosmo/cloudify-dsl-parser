@@ -34,21 +34,28 @@ def parse_dsl(dsl_location,
 def _set_plan_inputs(plan, inputs=None):
     inputs = inputs if inputs else {}
     # Verify inputs satisfied
+    missing_inputs = []
     for input_name, input_def in plan['inputs'].iteritems():
         if input_name not in inputs:
             if 'default' in input_def and input_def['default'] is not None:
                 inputs[input_name] = input_def['default']
             else:
-                raise exceptions.MissingRequiredInputError(
-                    "Required input '{0}' was not specified - expected "
-                    "inputs: {1}".format(input_name, plan['inputs'].keys()))
+                missing_inputs.append(input_name)
+
+    if missing_inputs:
+        raise exceptions.MissingRequiredInputError(
+            "Required inputs {0} were not specified - expected "
+            "inputs: {1}".format(missing_inputs, plan['inputs'].keys())
+        )
     # Verify all inputs appear in plan
-    for input_name in inputs.keys():
-        if input_name not in plan['inputs']:
-            raise exceptions.UnknownInputError(
-                "Unknown input '{0}' specified - "
-                "expected inputs: {1}".format(input_name,
-                                              plan['inputs'].keys()))
+    not_expected = [input_name for input_name in inputs.keys()
+                    if input_name not in plan['inputs']]
+    if not_expected:
+        raise exceptions.UnknownInputError(
+            "Unknown inputs {0} specified - "
+            "expected inputs: {1}".format(not_expected,
+                                          plan['inputs'].keys()))
+
     plan['inputs'] = inputs
 
 

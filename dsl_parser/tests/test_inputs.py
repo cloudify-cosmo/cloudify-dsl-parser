@@ -120,19 +120,39 @@ node_templates:
         yaml = """
 inputs:
     port: {}
+    name_i: {}
 node_types:
     webserver_type:
         properties:
             port: {}
+            name: {}
 node_templates:
     webserver:
         type: webserver_type
         properties:
             port: { get_input: port }
+            name: { get_input: name_i }
 """
-        self.assertRaises(MissingRequiredInputError,
-                          prepare_deployment_plan,
-                          self.parse(yaml))
+        e = self.assertRaises(
+            MissingRequiredInputError,
+            prepare_deployment_plan,
+            self.parse(yaml),
+            inputs={'port': '8080'}
+        )
+
+        msg = str(e).split('-')[0]  # get first part of message
+        self.assertTrue('name_i' in msg)
+
+        e = self.assertRaises(
+            MissingRequiredInputError,
+            prepare_deployment_plan,
+            self.parse(yaml),
+            inputs={}
+        )
+
+        msg = str(e).split('-')[0]  # get first part of message
+        self.assertTrue('name_i' in msg)
+        self.assertTrue('port' in msg)
 
     def test_inputs_default_value(self):
         yaml = """
@@ -168,10 +188,25 @@ node_templates:
         properties:
             port: { get_input: port }
 """
-        self.assertRaises(UnknownInputError,
-                          prepare_deployment_plan,
-                          self.parse(yaml),
-                          inputs={'a': 'b'})
+
+        self.assertRaisesRegex(
+            UnknownInputError,
+            'unknown_input_1',
+            prepare_deployment_plan,
+            self.parse(yaml),
+            inputs={'unknown_input_1': 'a'}
+        )
+
+        e = self.assertRaises(
+            UnknownInputError,
+            prepare_deployment_plan,
+            self.parse(yaml),
+            inputs={'unknown_input_1': 'a', 'unknown_input_2': 'b'}
+        )
+
+        msg = str(e)
+        self.assertTrue('unknown_input_1' in msg)
+        self.assertTrue('unknown_input_2' in msg)
 
     def test_get_input_in_nested_property(self):
         yaml = """
