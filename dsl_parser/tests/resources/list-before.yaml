@@ -1,0 +1,20 @@
+- type: "type1"
+  target: "target1"
+  properties:
+      connection_type: ""
+  source_interfaces: {}
+  target_interfaces: {}
+
+- type: "type2"
+  target: "target2"
+  properties:
+      connection_type: ""
+  source_interfaces: {}
+  target_interfaces: {}
+
+- type: "type3"
+  target: "target3"
+  properties:
+      connection_type: ""
+  source_interfaces: {}
+  target_interfaces: {}

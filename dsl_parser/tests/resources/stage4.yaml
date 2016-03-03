@@ -1,0 +1,68 @@
+description: >
+  Micro web sites hosting.
+
+node_types:
+  SiteTrafficMonitor:
+    derived_from: cloudify.nodes.SoftwareComponent
+    properties:
+      popmeter_threshold:
+        description: Popularity meter threshold in unique page visits.
+        type: integer
+        default: 10000
+    interfaces:
+      lifecycle:
+        start: scripts/start-popmeter.sh
+
+relationships:
+  site_traffic_monitor_connected_to_site:
+    derived_from: cloudify.relationships.connected_to
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish: scripts/add-popmeter.sh
+
+node_templates:
+  server:
+    type: cloudify.nodes.Compute
+
+  site_1:
+    type: cloudify.nodes.WebServer
+    properties:
+      port: 8081
+    interfaces:
+      lifecycle:
+        create: scripts/create-site.sh
+        start: scripts/validate-site.sh
+      admin:
+        toggle_google_analytics:
+          implementation:  scripts/toggle-ga.sh
+          inputs:
+            google_id: XXXXXXXX
+      
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: server
+
+  popularity_meter:
+    type: SiteTrafficMonitor
+    properties:
+      popmeter_threshold: 100
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: server
+      - type: site_traffic_monitor_connected_to_site
+
+plugins:
+  s3_tools:
+    package_name: s3_tools
+
+workflows:
+  export_to_s3:
+    mapping: s3_tools.export.tasks.export
+    parameters:
+      aws_key_id:
+        type: string
+      aws_secret_key:
+        type: string
+      archive_type:
+        description: The archive type, one of {zip, tar.gz, arj}.
+        type: string

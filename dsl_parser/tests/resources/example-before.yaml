@@ -1,0 +1,50 @@
+inputs:
+  input1:
+    description: input1_description
+    type: input1_type
+    default: input1_default
+
+  input2:
+    description: input2_description
+    type: input2_type
+    default: input2_default
+
+
+node_types:
+  node_type1:
+    derived_from: node_type0
+    interfaces:
+      interface1:
+        operation1: 
+          implementation: script1.sh
+          inputs: 
+            description: operation1_description
+            type: operation1_input_type
+            default: operation1_input_default
+          executor: operation1_executor
+          max_retries: operation1_max_retries
+          retry_interval: operation1_retry_interval
+
+node_templates:
+  node1:
+    relationships:
+    - type: "type1"
+      target: "target1"
+      properties:
+          connection_type: ""
+      source_interfaces: {}
+      target_interfaces: {}
+    
+    - type: "type2"
+      target: "target2"
+      properties:
+          connection_type: ""
+      source_interfaces: {}
+      target_interfaces: {}
+
+    - type: "type3"
+      target: "target3"
+      properties:
+          connection_type: ""
+      source_interfaces: {}
+      target_interfaces: {}
