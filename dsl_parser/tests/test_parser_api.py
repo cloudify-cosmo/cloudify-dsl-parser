@@ -325,6 +325,69 @@ imports:
         result = self.parse(top_level_yaml)
         self._assert_blueprint(result)
 
+    def _create_importable_yaml_for_version_1_3_and_above(self, importable):
+        imported_yaml = self.make_yaml_file(
+            self.BASIC_TYPE +
+            self.BASIC_PLUGIN +
+            importable)
+        main_yaml = """
+imports:
+    -   {0}""".format(imported_yaml) + \
+            self.BASIC_NODE_TEMPLATES_SECTION + \
+            self.BASIC_INPUTS + \
+            self.BASIC_OUTPUTS
+
+        return main_yaml
+
+    def _verify_1_2_and_below_non_mergeable_imports(self,
+                                                    importable,
+                                                    import_type):
+        main_yaml = self._create_importable_yaml_for_version_1_3_and_above(
+            importable)
+        ex = self.assertRaises(
+            exceptions.DSLParsingLogicException,
+            self.parse_1_2, main_yaml)
+        self.assertIn("Import failed: non-mergeable field: '{0}'".format(
+            import_type), str(ex))
+
+    def _verify_1_3_and_above_mergeable_imports(self, importable):
+        main_yaml = self._create_importable_yaml_for_version_1_3_and_above(
+            importable)
+        result = self.parse_1_3(main_yaml)
+        self._assert_blueprint(result)
+
+    def test_version_1_2_and_above_input_imports(self):
+        importable = """
+inputs:
+    test_input2:
+        default: value
+"""
+        self._verify_1_2_and_below_non_mergeable_imports(
+            importable, 'inputs')
+        self._verify_1_3_and_above_mergeable_imports(importable)
+
+    def test_version_1_2_and_above_node_template_imports(self):
+        importable = """
+node_templates:
+    test_node2:
+        type: test_type
+        properties:
+            key: "val"
+"""
+        self._verify_1_2_and_below_non_mergeable_imports(
+            importable, 'node_templates')
+        self._verify_1_3_and_above_mergeable_imports(importable)
+
+    def test_version_1_2_and_above_output_imports(self):
+        importable = """
+outputs:
+    test_output2:
+        value: value
+"""
+        self._verify_1_2_and_below_non_mergeable_imports(
+            importable, 'outputs')
+        self._verify_1_3_and_above_mergeable_imports(importable)
+
     def test_node_get_type_properties_including_overriding_properties(self):
         yaml = self.BASIC_NODE_TEMPLATES_SECTION + """
 node_types:
@@ -3113,9 +3176,11 @@ node_templates:
         imported1 = self.BASIC_VERSION_SECTION_DSL_1_0
         imported2 = self.BASIC_VERSION_SECTION_DSL_1_1
         imported3 = self.BASIC_VERSION_SECTION_DSL_1_2
+        imported4 = self.BASIC_VERSION_SECTION_DSL_1_3
         yaml = self.create_yaml_with_imports([imported1,
                                               imported2,
-                                              imported3])
+                                              imported3,
+                                              imported4])
         yaml += """
 node_types:
   type: {}
