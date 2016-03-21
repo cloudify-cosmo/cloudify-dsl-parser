@@ -1,0 +1,17 @@
+description: >
+  Micro web sites hosting.
+
+node_templates:
+  server:
+    type: cloudify.nodes.Compute
+
+  site_1: # added node
+    type: cloudify.nodes.WebServer
+    properties:
+      port: 8081
+    interfaces:
+      lifecycle:
+        create: scripts/create-site.sh # resource already exists
+    relationships:
+      - type: cloudify.relationships.contained_in # added relationship
+        target: server
