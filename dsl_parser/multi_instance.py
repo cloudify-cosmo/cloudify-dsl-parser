@@ -36,7 +36,19 @@ def create_deployment_plan(plan):
     return models.Plan(deployment_plan)
 
 
-def modify_deployment(nodes, previous_node_instances, modified_nodes):
+def modify_deployment(nodes,
+                      previous_node_instances,
+                      modified_nodes):
+    """
+    modifies deployment according to the new nodes. based of
+    previous_node_instances
+    :param nodes: the entire set of expected nodes.
+    :param previous_node_instances:
+    :param modified_nodes: For lacking a better name, describes the nodes that
+    the number of instances of those nodes were modified.
+    :return: a dict of add, modified and related node instances.
+    """
+
     plan_node_graph = rel_graph.build_node_graph(nodes)
     previous_deployment_node_graph = rel_graph.build_node_graph(
         previous_node_instances)
@@ -49,8 +61,26 @@ def modify_deployment(nodes, previous_node_instances, modified_nodes):
         previous_deployment_node_graph, new_deployment_node_graph)
     removed_and_related = rel_graph.extract_removed_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
+    extended_and_related = rel_graph.extract_added_relationships(
+        previous_deployment_node_graph, new_deployment_node_graph)
+    reduced_and_related = rel_graph.extract_removed_relationships(
+        previous_deployment_node_graph, new_deployment_node_graph)
+
+    extended_and_related_unadded = \
+        filter_node_instances(added_and_related, extended_and_related)
+    reduced_and_related_unremoved = \
+        filter_node_instances(removed_and_related, reduced_and_related)
 
     return {
         'added_and_related': added_and_related,
+        'extended_and_related': extended_and_related_unadded,
+        'reduced_and_related': reduced_and_related_unremoved,
         'removed_and_related': removed_and_related
     }
+
+
+def filter_node_instances(base_node_instances, modification_node_instances):
+    base_node_instances_ids = [n['id'] for n in base_node_instances
+                               if 'modification' in n]
+    return [n for n in modification_node_instances
+            if n['id'] not in base_node_instances_ids]

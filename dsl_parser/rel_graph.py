@@ -151,6 +151,53 @@ def extract_removed_node_instances(previous_deployment_node_graph,
     return extract_node_instances(removed_instances_graph, copy_instances=True)
 
 
+def _graph_diff_rel(G, H, node_instance_attributes):
+    """
+    G represents the base and H represents the changed graph.
+    :param G:
+    :param H:
+    :param node_instance_attributes:
+    :return:
+    """
+    result = nx.DiGraph()
+    for u, v, data in G.edges_iter(data=True):
+        if u in H and (v not in H[u] or cmp(H[u][v], data) != 0):
+            new_node = copy.deepcopy(G.node[u])
+
+            new_node['node']['relationships'].append(data['relationship'])
+            result.add_node(u, new_node,
+                            node_instance_attributes=node_instance_attributes)
+            if v in H[u]:
+                result.add_node(v, H.node[v])
+            else:
+                result.add_node(v, G.node[v])
+            result.add_edge(u, v, G[u][v])
+    return result
+
+
+def extract_added_relationships(previous_deployment_node_graph,
+                                new_deployment_node_graph):
+
+    modified_instance_graph = _graph_diff_rel(
+        new_deployment_node_graph,
+        previous_deployment_node_graph,
+        node_instance_attributes={'modification': 'extended'},
+    )
+
+    return extract_node_instances(modified_instance_graph, copy_instances=True)
+
+
+def extract_removed_relationships(previous_deployment_node_graph,
+                                  new_deployment_node_graph):
+    modified_instance_graph = _graph_diff_rel(
+        previous_deployment_node_graph,
+        new_deployment_node_graph,
+        node_instance_attributes={'modification': 'reduced'},
+    )
+
+    return extract_node_instances(modified_instance_graph, copy_instances=True)
+
+
 def _graph_diff(G, H, node_instance_attributes):
     result = nx.DiGraph()
     for n1, data in G.nodes_iter(data=True):
