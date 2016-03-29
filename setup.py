@@ -36,7 +36,7 @@ except ImportError:
 
 setup(
     name='cloudify-dsl-parser',
-    version='3.4a4',
+    version='3.4a3',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
     packages=['dsl_parser',
