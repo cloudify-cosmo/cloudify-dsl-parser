@@ -19,16 +19,24 @@ from dsl_parser import (functions,
 from dsl_parser.exceptions import DSLParsingLogicException
 
 
-def validate_missing_inputs(inputs):
-    for key, value in inputs.iteritems():
-        if value is None:
-            raise DSLParsingLogicException(
-                107,
-                "Input '{0}' is missing a value".format(key))
+def validate_missing_inputs(inputs, schema_inputs):
+    """Check that all inputs defined in schema_inputs exist in inputs"""
+
+    missing_inputs = set(schema_inputs) - set(inputs)
+    if missing_inputs:
+        if len(missing_inputs) == 1:
+            message = "Input '{0}' is missing a value".format(
+                missing_inputs.pop())
+        else:
+            formatted_inputs = ', '.join("'{0}'".format(input_name)
+                                         for input_name in missing_inputs)
+            message = "Inputs {0} are missing a value".format(formatted_inputs)
+
+        raise DSLParsingLogicException(107, message)
 
 
-def validate_inputs_types(inputs, inputs_schema):
-    for input_key, _input in inputs_schema.iteritems():
+def validate_inputs_types(inputs, schema_inputs):
+    for input_key, _input in schema_inputs.iteritems():
         input_type = _input.get('type')
         if input_type is None:
             # no type defined - no validation
@@ -72,7 +80,7 @@ def merge_schema_and_instance_inputs(schema_inputs,
         flattened_schema_inputs.items() +
         instance_inputs.items())
 
-    validate_missing_inputs(merged_inputs)
+    validate_missing_inputs(merged_inputs, schema_inputs)
     validate_inputs_types(merged_inputs, schema_inputs)
     return merged_inputs
 

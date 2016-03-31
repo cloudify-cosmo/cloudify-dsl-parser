@@ -14,7 +14,8 @@
 #    * limitations under the License.
 
 from dsl_parser.tasks import prepare_deployment_plan
-from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
+from dsl_parser.exceptions import (MissingRequiredInputError,
+                                   UnknownInputError, DSLParsingLogicException)
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
@@ -405,3 +406,52 @@ outputs:
         prepared = prepare_deployment_plan(self.parse(yaml))
         outputs = prepared.outputs
         self.assertEqual(8080, outputs['a']['value'])
+
+    def test_missing_input_exception(self):
+        yaml = """
+node_types:
+  type:
+    interfaces:
+      interface:
+        op:
+          implementation: plugin.mapping
+          inputs:
+            some_input:
+              type: string
+node_templates:
+  node:
+    type: type
+plugins:
+  plugin:
+    install: false
+    executor: central_deployment_agent
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 107, DSLParsingLogicException)
+        self.assertIn('some_input', ex.message)
+
+    def test_missing_inputs_both_reported(self):
+        yaml = """
+node_types:
+  type:
+    interfaces:
+      interface:
+        op:
+          implementation: plugin.mapping
+          inputs:
+            some_input:
+              type: string
+            another_input:
+              type: string
+node_templates:
+  node:
+    type: type
+plugins:
+  plugin:
+    install: false
+    executor: central_deployment_agent
+"""
+        ex = self._assert_dsl_parsing_exception_error_code(
+            yaml, 107, DSLParsingLogicException)
+        self.assertIn('some_input', ex.message)
+        self.assertIn('another_input', ex.message)
