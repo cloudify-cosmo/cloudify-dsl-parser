@@ -1,35 +1,23 @@
-########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
 
+import StringIO
 import os
 import socket
-import StringIO
-import yaml as yml
-from urllib2 import HTTPError
 from urllib import pathname2url
+from urllib2 import HTTPError
 
-from dsl_parser import exceptions
+import yaml as yml
+
 from dsl_parser import constants
-from dsl_parser import version
+from dsl_parser import exceptions
 from dsl_parser import models
-from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.parser import parse_from_path, parse_from_url
-from dsl_parser.parser import parse as dsl_parse
+from dsl_parser import version
+from dsl_parser.constants import TYPE_HIERARCHY
 from dsl_parser.interfaces.constants import NO_OP
 from dsl_parser.interfaces.utils import operation_mapping
-from dsl_parser.constants import TYPE_HIERARCHY
+from dsl_parser.parser import parse as dsl_parse
+from dsl_parser.parser import parse_from_path, parse_from_url
+
+from . import AbstractTestParser
 
 
 def op_struct(plugin_name,
