@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import copy
+
 from ...exceptions import DSLParsingLogicException
 from ... import constants, utils
 from .data_types import Schema

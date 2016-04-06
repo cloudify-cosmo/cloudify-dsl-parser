@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ... import constants, utils
 from ...exceptions import (
     DSLParsingLogicException, ERROR_UNKNOWN_TYPE, ERROR_INVALID_TYPE_NAME)
+from ... import constants, utils
 from .. import Value, Requirement, sibling_predicate
 from .version import ToscaDefinitionsVersion
 from .types import Type, Types, DataTypeDerivedFrom, derived_from_predicate

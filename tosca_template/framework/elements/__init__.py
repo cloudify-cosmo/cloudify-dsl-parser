@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import copy
+import requests
 
 from ... import exceptions
 from ... import holder
@@ -199,3 +200,8 @@ class UnknownSchema(object):
 
 class UnknownElement(Element):
     schema = UnknownSchema()
+
+
+def url_exists(url):
+    response = requests.get(url)
+    return response.status_code == 200

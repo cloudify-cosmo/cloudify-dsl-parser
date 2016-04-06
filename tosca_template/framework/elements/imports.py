@@ -18,9 +18,10 @@ import urllib
 import networkx
 
 from ...version import VERSION
-from ... import constants, utils
 from ...exceptions import DSLParsingFormatException, DSLParsingLogicException
-from . import Element, Leaf, List
+from ...yaml_loader import load_yaml
+from ... import constants
+from . import Element, Leaf, List, url_exists
 
 MERGE_NO_OVERRIDE = set([
     constants.INTERFACES,
@@ -106,16 +107,43 @@ class ImportsLoader(Element):
         return {'resource_base': self.resource_base}
 
 
+class ImportsGraph(object):
+    def __init__(self):
+        self._imports_tree = networkx.DiGraph()
+        self._imports_graph = networkx.DiGraph()
+
+    def add(self, import_url, parsed, via_import=None):
+        if import_url not in self._imports_tree:
+            self._imports_tree.add_node(import_url, parsed=parsed)
+            self._imports_graph.add_node(import_url, parsed=parsed)
+        if via_import:
+            self._imports_tree.add_edge(import_url, via_import)
+            self._imports_graph.add_edge(import_url, via_import)
+
+    def add_graph_dependency(self, import_url, via_import):
+        if via_import:
+            self._imports_graph.add_edge(import_url, via_import)
+
+    def topological_sort(self):
+        return list(
+            {'import': node,
+             'parsed': self._imports_tree.node[node]['parsed']}
+            for node in reversed(
+                networkx.topological_sort(self._imports_tree)))
+
+    def __contains__(self, item):
+        return item in self._imports_tree
+
+
 def _dsl_location_to_url(dsl_location, resources_base_url):
     if dsl_location is not None:
         dsl_location = _get_resource_location(dsl_location, resources_base_url)
         if dsl_location is None:
             ex = DSLParsingLogicException(
-                30, "Failed converting dsl "
-                    "location to url: no suitable "
-                    "location found "
-                    "for dsl '{0}'"
-                    .format(dsl_location))
+                30,
+                "Failed converting dsl location to url: no suitable "
+                "location found for dsl '{0}'"
+                .format(dsl_location))
             ex.failed_import = dsl_location
             raise ex
     return dsl_location
@@ -135,7 +163,7 @@ def _get_resource_location(resource_name,
     if current_resource_context:
         candidate_url = current_resource_context[
             :current_resource_context.rfind('/') + 1] + resource_name
-        if utils.url_exists(candidate_url):
+        if url_exists(candidate_url):
             return candidate_url
 
     if resources_base_url:
@@ -151,13 +179,14 @@ def _combine_imports(
         version,
         resolver,
         validate_version):
-    ordered_imports = _build_ordered_imports(parsed_dsl_holder,
-                                             dsl_location,
-                                             resources_base_url,
-                                             resolver)
+    ordered_imports = _build_ordered_imports(
+        parsed_dsl_holder,
+        dsl_location,
+        resources_base_url,
+        resolver)
     holder_result = parsed_dsl_holder.copy()
-    version_key_holder, version_value_holder = parsed_dsl_holder.get_item(
-        _version.VERSION)
+    (version_key_holder,
+     version_value_holder) = parsed_dsl_holder.get_item(VERSION)
     holder_result.value = {}
     for imported in ordered_imports:
         import_url = imported['import']
@@ -203,24 +232,22 @@ def _build_ordered_imports(parsed_dsl_holder,
                                                    location(_current_import))
             else:
                 raw_imported_dsl = resolver.fetch_import(import_url)
-                imported_dsl_holder = utils.load_yaml(
+                imported_dsl_holder = load_yaml(
                     raw_yaml=raw_imported_dsl,
                     error_message="Failed to parse import '{0}' (via '{1}')"
                                   .format(another_import, import_url),
                     filename=another_import)
-                imports_graph.add(import_url, imported_dsl_holder,
-                                  location(_current_import))
-                _build_ordered_imports_recursive(imported_dsl_holder,
-                                                 import_url)
+                imports_graph.add(
+                    import_url, imported_dsl_holder, location(_current_import))
+                _build_ordered_imports_recursive(
+                    imported_dsl_holder, import_url)
     _build_ordered_imports_recursive(parsed_dsl_holder, dsl_location)
     return imports_graph.topological_sort()
 
 
-def _validate_version(dsl_version,
-                      import_url,
-                      parsed_imported_dsl_holder):
-    version_key_holder, version_value_holder = parsed_imported_dsl_holder\
-        .get_item(VERSION)
+def _validate_version(dsl_version, import_url, parsed_imported_dsl_holder):
+    (version_key_holder,
+     version_value_holder) = parsed_imported_dsl_holder.get_item(VERSION)
     if version_value_holder and version_value_holder.value != dsl_version:
         raise DSLParsingLogicException(
             28,
@@ -263,37 +290,9 @@ def _merge_parsed_into_combined(combined_parsed_dsl_holder,
 def _merge_into_dict_or_throw_on_duplicate(from_dict_holder, to_dict_holder,
                                            key_name):
     for key_holder, value_holder in from_dict_holder.value.iteritems():
-        if key_holder.value not in to_dict_holder:
-            to_dict_holder.value[key_holder] = value_holder
-        else:
+        if key_holder.value in to_dict_holder:
             raise DSLParsingLogicException(
-                4, "Import failed: Could not merge '{0}' due to conflict "
-                   "on '{1}'".format(key_name, key_holder.value))
-
-
-class ImportsGraph(object):
-
-    def __init__(self):
-        self._imports_tree = networkx.DiGraph()
-        self._imports_graph = networkx.DiGraph()
-
-    def add(self, import_url, parsed, via_import=None):
-        if import_url not in self._imports_tree:
-            self._imports_tree.add_node(import_url, parsed=parsed)
-            self._imports_graph.add_node(import_url, parsed=parsed)
-        if via_import:
-            self._imports_tree.add_edge(import_url, via_import)
-            self._imports_graph.add_edge(import_url, via_import)
-
-    def add_graph_dependency(self, import_url, via_import):
-        if via_import:
-            self._imports_graph.add_edge(import_url, via_import)
-
-    def topological_sort(self):
-        return reversed(list(
-            ({'import': i,
-             'parsed': self._imports_tree.node[i]['parsed']}
-             for i in networkx.topological_sort(self._imports_tree))))
-
-    def __contains__(self, item):
-        return item in self._imports_tree
+                4,
+                "Import failed: Could not merge '{0}' due to conflict on '{1}'"
+                .format(key_name, key_holder.value))
+        to_dict_holder.value[key_holder] = value_holder

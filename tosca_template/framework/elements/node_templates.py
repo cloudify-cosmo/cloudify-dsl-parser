@@ -20,7 +20,10 @@ from ...exceptions import (
     DSLParsingFormatException,
     DSLParsingElementMatchException,
 )
-from ...interfaces import merge_relationship_type_and_instance_interfaces
+from ...interfaces import (
+    merge_relationship_type_and_instance_interfaces,
+    merge_node_type_and_node_template_interfaces,
+)
 from ... import utils, constants
 from .. import Value, Requirement
 from .relationships import Relationships, Relationship
@@ -35,17 +38,14 @@ from . import Element, Dict, DictElement, Leaf, List
 class NodeTemplateType(Element):
     required = True
     schema = Leaf(type=str)
-    requires = {
-        NodeTypes: [Value('node_types')],
-    }
+    requires = {NodeTypes: [Value('node_types')]}
 
     def validate(self, node_types):
         if self.initial_value not in node_types:
-            err_message = ("Could not locate node type: '{0}'; "
-                           "existing types: {1}"
-                           .format(self.initial_value,
-                                   node_types.keys()))
-            raise DSLParsingLogicException(7, err_message)
+            raise DSLParsingLogicException(
+                7,
+                "Could not locate node type: '{0}'; existing types: {1}"
+                .format(self.initial_value, node_types.keys()))
 
 
 class NodeTemplateProperties(Element):
@@ -78,9 +78,7 @@ class NodeTemplateProperties(Element):
 class NodeTemplateRelationshipType(Element):
     required = True
     schema = Leaf(type=str)
-    requires = {
-        Relationships: [Value('relationships')],
-    }
+    requires = {Relationships: [Value('relationships')]}
 
     def validate(self, relationships):
         if self.initial_value not in relationships:
@@ -152,9 +150,7 @@ class NodeTemplateInstancesDeploy(Element):
 
 
 class NodeTemplateInstances(DictElement):
-    schema = {
-        'deploy': NodeTemplateInstancesDeploy,
-    }
+    schema = {'deploy': NodeTemplateInstancesDeploy}
 
     def parse(self):
         if self.initial_value is None:
@@ -174,7 +170,7 @@ class NodeTemplateRelationship(Element):
     requires = {
         Relationship: [
             Value('relationship_type',
-                  predicate=_node_template_relationship_type_predicate)]
+                  predicate=_node_template_relationship_type_predicate)],
     }
 
     def parse(self, relationship_type):
@@ -272,10 +268,10 @@ class NodeTemplate(Element):
             constants.TYPE_HIERARCHY: node_type[constants.TYPE_HIERARCHY]
         })
 
-        node[constants.INTERFACES] = interfaces_parser.\
+        node[constants.INTERFACES] = (
             merge_node_type_and_node_template_interfaces(
                 node_type_interfaces=node_type[constants.INTERFACES],
-                node_template_interfaces=node[constants.INTERFACES])
+                node_template_interfaces=node[constants.INTERFACES]))
 
         node['operations'] = _process_operations(
             partial_error_message="in node '{0}' of type '{1}'"
