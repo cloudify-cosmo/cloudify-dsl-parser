@@ -13,15 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-PRIMITIVE_TYPES = (list, bool, int, float, long, basestring, dict)
-
-
 import copy
 
 from ... import exceptions
 from ... import holder
 from ...version import version_description
+
+PRIMITIVE_TYPES = (list, bool, int, float, long, basestring, dict)
 
 
 class Unparsed(object):

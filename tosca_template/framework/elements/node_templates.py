@@ -20,7 +20,7 @@ from ...exceptions import (
     DSLParsingFormatException,
     DSLParsingElementMatchException,
 )
-from ...interfaces import interfaces_parser
+from ...interfaces import merge_relationship_type_and_instance_interfaces
 from ... import utils, constants
 from .. import Value, Requirement
 from .relationships import Relationships, Relationship
@@ -181,10 +181,10 @@ class NodeTemplateRelationship(Element):
         result = self.build_dict_result()
         for interfaces in [constants.SOURCE_INTERFACES,
                            constants.TARGET_INTERFACES]:
-            result[interfaces] = interfaces_parser. \
+            result[interfaces] = (
                 merge_relationship_type_and_instance_interfaces(
                     relationship_type_interfaces=relationship_type[interfaces],
-                    relationship_instance_interfaces=result[interfaces])
+                    relationship_instance_interfaces=result[interfaces]))
         result[constants.TYPE_HIERARCHY] = relationship_type[
             constants.TYPE_HIERARCHY]
 

@@ -18,6 +18,10 @@ class DefaultResolverValidationException(Exception):
     pass
 
 
+class ResolverInstantiationError(Exception):
+    pass
+
+
 class MissingRequiredInputError(Exception):
     """
     An error raised when a deployment is created and a required input

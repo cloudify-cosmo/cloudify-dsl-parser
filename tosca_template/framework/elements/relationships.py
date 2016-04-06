@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...interfaces import interfaces_parser
+from ...interfaces import merge_relationship_type_interfaces
 from ... import constants, utils
 from .. import Requirement, Value, Dict
 from .plugins import Plugins
@@ -51,10 +51,10 @@ class Relationship(Type):
                 data_types=data_types)
             for interfaces in [constants.SOURCE_INTERFACES,
                                constants.TARGET_INTERFACES]:
-                relationship_type[interfaces] = interfaces_parser. \
+                relationship_type[interfaces] = (
                     merge_relationship_type_interfaces(
                         overriding_interfaces=relationship_type[interfaces],
-                        overridden_interfaces=super_type[interfaces])
+                        overridden_interfaces=super_type[interfaces]))
 
         _validate_relationship_fields(
             rel_obj=relationship_type,

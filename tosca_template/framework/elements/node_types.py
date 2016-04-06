@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...interfaces import interfaces_parser
+from ...interfaces import merge_node_type_interfaces
 from ... import constants, utils
 from .. import Value, Dict
 from .types import Type, Types, TypeDerivedFrom, derived_from_predicate
@@ -43,10 +43,9 @@ class NodeType(Type):
                 overridden_schema=super_type.get('properties', {}),
                 overriding_schema=node_type.get('properties', {}),
                 data_types=data_types)
-            node_type[constants.INTERFACES] = interfaces_parser. \
-                merge_node_type_interfaces(
-                    overridden_interfaces=super_type[constants.INTERFACES],
-                    overriding_interfaces=node_type[constants.INTERFACES])
+            node_type[constants.INTERFACES] = merge_node_type_interfaces(
+                overridden_interfaces=super_type[constants.INTERFACES],
+                overriding_interfaces=node_type[constants.INTERFACES])
         node_type[constants.TYPE_HIERARCHY] = self.create_type_hierarchy(
             super_type)
         self.fix_properties(node_type)
