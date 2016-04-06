@@ -335,68 +335,6 @@ class Concat(Function):
         return self.separator.join(str_join)
 
 
-def _get_property_value(node_name,
-                        properties,
-                        property_path,
-                        context_path='',
-                        raise_if_not_found=True):
-    """Extracts a property's value according to the provided property path
-
-    :param node_name: Node name the property belongs to (for logging).
-    :param properties: Properties dict.
-    :param property_path: Property path as list.
-    :param context_path: Context path (for logging).
-    :param raise_if_not_found: Whether to raise an error if property not found.
-    :return: Property value.
-    """
-
-    def str_list(li):
-        return [str(item) for item in li]
-
-    value = properties
-    for p in property_path:
-        if isinstance(value, dict):
-            if p not in value:
-                if raise_if_not_found:
-                    raise KeyError(
-                        "Node template property '{0}.properties.{1}' "
-                        "referenced from '{2}' doesn't exist.".format(
-                            node_name, '.'.join(str_list(property_path)),
-                            context_path))
-                return None
-            value = value[p]
-        elif isinstance(value, list):
-            try:
-                value = value[p]
-            except TypeError:
-                raise TypeError(
-                    "Node template property '{0}.properties.{1}' "
-                    "referenced from '{2}' is expected {3} to be an int "
-                    "but it is a {4}.".format(
-                        node_name, '.'.join(str_list(property_path)),
-                        context_path,
-                        p, type(p).__name__))
-            except IndexError:
-                if raise_if_not_found:
-                    raise IndexError(
-                        "Node template property '{0}.properties.{1}' "
-                        "referenced from '{2}' index is out of range. Got {3}"
-                        " but list size is {4}.".format(
-                            node_name, '.'.join(str_list(property_path)),
-                            context_path, p, len(value)))
-                return None
-        else:
-            if raise_if_not_found:
-                raise KeyError(
-                    "Node template property '{0}.properties.{1}' "
-                    "referenced from '{2}' doesn't exist.".format(
-                        node_name, '.'.join(str_list(property_path)),
-                        context_path))
-            return None
-
-    return value
-
-
 def parse(raw_function, scope=None, context=None, path=None):
     if isinstance(raw_function, dict) and len(raw_function) == 1:
         func_name = raw_function.keys()[0]
@@ -455,32 +393,6 @@ def evaluate_outputs(outputs_def,
         get_node_instances_method=get_node_instances_method,
         get_node_instance_method=get_node_instance_method,
         get_node_method=get_node_method)
-
-
-def _handler(evaluator, **evaluator_kwargs):
-    def handler(v, scope, context, path):
-        evaluated_value = v
-        scanned = False
-        while True:
-            func = parse(evaluated_value,
-                         scope=scope,
-                         context=context,
-                         path=path)
-            if not isinstance(func, Function):
-                break
-            previous_evaluated_value = evaluated_value
-            evaluated_value = getattr(func, evaluator)(**evaluator_kwargs)
-            if scanned and previous_evaluated_value == evaluated_value:
-                break
-            scan.scan_properties(evaluated_value,
-                                 handler,
-                                 scope=scope,
-                                 context=context,
-                                 path=path,
-                                 replace=True)
-            scanned = True
-        return evaluated_value
-    return handler
 
 
 def plan_evaluation_handler(plan):
@@ -548,9 +460,95 @@ def validate_functions(plan):
         validate_no_circular_get_property(result)
 
     def replace_with_raw_function(*args):
-        if isinstance(args[0], GetProperty):
-            return args[0].raw
-        return args[0]
+        return args[0].raw if isinstance(args[0], GetProperty) else args[0]
 
     # Change previously replaced get_property instances with raw values
     scan.scan_service_template(plan, replace_with_raw_function, replace=True)
+
+
+def _get_property_value(node_name,
+                        properties,
+                        property_path,
+                        context_path='',
+                        raise_if_not_found=True):
+    """Extracts a property's value according to the provided property path
+
+    :param node_name: Node name the property belongs to (for logging).
+    :param properties: Properties dict.
+    :param property_path: Property path as list.
+    :param context_path: Context path (for logging).
+    :param raise_if_not_found: Whether to raise an error if property not found.
+    :return: Property value.
+    """
+
+    def str_list(li):
+        return [str(item) for item in li]
+
+    value = properties
+    for p in property_path:
+        if isinstance(value, dict):
+            if p not in value:
+                if raise_if_not_found:
+                    raise KeyError(
+                        "Node template property '{0}.properties.{1}' "
+                        "referenced from '{2}' doesn't exist.".format(
+                            node_name, '.'.join(str_list(property_path)),
+                            context_path))
+                return None
+            value = value[p]
+        elif isinstance(value, list):
+            try:
+                value = value[p]
+            except TypeError:
+                raise TypeError(
+                    "Node template property '{0}.properties.{1}' "
+                    "referenced from '{2}' is expected {3} to be an int "
+                    "but it is a {4}.".format(
+                        node_name, '.'.join(str_list(property_path)),
+                        context_path,
+                        p, type(p).__name__))
+            except IndexError:
+                if raise_if_not_found:
+                    raise IndexError(
+                        "Node template property '{0}.properties.{1}' "
+                        "referenced from '{2}' index is out of range. Got {3}"
+                        " but list size is {4}.".format(
+                            node_name, '.'.join(str_list(property_path)),
+                            context_path, p, len(value)))
+                return None
+        else:
+            if raise_if_not_found:
+                raise KeyError(
+                    "Node template property '{0}.properties.{1}' "
+                    "referenced from '{2}' doesn't exist.".format(
+                        node_name, '.'.join(str_list(property_path)),
+                        context_path))
+            return None
+
+    return value
+
+
+def _handler(evaluator, **evaluator_kwargs):
+    def handler(v, scope, context, path):
+        evaluated_value = v
+        scanned = False
+        while True:
+            func = parse(evaluated_value,
+                         scope=scope,
+                         context=context,
+                         path=path)
+            if not isinstance(func, Function):
+                break
+            previous_evaluated_value = evaluated_value
+            evaluated_value = getattr(func, evaluator)(**evaluator_kwargs)
+            if scanned and previous_evaluated_value == evaluated_value:
+                break
+            scan.scan_properties(evaluated_value,
+                                 handler,
+                                 scope=scope,
+                                 context=context,
+                                 path=path,
+                                 replace=True)
+            scanned = True
+        return evaluated_value
+    return handler

@@ -13,12 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
+
 import requests
 
 from .framework import validate_version_schema, handle_imports, parse_blueprint
 from .import_resolver import DefaultImportResolver
+from .functions import validate_functions
 
-from . import functions, utils
+
+def parse(uri,
+          resources_base_url=None,
+          resolver=None,
+          validate_version=True):
+    scheme, _ = uri.split('://', 1)
+    return _PARSE_HANDLERS_PER_URI_SCHEMES[scheme](
+        uri, resources_base_url, resolver, validate_version)
 
 
 def parse_from_path(dsl_file_path,
@@ -26,35 +36,39 @@ def parse_from_path(dsl_file_path,
                     resolver=None,
                     validate_version=True):
     with open(dsl_file_path, 'r') as f:
-        return parse(f.read(),
-                     resources_base_url=resources_base_url,
-                     dsl_location=dsl_file_path,
-                     resolver=resolver,
-                     validate_version=validate_version)
+        return parse_from_string(
+            f.read(),
+            resources_base_url=resources_base_url,
+            dsl_location=dsl_file_path,
+            resolver=resolver,
+            validate_version=validate_version)
 
 
-def parse_from_url(dsl_url,
-                   resources_base_url=None,
-                   resolver=None,
-                   validate_version=True):
+def parse_from_url(
+        dsl_url,
+        resources_base_url=None,
+        resolver=None,
+        validate_version=True):
     response = requests.get(dsl_url, stream=True)
     if response.status_code != 200:
         raise Exception  # todo: sort exception
-    return parse(response.raw.read(),
-                 resources_base_url=resources_base_url,
-                 dsl_location=dsl_url,
-                 resolver=resolver,
-                 validate_version=validate_version)
+    return parse_from_string(
+        response.raw.read(),
+        resources_base_url=resources_base_url,
+        dsl_location=dsl_url,
+        resolver=resolver,
+        validate_version=validate_version)
 
 
-def parse(dsl_string,
-          resources_base_url,
-          dsl_location=None,
-          resolver=None,
-          validate_version=True):
+def parse_from_string(
+        dsl_string,
+        resources_base_url,
+        dsl_location=None,
+        resolver=None,
+        validate_version=True):
     resolver = resolver or DefaultImportResolver()
 
-    parsed_dsl_holder = utils.load_yaml(
+    parsed_dsl_holder = load_yaml(
         raw_yaml=dsl_string,
         error_message='Failed to parse DSL',
         filename=dsl_location)
@@ -73,5 +87,11 @@ def parse(dsl_string,
         resource_base,
         validate_version)
 
-    functions.validate_functions(plan)
+    validate_functions(plan)
     return plan
+
+_PARSE_HANDLERS_PER_URI_SCHEMES = defaultdict(
+    default_factory=lambda: parse_from_path,
+    http=parse_from_url,
+    https=parse_from_url,
+)
