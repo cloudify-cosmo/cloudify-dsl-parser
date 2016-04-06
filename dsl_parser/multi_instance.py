@@ -40,13 +40,14 @@ def modify_deployment(nodes,
                       previous_node_instances,
                       modified_nodes):
     """
-    modifies deployment according to the new nodes. based of
+    modifies deployment according to the expected nodes. based on
     previous_node_instances
     :param nodes: the entire set of expected nodes.
     :param previous_node_instances:
-    :param modified_nodes: For lacking a better name, describes the nodes that
-    the number of instances of those nodes were modified.
-    :return: a dict of add, modified and related node instances.
+    :param modified_nodes: existing nodes whose instance number has changed
+     Add a line note
+    :return: a dict of add,extended,reduced and removed instances
+     Add a line note
     """
 
     plan_node_graph = rel_graph.build_node_graph(nodes)
@@ -57,30 +58,38 @@ def modify_deployment(nodes,
         previous_deployment_node_graph,
         modified_nodes)
 
+    # Any node instnaces which were added or removed
     added_and_related = rel_graph.extract_added_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
     removed_and_related = rel_graph.extract_removed_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
+
+    # Any node instances which had a modification to their relationship.
+    # (newly introduced and removed nodes)
     extended_and_related = rel_graph.extract_added_relationships(
         previous_deployment_node_graph, new_deployment_node_graph)
     reduced_and_related = rel_graph.extract_removed_relationships(
         previous_deployment_node_graph, new_deployment_node_graph)
 
-    extended_and_related_unadded = \
-        filter_node_instances(added_and_related, extended_and_related)
-    reduced_and_related_unremoved = \
-        filter_node_instances(removed_and_related, reduced_and_related)
+    # The extracted extended and reduced relationships hold the new and old
+    # node instances, these are not required, since the change is in
+    # node instance level (and not the relationship level)
+    extended_and_related = \
+        filter_out_node_instances(added_and_related, extended_and_related)
+    reduced_and_related = \
+        filter_out_node_instances(removed_and_related, reduced_and_related)
 
     return {
         'added_and_related': added_and_related,
-        'extended_and_related': extended_and_related_unadded,
-        'reduced_and_related': reduced_and_related_unremoved,
+        'extended_and_related': extended_and_related,
+        'reduced_and_related': reduced_and_related,
         'removed_and_related': removed_and_related
     }
 
 
-def filter_node_instances(base_node_instances, modification_node_instances):
-    base_node_instances_ids = [n['id'] for n in base_node_instances
-                               if 'modification' in n]
-    return [n for n in modification_node_instances
-            if n['id'] not in base_node_instances_ids]
+def filter_out_node_instances(node_instances_to_filter_out,
+                              base_node_instances):
+    instance_ids_to_remove = [n['id'] for n in node_instances_to_filter_out
+                              if 'modification' in n]
+    return [n for n in base_node_instances
+            if n['id'] not in instance_ids_to_remove]
