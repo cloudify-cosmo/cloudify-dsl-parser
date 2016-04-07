@@ -16,10 +16,10 @@
 import copy
 
 from ...exceptions import DSLParsingLogicException
-from ... import constants, utils
+from ... import constants
 from .data_types import Schema
 from .version import ToscaDefinitionsVersion
-from . import DictElement, Element, Leaf, Dict
+from . import DictElement, Element, Leaf, Dict, uri_exists
 
 
 class OperationImplementation(Element):
@@ -294,7 +294,7 @@ def process_operation(
 
 
 def _resource_exists(resource_base, resource_name):
-    return utils.url_exists('{0}/{1}'.format(resource_base, resource_name))
+    return uri_exists('{0}/{1}'.format(resource_base, resource_name))
 
 
 def _operation(name,

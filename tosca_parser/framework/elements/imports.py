@@ -14,14 +14,13 @@
 # limitations under the License.
 
 import os
-import urllib
 import networkx
 
 from ...version import VERSION
 from ...exceptions import DSLParsingFormatException, DSLParsingLogicException
-from ...yaml_loader import load_yaml
+from ...yaml_loader import load
 from ... import constants
-from . import Element, Leaf, List, url_exists
+from . import Element, Leaf, List, uri_exists
 
 MERGE_NO_OVERRIDE = set([
     constants.INTERFACES,
@@ -157,13 +156,12 @@ def _get_resource_location(resource_name,
         return resource_name
 
     if os.path.exists(resource_name):
-        return 'file:{0}'.format(
-            urllib.pathname2url(os.path.abspath(resource_name)))
+        return os.path.abspath(resource_name)
 
     if current_resource_context:
         candidate_url = current_resource_context[
             :current_resource_context.rfind('/') + 1] + resource_name
-        if url_exists(candidate_url):
+        if uri_exists(candidate_url):
             return candidate_url
 
     if resources_base_url:
@@ -231,8 +229,9 @@ def _build_ordered_imports(parsed_dsl_holder,
                 imports_graph.add_graph_dependency(import_url,
                                                    location(_current_import))
             else:
+                # todo: I'm here
                 raw_imported_dsl = resolver.fetch_import(import_url)
-                imported_dsl_holder = load_yaml(
+                imported_dsl_holder = load(
                     raw_yaml=raw_imported_dsl,
                     error_message="Failed to parse import '{0}' (via '{1}')"
                                   .format(another_import, import_url),

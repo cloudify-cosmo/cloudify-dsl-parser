@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import copy
 import requests
+from requests.exceptions import InvalidSchema, MissingSchema
 
 from ... import exceptions
 from ... import holder
@@ -202,6 +204,9 @@ class UnknownElement(Element):
     schema = UnknownSchema()
 
 
-def url_exists(url):
-    response = requests.get(url)
-    return response.status_code == 200
+def uri_exists(uri):
+    try:
+        response = requests.get(uri)
+        return response.status_code == 200
+    except (InvalidSchema, MissingSchema):
+        return os.path.exists(uri)

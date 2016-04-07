@@ -14,75 +14,22 @@
 # limitations under the License.
 
 import abc
-
-import requests
-from retrying import retry
+from collections import Iterable
 
 from .exceptions import (
     DSLParsingLogicException, DefaultResolverValidationException)
-
-DEFAULT_RETRY_DELAY = 1
-MAX_NUMBER_RETRIES = 5
-DEFAULT_REQUEST_TIMEOUT = 10
+from .uri_data_reader import read_data_from_uri
 
 DEFAULT_RESLOVER_RULES_KEY = 'rules'
 
 
 def read_import(import_url):
     error_str = 'Import failed: Unable to open import url'
-    if import_url.startswith('file:'):
-        response = requests.get(import_url, stream=True)
-        if response.status_code != 200:
-            raise DSLParsingLogicException(
-                13, '{0} {1}'.format(response.status_code, import_url))
-    else:
-        number_of_attempts = MAX_NUMBER_RETRIES + 1
-
-        # Defines on which errors we should retry the import.
-        def _is_recoverable_error(e):
-            return isinstance(e, (requests.ConnectionError, requests.Timeout))
-
-        # Defines on which return values we should retry the import.
-        def _is_internal_error(result):
-            return hasattr(result, 'status_code') and result.status_code >= 500
-
-        @retry(stop_max_attempt_number=number_of_attempts,
-               wait_fixed=DEFAULT_RETRY_DELAY,
-               retry_on_exception=_is_recoverable_error,
-               retry_on_result=_is_internal_error)
-        def get_import():
-            response = requests.get(
-                import_url, timeout=DEFAULT_REQUEST_TIMEOUT)
-            # The response is a valid one, and the content should be returned
-            if 200 <= response.status_code < 300:
-                return response.text
-            # If the response status code is above 500, an internal server
-            # error has occurred. The return value would be caught by
-            # _is_internal_error (as specified in the decorator), and retried.
-            elif response.status_code >= 500:
-                return response
-            # Any other response should raise an exception.
-            else:
-                invalid_url_err = DSLParsingLogicException(
-                    13, '{0} {1}; status code: {2}'.format(
-                        error_str, import_url, response.status_code))
-                raise invalid_url_err
-
-        try:
-            import_result = get_import()
-            # If the error is an internal error only. A custom exception should
-            # be raised.
-            if _is_internal_error(import_result):
-                msg = 'Import failed {0} times, due to internal server error' \
-                      '; {1}'.format(number_of_attempts, import_result.text)
-                raise DSLParsingLogicException(13, msg)
-            return import_result
-        # If any ConnectionError, Timeout or URLRequired should rise
-        # after the retrying mechanism, a custom exception will be raised.
-        except (requests.ConnectionError, requests.Timeout,
-                requests.URLRequired) as err:
-            raise DSLParsingLogicException(
-                13, '{0} {1}; {2}'.format(error_str, import_url, err))
+    try:
+        return read_data_from_uri(import_url)
+    except Exception as exc:
+        raise DSLParsingLogicException(
+                13, '{0} {1}; {2}'.format(error_str, import_url, exc))
 
 
 class AbstractImportResolver(object):
@@ -200,7 +147,7 @@ class DefaultImportResolver(AbstractImportResolver):
             raise ex
 
     def _validate_rules(self):
-        if not isinstance(self.rules, list):
+        if not isinstance(self.rules, Iterable):
             raise DefaultResolverValidationException(
                 'Invalid parameters supplied for the default resolver: '
                 'The `{0}` parameter must be a list but it is of type {1}.'

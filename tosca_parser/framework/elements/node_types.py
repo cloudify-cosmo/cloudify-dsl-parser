@@ -15,10 +15,11 @@
 
 from ...interfaces import merge_node_type_interfaces
 from ... import constants, utils
-from .. import Value, Dict
+from .. import Value
 from .types import Type, Types, TypeDerivedFrom, derived_from_predicate
 from .operation import NodeTypeInterfaces
 from .data_types import SchemaWithInitialDefault, DataTypes
+from . import Dict
 
 
 class NodeType(Type):

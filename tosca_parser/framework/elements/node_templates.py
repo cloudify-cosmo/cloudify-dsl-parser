@@ -35,6 +35,182 @@ from .operation import process_interface_operations
 from . import Element, Dict, DictElement, Leaf, List
 
 
+def _node_template_relationship_type_predicate(source, target):
+    try:
+        return source.child(
+            NodeTemplateRelationshipType).initial_value == target.name
+    except DSLParsingElementMatchException:
+        return False
+
+
+def _node_template_related_nodes_predicate(source, target):
+    if source.name == target.name:
+        return False
+    targets = source.descendants(NodeTemplateRelationshipTarget)
+    relationship_targets = [e.initial_value for e in targets]
+    return target.name in relationship_targets
+
+
+def _node_template_node_type_predicate(source, target):
+    try:
+        return (
+            source.child(NodeTemplateType).initial_value == target.name)
+    except DSLParsingElementMatchException:
+        return False
+
+
+def _post_process_node_relationships(
+        processed_node,
+        node_name_to_node,
+        plugins,
+        resource_base):
+    for relationship in processed_node[constants.RELATIONSHIPS]:
+        target_node = node_name_to_node[relationship['target_id']]
+        _process_node_relationships_operations(
+            relationship=relationship,
+            interfaces_attribute='source_interfaces',
+            operations_attribute='source_operations',
+            node_for_plugins=processed_node,
+            plugins=plugins,
+            resource_base=resource_base)
+        _process_node_relationships_operations(
+            relationship=relationship,
+            interfaces_attribute='target_interfaces',
+            operations_attribute='target_operations',
+            node_for_plugins=target_node,
+            plugins=plugins,
+            resource_base=resource_base)
+
+
+def _process_operations(
+        partial_error_message,
+        interfaces,
+        plugins,
+        error_code,
+        resource_base):
+    operations = {}
+    for interface_name, interface in interfaces.items():
+        interface_operations = process_interface_operations(
+            interface=interface,
+            plugins=plugins,
+            error_code=error_code,
+            partial_error_message=(
+                "In interface '{0}' {1}".format(interface_name,
+                                                partial_error_message)),
+            resource_base=resource_base)
+        for operation in interface_operations:
+            operation_name = operation.pop('name')
+            if operation_name in operations:
+                # Indicate this implicit operation name needs to be
+                # removed as we can only
+                # support explicit implementation in this case
+                operations[operation_name] = None
+            else:
+                operations[operation_name] = operation
+            operations['{0}.{1}'.format(interface_name,
+                                        operation_name)] = operation
+
+    return dict(
+        (operation_name, operation)
+        for operation_name, operation in operations.iteritems()
+        if operation is not None)
+
+
+def _process_node_relationships_operations(
+        relationship,
+        interfaces_attribute,
+        operations_attribute,
+        node_for_plugins,
+        plugins,
+        resource_base):
+    partial_error_message = (
+        "in relationship of type '{0}' in node '{1}'"
+        .format(relationship['type'], node_for_plugins['id']))
+    operations = _process_operations(
+        partial_error_message=partial_error_message,
+        interfaces=relationship[interfaces_attribute],
+        plugins=plugins,
+        error_code=19,
+        resource_base=resource_base)
+    relationship[operations_attribute] = operations
+
+
+def _process_nodes_plugins(processed_nodes, host_types, plugins):
+    # extract node plugins based on node operations
+    # do we really need node.plugins?
+    nodes_operations = dict((name, []) for name in processed_nodes.iterkeys())
+    for node_name, node in processed_nodes.iteritems():
+        node_operations = nodes_operations[node_name]
+        node_operations.append(node['operations'])
+        for rel in node['relationships']:
+            node_operations.append(rel['source_operations'])
+            nodes_operations[rel['target_id']].append(rel['target_operations'])
+    for node_name, node in processed_nodes.iteritems():
+        node[constants.PLUGINS] = _get_plugins_from_operations(
+            operations_lists=nodes_operations[node_name],
+            processed_plugins=plugins)
+
+    for node in processed_nodes.itervalues():
+        # set plugins_to_install property for nodes
+        if node['type'] in host_types:
+            plugins_to_install = {}
+            for another_node in processed_nodes.itervalues():
+                # going over all other nodes, to accumulate plugins
+                # from different nodes whose host is the current node
+                if another_node.get('host_id') == node['id']:
+                    # ok to override here since we assume it is the same plugin
+                    for plugin in another_node[constants.PLUGINS]:
+                        if plugin[constants.PLUGIN_EXECUTOR_KEY] \
+                                == constants.HOST_AGENT:
+                            plugins_to_install[plugin['name']] = plugin
+            node[constants.PLUGINS_TO_INSTALL] = plugins_to_install.values()
+
+        # set deployment_plugins_to_install property for nodes
+        deployment_plugins_to_install = {}
+        for plugin in node[constants.PLUGINS]:
+            if plugin[constants.PLUGIN_EXECUTOR_KEY] \
+                    == constants.CENTRAL_DEPLOYMENT_AGENT:
+                deployment_plugins_to_install[plugin['name']] = plugin
+        node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] = \
+            deployment_plugins_to_install.values()
+
+    _validate_agent_plugins_on_host_nodes(processed_nodes)
+
+
+def _get_plugins_from_operations(operations_lists, processed_plugins):
+    plugins = {}
+    for operations in operations_lists:
+        for operation in operations.values():
+            plugin_name = operation['plugin']
+            if not plugin_name:
+                # no-op
+                continue
+            plugin = processed_plugins[plugin_name]
+            operation_executor = operation['executor']
+            plugin_key = (plugin_name, operation_executor)
+            if plugin_key not in plugins:
+                plugin = copy.deepcopy(plugin)
+                plugin['executor'] = operation_executor
+                plugins[plugin_key] = plugin
+    return plugins.values()
+
+
+def _validate_agent_plugins_on_host_nodes(processed_nodes):
+    for node in processed_nodes.itervalues():
+        if 'host_id' in node:
+            continue
+        for plugin in node[constants.PLUGINS]:
+            if plugin[constants.PLUGIN_EXECUTOR_KEY] == constants.HOST_AGENT:
+                raise DSLParsingLogicException(
+                    24,
+                    "node '{0}' has no relationship which makes it "
+                    "contained within a host and it has a "
+                    "plugin '{1}' with '{2}' as an executor. "
+                    "These types of plugins must be "
+                    "installed on a host"
+                    .format(node['id'], plugin['name'], constants.HOST_AGENT))
+
+
 class NodeTemplateType(Element):
     required = True
     schema = Leaf(type=str)
@@ -340,178 +516,3 @@ class NodeTemplates(Element):
                 deployment_plugins[plugin_name] = deployment_plugin
         return deployment_plugins.values()
 
-
-def _node_template_relationship_type_predicate(source, target):
-    try:
-        return source.child(
-            NodeTemplateRelationshipType).initial_value == target.name
-    except DSLParsingElementMatchException:
-        return False
-
-
-def _node_template_related_nodes_predicate(source, target):
-    if source.name == target.name:
-        return False
-    targets = source.descendants(NodeTemplateRelationshipTarget)
-    relationship_targets = [e.initial_value for e in targets]
-    return target.name in relationship_targets
-
-
-def _node_template_node_type_predicate(source, target):
-    try:
-        return (
-            source.child(NodeTemplateType).initial_value == target.name)
-    except DSLParsingElementMatchException:
-        return False
-
-
-def _post_process_node_relationships(
-        processed_node,
-        node_name_to_node,
-        plugins,
-        resource_base):
-    for relationship in processed_node[constants.RELATIONSHIPS]:
-        target_node = node_name_to_node[relationship['target_id']]
-        _process_node_relationships_operations(
-            relationship=relationship,
-            interfaces_attribute='source_interfaces',
-            operations_attribute='source_operations',
-            node_for_plugins=processed_node,
-            plugins=plugins,
-            resource_base=resource_base)
-        _process_node_relationships_operations(
-            relationship=relationship,
-            interfaces_attribute='target_interfaces',
-            operations_attribute='target_operations',
-            node_for_plugins=target_node,
-            plugins=plugins,
-            resource_base=resource_base)
-
-
-def _process_operations(
-        partial_error_message,
-        interfaces,
-        plugins,
-        error_code,
-        resource_base):
-    operations = {}
-    for interface_name, interface in interfaces.items():
-        interface_operations = process_interface_operations(
-            interface=interface,
-            plugins=plugins,
-            error_code=error_code,
-            partial_error_message=(
-                "In interface '{0}' {1}".format(interface_name,
-                                                partial_error_message)),
-            resource_base=resource_base)
-        for operation in interface_operations:
-            operation_name = operation.pop('name')
-            if operation_name in operations:
-                # Indicate this implicit operation name needs to be
-                # removed as we can only
-                # support explicit implementation in this case
-                operations[operation_name] = None
-            else:
-                operations[operation_name] = operation
-            operations['{0}.{1}'.format(interface_name,
-                                        operation_name)] = operation
-
-    return dict(
-        (operation_name, operation)
-        for operation_name, operation in operations.iteritems()
-        if operation is not None)
-
-
-def _process_node_relationships_operations(
-        relationship,
-        interfaces_attribute,
-        operations_attribute,
-        node_for_plugins,
-        plugins,
-        resource_base):
-    partial_error_message = (
-        "in relationship of type '{0}' in node '{1}'"
-        .format(relationship['type'], node_for_plugins['id']))
-    operations = _process_operations(
-        partial_error_message=partial_error_message,
-        interfaces=relationship[interfaces_attribute],
-        plugins=plugins,
-        error_code=19,
-        resource_base=resource_base)
-    relationship[operations_attribute] = operations
-
-
-def _process_nodes_plugins(processed_nodes, host_types, plugins):
-    # extract node plugins based on node operations
-    # do we really need node.plugins?
-    nodes_operations = dict((name, []) for name in processed_nodes.iterkeys())
-    for node_name, node in processed_nodes.iteritems():
-        node_operations = nodes_operations[node_name]
-        node_operations.append(node['operations'])
-        for rel in node['relationships']:
-            node_operations.append(rel['source_operations'])
-            nodes_operations[rel['target_id']].append(rel['target_operations'])
-    for node_name, node in processed_nodes.iteritems():
-        node[constants.PLUGINS] = _get_plugins_from_operations(
-            operations_lists=nodes_operations[node_name],
-            processed_plugins=plugins)
-
-    for node in processed_nodes.itervalues():
-        # set plugins_to_install property for nodes
-        if node['type'] in host_types:
-            plugins_to_install = {}
-            for another_node in processed_nodes.itervalues():
-                # going over all other nodes, to accumulate plugins
-                # from different nodes whose host is the current node
-                if another_node.get('host_id') == node['id']:
-                    # ok to override here since we assume it is the same plugin
-                    for plugin in another_node[constants.PLUGINS]:
-                        if plugin[constants.PLUGIN_EXECUTOR_KEY] \
-                                == constants.HOST_AGENT:
-                            plugins_to_install[plugin['name']] = plugin
-            node[constants.PLUGINS_TO_INSTALL] = plugins_to_install.values()
-
-        # set deployment_plugins_to_install property for nodes
-        deployment_plugins_to_install = {}
-        for plugin in node[constants.PLUGINS]:
-            if plugin[constants.PLUGIN_EXECUTOR_KEY] \
-                    == constants.CENTRAL_DEPLOYMENT_AGENT:
-                deployment_plugins_to_install[plugin['name']] = plugin
-        node[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] = \
-            deployment_plugins_to_install.values()
-
-    _validate_agent_plugins_on_host_nodes(processed_nodes)
-
-
-def _get_plugins_from_operations(operations_lists, processed_plugins):
-    plugins = {}
-    for operations in operations_lists:
-        for operation in operations.values():
-            plugin_name = operation['plugin']
-            if not plugin_name:
-                # no-op
-                continue
-            plugin = processed_plugins[plugin_name]
-            operation_executor = operation['executor']
-            plugin_key = (plugin_name, operation_executor)
-            if plugin_key not in plugins:
-                plugin = copy.deepcopy(plugin)
-                plugin['executor'] = operation_executor
-                plugins[plugin_key] = plugin
-    return plugins.values()
-
-
-def _validate_agent_plugins_on_host_nodes(processed_nodes):
-    for node in processed_nodes.itervalues():
-        if 'host_id' in node:
-            continue
-        for plugin in node[constants.PLUGINS]:
-            if plugin[constants.PLUGIN_EXECUTOR_KEY] == constants.HOST_AGENT:
-                raise DSLParsingLogicException(
-                    24,
-                    "node '{0}' has no relationship which makes it "
-                    "contained within a host and it has a "
-                    "plugin '{1}' with '{2}' as an executor. "
-                    "These types of plugins must be "
-                    "installed on a host"
-                    .format(node['id'], plugin['name'], constants.HOST_AGENT))

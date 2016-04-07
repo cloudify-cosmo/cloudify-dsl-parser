@@ -14,7 +14,14 @@
 # limitations under the License.
 
 """
-Aria's tosca_template Package
+Aria's tosca_parser Package
 Path: aria.tosca_template
 """
+
+from parser import Parser
+
 __version__ = '0.0.0.1'
+
+
+default_parser = Parser()
+parse = default_parser.parse

@@ -46,7 +46,7 @@ class PluginInstall(Element):
     schema = Leaf(type=bool)
 
     def parse(self):
-        return self.initial_value or True
+        return self.initial_value if self.initial_value is not None else True
 
 
 class PluginVersionValidatedElement(Element):
@@ -107,14 +107,16 @@ class Plugin(DictElement):
     }
 
     def validate(self):
-        if self.child(PluginInstall).value:
-            if not (self.child(PluginSource).value or
-                    self.child(PluginPackageName).value):
-                raise DSLParsingLogicException(
-                    50,
-                    "Plugin '{0}' needs to be installed, "
-                    "but does not declare a source or package_name property"
-                    .format(self.name))
+        if not self.child(PluginInstall).value:
+            return
+        if (self.child(PluginSource).value or
+                self.child(PluginPackageName).value):
+            return
+        raise DSLParsingLogicException(
+            50,
+            "Plugin '{0}' needs to be installed, "
+            "but does not declare a source or package_name property"
+            .format(self.name))
 
     def parse(self):
         result = super(Plugin, self).parse()

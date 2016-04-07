@@ -15,11 +15,12 @@
 
 from ...interfaces import merge_relationship_type_interfaces
 from ... import constants, utils
-from .. import Requirement, Value, Dict
+from .. import Requirement, Value
 from .plugins import Plugins
 from .types import Type, Types, RelationshipDerivedFrom, derived_from_predicate
 from .data_types import SchemaWithInitialDefault, DataTypes
 from .operation import NodeTypeInterfaces, process_interface_operations
+from . import Dict
 
 
 class Relationship(Type):

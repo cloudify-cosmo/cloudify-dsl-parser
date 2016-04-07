@@ -44,7 +44,7 @@ class Holder(object):
             'start_column={self.start_column},'
             'end_line={self.end_line},'
             'end_column={self.end_column})'
-        )
+            .format(name=self.__class__.__name__, self=self))
 
     def __contains__(self, key):
         key_holder, value_holder = self.get_item(key)

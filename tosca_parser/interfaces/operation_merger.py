@@ -1,19 +1,27 @@
-########
-# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from . import NO_OP, operation_mapping, merge_schema_and_instance_inputs
+from .utils import operation_mapping, merge_schema_and_instance_inputs
+
+
+NO_OP = operation_mapping(
+    executor=None,
+    implementation='',
+    inputs={},
+    max_retries=None,
+    retry_interval=None)
 
 
 class OperationMerger(object):
@@ -37,7 +45,8 @@ class OperationMerger(object):
     def _create_operation(self, raw_operation):
         if raw_operation is None:
             return None
-        return self._create_operation_handlers[type(raw_operation)](raw_operation)
+        return self._create_operation_handlers[
+            type(raw_operation)](raw_operation)
 
     def merge(self):
         raise NotImplementedError('Must be implemented by subclasses')

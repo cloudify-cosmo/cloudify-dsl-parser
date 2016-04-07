@@ -49,7 +49,7 @@ def handle_imports(
         inputs={
             'main_blueprint_holder': parsed_dsl_holder,
             'resources_base_url': resources_base_url,
-            'blueprint_location': resources_base_url.filename,
+            'blueprint_location': parsed_dsl_holder.filename,
             'version': version,
             'resolver': resolver,
             'validate_version': validate_version,

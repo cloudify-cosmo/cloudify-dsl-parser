@@ -16,18 +16,6 @@
 from .. import functions, utils
 from ..exceptions import DSLParsingLogicException
 
-from .interfaces_merger import InterfacesMerger
-from .operation_merger import (
-    NodeTypeNodeTypeOperationMerger,
-    RelationshipTypeRelationshipInstanceOperationMerger,
-    RelationshipTypeRelationshipTypeOperationMerger,
-    NodeTemplateNodeTypeOperationMerger)
-
-
-INTERFACES = 'interfaces'
-SOURCE_INTERFACES = 'source_interfaces'
-TARGET_INTERFACES = 'target_interfaces'
-
 
 def operation_mapping(
         implementation,
@@ -41,15 +29,8 @@ def operation_mapping(
         'inputs': inputs,
         'executor': executor,
         'max_retries': max_retries,
-        'retry_interval': retry_interval
+        'retry_interval': retry_interval,
     }
-
-NO_OP = operation_mapping(
-    executor=None,
-    implementation='',
-    inputs={},
-    max_retries=None,
-    retry_interval=None)
 
 
 def merge_schema_and_instance_inputs(schema_inputs, instance_inputs):
@@ -60,42 +41,6 @@ def merge_schema_and_instance_inputs(schema_inputs, instance_inputs):
     _validate_missing_inputs(merged_inputs, schema_inputs)
     _validate_inputs_types(merged_inputs, schema_inputs)
     return merged_inputs
-
-
-def merge_node_type_interfaces(
-        overriding_interfaces, overridden_interfaces):
-    return InterfacesMerger(
-        overriding_interfaces=overriding_interfaces,
-        overridden_interfaces=overridden_interfaces,
-        operation_merger=NodeTypeNodeTypeOperationMerger
-    ).merge()
-
-
-def merge_node_type_and_node_template_interfaces(
-        node_type_interfaces, node_template_interfaces):
-    return InterfacesMerger(
-        overriding_interfaces=node_template_interfaces,
-        overridden_interfaces=node_type_interfaces,
-        operation_merger=NodeTemplateNodeTypeOperationMerger
-    ).merge()
-
-
-def merge_relationship_type_interfaces(
-        overriding_interfaces, overridden_interfaces):
-    return InterfacesMerger(
-        overriding_interfaces=overriding_interfaces,
-        overridden_interfaces=overridden_interfaces,
-        operation_merger=RelationshipTypeRelationshipTypeOperationMerger
-    ).merge()
-
-
-def merge_relationship_type_and_instance_interfaces(
-        relationship_type_interfaces, relationship_instance_interfaces):
-    return InterfacesMerger(
-        overriding_interfaces=relationship_instance_interfaces,
-        overridden_interfaces=relationship_type_interfaces,
-        operation_merger=RelationshipTypeRelationshipInstanceOperationMerger
-    ).merge()
 
 
 def _validate_missing_inputs(inputs, schema_inputs):

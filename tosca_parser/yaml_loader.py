@@ -25,7 +25,7 @@ from .exceptions import DSLParsingFormatException
 from .holder import Holder
 
 
-def load_yaml(raw_yaml, error_message, filename=None):
+def load(raw_yaml, error_message, filename=None):
     try:
         result = MarkedLoader(raw_yaml, filename).get_single_data()
         return result or Holder.of({}, filename=filename)
