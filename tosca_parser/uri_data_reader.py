@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
-
 import requests
 from retrying import retry
 
@@ -24,8 +22,13 @@ MAX_NUMBER_RETRIES = 5
 
 
 def read_data_from_uri(uri):
-    scheme = uri.split('://', 1)[0]
-    return _READ_HANDLERS_FROM_URI_SCHEMES[scheme](uri)
+    try:
+        scheme, path = uri.split('://', 1)
+        return _READ_HANDLERS_FROM_URI_SCHEMES[scheme](uri)
+    except ValueError:
+        return read_from_path(uri)
+    except KeyError:
+        raise Exception('unknown url type: {0}'.format(uri))
 
 
 def read_from_path(dsl_file_path):
@@ -38,13 +41,12 @@ def read_from_path(dsl_file_path):
 def read_from_url(dsl_url):
     response = requests.get(dsl_url, stream=True)
     if response.status_code != 200:
-        raise Exception  # todo: sort exception
+        raise Exception('status code: {0}'.format(response.status_code))
     return response.raw.read()
 
 
-_READ_HANDLERS_FROM_URI_SCHEMES = defaultdict(
-    lambda: read_from_path,
-    file=read_from_path,
-    http=read_from_url,
-    https=read_from_url,
-)
+_READ_HANDLERS_FROM_URI_SCHEMES = {
+    'file': read_from_path,
+    'http': read_from_url,
+    'https': read_from_url,
+}

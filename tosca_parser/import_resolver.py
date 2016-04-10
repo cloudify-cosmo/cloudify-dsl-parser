@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import abc
-from collections import Iterable
 
 from .exceptions import (
     DSLParsingLogicException, DefaultResolverValidationException)
@@ -147,7 +146,7 @@ class DefaultImportResolver(AbstractImportResolver):
             raise ex
 
     def _validate_rules(self):
-        if not isinstance(self.rules, Iterable):
+        if not isinstance(self.rules, (list, tuple)):
             raise DefaultResolverValidationException(
                 'Invalid parameters supplied for the default resolver: '
                 'The `{0}` parameter must be a list but it is of type {1}.'

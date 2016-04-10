@@ -148,21 +148,13 @@ def _dsl_location_to_url(dsl_location, resources_base_url):
     return dsl_location
 
 
-def _get_resource_location(resource_name,
-                           resources_base_url,
-                           current_resource_context=None):
+def _get_resource_location(resource_name, resources_base_url):
     url_parts = resource_name.split(':')
     if url_parts[0] in ['http', 'https', 'file', 'ftp']:
         return resource_name
 
     if os.path.exists(resource_name):
         return os.path.abspath(resource_name)
-
-    if current_resource_context:
-        candidate_url = current_resource_context[
-            :current_resource_context.rfind('/') + 1] + resource_name
-        if uri_exists(candidate_url):
-            return candidate_url
 
     if resources_base_url:
         return resources_base_url + resource_name
@@ -216,9 +208,8 @@ def _build_ordered_imports(parsed_dsl_holder,
             return
 
         for another_import in imports_value_holder.restore():
-            import_url = _get_resource_location(another_import,
-                                                resources_base_url,
-                                                _current_import)
+            import_url = _get_resource_location(
+                another_import, resources_base_url)
             if import_url is None:
                 ex = DSLParsingLogicException(
                     13, "Import failed: no suitable location found for "
