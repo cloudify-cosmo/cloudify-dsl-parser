@@ -42,7 +42,7 @@ def merge_schemas(overridden_schema, overriding_schema, data_types):
         overridden_type = overridden_property.get('type')
         overridden_default = overridden_property.get('default')
         overriding_initial_default = overriding_property.get(
-            'initial_default', {})
+            'initial_default') or {}
         if all((overriding_type is not None,
                 overriding_type == overridden_type,
                 overriding_type in data_types,

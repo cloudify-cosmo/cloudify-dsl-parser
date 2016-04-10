@@ -49,8 +49,9 @@ class Parser(object):
         :param uri:
         :return:
         """
-        dsl_string = uri_data_reader.read_data_from_uri(uri)
-        return self.parse_from_string(dsl_string, dsl_location=uri)
+        return self._parser_method_template(
+            read_method=uri_data_reader.read_data_from_uri,
+            uri=uri)
 
     def _parser_method_template(self, read_method, uri):
         dsl_string = read_method(uri)
@@ -67,7 +68,7 @@ class Parser(object):
 
         resource_base, merged_blueprint_holder = handle_imports(
             parsed_dsl_holder,
-            os.path.dirname(dsl_location),
+            os.path.dirname(dsl_location) if dsl_location else None,
             version,
             self.import_resolver,
             self.validate_version)
