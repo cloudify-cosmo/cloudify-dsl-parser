@@ -242,3 +242,21 @@ def get_nodes_by_names(plan, names):
         for name in names
         if node['id'] == name
     ]
+
+
+def op_struct(
+        plugin_name,
+        mapping,
+        inputs=None,
+        executor=None,
+        max_retries=None,
+        retry_interval=None):
+    return {
+        'plugin': plugin_name,
+        'operation': mapping,
+        'inputs': inputs or {},
+        'executor': executor,
+        'has_intrinsic_functions': False,
+        'max_retries': max_retries,
+        'retry_interval': retry_interval,
+    }
