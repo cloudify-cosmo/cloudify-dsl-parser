@@ -58,7 +58,7 @@ def modify_deployment(nodes,
         previous_deployment_node_graph,
         modified_nodes)
 
-    # Any node instnaces which were added or removed
+    # Any node instances which were added or removed
     added_and_related = rel_graph.extract_added_node_instances(
         previous_deployment_node_graph, new_deployment_node_graph)
     removed_and_related = rel_graph.extract_removed_node_instances(
@@ -72,7 +72,7 @@ def modify_deployment(nodes,
         previous_deployment_node_graph, new_deployment_node_graph)
 
     # The extracted extended and reduced relationships hold the new and old
-    # node instances, these are not required, since the change is in
+    # node instances. These are not required, since the change is on
     # node instance level (and not the relationship level)
     extended_and_related = \
         filter_out_node_instances(added_and_related, extended_and_related)
