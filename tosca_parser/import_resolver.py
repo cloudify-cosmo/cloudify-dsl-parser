@@ -18,8 +18,7 @@ import abc
 from .exceptions import (
     DSLParsingLogicException, DefaultResolverValidationException)
 from .uri_data_reader import read_data_from_uri
-
-DEFAULT_RESLOVER_RULES_KEY = 'rules'
+from .constants import DEFAULT_RESLOVER_RULES_KEY
 
 
 def read_import(import_url):

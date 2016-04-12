@@ -35,7 +35,7 @@ class Parser(object):
     def __getattr__(self, item):
         if not item.startswith('parse_from'):
             return super(Parser, self).__getattribute__(item)
-        read_from_method_name = item.repname('parse_', 'read_', 1)
+        read_from_method_name = item.replace('parse_', 'read_', 1)
         try:
             read_method = getattr(uri_data_reader, read_from_method_name)
         except AttributeError:
@@ -66,9 +66,12 @@ class Parser(object):
         version = validate_version_schema(
             parsed_dsl_holder, self.validate_version)
 
+        if dsl_location and not os.path.isdir(dsl_location):
+            dsl_location = os.path.dirname(dsl_location)
+
         resource_base, merged_blueprint_holder = handle_imports(
             parsed_dsl_holder,
-            os.path.dirname(dsl_location) if dsl_location else None,
+            dsl_location,
             version,
             self.import_resolver,
             self.validate_version)

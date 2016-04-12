@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from .requirements import Requirement, Value, sibling_predicate
-from .parser import parse
+from .parser import parse, validate_schema_api
 from .elements.blueprint import (
     BlueprintVersionExtractor, BlueprintImporter, Blueprint)
 from .elements import (

@@ -79,3 +79,5 @@ USER_PRIMITIVE_TYPES = ['string', 'integer', 'float', 'boolean']
 NODE_TEMPLATE_SCOPE = 'node_template'
 NODE_TEMPLATE_RELATIONSHIP_SCOPE = 'node_template_relationship'
 OUTPUTS_SCOPE = 'outputs'
+
+DEFAULT_RESLOVER_RULES_KEY = 'rules'

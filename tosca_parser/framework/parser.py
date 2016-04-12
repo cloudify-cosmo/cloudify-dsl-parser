@@ -20,7 +20,11 @@ from ..exceptions import (
     DSLParsingLogicException, DSLParsingSchemaAPIException,
     ERROR_CODE_CYCLE,
 )
-from . import elements, Requirement
+from .elements import (
+    Element, ElementType, UnknownElement,
+    UnknownSchema, Dict, Leaf, List,
+)
+from . import Requirement
 
 
 def parse(value,
@@ -115,14 +119,14 @@ class Context(object):
         if isinstance(schema, dict):
             self._traverse_dict_schema(schema=schema,
                                        parent_element=parent_element)
-        elif isinstance(schema, elements.ElementType):
+        elif isinstance(schema, ElementType):
             self._traverse_element_type_schema(
                 schema=schema,
                 parent_element=parent_element)
         elif isinstance(schema, list):
             self._traverse_list_schema(schema=schema,
                                        parent_element=parent_element)
-        elif isinstance(schema, elements.UnknownSchema):
+        elif isinstance(schema, UnknownSchema):
             pass
         else:
             raise ValueError('Illegal state should have been identified'
@@ -147,16 +151,16 @@ class Context(object):
         for k_holder, v_holder in parent_element.initial_value_holder.value.\
                 iteritems():
             if k_holder.value not in parsed_names:
-                self._traverse_element_cls(element_cls=elements.UnknownElement,
+                self._traverse_element_cls(element_cls=UnknownElement,
                                            name=k_holder, value=v_holder,
                                            parent_element=parent_element)
 
     def _traverse_element_type_schema(self, schema, parent_element):
-        if isinstance(schema, elements.Leaf):
+        if isinstance(schema, Leaf):
             return
 
         element_cls = schema.type
-        if isinstance(schema, elements.Dict):
+        if isinstance(schema, Dict):
             if not isinstance(parent_element.initial_value, dict):
                 return
             for name_holder, value_holder in parent_element.\
@@ -165,7 +169,7 @@ class Context(object):
                                            name=name_holder,
                                            value=value_holder,
                                            parent_element=parent_element)
-        elif isinstance(schema, elements.List):
+        elif isinstance(schema, List):
             if not isinstance(parent_element.initial_value, list):
                 return
             for index, value_holder in enumerate(
@@ -228,7 +232,10 @@ class Context(object):
 
 
 def validate_schema_api(element_cls):
-    if not issubclass(element_cls, elements.Element):
+    try:
+        if not issubclass(element_cls, Element):
+            raise DSLParsingSchemaAPIException(1)
+    except TypeError:
         raise DSLParsingSchemaAPIException(1)
     _traverse_schema(element_cls.schema)
 
@@ -246,17 +253,17 @@ def _traverse_schema(schema, list_nesting=0):
             raise DSLParsingSchemaAPIException(1)
         for value in schema:
             _traverse_schema(value, list_nesting+1)
-    elif isinstance(schema, elements.ElementType):
-        if isinstance(schema, elements.Leaf):
+    elif isinstance(schema, ElementType):
+        if isinstance(schema, Leaf):
             if not isinstance(schema.type, (type, list, tuple)):
                 raise DSLParsingSchemaAPIException(1)
             if (isinstance(schema.type, (list, tuple)) and
                 (not schema.type or
                  not all([isinstance(i, type) for i in schema.type]))):
                 raise DSLParsingSchemaAPIException(1)
-        elif isinstance(schema, elements.Dict):
+        elif isinstance(schema, Dict):
             validate_schema_api(schema.type)
-        elif isinstance(schema, elements.List):
+        elif isinstance(schema, List):
             validate_schema_api(schema.type)
         else:
             raise DSLParsingSchemaAPIException(1)
@@ -272,7 +279,7 @@ def _validate_element_schema(element, strict):
                .format(element.name))
 
     def validate_schema(schema):
-        if isinstance(schema, (dict, elements.Dict)):
+        if isinstance(schema, (dict, Dict)):
             if not isinstance(value, dict):
                 raise DSLParsingFormatException(
                     1, _expected_type_message(value, dict))
@@ -296,12 +303,12 @@ def _validate_element_schema(element, strict):
                             break
                     raise ex
 
-        if (isinstance(schema, elements.List) and
+        if (isinstance(schema, List) and
                 not isinstance(value, list)):
             raise DSLParsingFormatException(
                 1, _expected_type_message(value, list))
 
-        if (isinstance(schema, elements.Leaf) and
+        if (isinstance(schema, Leaf) and
                 not isinstance(value, schema.type)):
             raise DSLParsingFormatException(
                 1, _expected_type_message(value, schema.type))

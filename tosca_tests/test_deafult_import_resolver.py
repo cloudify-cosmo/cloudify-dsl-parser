@@ -223,9 +223,9 @@ class TestDefaultResolver(TestCase):
                     if expected_failure:
                         err_msg = 'resolve should have been failed'
                         if partial_err_msg:
-                            err_msg = \
-                                '{0} with error message that contains: {1}'\
-                                .format(err_msg, partial_err_msg)
+                            err_msg = (
+                                '{0} with error message that contains: {1}'
+                                .format(err_msg, partial_err_msg))
                         raise AssertionError(err_msg)
                 except DSLParsingLogicException, ex:
                     if not expected_failure:

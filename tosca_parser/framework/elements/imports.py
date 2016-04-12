@@ -157,7 +157,7 @@ def _get_resource_location(resource_name, resources_base_url):
         return os.path.abspath(resource_name)
 
     if resources_base_url:
-        return resources_base_url + resource_name
+        return os.path.join(resources_base_url, resource_name)
 
     return None
 
@@ -220,7 +220,6 @@ def _build_ordered_imports(parsed_dsl_holder,
                 imports_graph.add_graph_dependency(import_url,
                                                    location(_current_import))
             else:
-                # todo: I'm here
                 raw_imported_dsl = resolver.fetch_import(import_url)
                 imported_dsl_holder = load(
                     raw_yaml=raw_imported_dsl,

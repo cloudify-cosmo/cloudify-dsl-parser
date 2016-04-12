@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import requests
+from requests.exceptions import HTTPError
 from retrying import retry
 
 DEFAULT_RETRY_DELAY = 1
@@ -32,6 +33,7 @@ def read_data_from_uri(uri):
 
 
 def read_from_path(dsl_file_path):
+    dsl_file_path = dsl_file_path.replace('file://', '', 1)
     with open(dsl_file_path, 'r') as f:
         return f.read()
 
@@ -41,7 +43,9 @@ def read_from_path(dsl_file_path):
 def read_from_url(dsl_url):
     response = requests.get(dsl_url, stream=True)
     if response.status_code != 200:
-        raise Exception('status code: {0}'.format(response.status_code))
+        raise HTTPError(
+            'status code: {0}, url: {1}'.format(response.status_code, dsl_url),
+            response=response)
     return response.raw.read()
 
 

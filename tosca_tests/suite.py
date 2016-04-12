@@ -84,7 +84,7 @@ class TempDirectoryTestCase(TestCase):
             path = self.make_yaml_file(content)
             return import_path_maker(path)
 
-        return '\nimports:{0}'.format(
+        return '\nimports:\n    -   {0}'.format(
             '\n    -   '.join(imap(import_creator, contents)))
 
 
@@ -101,10 +101,14 @@ class ParserTestCase(TestCase):
         self.template = None
         super(ParserTestCase, self).tearDown()
 
-    def parse(self, import_resolver=None, validate_version=True):
+    def parse(self,
+              import_resolver=None,
+              validate_version=True,
+              dsl_location=None):
         parser = Parser(import_resolver=import_resolver,
                         validate_version=validate_version)
-        return parser.parse_from_string(str(self.template))
+        return parser.parse_from_string(
+            str(self.template), dsl_location=dsl_location)
 
     def assert_parser_raise_exception(
             self, error_code, exception_types, extra_tests=()):
@@ -119,8 +123,47 @@ class ParserTestCase(TestCase):
 
 
 class Template(object):
+    BASIC_NODE_TEMPLATES_SECTION = (
+        '\nnode_templates:\n'
+        '    test_node:\n'
+        '        type: test_type\n'
+        '        properties:\n'
+        '            key: "val"\n'
+    )
+    BASIC_PLUGIN = (
+        '\nplugins:\n'
+        '    test_plugin:\n'
+        '        executor: central_deployment_agent\n'
+        '        source: dummy\n'
+    )
+
+    BASIC_TYPE = (
+        '\nnode_types:\n'
+        '    test_type:\n'
+        '        interfaces:\n'
+        '            test_interface1:\n'
+        '                install:\n'
+        '                    implementation: test_plugin.install\n'
+        '                    inputs: {}\n'
+        '                terminate:\n'
+        '                    implementation: test_plugin.terminate\n'
+        '                    inputs: {}\n'
+        '        properties:\n'
+        '            install_agent:\n'
+        '               default: "false"\n'
+        '            key: {}\n'
+    )
+
+    PLUGIN_WITH_INSTALL_ARGS = (
+        '\nplugins:\n'
+        '    test_plugin:\n'
+        '        executor: central_deployment_agent\n'
+        '        source: dummy\n'
+        '        install_arguments: -r requirements.txt\n'
+    )
+
     def __init__(self):
-        self.template = ''
+        self.clear()
 
     def __str__(self):
         return self.template
@@ -129,9 +172,16 @@ class Template(object):
         self.template += other
         return self
 
-    def version_section(self, version):
-        self.template += ('\ntosca_definitions_version: cloudify_dsl_{0}\n'
-                          .format(version.replace('.', '_')))
+    def clear(self):
+        self.template = ''
+
+    def version_section(self, version, raw=False):
+        version_str = (
+            '\ntosca_definitions_version: cloudify_dsl_{0}\n'
+            .format(version.replace('.', '_')))
+        if raw:
+            return version_str
+        self.template += version_str
 
     def node_type_section(self, **kwargs):
         self.template += (
@@ -143,13 +193,7 @@ class Template(object):
         )
 
     def node_template_section(self):
-        self.template += (
-            '\nnode_templates:\n'
-            '    test_node:\n'
-            '        type: test_type\n'
-            '        properties:\n'
-            '            key: "val"\n'
-        )
+        self.template += self.BASIC_NODE_TEMPLATES_SECTION
 
     def data_types_section(
             self,
@@ -168,6 +212,33 @@ class Template(object):
                     extras=extras)
         )
 
+    def plugin_section(self):
+        self.template += self.BASIC_PLUGIN
+
+    def input_section(self):
+        self.template += (
+            '\ninputs:\n'
+            '    test_input:\n'
+            '        type: string\n'
+            '        default: test_input_default_value\n'
+        )
+
+    def output_section(self):
+        self.template += (
+            '\noutputs:\n'
+            '    test_output:\n'
+            '        value: test_output_value\n'
+        )
+
 
 def get_node_by_name(plan, name):
-        return [x for x in plan.node_templates if x['name'] == name][0]
+    return [x for x in plan.node_templates if x['name'] == name][0]
+
+
+def get_nodes_by_names(plan, names):
+    return [
+        node
+        for node in plan.node_templates
+        for name in names
+        if node['id'] == name
+    ]
