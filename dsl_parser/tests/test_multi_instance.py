@@ -26,7 +26,6 @@ from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
 class TestMultiInstance(AbstractTestParser):
-
     BASE_BLUEPRINT = """
 node_types:
     cloudify.nodes.Compute:
@@ -59,6 +58,57 @@ node_templates:
         return modify_deployment(plan['nodes'],
                                  plan['node_instances'],
                                  modified_nodes)
+
+    def test_base_nodes(self):
+        return self.BASE_BLUEPRINT + """
+    without_rel:
+        type: type
+    with_rel:
+        type: type
+"""
+
+    def test_new_node(self):
+        blueprint = self.test_base_nodes()
+
+        plan = self.parse_multi(blueprint)
+
+        plan['nodes'].append({
+            'name': 'new_node',
+            'id': 'new_node',
+            'type': 'new_type',
+            'number_of_instances': 1
+        })
+        new_node = [n for n in plan['nodes'] if n['id'] == 'new_node'][0]
+
+        modified_nodes = [new_node]
+        self.modify_multi(plan, modified_nodes=modified_nodes)
+
+    def test_new_relationship(self):
+        blueprint = self.test_base_nodes()
+
+        connected_to = 'cloudify.relationships.connected_to'
+        rel_type = connected_to
+
+        plan = self.parse_multi(blueprint)
+
+        with_rel = [n for n in plan['nodes'] if n['id'] == 'with_rel'][0]
+        without_rel = [n for n in plan['nodes'] if n['id'] == 'without_rel'][0]
+        with_rel['relationships'] = \
+            [{'type': rel_type,
+              'type_hierarchy': [rel_type],
+              'target_id': without_rel['id'],
+              'source_interface': {
+                  'cloudify.interfaces.relationship_lifecycle': {
+                      'preconfigure': 'scripts/increment.sh',
+                      'establish': 'scripts/increment.sh',
+                      'postconfigure': 'scripts/increment.sh'
+                  }
+              },
+              'properties': {
+                  'connection_type': 'all_to_all'
+              }}]
+        modified_nodes = [with_rel]
+        self.modify_multi(plan, modified_nodes=modified_nodes)
 
     def test_single_node(self):
 
@@ -209,9 +259,9 @@ node_templates:
         webserver_relationships = webserver['relationships']
         self.assertEquals(2, len(webserver_relationships))
         webserver_host_rel = self._relationships_by_target_name(
-            webserver_relationships, 'host2')[0]
+                webserver_relationships, 'host2')[0]
         webserver_db_rel = self._relationships_by_target_name(
-            webserver_relationships, 'db')[0]
+                webserver_relationships, 'db')[0]
         self.assertEquals(host2['id'],
                           webserver_host_rel['target_id'])
         self.assertEquals(db['id'],
@@ -220,9 +270,9 @@ node_templates:
         db_dependent_relationships = db_dependent['relationships']
         self.assertEquals(2, len(db_dependent_relationships))
         db_dependent_db_rel = self._relationships_by_target_name(
-            db_dependent_relationships, 'db')[0]
+                db_dependent_relationships, 'db')[0]
         db_dependent_host_rel = self._relationships_by_target_name(
-            db_dependent_relationships, 'host1')[0]
+                db_dependent_relationships, 'host1')[0]
         self.assertEquals(db['id'],
                           db_dependent_db_rel['target_id'])
         self.assertEquals(host1['id'],
@@ -351,13 +401,13 @@ node_templates:
         self.assertEquals(host3_2['id'], host3_2['host_id'])
 
         self._assert_each_node_valid_hosted(
-            webserver1_nodes, host2_nodes)
+                webserver1_nodes, host2_nodes)
         self._assert_each_node_valid_hosted(
-            webserver2_nodes, host2_nodes)
+                webserver2_nodes, host2_nodes)
         self._assert_each_node_valid_hosted(
-            db_nodes, host1_nodes)
+                db_nodes, host1_nodes)
         self._assert_each_node_valid_hosted(
-            db_dependent_nodes, host1_nodes)
+                db_dependent_nodes, host1_nodes)
 
         network_1_relationships = network_1['relationships']
         host1_1_relationships = host1_1['relationships']
@@ -453,13 +503,13 @@ node_templates:
 
     def _assert_contained(self, source_relationships, node_ids, target_name):
         relationships = self._relationships_by_target_name(
-            source_relationships, target_name)
+                source_relationships, target_name)
         target_ids = [rel['target_id'] for rel in relationships]
         self.assertEqual(set(node_ids), set(target_ids))
 
     def _assert_all_to_one(self, source_relationships, node_ids, target_name):
         relationships = self._relationships_by_target_name(
-            source_relationships, target_name)
+                source_relationships, target_name)
         target_ids = [rel['target_id'] for rel in relationships]
         self.assertEqual(1, len(set(target_ids)))
         self.assertIn(target_ids[0], node_ids)
@@ -469,7 +519,7 @@ node_templates:
                            node_ids, target_name):
         for source_relationships in source_relationships_lists:
             relationships = self._relationships_by_target_name(
-                source_relationships, target_name)
+                    source_relationships, target_name)
             target_ids = [rel['target_id'] for rel in relationships]
             self.assertEqual(set(node_ids), set(target_ids))
 
@@ -999,9 +1049,9 @@ node_templates:
         db_nodes = self._nodes_by_name(node_instances, 'db')
         host2_nodes = self._nodes_by_name(node_instances, 'host2')
         initial_target_id = self._assert_all_to_one(
-            self._nodes_relationships(db_nodes, 'host2'),
-            self._node_ids(host2_nodes),
-            'host2')
+                self._nodes_relationships(db_nodes, 'host2'),
+                self._node_ids(host2_nodes),
+                'host2')
         modification = self.modify_multi(plan, {
             'host2': {'instances': 10},
             'db': {'instances': 10}
@@ -1015,9 +1065,9 @@ node_templates:
         added_host2_nodes = self._nodes_by_name(added_and_related, 'host2')
         self.assertEqual(6, len(added_host2_nodes))
         new_target_id = self._assert_all_to_one(
-            self._nodes_relationships(added_db_nodes, 'host2'),
-            self._node_ids(host2_nodes + added_host2_nodes),
-            'host2')
+                self._nodes_relationships(added_db_nodes, 'host2'),
+                self._node_ids(host2_nodes + added_host2_nodes),
+                'host2')
         self.assertEqual(initial_target_id, new_target_id)
 
     def test_removed_ids_hint(self):
@@ -1048,7 +1098,7 @@ node_templates:
             })
             self._assert_modification(modification, 0, 3, 0, 3)
             removed_host_ids = self._node_ids(self._nodes_by_name(
-                modification['removed_and_related'], 'host'))
+                    modification['removed_and_related'], 'host'))
             self.assertEqual(removed_host_ids, [host_id])
 
         for host_id in host_ids:
@@ -1060,7 +1110,7 @@ node_templates:
             })
             self._assert_modification(modification, 0, 3, 0, 3)
             removed_host_ids = self._node_ids(self._nodes_by_name(
-                modification['removed_and_related'], 'host'))
+                    modification['removed_and_related'], 'host'))
             self.assertNotIn(host_id, removed_host_ids)
 
         for db_id in db_ids:
@@ -1072,7 +1122,7 @@ node_templates:
             })
             self._assert_modification(modification, 0, 6, 0, 3)
             removed_db_ids = self._node_ids(self._nodes_by_name(
-                modification['removed_and_related'], 'db'))
+                    modification['removed_and_related'], 'db'))
             self.assertIn(db_id, removed_db_ids)
 
         for db_id in db_ids:
@@ -1084,7 +1134,7 @@ node_templates:
             })
             self._assert_modification(modification, 0, 6, 0, 3)
             removed_db_ids = self._node_ids(self._nodes_by_name(
-                modification['removed_and_related'], 'db'))
+                    modification['removed_and_related'], 'db'))
             self.assertNotIn(db_id, removed_db_ids)
 
         # give all nodes as include hint to see we only take what is needed

@@ -151,6 +151,54 @@ def extract_removed_node_instances(previous_deployment_node_graph,
     return extract_node_instances(removed_instances_graph, copy_instances=True)
 
 
+def _graph_diff_relationships(G, H, node_instance_attributes):
+    """
+    G represents the base and H represents the changed graph.
+    :param G:
+    :param H:
+    :param node_instance_attributes:
+    :return:
+    """
+    result = nx.DiGraph()
+    for source, dest, data in G.edges_iter(data=True):
+        if source in H and \
+                (dest not in H[source] or cmp(H[source][dest], data) != 0):
+            new_node = copy.deepcopy(G.node[source])
+
+            new_node['node']['relationships'].append(data['relationship'])
+            result.add_node(source, new_node,
+                            node_instance_attributes=node_instance_attributes)
+            if dest in H[source]:
+                result.add_node(dest, H.node[dest])
+            else:
+                result.add_node(dest, G.node[dest])
+            result.add_edge(source, dest, G[source][dest])
+    return result
+
+
+def extract_added_relationships(previous_deployment_node_graph,
+                                new_deployment_node_graph):
+
+    modified_instance_graph = _graph_diff_relationships(
+        new_deployment_node_graph,
+        previous_deployment_node_graph,
+        node_instance_attributes={'modification': 'extended'},
+    )
+
+    return extract_node_instances(modified_instance_graph, copy_instances=True)
+
+
+def extract_removed_relationships(previous_deployment_node_graph,
+                                  new_deployment_node_graph):
+    modified_instance_graph = _graph_diff_relationships(
+        previous_deployment_node_graph,
+        new_deployment_node_graph,
+        node_instance_attributes={'modification': 'reduced'},
+    )
+
+    return extract_node_instances(modified_instance_graph, copy_instances=True)
+
+
 def _graph_diff(G, H, node_instance_attributes):
     result = nx.DiGraph()
     for n1, data in G.nodes_iter(data=True):
