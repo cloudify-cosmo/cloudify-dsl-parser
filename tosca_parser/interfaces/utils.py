@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .. import functions, utils
 from ..exceptions import DSLParsingLogicException
+from ..framework import functions
+from .. import utils
 
 
 def operation_mapping(

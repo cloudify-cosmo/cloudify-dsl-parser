@@ -39,19 +39,12 @@ class BlueprintVersionExtractor(Element):
     }
 
     def parse(self, version, plan_version):
-        return {
-            'version': version,
-            'plan_version': plan_version
-        }
+        return {'version': version, 'plan_version': plan_version}
 
 
 class BlueprintImporter(Element):
-    schema = {
-        'imports': ImportsLoader,
-    }
-    requires = {
-        ImportsLoader: ['resource_base'],
-    }
+    schema = {'imports': ImportsLoader}
+    requires = {ImportsLoader: ['resource_base']}
 
     def parse(self, resource_base):
         return {

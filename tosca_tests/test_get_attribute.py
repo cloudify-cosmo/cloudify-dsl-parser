@@ -19,7 +19,7 @@ from testtools import TestCase
 from tosca_parser.exceptions import (
     FunctionEvaluationError,
 )
-from tosca_parser.functions import evaluate_functions
+from tosca_parser.framework.functions import evaluate_functions
 # from dsl_parser.tasks import prepare_deployment_plan
 
 

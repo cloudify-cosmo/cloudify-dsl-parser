@@ -15,10 +15,14 @@
 import os
 from functools import partial
 
-from .framework import validate_version_schema, handle_imports, parse_blueprint
 from .import_resolver import DefaultImportResolver
-from .functions import validate_functions
 from .yaml_loader import load
+from .framework import (
+    validate_version_schema,
+    handle_imports,
+    parse_blueprint,
+    validate_functions,
+)
 from . import uri_data_reader
 
 

@@ -18,7 +18,7 @@ Aria's tosca_parser Package
 Path: aria.tosca_template
 """
 
-from parser import Parser
+from .parser import Parser
 
 __version__ = '0.0.0.1'
 

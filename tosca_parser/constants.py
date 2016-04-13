@@ -35,10 +35,9 @@ OUTPUTS = 'outputs'
 DERIVED_FROM = 'derived_from'
 DATA_TYPES = 'data_types'
 
+# todo: remove cloudify from here...
 HOST_TYPE = 'cloudify.nodes.Compute'
-DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
-CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
 
 CENTRAL_DEPLOYMENT_AGENT = 'central_deployment_agent'
 HOST_AGENT = 'host_agent'
@@ -57,7 +56,6 @@ PLUGINS_TO_INSTALL = 'plugins_to_install'
 DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
 WORKFLOW_PLUGINS_TO_INSTALL = 'workflow_plugins_to_install'
 VERSION = 'version'
-CLOUDIFY = 'cloudify'
 
 SCRIPT_PLUGIN_NAME = 'script'
 SCRIPT_PLUGIN_RUN_TASK = 'script_runner.tasks.run'

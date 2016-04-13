@@ -17,7 +17,7 @@ import copy
 import importlib
 import sys
 
-from .functions import parse
+from .framework.functions import parse
 from .constants import (
     RESOLVER_IMPLEMENTATION_KEY,
     RESLOVER_PARAMETERS_KEY,

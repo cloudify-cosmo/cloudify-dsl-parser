@@ -23,8 +23,8 @@ class OutputDescription(Element):
 
 
 class OutputValue(Element):
-    required = True
     schema = Leaf(type=PRIMITIVE_TYPES)
+    required = True
 
 
 class Output(Element):

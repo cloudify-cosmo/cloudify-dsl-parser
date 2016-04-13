@@ -23,6 +23,7 @@ from .elements import (
     Element, ElementType, DictElement, UnknownElement,
     UnknownSchema,
 )
+from functions import validate_functions
 
 
 def validate_version_schema(

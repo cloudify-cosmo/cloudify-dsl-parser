@@ -17,8 +17,8 @@ import abc
 import pkg_resources
 from functools import partial
 
-from . import constants, scan
-from .exceptions import UnknownInputError, FunctionEvaluationError
+from .. import constants, scan
+from ..exceptions import UnknownInputError, FunctionEvaluationError
 
 
 def _register_entry_point_functions():

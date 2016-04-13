@@ -18,7 +18,7 @@ from unittest import skip
 from tosca_parser.exceptions import (
     DSLParsingFormatException, FunctionEvaluationError,
 )
-from tosca_parser.functions import (
+from tosca_parser.framework.functions import (
     parse, GetAttribute, evaluate_outputs,
 )
 # from dsl_parser.tasks import prepare_deployment_plan
