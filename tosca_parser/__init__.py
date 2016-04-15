@@ -14,14 +14,22 @@
 # limitations under the License.
 
 """
-Aria's tosca_parser Package
-Path: aria.tosca_template
+Aria's parser Package
+Path: aria.parser
 """
 
 from .parser import Parser
+from .expansion_tools import ParserExpander
 
 __version__ = '0.0.0.1'
 
 
 default_parser = Parser()
+default_expander = ParserExpander()
+
 parse = default_parser.parse
+
+
+def expand(element_expantions=(), function_expantions=()):
+    default_expander.expand_elements(*element_expantions)
+    default_expander.expand_property_functions(*function_expantions)

@@ -14,34 +14,26 @@
 # limitations under the License.
 
 import abc
-import pkg_resources
 from functools import partial
 
 from .. import constants, scan
 from ..exceptions import UnknownInputError, FunctionEvaluationError
 
 
-def _register_entry_point_functions():
-    for entry_point in pkg_resources.iter_entry_points(
-            group='cloudify.tosca.ext.functions'):
-        register(fn=entry_point.load(), name=entry_point.name)
-_register_entry_point_functions()
-
-
 SELF, SOURCE, TARGET = 'SELF', 'SOURCE', 'TARGET'
-TEMPLATE_FUNCTIONS = {}
+template_functions = {}
 
 
-def register(fn=None, name=None):
-    if fn is None:
+def register(function_cls=None, name=None):
+    if function_cls is None:
         return partial(register, name=name)
-    TEMPLATE_FUNCTIONS[name] = fn
-    fn.name = name
-    return fn
+    template_functions[name] = function_cls
+    function_cls.name = name
+    return function_cls
 
 
 def unregister(name):
-    TEMPLATE_FUNCTIONS.pop(name, None)
+    template_functions.pop(name, None)
 
 
 class RuntimeEvaluationStorage(object):
@@ -338,9 +330,9 @@ class Concat(Function):
 def parse(raw_function, scope=None, context=None, path=None):
     if isinstance(raw_function, dict) and len(raw_function) == 1:
         func_name = raw_function.keys()[0]
-        if func_name in TEMPLATE_FUNCTIONS:
+        if func_name in template_functions:
             func_args = raw_function.values()[0]
-            return TEMPLATE_FUNCTIONS[func_name](
+            return template_functions[func_name](
                 func_args,
                 scope=scope,
                 context=context,
@@ -552,3 +544,5 @@ def _handler(evaluator, **evaluator_kwargs):
             scanned = True
         return evaluated_value
     return handler
+
+import pkg_resources
