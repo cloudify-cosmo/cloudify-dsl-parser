@@ -8,11 +8,14 @@ from functools import wraps, partial
 
 from tosca_parser.framework.elements.blueprint import Blueprint
 from tosca_parser.framework.functions import template_functions
-from tosca_parser.expansion_tools import (
-    Element, ElementExpansion,
-    Function, PropertyFunctionExpansion,
+
+from tosca_parser.extension_tools import (  # from tosca_parser.extension_tools the user can get:
+    Element,                                # base-element class to create custom Element
+    ElementExtension,                       # Element Extension object
+    Function,                               # base-function class to create custom Function
+    IntrinsicFunctionExtension,             # Function Extension object
 )
-from tosca_parser import parse, expand
+from tosca_parser import parse, extend
 
 
 def main_demo():
@@ -27,8 +30,8 @@ def main_demo():
     print('    action: replace element')
     print('    target_element: element to action on')
     print('    new_element: element to action with')
-    element_expantion = ElementExpansion(
-        action=ElementExpansion.REPLACE_ELEMENT_ACTION,
+    element_expantion = ElementExtension(
+        action=ElementExtension.REPLACE_ELEMENT_ACTION,
         target_element=Blueprint,
         new_element=TestBlueprint)
     print('element_expantion: {0!r}'.format(element_expantion))
@@ -38,25 +41,24 @@ def main_demo():
     print('    action: add function')
     print('    name: function name')
     print('    function: Function class to action with')
-    function_expantion = PropertyFunctionExpansion(
-        action=PropertyFunctionExpansion.ADD_FUNCTION_ACTION,
-        name='test_func',
-        function=type('TestFunction', (Function,), {}),
-    )
+    function_expantion = IntrinsicFunctionExtension(
+        action=IntrinsicFunctionExtension.ADD_FUNCTION_ACTION,
+        name='test_function',
+        function=type('TestFunction', (Function,), {}))
     print('function_expantion: {0!r}'.format(function_expantion))
 
     print('Expanding the aria.parser "Language"')
-    expand(element_expantions=[element_expantion],
-           function_expantions=[function_expantion])
+    extend(element_extentions=[element_expantion],
+           function_expansions=[function_expantion])
 
     print('Check function expanded, result:'.format(
-        bool(template_functions.get('test_func'))))
+        bool(template_functions.get('test_function'))))
 
-    tosca_template = ('/home/liorm/work/workspace/bootstrap/'
-                      'cloudify-manager-blueprints/'
-                      'openstack-manager-blueprint.yaml')
+    tosca_template = (
+        '/home/liorm/work/workspace/bootstrap/cloudify-manager-blueprints/'
+        'openstack-manager-blueprint.yaml')
     print('Check element replacement expanding:')
-    print('    for this test lets run the parser')
+    print("    for this test we'll run the parser")
     print('tosca-template: {0}'.format(tosca_template))
     parse(tosca_template)
     print('Success!...')

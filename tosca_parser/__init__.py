@@ -16,20 +16,23 @@
 """
 Aria's parser Package
 Path: aria.parser
+
+Methods:
+    * default_parser - Parser class instance with default values
+    * default_expander - ParserExpander class instance with default values
+    * parse - default_parser.parse method
+    * expand - default parser language expansion method
+
 """
 
 from .parser import Parser
-from .expansion_tools import ParserExpander
+from .extension_tools import ParserExtender
 
-__version__ = '0.0.0.1'
+__version__ = '0.1.0.0'
 
 
 default_parser = Parser()
-default_expander = ParserExpander()
+default_expander = ParserExtender()
 
 parse = default_parser.parse
-
-
-def expand(element_expantions=(), function_expantions=()):
-    default_expander.expand_elements(*element_expantions)
-    default_expander.expand_property_functions(*function_expantions)
+extend = default_expander.extend
