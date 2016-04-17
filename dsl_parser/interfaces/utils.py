@@ -19,10 +19,10 @@ from dsl_parser import (functions,
 from dsl_parser.exceptions import DSLParsingLogicException
 
 
-def validate_missing_inputs(inputs, schema_inputs):
-    """Check that all inputs defined in schema_inputs exist in inputs"""
+def validate_missing_inputs(inputs, inputs_schema):
+    """Check that all inputs defined in inputs_schema exist in inputs"""
 
-    missing_inputs = set(schema_inputs) - set(inputs)
+    missing_inputs = set(inputs_schema) - set(inputs)
     if missing_inputs:
         if len(missing_inputs) == 1:
             message = "Input '{0}' is missing a value".format(
