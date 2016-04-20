@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tosca_parser.constants import SCRIPT_PLUGIN_NAME
-from tosca_parser.exceptions import (
+from aria.parser.constants import SCRIPT_PLUGIN_NAME
+from aria.parser.exceptions import (
     DSLParsingLogicException,
     DSLParsingException,
     ERROR_UNKNOWN_TYPE,
     ERROR_VALUE_DOES_NOT_MATCH_TYPE,
     ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
 )
-from tosca_parser.version import parse_dsl_version, DSL_VERSION_1_0
+from aria.parser.version import parse_dsl_version, DSL_VERSION_1_0
 from tosca_parser import parse
 
 from .suite import ParserTestCase, TempDirectoryTestCase

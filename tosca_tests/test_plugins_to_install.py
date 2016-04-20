@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tosca_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
+from aria.parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 
 from .suite import ParserTestCase, op_struct, get_nodes_by_names
 
@@ -209,7 +209,9 @@ plugins:
         source: dummy
 """
         result = self.parse()
+
         self.assertEquals(2, len(result['nodes']))
+
         nodes = get_nodes_by_names(result, ['test_node', 'test_node2'])
         self.assertEquals('test_node2', nodes[0]['id'])
         self.assertEquals(2, len(nodes[0]['relationships']))
@@ -218,27 +220,33 @@ plugins:
         self.assertEquals('test_relationship', relationship1['type'])
         self.assertEquals('test_node', relationship1['target_id'])
         rel1_source_ops = relationship1['source_operations']
-        self.assertEqual(op_struct('test_plugin1', 'install',
-                                   executor='central_deployment_agent'),
-                         rel1_source_ops['install'])
-        self.assertEqual(op_struct('test_plugin1', 'install',
-                                   executor='central_deployment_agent'),
-                         rel1_source_ops['test_interface1.install'])
+        self.assertEqual(
+            op_struct('test_plugin1', 'install',
+                      executor='central_deployment_agent'),
+            rel1_source_ops['install'])
+        self.assertEqual(
+            op_struct('test_plugin1', 'install',
+                      executor='central_deployment_agent'),
+            rel1_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel1_source_ops))
         self.assertEquals(8, len(relationship1))
+
         plugin1_def = nodes[0]['plugins'][0]
         self.assertEquals('test_plugin1', plugin1_def['name'])
 
         relationship2 = nodes[0]['relationships'][1]
         self.assertEquals('test_relationship', relationship2['type'])
         self.assertEquals('test_node', relationship2['target_id'])
+
         rel2_source_ops = relationship2['target_operations']
-        self.assertEqual(op_struct('test_plugin2', 'install',
-                                   executor='central_deployment_agent'),
-                         rel2_source_ops['install'])
-        self.assertEqual(op_struct('test_plugin2', 'install',
-                                   executor='central_deployment_agent'),
-                         rel2_source_ops['test_interface1.install'])
+        self.assertEqual(
+            op_struct('test_plugin2', 'install',
+                      executor='central_deployment_agent'),
+            rel2_source_ops['install'])
+        self.assertEqual(
+            op_struct('test_plugin2', 'install',
+                      executor='central_deployment_agent'),
+            rel2_source_ops['test_interface1.install'])
         self.assertEquals(2, len(rel2_source_ops))
         self.assertEquals(8, len(relationship2))
 

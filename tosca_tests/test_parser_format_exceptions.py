@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tosca_parser.exceptions import (
+from aria.parser.exceptions import (
     DSLParsingFormatException,
     DSLParsingLogicException,
     ERROR_UNKNOWN_TYPE,

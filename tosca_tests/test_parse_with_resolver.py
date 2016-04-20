@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tosca_parser.import_resolver import AbstractImportResolver
+from aria.parser.import_resolver import AbstractImportResolver
 
 from .suite import ParserTestCase
 

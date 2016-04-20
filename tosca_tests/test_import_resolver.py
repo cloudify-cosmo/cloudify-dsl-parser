@@ -15,17 +15,17 @@
 
 from testtools import TestCase
 
-from tosca_parser.exceptions import ResolverInstantiationError
-from tosca_parser.utils import (
+from aria.parser.exceptions import ResolverInstantiationError
+from aria.parser.utils import (
     create_import_resolver,
 )
-from tosca_parser.constants import (
+from aria.parser.constants import (
     RESOLVER_IMPLEMENTATION_KEY,
     RESLOVER_PARAMETERS_KEY,
     DEFAULT_RESLOVER_RULES_KEY,
 )
-from tosca_parser.exceptions import DefaultResolverValidationException
-from tosca_parser.import_resolver import (
+from aria.parser.exceptions import DefaultResolverValidationException
+from aria.parser.import_resolver import (
     AbstractImportResolver,
     DefaultImportResolver,
 )

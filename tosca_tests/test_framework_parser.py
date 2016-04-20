@@ -15,12 +15,12 @@
 
 from testtools import TestCase
 
-from tosca_parser.exceptions import (
+from aria.parser.exceptions import (
     DSLParsingSchemaAPIException,
     DSLParsingException,
     ERROR_CODE_ILLEGAL_VALUE_ACCESS,
 )
-from tosca_parser.framework import (
+from aria.parser.framework import (
     parse,
     validate_schema_api,
     Element,

@@ -20,15 +20,15 @@ from urllib import pathname2url
 from mock import patch
 from requests.exceptions import HTTPError
 
-from tosca_parser import models
-from tosca_parser import default_parser
-from tosca_parser.version import parse_dsl_version
-from tosca_parser.exceptions import (
+from aria.parser import models
+from aria.parser import default_parser
+from aria.parser.version import parse_dsl_version
+from aria.parser.exceptions import (
     DSLParsingLogicException, DSLParsingException,
 )
-from tosca_parser.interfaces.operation_merger import NO_OP
-from tosca_parser.interfaces.utils import operation_mapping
-from tosca_parser.constants import (
+from aria.parser.interfaces.operation_merger import NO_OP
+from aria.parser.interfaces.utils import operation_mapping
+from aria.parser.constants import (
     PLUGIN_NAME_KEY,
     PLUGIN_SOURCE_KEY,
     PLUGIN_INSTALL_KEY,
@@ -45,6 +45,7 @@ from tosca_parser.constants import (
     SCRIPT_PLUGIN_NAME,
     SCRIPT_PLUGIN_RUN_TASK,
     SCRIPT_PLUGIN_EXECUTE_WORKFLOW_TASK,
+    LOCAL_AGENT,
 )
 
 from .suite import (
@@ -1503,7 +1504,7 @@ plugins:
         self.assertEquals(
             {'implementation': '',
              'inputs': {},
-             'executor': None,
+             'executor': LOCAL_AGENT,
              'max_retries': None,
              'retry_interval': None},
             parent_relationship[
@@ -1586,27 +1587,27 @@ plugins:
         self.assertEquals(4, len(rel_source_ops))
         self.assertEqual(
             op_struct('test_plugin', 'install',
-                       executor='central_deployment_agent'),
+                      executor='central_deployment_agent'),
             rel_source_ops['test_interface2.install'])
         self.assertEqual(
             op_struct('test_plugin', 'install',
-                       executor='central_deployment_agent'),
+                      executor='central_deployment_agent'),
             rel_source_ops['test_interface3.install'])
         self.assertEqual(
             op_struct('test_plugin', 'terminate',
-                       executor='central_deployment_agent'),
+                      executor='central_deployment_agent'),
             rel_source_ops['terminate'])
         self.assertEqual(
             op_struct('test_plugin', 'terminate',
-                       executor='central_deployment_agent'),
+                      executor='central_deployment_agent'),
             rel_source_ops['test_interface2.terminate'])
 
         rel_target_ops = node_relationship['target_operations']
         self.assertEquals(2, len(rel_target_ops))
-        self.assertEqual(op_struct('', '', {}),
+        self.assertEqual(op_struct('', '', {}, LOCAL_AGENT),
                          rel_target_ops['test_interface3.install'])
         self.assertEqual(op_struct('test_plugin', 'install',
-                                    executor='central_deployment_agent'),
+                                   executor='central_deployment_agent'),
                          rel_target_ops['test_interface1.install'])
 
     def test_relationship_interfaces_inheritance_merge(self):
@@ -3099,20 +3100,20 @@ node_templates:
         template_path = self.write_to_file(
             content=str(self.template), filename='blueprint.yaml')
         result = default_parser.parse(template_path)
+
+        workflow = result['workflows']['workflow']
+        workflow2 = result['workflows']['workflow2']
         node = [n for n in result['nodes'] if n['name'] == 'node1'][0]
-        relationship = node['relationships'][0]
 
         operation = node['operations']['test.op']
         operation2 = node['operations']['test.op2']
+        relationship = node['relationships'][0]
+
         source_operation = relationship['source_operations']['test.op']
         target_operation = relationship['target_operations']['test.op']
-        workflow = result['workflows']['workflow']
-        workflow2 = result['workflows']['workflow2']
 
-        def assert_operation(op, extra_properties=False):
-            inputs = {'script_path': 'stub.py'}
-            if extra_properties:
-                inputs.update({'key': 'value'})
+        def assert_operation(op, **inputs):
+            inputs['script_path'] = 'stub.py'
             self.assertEqual(op, op_struct(
                 plugin_name=SCRIPT_PLUGIN_NAME,
                 mapping=SCRIPT_PLUGIN_RUN_TASK,
@@ -3120,7 +3121,7 @@ node_templates:
                 executor='central_deployment_agent'))
 
         assert_operation(operation)
-        assert_operation(operation2, extra_properties=True)
+        assert_operation(operation2, key='value')
         assert_operation(source_operation)
         assert_operation(target_operation)
 

@@ -15,8 +15,8 @@
 
 from yaml import safe_dump, safe_load
 
-from tosca_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
-from tosca_parser.exceptions import DSLParsingLogicException
+from aria.parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
+from aria.parser.exceptions import DSLParsingLogicException
 
 from .suite import ParserTestCase
 

@@ -15,7 +15,7 @@
 
 from unittest import skip
 
-from tosca_parser.exceptions import (
+from aria.parser.exceptions import (
     MissingRequiredInputError,
     UnknownInputError,
     DSLParsingLogicException)
