@@ -24,6 +24,9 @@ from dsl_parser.framework.elements import (DictElement,
                                            Element,
                                            Leaf,
                                            Dict)
+from dsl_parser.interfaces.utils import (operation,
+                                         workflow_operation,
+                                         no_op_operation)
 
 
 class OperationImplementation(Element):
@@ -209,14 +212,7 @@ def process_operation(
             raise RuntimeError('Illegal state. workflow mapping should always'
                                'be defined (enforced by schema validation)')
         else:
-            return _operation(
-                name=operation_name,
-                plugin_name='',
-                operation_mapping='',
-                operation_inputs={},
-                executor=None,
-                max_retries=None,
-                retry_interval=None)
+            return no_op_operation(operation_name=operation_name)
 
     candidate_plugins = [p for p in plugins.keys()
                          if operation_mapping.startswith('{0}.'.format(p))]
@@ -228,14 +224,14 @@ def process_operation(
         plugin_name = candidate_plugins[0]
         mapping = operation_mapping[len(plugin_name) + 1:]
         if is_workflows:
-            return _workflow_operation(
+            return workflow_operation(
                 plugin_name=plugin_name,
                 workflow_mapping=mapping,
                 workflow_parameters=operation_payload)
         else:
             if not operation_executor:
                 operation_executor = plugins[plugin_name]['executor']
-            return _operation(
+            return operation(
                 name=operation_name,
                 plugin_name=plugin_name,
                 operation_mapping=mapping,
@@ -276,7 +272,7 @@ def process_operation(
             raise exceptions.DSLParsingLogicException(61, message)
 
         if is_workflows:
-            return _workflow_operation(
+            return workflow_operation(
                 plugin_name=constants.SCRIPT_PLUGIN_NAME,
                 workflow_mapping=operation_mapping,
                 workflow_parameters=operation_payload)
@@ -284,7 +280,7 @@ def process_operation(
             if not operation_executor:
                 operation_executor = plugins[constants.SCRIPT_PLUGIN_NAME][
                     'executor']
-            return _operation(
+            return operation(
                 name=operation_name,
                 plugin_name=constants.SCRIPT_PLUGIN_NAME,
                 operation_mapping=operation_mapping,
@@ -307,32 +303,3 @@ def process_operation(
 
 def _resource_exists(resource_base, resource_name):
     return utils.url_exists('{0}/{1}'.format(resource_base, resource_name))
-
-
-def _operation(name,
-               plugin_name,
-               operation_mapping,
-               operation_inputs,
-               executor,
-               max_retries,
-               retry_interval):
-    return {
-        'name': name,
-        'plugin': plugin_name,
-        'operation': operation_mapping,
-        'executor': executor,
-        'inputs': operation_inputs,
-        'has_intrinsic_functions': False,
-        'max_retries': max_retries,
-        'retry_interval': retry_interval
-    }
-
-
-def _workflow_operation(plugin_name,
-                        workflow_mapping,
-                        workflow_parameters):
-    return {
-        'plugin': plugin_name,
-        'operation': workflow_mapping,
-        'parameters': workflow_parameters
-    }

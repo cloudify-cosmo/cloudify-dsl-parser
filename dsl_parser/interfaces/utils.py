@@ -62,14 +62,14 @@ def validate_inputs_types(inputs, schema_inputs):
             continue
         else:
             raise DSLParsingLogicException(
-                80, "Unexpected type defined in inputs schema "
-                    "for input '{0}' - unknown type is {1}"
-                    .format(input_key, input_type))
+                    80, "Unexpected type defined in inputs schema "
+                        "for input '{0}' - unknown type is {1}"
+                        .format(input_key, input_type))
 
         raise DSLParsingLogicException(
-            50, "Input type validation failed: Input '{0}' type "
-                "is '{1}', yet it was assigned with the value '{2}'"
-                .format(input_key, input_type, input_val))
+                50, "Input type validation failed: Input '{0}' type "
+                    "is '{1}', yet it was assigned with the value '{2}'"
+                    .format(input_key, input_type, input_val))
 
 
 def merge_schema_and_instance_inputs(schema_inputs,
@@ -77,8 +77,8 @@ def merge_schema_and_instance_inputs(schema_inputs,
 
     flattened_schema_inputs = utils.flatten_schema(schema_inputs)
     merged_inputs = dict(
-        flattened_schema_inputs.items() +
-        instance_inputs.items())
+            flattened_schema_inputs.items() +
+            instance_inputs.items())
 
     validate_missing_inputs(merged_inputs, schema_inputs)
     validate_inputs_types(merged_inputs, schema_inputs)
@@ -98,9 +98,50 @@ def operation_mapping(implementation, inputs, executor,
 
 def no_op():
     return operation_mapping(
-        implementation='',
-        inputs={},
-        executor=None,
-        max_retries=None,
-        retry_interval=None,
+            implementation='',
+            inputs={},
+            executor=None,
+            max_retries=None,
+            retry_interval=None,
     )
+
+
+def no_op_operation(operation_name):
+    return operation(
+            name=operation_name,
+            plugin_name='',
+            operation_mapping='',
+            operation_inputs={},
+            executor=None,
+            max_retries=None,
+            retry_interval=None
+    )
+
+
+def operation(name,
+              plugin_name,
+              operation_mapping,
+              operation_inputs,
+              executor,
+              max_retries,
+              retry_interval):
+    return {
+        'name': name,
+        'plugin': plugin_name,
+        'operation': operation_mapping,
+        'executor': executor,
+        'inputs': operation_inputs,
+        'has_intrinsic_functions': False,
+        'max_retries': max_retries,
+        'retry_interval': retry_interval
+    }
+
+
+def workflow_operation(plugin_name,
+                       workflow_mapping,
+                       workflow_parameters):
+    return {
+        'plugin': plugin_name,
+        'operation': workflow_mapping,
+        'parameters': workflow_parameters
+    }
