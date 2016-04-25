@@ -27,7 +27,19 @@ from aria.parser.constants import (
 )
 from aria.parser.extension_tools import ElementExtension
 from aria.parser.exceptions import DSLParsingLogicException
-from aria.parser import extend
+
+
+def extend_cloudify_version_1_0():
+    return dict(
+        element_extensions=[
+            cloudify_node_template_relationships_extension,
+            cloudify_node_type_extension,
+            cloudify_blueprint_extension,
+            cloudify_blueprint_schema_extension,
+            cloudify_operation_executor_extension,
+            cloudify_plugin_extension_extension,
+            cloudify_node_templates_extension,
+        ])
 
 
 class CloudifyNodeTemplateRelationships(NodeTemplateRelationships):
@@ -73,15 +85,15 @@ class CloudifyNodeTemplates(NodeTemplates):
         return plugin[PLUGIN_EXECUTOR_KEY] == HOST_AGENT
 
 
+cloudify_node_template_relationships_extension = ElementExtension(
+    action=ElementExtension.REPLACE_ELEMENT_ACTION,
+    target_element=NodeTemplateRelationships,
+    new_element=CloudifyNodeTemplateRelationships)
+
 cloudify_node_type_extension = ElementExtension(
     action=ElementExtension.REPLACE_ELEMENT_ACTION,
     target_element=NodeTypes,
     new_element=CloudifyNodeTypes)
-
-cloudify_node_template_relationshios_extension = ElementExtension(
-    action=ElementExtension.REPLACE_ELEMENT_ACTION,
-    target_element=NodeTemplateRelationships,
-    new_element=CloudifyNodeTemplateRelationships)
 
 cloudify_blueprint_schema_extension = ElementExtension(
     action=ElementExtension.ADD_ELEMENT_TO_SCHEMA_ACTION,
@@ -109,15 +121,3 @@ cloudify_node_templates_extension = ElementExtension(
     action=ElementExtension.REPLACE_ELEMENT_ACTION,
     target_element=NodeTemplates,
     new_element=CloudifyNodeTemplates)
-
-
-def extend_parser():
-    extend(element_extensions=(
-        cloudify_node_type_extension,
-        cloudify_node_template_relationshios_extension,
-        cloudify_blueprint_schema_extension,
-        cloudify_blueprint_extension,
-        cloudify_operation_executor_extension,
-        cloudify_plugin_extension_extension,
-        cloudify_node_templates_extension,
-    ))

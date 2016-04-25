@@ -16,33 +16,11 @@
 import os
 from uuid import uuid4
 from shutil import rmtree
-from functools import wraps, partial
 from itertools import imap
 from tempfile import mkdtemp
 from testtools import TestCase
-from multiprocessing import Process
 
 from tosca_parser import Parser
-
-
-class TimeoutTestMixin(TestCase):
-    def timeout_decorator(self, func=None, seconds=10):
-        if not func:
-            return partial(self.timeout_decorator, seconds=seconds)
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            process = Process(target=func, args=args, kwargs=kwargs)
-            process.start()
-            process.join(seconds)
-            if process.exitcode != 0:
-                process.terminate()
-                self.fail(
-                    'timeout decorator timedout, process exitcode: {0}'
-                        .format(process.exitcode))
-
-        return wrapper
-    timeout_decorator = staticmethod(timeout_decorator)
 
 
 class TempDirectoryTestCase(TestCase):

@@ -22,7 +22,10 @@ from requests.exceptions import HTTPError
 
 from aria.parser import models
 from aria.parser import default_parser
-from aria.parser.version import parse_dsl_version
+from aria.parser.dsl_supported_versions import (
+    parse_dsl_version, database,
+    VersionNumber, VersionStructure,
+)
 from aria.parser.exceptions import (
     DSLParsingLogicException, DSLParsingException,
 )
@@ -3147,23 +3150,32 @@ node_templates:
             version = self.parse()['version']
             version = models.Version(version)
             self.assertEqual(version.definitions_name, 'cloudify_dsl')
-            self.assertEqual(version.definitions_version, expected)
+            self.assertEqual(version.definitions_version.number, expected)
 
         self.template.version_section('1.0')
-        assertion(expected=(1, 0))
+        assertion(expected=VersionNumber(1, 0))
         self.template.clear()
         self.template.version_section('1.1')
-        assertion(expected=(1, 1))
+        assertion(expected=VersionNumber(1, 1))
         self.template.clear()
         self.template.version_section('1.2')
-        assertion(expected=(1, 2))
+        assertion(expected=VersionNumber(1, 2))
         self.template.clear()
 
     def test_version_comparison(self):
 
         def parse_version(version):
-            parsed = parse_dsl_version('cloudify_dsl_{0}'.format(version))
-            major, minor, micro = parsed
+            version_structure = VersionStructure(
+                'cloudify_dsl',
+                VersionNumber(*(int(n) for n in version.split('_'))))
+            default_db = database.copy()
+            database['cloudify_dsl'].add(version_structure)
+            try:
+                parsed = parse_dsl_version('cloudify_dsl_{0}'.format(version))
+            finally:
+                database.clear()
+                database.update(default_db)
+            major, minor, micro = parsed.number
             if micro is None:
                 micro = 0
             return major, minor, micro

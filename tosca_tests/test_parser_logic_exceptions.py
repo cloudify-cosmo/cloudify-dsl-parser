@@ -21,10 +21,13 @@ from aria.parser.exceptions import (
     ERROR_VALUE_DOES_NOT_MATCH_TYPE,
     ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
 )
-from aria.parser.version import parse_dsl_version, DSL_VERSION_1_0
+from aria.parser.dsl_supported_versions import parse_dsl_version
 from tosca_parser import parse
 
 from .suite import ParserTestCase, TempDirectoryTestCase
+
+
+DSL_VERSION_1_0 = 'cloudify_dsl_1_0'
 
 
 class TestParserLogicExceptions(ParserTestCase, TempDirectoryTestCase):
@@ -685,48 +688,30 @@ node_templates:
                                parse_dsl_version, [1])
 
     def test_parse_wrong_dsl_version_format(self):
-        expected_err_msg = "Invalid tosca_definitions_version: '{0}', " \
-                           "expected a value following this format: '{1}'"\
-            .format('1_0', DSL_VERSION_1_0)
+        expected_err_msg = (
+            'Unexpected tosca_definitions_version {0}; '
+            'Currently supported versions are:')
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg,
+                               expected_err_msg.format('1_0'),
                                parse_dsl_version, '1_0')
 
-        expected_err_msg = "Invalid tosca_definitions_version: '{0}', " \
-                           "expected a value following this format: '{1}'" \
-            .format('cloudify_dsl_1.0', DSL_VERSION_1_0)
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg,
+                               expected_err_msg.format('cloudify_dsl_1.0'),
                                parse_dsl_version,
                                'cloudify_dsl_1.0')
 
-        expected_err_msg = (
-            "Invalid tosca_definitions_version: '{0}', "
-            "major version is 'a' while expected to be a"
-            " number"
-            .format('cloudify_dsl_a_0', DSL_VERSION_1_0))
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg,
+                               expected_err_msg.format('cloudify_dsl_a_0'),
                                parse_dsl_version,
                                'cloudify_dsl_a_0')
 
-        expected_err_msg = (
-            "Invalid tosca_definitions_version: '{0}', "
-            "minor version is 'a' while expected to be a"
-            " number"
-            .format('cloudify_dsl_1_a', DSL_VERSION_1_0))
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg,
+                               expected_err_msg.format('cloudify_dsl_1_a'),
                                parse_dsl_version,
                                'cloudify_dsl_1_a')
 
-        expected_err_msg = (
-            "Invalid tosca_definitions_version: '{0}', "
-            "micro version is 'a' while expected to be a"
-            " number"
-            .format('cloudify_dsl_1_1_a', DSL_VERSION_1_0))
         self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg,
+                               expected_err_msg.format('cloudify_dsl_1_1_a'),
                                parse_dsl_version,
                                'cloudify_dsl_1_1_a')
 
