@@ -26,19 +26,24 @@ def create_deployment_plan(plan):
     Expand node instances based on number of instances to deploy and
     defined relationships
     """
-    plan_node_graph = rel_graph.build_node_graph(plan['nodes'])
-    deployment_node_graph = rel_graph.build_deployment_node_graph(
+    deployment_plan = copy.deepcopy(plan)
+    plan_node_graph = rel_graph.build_node_graph(
+        nodes=deployment_plan['nodes'],
+        scaling_groups=deployment_plan['scaling_groups'])
+    deployment_node_graph, ctx = rel_graph.build_deployment_node_graph(
         plan_node_graph)
     node_instances = rel_graph.extract_node_instances(
-        node_instances_graph=deployment_node_graph)
-    deployment_plan = copy.deepcopy(plan)
+        node_instances_graph=deployment_node_graph,
+        ctx=ctx)
     deployment_plan[constants.NODE_INSTANCES] = node_instances
     return models.Plan(deployment_plan)
 
 
 def modify_deployment(nodes,
+                      previous_nodes,
                       previous_node_instances,
-                      modified_nodes):
+                      modified_nodes,
+                      scaling_groups):
     """
     modifies deployment according to the expected nodes. based on
     previous_node_instances
@@ -50,26 +55,38 @@ def modify_deployment(nodes,
      Add a line note
     """
 
-    plan_node_graph = rel_graph.build_node_graph(nodes)
-    previous_deployment_node_graph = rel_graph.build_node_graph(
-        previous_node_instances)
-    new_deployment_node_graph = rel_graph.build_deployment_node_graph(
-        plan_node_graph,
-        previous_deployment_node_graph,
-        modified_nodes)
+    plan_node_graph = rel_graph.build_node_graph(
+        nodes=nodes,
+        scaling_groups=scaling_groups)
+    previous_plan_node_graph = rel_graph.build_node_graph(
+        nodes=previous_nodes,
+        scaling_groups=scaling_groups)
+    previous_deployment_node_graph, previous_deployment_contained_graph = \
+        rel_graph.build_previous_deployment_node_graph(
+            plan_node_graph=previous_plan_node_graph,
+            previous_node_instances=previous_node_instances)
+    new_deployment_node_graph, ctx = rel_graph.build_deployment_node_graph(
+        plan_node_graph=plan_node_graph,
+        previous_deployment_node_graph=previous_deployment_node_graph,
+        previous_deployment_contained_graph=previous_deployment_contained_graph,  # noqa
+        modified_nodes=modified_nodes)
 
     # Any node instances which were added or removed
     added_and_related = rel_graph.extract_added_node_instances(
-        previous_deployment_node_graph, new_deployment_node_graph)
+        previous_deployment_node_graph, new_deployment_node_graph,
+        ctx=ctx)
     removed_and_related = rel_graph.extract_removed_node_instances(
-        previous_deployment_node_graph, new_deployment_node_graph)
+        previous_deployment_node_graph, new_deployment_node_graph,
+        ctx=ctx)
 
     # Any node instances which had a modification to their relationship.
     # (newly introduced and removed nodes)
     extended_and_related = rel_graph.extract_added_relationships(
-        previous_deployment_node_graph, new_deployment_node_graph)
+        previous_deployment_node_graph, new_deployment_node_graph,
+        ctx=ctx)
     reduced_and_related = rel_graph.extract_removed_relationships(
-        previous_deployment_node_graph, new_deployment_node_graph)
+        previous_deployment_node_graph, new_deployment_node_graph,
+        ctx=ctx)
 
     # The extracted extended and reduced relationships hold the new and old
     # node instances. These are not required, since the change is on

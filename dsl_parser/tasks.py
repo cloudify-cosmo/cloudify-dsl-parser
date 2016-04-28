@@ -19,6 +19,12 @@ from dsl_parser import (functions,
                         scan,
                         parser,
                         multi_instance)
+from dsl_parser.multi_instance import modify_deployment
+
+
+__all__ = [
+    'modify_deployment'
+]
 
 
 def parse_dsl(dsl_location,
@@ -72,9 +78,3 @@ def prepare_deployment_plan(plan, inputs=None, **kwargs):
     _set_plan_inputs(plan, inputs)
     _process_functions(plan)
     return plan
-
-
-def modify_deployment(nodes, previous_node_instances, modified_nodes):
-    return multi_instance.modify_deployment(nodes,
-                                            previous_node_instances,
-                                            modified_nodes)
