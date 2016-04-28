@@ -68,6 +68,8 @@ class RuntimeEvaluationStorage(object):
         if node_id not in self._node_to_node_instances:
             node_instances = self._get_node_instances_method(node_id)
             self._node_to_node_instances[node_id] = node_instances
+            for node_instance in node_instances:
+                self._node_instances[node_instance.id] = node_instance
         return self._node_to_node_instances[node_id]
 
     def get_node_instance(self, node_instance_id):
@@ -269,19 +271,7 @@ class GetAttribute(Function):
             self._validate_ref(node_instance_id, TARGET)
             node_instance = storage.get_node_instance(node_instance_id)
         else:
-            node_id = self.node_name
-            node_instances = storage.get_node_instances(node_id)
-            if len(node_instances) == 0:
-                raise exceptions.FunctionEvaluationError(
-                    self.name,
-                    'Node specified in function does not exist: {0}.'
-                    .format(self.node_name))
-            if len(node_instances) > 1:
-                raise exceptions.FunctionEvaluationError(
-                    self.name,
-                    'Multi instances of node "{0}" are not supported by '
-                    'function.'.format(self.node_name))
-            node_instance = node_instances[0]
+            node_instance = self._resolve_node_instance_by_name(storage)
 
         value = _get_property_value(node_instance.node_id,
                                     node_instance.runtime_properties,
@@ -296,6 +286,138 @@ class GetAttribute(Function):
                                         self.path,
                                         raise_if_not_found=False)
         return value
+
+    def _resolve_node_instance_by_name(self, storage):
+        node_id = self.node_name
+        node_instances = storage.get_node_instances(node_id)
+
+        if len(node_instances) == 0:
+            raise exceptions.FunctionEvaluationError(
+                self.name,
+                'Node specified in function does not exist: {0}.'
+                    .format(self.node_name))
+
+        if len(node_instances) == 1:
+            return node_instances[0]
+
+        node_instance = self._try_resolve_node_instance_by_relationship(
+            storage=storage,
+            node_instances=node_instances)
+        if node_instance:
+            return node_instance
+
+        node_instance = self._try_resolve_node_instance_by_scaling_group(
+            storage=storage,
+            node_instances=node_instances)
+        if node_instance:
+            return node_instance
+
+        raise exceptions.FunctionEvaluationError(
+            self.name,
+            'More than one node instance found for node "{0}". Cannot '
+            'resolve a node instance unambiguously.'
+            .format(self.node_name))
+
+    def _try_resolve_node_instance_by_relationship(
+            self,
+            storage,
+            node_instances):
+        self_instance_id = self.context.get('self')
+        if not self_instance_id:
+            return None
+        self_instance = storage.get_node_instance(self_instance_id)
+        self_instance_relationships = self_instance.relationships or []
+        node_instances_target_ids = set()
+        for relationship in self_instance_relationships:
+            if relationship['target_name'] == self.node_name:
+                node_instances_target_ids.add(relationship['target_id'])
+        if len(node_instances_target_ids) != 1:
+            return None
+        node_instance_target_id = node_instances_target_ids.pop()
+        for node_instance in node_instances:
+            if node_instance.id == node_instance_target_id:
+                return node_instance
+        else:
+            raise RuntimeError('Illegal state')
+
+    def _try_resolve_node_instance_by_scaling_group(
+            self,
+            storage,
+            node_instances):
+
+        def _parent_instance(_instance):
+            _node = storage.get_node(_instance.node_id)
+            for relationship in _node.relationships or []:
+                if (constants.CONTAINED_IN_REL_TYPE in
+                        relationship['type_hierarchy']):
+                    target_name = relationship['target_id']
+                    target_id = [
+                        r['target_id'] for r in _instance.relationships
+                        if r['target_name'] == target_name][0]
+                    return storage.get_node_instance(target_id)
+            return None
+
+        def _containing_groups(_instance):
+            result = [g['name'] for g in _instance.scaling_groups or []]
+            parent_instance = _parent_instance(_instance)
+            if parent_instance:
+                result += _containing_groups(parent_instance)
+            return result
+
+        def _minimal_shared_group(instance_a, instance_b):
+            a_containing_groups = _containing_groups(instance_a)
+            b_containing_groups = _containing_groups(instance_b)
+            shared_groups = set(a_containing_groups) & set(b_containing_groups)
+            if not shared_groups:
+                return None
+            for group in a_containing_groups:
+                if group in shared_groups:
+                    return group
+            else:
+                raise RuntimeError('Illegal state')
+
+        def _group_instance(node_instance, group_name):
+            for scaling_group in (node_instance.scaling_groups or []):
+                if scaling_group['name'] == group_name:
+                    return scaling_group['id']
+            parent_instance = _parent_instance(node_instance)
+            if not parent_instance:
+                raise RuntimeError('Illegal state')
+            return _group_instance(parent_instance, group_name)
+
+        def _resolve_node_instance(context_instance_id):
+            context_instance = storage.get_node_instance(context_instance_id)
+            minimal_shared_group = _minimal_shared_group(context_instance,
+                                                         node_instances[0])
+            if not minimal_shared_group:
+                return None
+
+            context_group_instance = _group_instance(context_instance,
+                                                     minimal_shared_group)
+            result_node_instances = [
+                i for i in node_instances if
+                _group_instance(i, minimal_shared_group) ==
+                context_group_instance]
+
+            if len(result_node_instances) == 1:
+                return result_node_instances[0]
+
+            return None
+
+        self_instance_id = self.context.get('self')
+        source_instance_id = self.context.get('source')
+        target_instance_id = self.context.get('target')
+        if self_instance_id:
+            return _resolve_node_instance(self_instance_id)
+        elif source_instance_id:
+            node_instance = _resolve_node_instance(source_instance_id)
+            if node_instance:
+                return node_instance
+            node_instance = _resolve_node_instance(target_instance_id)
+            if node_instance:
+                return node_instance
+
+        return None
 
     def _validate_ref(self, ref, ref_name):
         if not ref:
