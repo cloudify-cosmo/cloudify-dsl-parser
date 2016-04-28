@@ -671,6 +671,27 @@ class TestScalingPoliciesAndGroupsValidation(AbstractTestParser):
                 groups=groups, nodes=nodes,
                 version=version)
 
+    def test_validate_illegal_instances_dict_value(self):
+        nodes = {
+            'node': None
+        }
+        groups = {
+            'group': ['node']
+        }
+        for instances in ['default', 'min', 'max']:
+            policies = {
+                'policy': {
+                    'type': constants.SCALING_POLICY,
+                    'targets': ['group'],
+                    'properties': {
+                        '{0}_instances'.format(instances): {},
+                    }
+                }
+            }
+            self.assert_validation(
+                exceptions.ERROR_INVALID_DICT_VALUE,
+                groups=groups, nodes=nodes, policies=policies)
+
     def assert_validation(self, expected_error_code,
                           groups=None, nodes=None, policies=None,
                           version=None):

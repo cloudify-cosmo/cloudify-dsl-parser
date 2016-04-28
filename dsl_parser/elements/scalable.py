@@ -14,7 +14,8 @@
 #    * limitations under the License.
 
 from dsl_parser import (exceptions,
-                        constants)
+                        constants,
+                        functions)
 from dsl_parser.framework.elements import (DictElement,
                                            Element,
                                            Leaf)
@@ -22,8 +23,20 @@ from dsl_parser.framework.elements import (DictElement,
 
 class Instances(Element):
 
-    schema = Leaf(type=int)
+    schema = Leaf(type=(int, dict))
     default_value = None
+
+    def validate(self):
+        value = self.initial_value
+        if isinstance(value, dict):
+            function = functions.parse(value)
+            if not isinstance(function, functions.Function):
+                raise exceptions.DSLParsingLogicException(
+                    exceptions.ERROR_INVALID_DICT_VALUE,
+                    '{0} should be a valid intrinsic function or a value.'
+                    .format(self.name))
+            return True
+        return False
 
     def parse(self):
         if self.initial_value is None:
@@ -36,6 +49,8 @@ class DefaultOneInstances(Instances):
     default_value = 1
 
     def validate(self):
+        if super(DefaultOneInstances, self).validate():
+            return
         if self.initial_value is not None and self.initial_value < 0:
             raise exceptions.DSLParsingLogicException(
                 exceptions.ERROR_INVALID_INSTANCES,
@@ -53,10 +68,12 @@ class MinInstances(DefaultOneInstances):
 
 class MaxInstances(Instances):
 
-    schema = Leaf(type=(int, basestring))
+    schema = Leaf(type=(int, basestring, dict))
     default_value = constants.UNBOUNDED
 
     def validate(self):
+        if super(MaxInstances, self).validate():
+            return
         value = self.initial_value
         if value is None:
             return
@@ -106,21 +123,25 @@ class Properties(DictElement):
                                    self.DEFAULT['max_instances'])
         default_instances = result.get('default_instances',
                                        self.DEFAULT['default_instances'])
-        if default_instances < min_instances:
+        check_min = not isinstance(min_instances, dict)
+        check_max = all([not isinstance(max_instances, dict),
+                         max_instances != constants.UNBOUNDED])
+        check_default = not isinstance(default_instances, dict)
+        if check_min and check_default and default_instances < min_instances:
             raise exceptions.DSLParsingLogicException(
                 exceptions.ERROR_INVALID_INSTANCES,
                 'default_instances ({0}) cannot be smaller than '
                 'min_instances ({1})'
                 .format(default_instances, min_instances))
-        if max_instances == constants.UNBOUNDED:
+        if not check_max:
             return
-        if min_instances > max_instances:
+        if check_min and min_instances > max_instances:
             raise exceptions.DSLParsingLogicException(
                 exceptions.ERROR_INVALID_INSTANCES,
                 'min_instances ({0}) cannot be greater than '
                 'max_instances ({1})'
                 .format(min_instances, max_instances))
-        if default_instances > max_instances:
+        if check_default and default_instances > max_instances:
             raise exceptions.DSLParsingLogicException(
                 exceptions.ERROR_INVALID_INSTANCES,
                 'default_instances ({0}) cannot be greater than '

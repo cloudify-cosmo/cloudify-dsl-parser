@@ -13,10 +13,12 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import copy
 
 from dsl_parser import (functions,
                         exceptions,
                         scan,
+                        models,
                         parser,
                         multi_instance)
 from dsl_parser.multi_instance import modify_deployment
@@ -74,7 +76,7 @@ def prepare_deployment_plan(plan, inputs=None, **kwargs):
     """
     Prepare a plan for deployment
     """
-    plan = multi_instance.create_deployment_plan(plan)
+    plan = models.Plan(copy.deepcopy(plan))
     _set_plan_inputs(plan, inputs)
     _process_functions(plan)
-    return plan
+    return multi_instance.create_deployment_plan(plan)
