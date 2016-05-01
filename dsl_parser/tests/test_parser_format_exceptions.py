@@ -746,24 +746,6 @@ groups:
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
 
-    def test_groups_missing_policies(self):
-        yaml = """
-node_types:
-    test_type: {}
-node_templates:
-    member:
-        type: test_type
-policy_types:
-    type:
-        properties: {}
-        source: source
-groups:
-    group:
-        members: [member]
-"""
-        self._assert_dsl_parsing_exception_error_code(
-            yaml, 1, DSLParsingFormatException)
-
     def test_groups_extra_property(self):
         yaml = """
 node_types:

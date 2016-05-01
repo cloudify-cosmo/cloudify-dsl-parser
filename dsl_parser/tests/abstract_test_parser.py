@@ -29,6 +29,8 @@ from dsl_parser.parser import parse_from_path as dsl_parse_from_path
 from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 from dsl_parser.version import DSL_VERSION_PREFIX
+from dsl_parser.multi_instance import (create_deployment_plan,
+                                       modify_deployment)
 
 
 def timeout(seconds=10):
@@ -203,6 +205,18 @@ imports:"""
 
     def parse_from_path(self, dsl_path, resources_base_url=None):
         return dsl_parse_from_path(dsl_path, resources_base_url)
+
+    def parse_multi(self, yaml):
+        return create_deployment_plan(self.parse_1_3(yaml))
+
+    @staticmethod
+    def modify_multi(plan, modified_nodes):
+        return modify_deployment(
+            nodes=plan['nodes'],
+            previous_nodes=plan['nodes'],
+            previous_node_instances=plan['node_instances'],
+            modified_nodes=modified_nodes,
+            scaling_groups=plan['scaling_groups'])
 
     def _assert_dsl_parsing_exception_error_code(
             self, dsl,

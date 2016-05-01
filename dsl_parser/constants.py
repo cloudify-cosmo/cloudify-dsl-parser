@@ -29,6 +29,7 @@ PARAMETERS = 'parameters'
 TYPE_HIERARCHY = 'type_hierarchy'
 POLICY_TRIGGERS = 'policy_triggers'
 POLICY_TYPES = 'policy_types'
+POLICIES = 'policies'
 GROUPS = 'groups'
 INPUTS = 'inputs'
 OUTPUTS = 'outputs'
@@ -39,6 +40,8 @@ HOST_TYPE = 'cloudify.nodes.Compute'
 DEPENDS_ON_REL_TYPE = 'cloudify.relationships.depends_on'
 CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
 CONNECTED_TO_REL_TYPE = 'cloudify.relationships.connected_to'
+
+SCALING_POLICY = 'cloudify.policies.scaling'
 
 CENTRAL_DEPLOYMENT_AGENT = 'central_deployment_agent'
 HOST_AGENT = 'host_agent'
@@ -75,3 +78,8 @@ RESOLVER_IMPLEMENTATION_KEY = 'implementation'
 RESLOVER_PARAMETERS_KEY = 'parameters'
 
 USER_PRIMITIVE_TYPES = ['string', 'integer', 'float', 'boolean']
+
+UNBOUNDED_LITERAL = 'UNBOUNDED'
+UNBOUNDED = -1
+
+SCALING_GROUPS = 'scaling_groups'
