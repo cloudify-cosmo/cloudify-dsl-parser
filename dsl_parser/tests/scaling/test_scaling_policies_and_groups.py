@@ -692,6 +692,20 @@ class TestScalingPoliciesAndGroupsValidation(AbstractTestParser):
                 exceptions.ERROR_INVALID_DICT_VALUE,
                 groups=groups, nodes=nodes, policies=policies)
 
+    def test_validate_group_and_node_template_same_name(self):
+        groups = {
+            'node1': ['node2']
+        }
+        nodes = {
+            'node1': None,
+            'node2': None,
+        }
+        expected_code = exceptions.ERROR_GROUP_AND_NODE_TEMPLATE_SAME_NAME
+        self.assert_validation(
+            expected_error_code=expected_code,
+            groups=groups,
+            nodes=nodes)
+
     def assert_validation(self, expected_error_code,
                           groups=None, nodes=None, policies=None,
                           version=None):

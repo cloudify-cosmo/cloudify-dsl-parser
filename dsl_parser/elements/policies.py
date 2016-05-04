@@ -232,6 +232,16 @@ class Group(DictElement):
         'members': GroupMembers,
         'policies': GroupPolicies,
     }
+    requires = {
+        _node_templates.NodeTemplates: ['node_template_names']
+    }
+
+    def validate(self, node_template_names):
+        if self.name in node_template_names:
+            raise exceptions.DSLParsingLogicException(
+                exceptions.ERROR_GROUP_AND_NODE_TEMPLATE_SAME_NAME,
+                "Both a group and a node template are named '{0}'"
+                .format(self.name))
 
 
 class Groups(DictElement):
