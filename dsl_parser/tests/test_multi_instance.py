@@ -51,6 +51,13 @@ relationships:
 node_templates:
     """
 
+    BASE_NODES = """
+    without_rel:
+        type: type
+    with_rel:
+        type: type
+"""
+
     def parse_multi(self, yaml):
         return create_deployment_plan(self.parse(yaml))
 
@@ -59,16 +66,8 @@ node_templates:
                                  plan['node_instances'],
                                  modified_nodes)
 
-    def _base_nodes(self):
-        return self.BASE_BLUEPRINT + """
-    without_rel:
-        type: type
-    with_rel:
-        type: type
-"""
-
     def test_add_node(self):
-        blueprint = self._base_nodes()
+        blueprint = self.BASE_BLUEPRINT + self.BASE_NODES
 
         plan = self.parse_multi(blueprint)
         plan['nodes'].append({
@@ -102,7 +101,7 @@ node_templates:
         self.assertEqual(len(node_instances['reduced_and_related']), 0)
 
     def test_remove_node(self):
-        blueprint = self._base_nodes() + """
+        blueprint = self.BASE_BLUEPRINT + self.BASE_NODES + """
         relationships:
             -  type: cloudify.relationships.connected_to
                target: without_rel
@@ -112,7 +111,7 @@ node_templates:
         node_to_remove = [n for n in plan['nodes'] if n['id'] == 'with_rel'][0]
         plan['nodes'].remove(node_to_remove)
 
-        modified_nodes = [['with_rel']]
+        modified_nodes = ['with_rel']
         node_instances = self.modify_multi(plan, modified_nodes=modified_nodes)
 
         self.assertEqual(len(node_instances['added_and_related']), 0)
@@ -126,7 +125,7 @@ node_templates:
         self.assertEqual(len(node_instances['reduced_and_related']), 0)
 
     def test_add_relationship(self):
-        blueprint = self._base_nodes()
+        blueprint = self.BASE_BLUEPRINT + self.BASE_NODES
 
         rel_type = 'cloudify.relationships.connected_to'
         plan = self.parse_multi(blueprint)
@@ -161,7 +160,7 @@ node_templates:
         self.assertEqual(len(node_instances['reduced_and_related']), 0)
 
     def test_remove_relationship(self):
-        blueprint = self._base_nodes() + """
+        blueprint = self.BASE_BLUEPRINT + self.BASE_NODES + """
         relationships:
             -  type: cloudify.relationships.connected_to
                target: without_rel
