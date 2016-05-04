@@ -34,7 +34,7 @@ from aria.parser.dsl_supported_versions import add_version_to_database
 from .cloudify_profile_v1_0 import extend_cloudify_version_1_0
 from .cloudify_profile_v1_1 import extend_cloudify_version_1_1
 from .cloudify_profile_v1_2 import extend_cloudify_version_1_2
-# from .cloudify_profile_v1_2 import extend_cloudify_version_1_3
+from .cloudify_profile_v1_3 import extend_cloudify_version_1_3
 
 __version__ = '0.1.0.0'
 __all__ = [
@@ -56,6 +56,11 @@ extend(
 extend(
     version_structure=CloudifyProfile(number=VersionNumber(1, 2, 0)),
     **extend_cloudify_version_1_2())
+
+# this is supported but without version verification for legacy
+extend(
+    version_structure=CloudifyProfile(number=VersionNumber(1, 0, 0)),
+    **extend_cloudify_version_1_3())
 add_version_to_database(
     profile=cloudify_profile_name,
     version_structure=CloudifyProfile(number=VersionNumber(1, 3, 0)))

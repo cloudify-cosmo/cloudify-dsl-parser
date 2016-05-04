@@ -609,12 +609,6 @@ node_types:
         self.template.node_template_section()
         self.assert_parser_raise_exception(28, DSLParsingLogicException)
 
-    def test_unsupported_version(self):
-        self.template.version_section('unsupported_version')
-        self.template.node_type_section()
-        self.template.node_template_section()
-        self.assert_parser_raise_exception(29, DSLParsingLogicException)
-
     def test_script_mapping_illegal_script_path_override(self):
         self.template.version_section('1.0')
         self.template += """
@@ -687,34 +681,6 @@ node_templates:
                                expected_err_msg,
                                parse_dsl_version, [1])
 
-    def test_parse_wrong_dsl_version_format(self):
-        expected_err_msg = (
-            'Unexpected tosca_definitions_version {0}; '
-            'Currently supported versions are:')
-        self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg.format('1_0'),
-                               parse_dsl_version, '1_0')
-
-        self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg.format('cloudify_dsl_1.0'),
-                               parse_dsl_version,
-                               'cloudify_dsl_1.0')
-
-        self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg.format('cloudify_dsl_a_0'),
-                               parse_dsl_version,
-                               'cloudify_dsl_a_0')
-
-        self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg.format('cloudify_dsl_1_a'),
-                               parse_dsl_version,
-                               'cloudify_dsl_1_a')
-
-        self.assertRaisesRegex(DSLParsingLogicException,
-                               expected_err_msg.format('cloudify_dsl_1_1_a'),
-                               parse_dsl_version,
-                               'cloudify_dsl_1_1_a')
-
     def test_max_retries_version_validation(self):
         self.template.version_section('1.1')
         self.template.node_type_section()
@@ -783,8 +749,6 @@ node_templates:
         self.parse()
         self.template.clear()
         self.template.version_section('1.1')
-        self.template.node_type_section()
-        self.template.node_template_section()
         self.template += """
 dsl_definitions:
     def: &def
@@ -803,8 +767,6 @@ node_templates:
             DSLParsingLogicException)
         self.template.clear()
         self.template.version_section('1.0')
-        self.template.node_type_section()
-        self.template.node_template_section()
         self.template += """
 dsl_definitions:
     def: &def

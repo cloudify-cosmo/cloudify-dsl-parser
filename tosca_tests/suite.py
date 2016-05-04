@@ -24,21 +24,19 @@ from tosca_parser import Parser
 
 
 class TempDirectoryTestCase(TestCase):
-    def __init__(self, *args, **kwargs):
-        super(TempDirectoryTestCase, self).__init__(*args, **kwargs)
-        self.temp_directory = None
-        self._path_to_uri = 'file://{0}'.format
+    temp_directory = None
+    _path_to_uri = 'file://{0}'.format
 
     def setUp(self):
-        self.temp_directory = mkdtemp(prefix=self.__class__.__name__)
         super(TempDirectoryTestCase, self).setUp()
+        self.temp_directory = mkdtemp(prefix=self.__class__.__name__)
+        self.addCleanup(self.cleanup)
 
-    def tearDown(self):
+    def cleanup(self):
         rmtree(self.temp_directory, ignore_errors=True)
-        super(TempDirectoryTestCase, self).tearDown()
 
-    def write_to_file(self, content, filename, directory=None):
-        directory = os.path.join(self.temp_directory, directory or '')
+    def write_to_file(self, content, filename, directory=''):
+        directory = os.path.join(self.temp_directory, directory)
         if not os.path.exists(directory):
             os.makedirs(directory)
 
@@ -67,17 +65,11 @@ class TempDirectoryTestCase(TestCase):
 
 
 class ParserTestCase(TestCase):
-    def __init__(self, *args, **kwargs):
-        super(ParserTestCase, self).__init__(*args, **kwargs)
-        self.template = None
+    template = None
 
     def setUp(self):
-        self.template = Template()
         super(ParserTestCase, self).setUp()
-
-    def tearDown(self):
-        self.template = None
-        super(ParserTestCase, self).tearDown()
+        self.template = Template()
 
     def parse(self,
               import_resolver=None,
@@ -161,7 +153,7 @@ class Template(object):
             return version_str
         self.template += version_str
 
-    def node_type_section(self, **kwargs):
+    def node_type_section(self):
         self.template += (
             '\nnode_types:\n'
             '    test_type:\n'
@@ -210,7 +202,8 @@ class Template(object):
 
 
 def get_node_by_name(plan, name):
-    return [x for x in plan.node_templates if x['name'] == name][0]
+    return [x for x in plan.node_templates
+            if x['name'] == name][0]
 
 
 def get_nodes_by_names(plan, names):

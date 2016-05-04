@@ -17,29 +17,43 @@ from aria.parser.framework.elements.node_templates import (
     NodeTemplateRelationships, NodeTemplates)
 from aria.parser.framework.elements.node_types import NodeTypes
 from aria.parser.framework.elements.blueprint import Blueprint
-from aria.parser.framework.elements.policies import PolicyTriggers
+from aria.parser.framework.elements.policies import Group
 from aria.parser.framework.elements.operation import OperationExecutor
 from aria.parser.framework.elements.plugins import Plugin
+from aria.parser.framework.elements.imports import ImportsLoader
 from aria.parser.framework.elements import Element, Leaf
 from aria.parser.constants import (
-    CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT,
-    POLICY_TRIGGERS, PLUGIN_EXECUTOR_KEY,
+    CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT, PLUGIN_EXECUTOR_KEY,
 )
 from aria.parser.extension_tools import ElementExtension
 from aria.parser.exceptions import DSLParsingLogicException
+from aria.parser.models import Plan
+
+from .elements.policies import PolicyTriggers, PolicyTypes, GroupPolicies
+
+
+POLICY_TRIGGERS = 'policy_triggers'
+POLICY_TYPES = 'policy_types'
 
 
 def extend_cloudify_version_1_0():
+    unofficial_extensions()
     return dict(
         element_extensions=[
             cloudify_node_template_relationships_extension,
             cloudify_node_type_extension,
             cloudify_blueprint_extension,
-            cloudify_blueprint_schema_extension,
+            cloudify_blueprint_schema_policy_triggers_extension,
+            cloudify_blueprint_schema_policy_type_extension,
             cloudify_operation_executor_extension,
             cloudify_plugin_extension_extension,
             cloudify_node_templates_extension,
+            cloudify_group_schema_extension,
         ])
+
+
+def unofficial_extensions():
+    ImportsLoader.MERGE_NO_OVERRIDE.update((POLICY_TYPES, POLICY_TRIGGERS))
 
 
 class CloudifyNodeTemplateRelationships(NodeTemplateRelationships):
@@ -52,9 +66,10 @@ class CloudifyNodeTypes(NodeTypes):
 
 class CloudifyBlueprint(Blueprint):
     def parse(self, *args, **kwargs):
-        plan = super(CloudifyBlueprint, self).parse(*args, **kwargs)
-        plan[POLICY_TRIGGERS] = self.child(PolicyTriggers).value
-        return plan
+        return Plan({
+            POLICY_TRIGGERS: self.child(PolicyTriggers).value,
+            POLICY_TYPES: self.child(PolicyTypes).value,
+        }, **super(CloudifyBlueprint, self).parse(*args, **kwargs))
 
 
 class CloudifyOperationExecutor(OperationExecutor):
@@ -81,7 +96,7 @@ class CloudifyPluginExecutor(Element):
 
 class CloudifyNodeTemplates(NodeTemplates):
     @staticmethod
-    def check_executor_key(plugin):
+    def should_install_plugin_on_compute_node(plugin):
         return plugin[PLUGIN_EXECUTOR_KEY] == HOST_AGENT
 
 
@@ -95,16 +110,23 @@ cloudify_node_type_extension = ElementExtension(
     target_element=NodeTypes,
     new_element=CloudifyNodeTypes)
 
-cloudify_blueprint_schema_extension = ElementExtension(
+# Dan: add comment that these two extensions are related...
+cloudify_blueprint_schema_policy_triggers_extension = ElementExtension(
     action=ElementExtension.ADD_ELEMENT_TO_SCHEMA_ACTION,
     target_element=Blueprint,
     new_element=PolicyTriggers,
     schema_key='policy_triggers')
+cloudify_blueprint_schema_policy_type_extension = ElementExtension(
+    action=ElementExtension.ADD_ELEMENT_TO_SCHEMA_ACTION,
+    target_element=Blueprint,
+    new_element=PolicyTypes,
+    schema_key='policy_types')
 
 cloudify_blueprint_extension = ElementExtension(
     action=ElementExtension.REPLACE_ELEMENT_ACTION,
     target_element=Blueprint,
     new_element=CloudifyBlueprint)
+# Dan: add comment that these two extensions are related...
 
 cloudify_operation_executor_extension = ElementExtension(
     action=ElementExtension.REPLACE_ELEMENT_ACTION,
@@ -121,3 +143,9 @@ cloudify_node_templates_extension = ElementExtension(
     action=ElementExtension.REPLACE_ELEMENT_ACTION,
     target_element=NodeTemplates,
     new_element=CloudifyNodeTemplates)
+
+cloudify_group_schema_extension = ElementExtension(
+    action=ElementExtension.ADD_ELEMENT_TO_SCHEMA_ACTION,
+    target_element=Group,
+    new_element=GroupPolicies,
+    schema_key='policies')

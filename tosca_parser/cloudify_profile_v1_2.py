@@ -39,7 +39,7 @@ def extend_cloudify_version_1_2():
             cloudify_plugin_supported_platform_extension,
             cloudify_plugin_distribution_extension,
             cloudify_plugin_distribution_version_extension,
-            cloudify_plugin_distribution_release_extension
+            cloudify_plugin_distribution_release_extension,
         ],
     )
 
