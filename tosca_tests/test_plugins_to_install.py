@@ -1,17 +1,17 @@
-# Licensed to the Apache Software Foundation (ASF) under one or more
-# contributor license agreements.  See the NOTICE file distributed with
-# this work for additional information regarding copyright ownership.
-# The ASF licenses this file to You under the Apache License, Version 2.0
-# (the "License"); you may not use this file except in compliance with
-# the License.  You may obtain a copy of the License at
+#########
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
 
 from aria.parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 
@@ -209,7 +209,6 @@ plugins:
         source: dummy
 """
         result = self.parse()
-
         self.assertEquals(2, len(result['nodes']))
 
         nodes = get_nodes_by_names(result, ['test_node', 'test_node2'])
@@ -408,37 +407,6 @@ plugins:
         # check the property on the plan is correct
         deployment_plugins = result[DEPLOYMENT_PLUGINS_TO_INSTALL]
         self.assertEquals(2, len(deployment_plugins))
-
-    def test_no_operation_mapping_no_plugin(self):
-        self.template.version_section('1.0')
-        self.template += """
-node_templates:
-    test_node1:
-        type: cloudify.nodes.Compute
-
-node_types:
-    cloudify.nodes.Compute:
-        interfaces:
-            test_interface:
-                start:
-                    implementation: test_plugin.start
-                    inputs: {}
-
-plugins:
-    test_management_plugin:
-        executor: central_deployment_agent
-        source: dummy
-    test_plugin:
-        executor: host_agent
-        source: dummy
-"""
-        result = self.parse()
-        deployment_plugins = result['nodes'][0][DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(0, len(deployment_plugins))
-
-        # check the property on the plan is correct
-        deployment_plugins = result[DEPLOYMENT_PLUGINS_TO_INSTALL]
-        self.assertEquals(0, len(deployment_plugins))
 
     def test_two_identical_plugins_on_node(self):
         self.template.version_section('1.0')
