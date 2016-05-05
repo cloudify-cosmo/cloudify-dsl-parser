@@ -51,6 +51,13 @@ relationships:
 node_templates:
     """
 
+    BASE_NODES = """
+    without_rel:
+        type: type
+    with_rel:
+        type: type
+"""
+
     def parse_multi(self, yaml):
         return create_deployment_plan(self.parse(yaml))
 
@@ -59,36 +66,68 @@ node_templates:
                                  plan['node_instances'],
                                  modified_nodes)
 
-    def test_base_nodes(self):
-        return self.BASE_BLUEPRINT + """
-    without_rel:
-        type: type
-    with_rel:
-        type: type
-"""
-
-    def test_new_node(self):
-        blueprint = self.test_base_nodes()
+    def test_add_node(self):
+        blueprint = self.BASE_BLUEPRINT + self.BASE_NODES
 
         plan = self.parse_multi(blueprint)
-
         plan['nodes'].append({
             'name': 'new_node',
             'id': 'new_node',
             'type': 'new_type',
-            'number_of_instances': 1
+            'number_of_instances': 1,
+            'relationships': [
+                {'type': 'cloudify.relationships.connected_to',
+                 'target_id': 'without_rel',
+                 'type_hierarchy': ['cloudify.relationships.connected_to'],
+                 'properties': {
+                     'connection_type': 'all_to_all'
+                 },
+                 }
+            ]
         })
         new_node = [n for n in plan['nodes'] if n['id'] == 'new_node'][0]
 
         modified_nodes = [new_node]
-        self.modify_multi(plan, modified_nodes=modified_nodes)
+        node_instances = self.modify_multi(plan, modified_nodes=modified_nodes)
 
-    def test_new_relationship(self):
-        blueprint = self.test_base_nodes()
+        self.assertEqual(len(node_instances['added_and_related']), 2)
+        added_and_related = node_instances['added_and_related']
+        added = [n for n in added_and_related if 'modification' in n]
+        related = [n for n in added_and_related if n not in added]
+        self.assertEqual(len(added), 1)
+        self.assertEqual(len(related), 1)
+        self.assertEqual(len(node_instances['removed_and_related']), 0)
+        self.assertEqual(len(node_instances['extended_and_related']), 0)
+        self.assertEqual(len(node_instances['reduced_and_related']), 0)
 
-        connected_to = 'cloudify.relationships.connected_to'
-        rel_type = connected_to
+    def test_remove_node(self):
+        blueprint = self.BASE_BLUEPRINT + self.BASE_NODES + """
+        relationships:
+            -  type: cloudify.relationships.connected_to
+               target: without_rel
+    """
 
+        plan = self.parse_multi(blueprint)
+        node_to_remove = [n for n in plan['nodes'] if n['id'] == 'with_rel'][0]
+        plan['nodes'].remove(node_to_remove)
+
+        modified_nodes = ['with_rel']
+        node_instances = self.modify_multi(plan, modified_nodes=modified_nodes)
+
+        self.assertEqual(len(node_instances['added_and_related']), 0)
+        self.assertEqual(len(node_instances['removed_and_related']), 2)
+        removed_and_related = node_instances['removed_and_related']
+        removed = [n for n in removed_and_related if 'modification' in n]
+        related = [n for n in removed_and_related if n not in removed]
+        self.assertEqual(len(removed), 1)
+        self.assertEqual(len(related), 1)
+        self.assertEqual(len(node_instances['extended_and_related']), 0)
+        self.assertEqual(len(node_instances['reduced_and_related']), 0)
+
+    def test_add_relationship(self):
+        blueprint = self.BASE_BLUEPRINT + self.BASE_NODES
+
+        rel_type = 'cloudify.relationships.connected_to'
         plan = self.parse_multi(blueprint)
 
         with_rel = [n for n in plan['nodes'] if n['id'] == 'with_rel'][0]
@@ -108,7 +147,41 @@ node_templates:
                   'connection_type': 'all_to_all'
               }}]
         modified_nodes = [with_rel]
-        self.modify_multi(plan, modified_nodes=modified_nodes)
+        node_instances = self.modify_multi(plan, modified_nodes=modified_nodes)
+
+        self.assertEqual(len(node_instances['added_and_related']), 0)
+        self.assertEqual(len(node_instances['removed_and_related']), 0)
+        self.assertEqual(len(node_instances['extended_and_related']), 2)
+        extended_and_related = node_instances['extended_and_related']
+        extended = [n for n in extended_and_related if 'modification' in n]
+        related = [n for n in extended_and_related if n not in extended]
+        self.assertEqual(len(extended), 1)
+        self.assertEqual(len(related), 1)
+        self.assertEqual(len(node_instances['reduced_and_related']), 0)
+
+    def test_remove_relationship(self):
+        blueprint = self.BASE_BLUEPRINT + self.BASE_NODES + """
+        relationships:
+            -  type: cloudify.relationships.connected_to
+               target: without_rel
+    """
+
+        plan = self.parse_multi(blueprint)
+
+        with_rel = [n for n in plan['nodes'] if n['id'] == 'with_rel'][0]
+        del(with_rel['relationships'])
+        modified_nodes = [with_rel]
+        node_instances = self.modify_multi(plan, modified_nodes=modified_nodes)
+
+        self.assertEqual(len(node_instances['added_and_related']), 0)
+        self.assertEqual(len(node_instances['removed_and_related']), 0)
+        self.assertEqual(len(node_instances['extended_and_related']), 0)
+        self.assertEqual(len(node_instances['reduced_and_related']), 2)
+        reduced_and_related = node_instances['reduced_and_related']
+        reduced = [n for n in reduced_and_related if 'modification' in n]
+        related = [n for n in reduced_and_related if n not in reduced]
+        self.assertEqual(len(reduced), 1)
+        self.assertEqual(len(related), 1)
 
     def test_single_node(self):
 
