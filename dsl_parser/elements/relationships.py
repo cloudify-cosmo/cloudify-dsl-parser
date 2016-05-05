@@ -85,4 +85,4 @@ def _validate_relationship_fields(rel_obj, plugins, rel_name, resource_base):
                 plugins=plugins,
                 error_code=19,
                 partial_error_message="Relationship '{0}'".format(rel_name),
-                resource_base=resource_base)
+                resource_bases=resource_base)
