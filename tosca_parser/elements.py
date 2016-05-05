@@ -13,13 +13,95 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from aria.parser.framework.elements import Element, DictElement, Dict, Leaf
-from aria.parser.framework.elements.data_types import Schema, DataTypes
+from aria.parser import constants
+from aria.parser.models import Plan
+from aria.parser.extension_tools import VersionNumber
+from aria.parser.exceptions import DSLParsingLogicException
+from aria.parser.utils import merge_schema_and_instance_properties
+from aria.parser.constants import (
+    CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT, PLUGIN_EXECUTOR_KEY)
+from aria.parser.framework.elements.imports import ImportsLoader
 from aria.parser.framework.elements.policies import Group
+from aria.parser.framework.elements.plugins import Plugin
+from aria.parser.framework.elements.data_types import Schema, DataTypes
+from aria.parser.framework.elements.node_templates import (
+    NodeTemplateRelationships, NodeTemplates)
+from aria.parser.framework.elements.blueprint import Blueprint
+from aria.parser.framework.elements.node_types import NodeTypes
+from aria.parser.framework.elements.operation import OperationExecutor
+from aria.parser.framework.elements import Element, DictElement, Dict, Leaf
 from aria.parser.framework.requirements import Value
 
-from aria.parser.utils import merge_schema_and_instance_properties
-from aria.parser.exceptions import DSLParsingLogicException
+POLICY_TRIGGERS = 'policy_triggers'
+POLICY_TYPES = 'policy_types'
+
+
+class CloudifyNodeTemplateRelationships(NodeTemplateRelationships):
+    CONTAINED_IN_REL_TYPE = 'cloudify.relationships.contained_in'
+
+
+class CloudifyNodeTypes(NodeTypes):
+    HOST_TYPE = 'cloudify.nodes.Compute'
+
+
+class CloudifyBlueprint(Blueprint):
+    def parse(self, *args, **kwargs):
+        return Plan({
+            POLICY_TRIGGERS: self.child(PolicyTriggers).value,
+            POLICY_TYPES: self.child(PolicyTypes).value,
+        }, **super(CloudifyBlueprint, self).parse(*args, **kwargs))
+
+
+class CloudifyOperationExecutor(OperationExecutor):
+    valid_executors = (CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT)
+
+
+class CloudifyPluginExecutor(Element):
+    required = True
+    schema = Leaf(type=str)
+
+    def validate(self):
+        if self.initial_value not in [CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT]:
+            raise DSLParsingLogicException(
+                18,
+                "Plugin '{0}' has an illegal "
+                "'{1}' value '{2}'; value "
+                "must be either '{3}' or '{4}'"
+                .format(self.ancestor(Plugin).name,
+                        self.name,
+                        self.initial_value,
+                        CENTRAL_DEPLOYMENT_AGENT,
+                        HOST_AGENT))
+
+
+class CloudifyNodeTemplates(NodeTemplates):
+    @staticmethod
+    def should_install_plugin_on_compute_node(plugin):
+        return plugin[PLUGIN_EXECUTOR_KEY] == HOST_AGENT
+
+
+class CloudifyImportsLoader(ImportsLoader):
+    MERGEABLE_FROM_DSL = [
+        constants.INPUTS,
+        constants.OUTPUTS,
+        constants.NODE_TEMPLATES,
+    ]
+
+    def merge_parsed_into_combined(self, **kwargs):
+        kwargs['merge_no_override'] = self.MERGE_NO_OVERRIDE.copy()
+        version = kwargs['version']
+        if version['definitions_version'].number > VersionNumber(1, 2):
+            kwargs['merge_no_override'].update(self.MERGEABLE_FROM_DSL)
+        super(CloudifyImportsLoader, self).merge_parsed_into_combined(**kwargs)
+
+    def assert_mergeable(self, key_holder):
+        if key_holder.value in self.MERGEABLE_FROM_DSL:
+            raise DSLParsingLogicException(
+                3,
+                "Import failed: non-mergeable field: '{0}'. "
+                "{0} can be imported multiple times only from "
+                "cloudify_dsl_1_3 and above.".format(key_holder.value))
+        super(CloudifyImportsLoader, self).assert_mergeable(key_holder)
 
 
 class PolicyTypeSource(Element):

@@ -35,7 +35,6 @@ def extend_cloudify_version_1_1():
         function_extensions=[cloudify_concat_extension],
     )
 
-# Dan: explain...
 cloudify_operation_max_retries_extension = ElementExtension(
     action=ElementExtension.CHANGE_ELEMENT_VERSION,
     target_element=OperationMaxRetries)
@@ -48,7 +47,7 @@ cloudify_plugin_install_arguments_extension = ElementExtension(
     action=ElementExtension.CHANGE_ELEMENT_VERSION,
     target_element=PluginInstallArguments)
 
-# Dan: add to Func Exten change version action
+
 cloudify_concat_extension = IntrinsicFunctionExtension(
     action=IntrinsicFunctionExtension.ADD_FUNCTION_ACTION,
     name='concat',
