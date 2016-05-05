@@ -434,7 +434,7 @@ def _process_operations(partial_error_message,
                 partial_error_message=(
                     "In interface '{0}' {1}".format(interface_name,
                                                     partial_error_message)),
-                resource_base=resource_base)
+                resource_bases=resource_base)
         for operation in interface_operations:
             operation_name = operation.pop('name')
             if operation_name in operations:
