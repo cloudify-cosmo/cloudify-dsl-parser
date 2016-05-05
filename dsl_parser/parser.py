@@ -27,14 +27,16 @@ from dsl_parser.import_resolver.default_import_resolver import \
 def parse_from_path(dsl_file_path,
                     resources_base_url=None,
                     resolver=None,
-                    validate_version=True):
+                    validate_version=True,
+                    additional_resource_sources=()):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
     return _parse(dsl_string,
                   resources_base_url=resources_base_url,
                   dsl_location=dsl_file_path,
                   resolver=resolver,
-                  validate_version=validate_version)
+                  validate_version=validate_version,
+                  additional_resource_sources=additional_resource_sources)
 
 
 def parse_from_url(dsl_url,
@@ -73,7 +75,8 @@ def _parse(dsl_string,
            resources_base_url,
            dsl_location=None,
            resolver=None,
-           validate_version=True):
+           validate_version=True,
+           additional_resource_sources=()):
     parsed_dsl_holder = utils.load_yaml(raw_yaml=dsl_string,
                                         error_message='Failed to parse DSL',
                                         filename=dsl_location)
@@ -104,7 +107,10 @@ def _parse(dsl_string,
         },
         element_cls=blueprint.BlueprintImporter,
         strict=False)
-    resource_base = result['resource_base']
+    resource_base = [result['resource_base']]
+    if additional_resource_sources:
+        resource_base.extend(additional_resource_sources)
+
     merged_blueprint_holder = result['merged_blueprint']
 
     # parse blueprint

@@ -179,13 +179,13 @@ def process_interface_operations(
         plugins,
         error_code,
         partial_error_message,
-        resource_base):
+        resource_bases):
     return [process_operation(plugins=plugins,
                               operation_name=operation_name,
                               operation_content=operation_content,
                               error_code=error_code,
                               partial_error_message=partial_error_message,
-                              resource_base=resource_base)
+                              resource_bases=resource_bases)
             for operation_name, operation_content in interface.items()]
 
 
@@ -195,7 +195,7 @@ def process_operation(
         operation_content,
         error_code,
         partial_error_message,
-        resource_base,
+        resource_bases,
         is_workflows=False):
     payload_field_name = 'parameters' if is_workflows else 'inputs'
     mapping_field_name = 'mapping' if is_workflows else 'implementation'
@@ -239,7 +239,8 @@ def process_operation(
                 executor=operation_executor,
                 max_retries=operation_max_retries,
                 retry_interval=operation_retry_interval)
-    elif resource_base and _resource_exists(resource_base, operation_mapping):
+    elif resource_bases and _resource_exists(resource_bases,
+                                             operation_mapping):
         operation_payload = copy.deepcopy(operation_payload or {})
         if constants.SCRIPT_PATH_PROPERTY in operation_payload:
             message = "Cannot define '{0}' property in '{1}' for {2} '{3}'" \
@@ -301,5 +302,6 @@ def process_operation(
         raise exceptions.DSLParsingLogicException(error_code, error_message)
 
 
-def _resource_exists(resource_base, resource_name):
-    return utils.url_exists('{0}/{1}'.format(resource_base, resource_name))
+def _resource_exists(resource_bases, resource_name):
+    return any(utils.url_exists('{0}/{1}'.format(resource_base, resource_name))
+               for resource_base in resource_bases if resource_base)
