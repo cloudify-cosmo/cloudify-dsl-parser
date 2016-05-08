@@ -242,5 +242,4 @@ class GroupPolicy(DictElement):
 
 
 class GroupPolicies(DictElement):
-    required = True
     schema = Dict(type=GroupPolicy)

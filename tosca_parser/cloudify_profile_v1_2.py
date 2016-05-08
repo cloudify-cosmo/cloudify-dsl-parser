@@ -16,6 +16,9 @@
 from aria.parser.framework.elements.misc import DSLDefinitions, Description
 from aria.parser.framework.elements.data_types import (
     SchemaPropertyRequired, DataTypes)
+from aria.parser.framework.elements.node_templates import (
+    NodeTemplateCapabilities)
+from aria.parser.framework.elements.policies import Policies
 from aria.parser.framework.elements.plugins import (
     PluginPackageName,
     PluginPackageVersion,
@@ -40,6 +43,8 @@ def extend_cloudify_version_1_2():
             cloudify_plugin_distribution_extension,
             cloudify_plugin_distribution_version_extension,
             cloudify_plugin_distribution_release_extension,
+            cloudify_node_template_capabilities_extension,
+            cloudify_policies_extension,
         ],
     )
 
@@ -82,3 +87,11 @@ cloudify_plugin_distribution_version_extension = ElementExtension(
 cloudify_plugin_distribution_release_extension = ElementExtension(
     action=ElementExtension.CHANGE_ELEMENT_VERSION,
     target_element=PluginDistributionRelease)
+
+cloudify_node_template_capabilities_extension = ElementExtension(
+    action=ElementExtension.CHANGE_ELEMENT_VERSION,
+    target_element=NodeTemplateCapabilities)
+
+cloudify_policies_extension = ElementExtension(
+    action=ElementExtension.CHANGE_ELEMENT_VERSION,
+    target_element=Policies)
