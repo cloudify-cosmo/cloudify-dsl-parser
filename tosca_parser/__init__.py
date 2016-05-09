@@ -67,3 +67,4 @@ add_version_to_database(
 
 default_parser = Parser()
 parse = default_parser.parse
+
