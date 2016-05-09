@@ -1,9 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one or more
-# contributor license agreements.  See the NOTICE file distributed with
-# this work for additional information regarding copyright ownership.
-# The ASF licenses this file to You under the Apache License, Version 2.0
-# (the "License"); you may not use this file except in compliance with
-# the License.  You may obtain a copy of the License at
+########
+# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -13,10 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import itertools
-import random
+from dsl_parser.tests import scaling
 
-from mock import patch
 
 from dsl_parser import rel_graph
 from dsl_parser.multi_instance import (create_deployment_plan,
@@ -499,6 +493,9 @@ node_templates:
 """
         self.assertRaises(rel_graph.UnsupportedRelationship,
                           self.parse_multi, yaml)
+=======
+class TestMultiInstanceModify(scaling.BaseTestMultiInstance):
+>>>>>>> master:dsl_parser/tests/scaling/test_modify.py
 
     def test_modified_single_node_added(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -532,8 +529,10 @@ node_templates:
         yaml = self.BASE_BLUEPRINT + """
     host:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
 """
         plan = self.parse_multi(yaml)
         modification = self.modify_multi(plan, {
@@ -578,8 +577,10 @@ node_templates:
         yaml = self.BASE_BLUEPRINT + """
     host:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
     db:
         type: db
         relationships:
@@ -639,8 +640,10 @@ node_templates:
         type: cloudify.nodes.Compute
     db:
         type: db
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: host
@@ -696,12 +699,16 @@ node_templates:
         yaml = self.BASE_BLUEPRINT + """
     host:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
     db:
         type: db
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: host
@@ -766,16 +773,22 @@ node_templates:
         yaml = self.BASE_BLUEPRINT + """
     host1:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
     host2:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
     db:
         type: db
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: host1
@@ -848,16 +861,22 @@ node_templates:
         yaml = self.BASE_BLUEPRINT + """
     host1:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
     host2:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
     db:
         type: db
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: host1
@@ -930,16 +949,22 @@ node_templates:
         yaml = self.BASE_BLUEPRINT + """
     host1:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
     host2:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
     db:
         type: db
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: host1
@@ -979,12 +1004,16 @@ node_templates:
         type: cloudify.nodes.Compute
     host2:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 5
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 5
     db:
         type: db
-        instances:
-            deploy: 5
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 5
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: host1
@@ -998,9 +1027,9 @@ node_templates:
         db_nodes = self._nodes_by_name(node_instances, 'db')
         host2_nodes = self._nodes_by_name(node_instances, 'host2')
         initial_target_id = self._assert_all_to_one(
-            self._nodes_relationships(db_nodes, 'host2'),
-            self._node_ids(host2_nodes),
-            'host2')
+                self._nodes_relationships(db_nodes, 'host2'),
+                self._node_ids(host2_nodes),
+                'host2')
         modification = self.modify_multi(plan, {
             'host2': {'instances': 10},
             'db': {'instances': 10}
@@ -1014,21 +1043,25 @@ node_templates:
         added_host2_nodes = self._nodes_by_name(added_and_related, 'host2')
         self.assertEqual(6, len(added_host2_nodes))
         new_target_id = self._assert_all_to_one(
-            self._nodes_relationships(added_db_nodes, 'host2'),
-            self._node_ids(host2_nodes + added_host2_nodes),
-            'host2')
+                self._nodes_relationships(added_db_nodes, 'host2'),
+                self._node_ids(host2_nodes + added_host2_nodes),
+                'host2')
         self.assertEqual(initial_target_id, new_target_id)
 
     def test_removed_ids_hint(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
         type: cloudify.nodes.Compute
-        instances:
-            deploy: 3
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 3
     db:
         type: db
-        instances:
-            deploy: 2
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 2
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: host
@@ -1047,7 +1080,7 @@ node_templates:
             })
             self._assert_modification(modification, 0, 3, 0, 3)
             removed_host_ids = self._node_ids(self._nodes_by_name(
-                modification['removed_and_related'], 'host'))
+                    modification['removed_and_related'], 'host'))
             self.assertEqual(removed_host_ids, [host_id])
 
         for host_id in host_ids:
@@ -1059,7 +1092,7 @@ node_templates:
             })
             self._assert_modification(modification, 0, 3, 0, 3)
             removed_host_ids = self._node_ids(self._nodes_by_name(
-                modification['removed_and_related'], 'host'))
+                    modification['removed_and_related'], 'host'))
             self.assertNotIn(host_id, removed_host_ids)
 
         for db_id in db_ids:
@@ -1071,7 +1104,7 @@ node_templates:
             })
             self._assert_modification(modification, 0, 6, 0, 3)
             removed_db_ids = self._node_ids(self._nodes_by_name(
-                modification['removed_and_related'], 'db'))
+                    modification['removed_and_related'], 'db'))
             self.assertIn(db_id, removed_db_ids)
 
         for db_id in db_ids:
@@ -1083,7 +1116,7 @@ node_templates:
             })
             self._assert_modification(modification, 0, 6, 0, 3)
             removed_db_ids = self._node_ids(self._nodes_by_name(
-                modification['removed_and_related'], 'db'))
+                    modification['removed_and_related'], 'db'))
             self.assertNotIn(db_id, removed_db_ids)
 
         # give all nodes as include hint to see we only take what is needed
@@ -1104,73 +1137,56 @@ node_templates:
         })
         self._assert_modification(modification, 0, 6, 0, 3)
 
-    def _nodes_relationships(self, nodes, target_name=None):
-        relationships = []
-        for node in nodes:
-            for rel in node['relationships']:
-                if target_name and rel['target_name'] != target_name:
-                    continue
-                relationships.append(rel)
-        return relationships
+    def _test_base_nodes(self):
+        return self.BASE_BLUEPRINT + """
+            without_rel:
+                type: type
+            with_rel:
+                type: type
+        """
 
-    def _assert_added_not_in_previous(self, plan, modification):
-        previous_node_instances = plan['node_instances']
-        added_and_related = modification['added_and_related']
-        previous_graph = rel_graph.build_node_graph(previous_node_instances)
-        added_nodes_graph = rel_graph.build_node_graph(added_and_related)
-        for instance_id, data in added_nodes_graph.nodes_iter(data=True):
-            instance = data['node']
-            if instance.get('modification') == 'added':
-                self.assertNotIn(instance_id, previous_graph)
-            else:
-                self.assertIn(instance_id, previous_graph)
-        for source, target, in added_nodes_graph.edges_iter():
-            self.assertFalse(previous_graph.has_edge(source, target))
+    def test_new_node(self):
+        blueprint = self._test_base_nodes()
 
-    def _assert_removed_in_previous(self, plan, modification):
-        previous_node_instances = plan['node_instances']
-        removed_and_related = modification['removed_and_related']
-        previous_graph = rel_graph.build_node_graph(previous_node_instances)
-        removed_nodes_graph = rel_graph.build_node_graph(removed_and_related)
-        for instance_id, data in removed_nodes_graph.nodes_iter(data=True):
-            self.assertIn(instance_id, previous_graph)
-        for source, target, in removed_nodes_graph.edges_iter():
-            self.assertTrue(previous_graph.has_edge(source, target))
+        plan = self.parse_multi(blueprint)
 
-    def _assert_modification(self,
-                             modification,
-                             expected_added_and_related_count,
-                             expected_removed_and_related_count,
-                             expected_added_count,
-                             expected_removed_count):
-        added_and_related = modification['added_and_related']
-        removed_and_related = modification['removed_and_related']
-        added = [instance for instance in added_and_related
-                 if instance.get('modification') == 'added']
-        removed = [instance for instance in removed_and_related
-                   if instance.get('modification') == 'removed']
+        plan['nodes'].append({
+            'name': 'new_node',
+            'id': 'new_node',
+            'type': 'new_type',
+            'number_of_instances': 1,
+            'deploy_number_of_instances': 1,
+            'min_number_of_instances': 1,
+            'max_number_of_instances': 1,
+        })
+        new_node = [n for n in plan['nodes'] if n['id'] == 'new_node'][0]
 
-        self.assertEqual(expected_added_and_related_count,
-                         len(added_and_related))
-        self.assertEqual(expected_removed_and_related_count,
-                         len(removed_and_related))
-        self.assertEqual(expected_added_count,
-                         len(added))
-        self.assertEqual(expected_removed_count,
-                         len(removed))
+        modified_nodes = [new_node]
+        self.modify_multi(plan, modified_nodes=modified_nodes)
 
-    def test_small_id_range(self):
-        instances = 10
-        blueprint = '''
-node_templates:
-  node:
-    instances:
-      deploy: {0}
-    type: type
-node_types:
-  type: {1}
-'''.format(instances, '{}')
-        with patch('dsl_parser.rel_graph._generate_id',
-                   lambda: random.randint(1, instances)):
-            plan = self.parse_multi(blueprint)
-        self.assertEqual(instances, len(plan['node_instances']))
+    def test_new_relationship(self):
+        blueprint = self._test_base_nodes()
+
+        connected_to = 'cloudify.relationships.connected_to'
+        rel_type = connected_to
+
+        plan = self.parse_multi(blueprint)
+
+        with_rel = [n for n in plan['nodes'] if n['id'] == 'with_rel'][0]
+        without_rel = [n for n in plan['nodes'] if n['id'] == 'without_rel'][0]
+        with_rel['relationships'] = \
+            [{'type': rel_type,
+              'type_hierarchy': [rel_type],
+              'target_id': without_rel['id'],
+              'source_interface': {
+                  'cloudify.interfaces.relationship_lifecycle': {
+                      'preconfigure': 'scripts/increment.sh',
+                      'establish': 'scripts/increment.sh',
+                      'postconfigure': 'scripts/increment.sh'
+                  }
+              },
+              'properties': {
+                  'connection_type': 'all_to_all'
+              }}]
+        modified_nodes = [with_rel]
+        self.modify_multi(plan, modified_nodes=modified_nodes)

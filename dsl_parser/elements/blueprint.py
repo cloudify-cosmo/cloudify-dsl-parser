@@ -79,6 +79,7 @@ class Blueprint(Element):
         'policy_types': policies.PolicyTypes,
         'policy_triggers': policies.PolicyTriggers,
         'groups': policies.Groups,
+        'policies': policies.Policies,
         'workflows': workflows.Workflows,
         'outputs': misc.Outputs,
         'data_types': data_types.DataTypes
@@ -86,11 +87,13 @@ class Blueprint(Element):
 
     requires = {
         node_templates.NodeTemplates: ['deployment_plugins_to_install'],
-        workflows.Workflows: ['workflow_plugins_to_install']
+        workflows.Workflows: ['workflow_plugins_to_install'],
+        policies.Policies: ['scaling_groups']
     }
 
     def parse(self, workflow_plugins_to_install,
-              deployment_plugins_to_install):
+              deployment_plugins_to_install,
+              scaling_groups):
         return models.Plan({
             constants.DESCRIPTION: self.child(misc.Description).value,
             constants.NODES: self.child(node_templates.NodeTemplates).value,
@@ -100,7 +103,10 @@ class Blueprint(Element):
             constants.POLICY_TYPES: self.child(policies.PolicyTypes).value,
             constants.POLICY_TRIGGERS:
                 self.child(policies.PolicyTriggers).value,
+            constants.POLICIES:
+                self.child(policies.Policies).value,
             constants.GROUPS: self.child(policies.Groups).value,
+            constants.SCALING_GROUPS: scaling_groups or {},
             constants.INPUTS: self.child(misc.Inputs).value,
             constants.OUTPUTS: self.child(misc.Outputs).value,
             constants.DEPLOYMENT_PLUGINS_TO_INSTALL:

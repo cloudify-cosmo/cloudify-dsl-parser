@@ -273,7 +273,7 @@ outputs:
                                        get_node)
             self.fail()
         except exceptions.FunctionEvaluationError, e:
-            self.assertIn('Multi instances of node', str(e))
+            self.assertIn('unambiguously', str(e))
             self.assertIn('webserver', str(e))
 
     def test_get_attribute_nested_property(self):

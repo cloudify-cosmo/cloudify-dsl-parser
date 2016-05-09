@@ -208,6 +208,72 @@ node_templates:
             self.assertIn('vm.properties.notfound', str(e))
             self.assertIn('vm.operations.interface.op.inputs.x', str(e))
 
+    def test_node_template_capabilities(self):
+        yaml = """
+node_templates:
+    node:
+        type: type
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: { get_property: [node, prop1] }
+                    max_instances: { get_property: [SELF, prop1] }
+                    min_instances: { get_input: my_input }
+inputs:
+    my_input:
+        default: 20
+node_types:
+    type:
+        properties:
+            prop1:
+                default: 10
+"""
+        parsed = prepare_deployment_plan(self.parse_1_2(yaml))
+        node = self.get_node_by_name(parsed, 'node')
+        self.assertEqual({
+            'default_instances': 10,
+            'min_instances': 20,
+            'max_instances': 10,
+            'current_instances': 10,
+            'planned_instances': 10,
+        }, node['capabilities']['scalable']['properties'])
+
+    def test_policies_properties(self):
+        yaml = """
+node_templates:
+    node:
+        type: type
+inputs:
+    my_input:
+        default: 20
+node_types:
+    type:
+        properties:
+            prop1:
+                default: 10
+groups:
+    group:
+        members: [node]
+policies:
+    policy:
+        type: cloudify.policies.scaling
+        targets: [group]
+        properties:
+            default_instances: { get_property: [node, prop1] }
+            min_instances: { get_input: my_input }
+"""
+        parsed = prepare_deployment_plan(self.parse_1_2(yaml))
+        expected = {
+            'default_instances': 10,
+            'min_instances': 20,
+            'max_instances': -1,
+            'current_instances': 10,
+            'planned_instances': 10,
+        }
+        self.assertEqual(expected,
+                         parsed['scaling_groups']['group']['properties'])
+        self.assertEqual(expected, parsed['policies']['policy']['properties'])
+
     def test_recursive(self):
         yaml = """
 inputs:
