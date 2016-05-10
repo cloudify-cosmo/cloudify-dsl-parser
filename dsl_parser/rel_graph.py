@@ -608,8 +608,8 @@ def _get_all_to_one_relationship_target_id(
         target_node_id,
         relationship,
         target_node_instance_ids):
-    if ctx.is_modification:
-        key = (source_node_id, target_node_id, relationship['type'])
+    key = (source_node_id, target_node_id, relationship['type'])
+    if ctx.is_modification and key in relationship_target_ids:
         target_ids = relationship_target_ids[key]
         if len(target_ids) != 1:
             raise exceptions.IllegalAllToOneState(
