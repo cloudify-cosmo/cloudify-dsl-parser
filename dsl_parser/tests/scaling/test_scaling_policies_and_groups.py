@@ -29,7 +29,7 @@ class TestScalingPoliciesAndGroups(AbstractTestParser):
         }
         expected = {
             'default_instances': 1,
-            'min_instances': 1,
+            'min_instances': 0,
             'max_instances': constants.UNBOUNDED,
             'current_instances': 1,
             'planned_instances': 1
@@ -44,7 +44,7 @@ class TestScalingPoliciesAndGroups(AbstractTestParser):
         }
         expected = {
             'default_instances': 1,
-            'min_instances': 1,
+            'min_instances': 0,
             'max_instances': constants.UNBOUNDED,
             'current_instances': 1,
             'planned_instances': 1
@@ -61,7 +61,7 @@ class TestScalingPoliciesAndGroups(AbstractTestParser):
         }
         expected = {
             'default_instances': 3,
-            'min_instances': 1,
+            'min_instances': 0,
             'max_instances': constants.UNBOUNDED,
             'current_instances': 3,
             'planned_instances': 3
@@ -78,7 +78,7 @@ class TestScalingPoliciesAndGroups(AbstractTestParser):
         }
         expected = {
             'default_instances': 1,
-            'min_instances': 1,
+            'min_instances': 0,
             'max_instances': 3,
             'current_instances': 1,
             'planned_instances': 1
@@ -90,12 +90,12 @@ class TestScalingPoliciesAndGroups(AbstractTestParser):
             'type': constants.SCALING_POLICY,
             'targets': ['group'],
             'properties': {
-                'min_instances': 0,
+                'min_instances': 1,
             }
         }
         expected = {
             'default_instances': 1,
-            'min_instances': 0,
+            'min_instances': 1,
             'max_instances': constants.UNBOUNDED,
             'current_instances': 1,
             'planned_instances': 1
@@ -112,7 +112,7 @@ class TestScalingPoliciesAndGroups(AbstractTestParser):
         }
         expected = {
             'default_instances': 1,
-            'min_instances': 1,
+            'min_instances': 0,
             'max_instances': constants.UNBOUNDED,
             'current_instances': 1,
             'planned_instances': 1
@@ -191,7 +191,7 @@ class TestScalingPoliciesAndGroupsExtra(AbstractTestParser):
                 'members': ['node'],
                 'properties': {
                     'default_instances': 1,
-                    'min_instances': 1,
+                    'min_instances': 0,
                     'max_instances': constants.UNBOUNDED,
                     'current_instances': 1,
                     'planned_instances': 1
@@ -751,7 +751,7 @@ class TestNodeTemplateDefaultScalableProperties(AbstractTestParser):
         plan = self.parse_1_3(blueprint)
         self.assertEquals({
             'default_instances': expected_default,
-            'min_instances': 1,
+            'min_instances': 0,
             'max_instances': constants.UNBOUNDED,
             'current_instances': expected_default,
             'planned_instances': expected_default
