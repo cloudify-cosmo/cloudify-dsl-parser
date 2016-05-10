@@ -569,6 +569,29 @@ class TestMultiInstanceModify(scaling.BaseTestMultiInstance):
                 'host2')
         self.assertEqual(initial_target_id, new_target_id)
 
+    def test_scale_out_from_zero_with_relationship(self):
+        yaml = self.BASE_BLUEPRINT + """
+    host:
+        type: cloudify.nodes.Compute
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 0
+                    min_instances: 0
+        relationships:
+            -   type: cloudify.relationships.connected_to
+                target: webserver
+                properties:
+                    connection_type: all_to_one
+    webserver:
+        type: webserver
+"""
+        plan = self.parse_multi(yaml)
+        modification = self.modify_multi(
+            plan, modified_nodes={'host': {'instances': 1}})
+        added = modification['added_and_related']
+        self.assertEqual(2, len(added))
+
     def test_removed_ids_hint(self):
         yaml = self.BASE_BLUEPRINT + """
     host:
