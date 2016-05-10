@@ -44,12 +44,10 @@ class Instances(Element):
         return self.initial_value
 
 
-class DefaultOneInstances(Instances):
-
-    default_value = 1
+class NonNegativeInstances(Instances):
 
     def validate(self):
-        if super(DefaultOneInstances, self).validate():
+        if super(NonNegativeInstances, self).validate():
             return
         if self.initial_value is not None and self.initial_value < 0:
             raise exceptions.DSLParsingLogicException(
@@ -58,12 +56,12 @@ class DefaultOneInstances(Instances):
                 .format(self.name))
 
 
-class DefaultInstances(DefaultOneInstances):
-    pass
+class DefaultInstances(NonNegativeInstances):
+    default_value = 1
 
 
-class MinInstances(DefaultOneInstances):
-    pass
+class MinInstances(NonNegativeInstances):
+    default_value = 0
 
 
 class MaxInstances(Instances):
