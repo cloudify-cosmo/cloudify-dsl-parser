@@ -2947,7 +2947,7 @@ class TestMultiInstanceGroups(scaling.BaseTestMultiInstance):
 
         # final blueprint definition
         blueprint = {
-            'tosca_definitions_version': 'cloudify_dsl_1_2',
+            'tosca_definitions_version': 'cloudify_dsl_1_3',
             'node_types': {
                 'cloudify.nodes.Compute': {},
                 'cloudify.nodes.Root': {}

@@ -665,7 +665,7 @@ class TestScalingPoliciesAndGroupsValidation(AbstractTestParser):
         groups = {
             'group': ['node']
         }
-        for version in ['1_0', '1_1']:
+        for version in ['1_0', '1_1', '1_2']:
             self.assert_validation(
                 exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
                 groups=groups, nodes=nodes,
@@ -761,7 +761,7 @@ class TestNodeTemplateDefaultScalableProperties(AbstractTestParser):
         blueprint = self.MINIMAL_BLUEPRINT + """
         capabilities: {}
 """
-        for parsing_method in [self.parse_1_0, self.parse_1_1]:
+        for parsing_method in [self.parse_1_0, self.parse_1_1, self.parse_1_2]:
             self._assert_dsl_parsing_exception_error_code(
                 blueprint,
                 exceptions.ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,

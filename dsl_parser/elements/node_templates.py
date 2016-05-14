@@ -201,7 +201,7 @@ class NodeTemplateCapabilities(DictElement):
 
     def validate(self, version, validate_version, instances_deploy):
         if validate_version:
-            self.validate_version(version, (1, 2))
+            self.validate_version(version, (1, 3))
         if instances_deploy is not None and self.initial_value is not None:
             raise exceptions.DSLParsingLogicException(
                 exceptions.ERROR_INSTANCES_DEPLOY_AND_CAPABILITIES,

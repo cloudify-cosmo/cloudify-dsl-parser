@@ -324,7 +324,7 @@ class Policies(DictElement):
 
     def validate(self, version, validate_version, **kwargs):
         if validate_version:
-            self.validate_version(version, (1, 2))
+            self.validate_version(version, (1, 3))
 
     def calculate_provided(self, groups, node_templates, **kwargs):
         scaling_groups = self._create_scaling_groups(groups)
