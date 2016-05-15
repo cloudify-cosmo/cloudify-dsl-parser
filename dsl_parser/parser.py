@@ -42,7 +42,8 @@ def parse_from_path(dsl_file_path,
 def parse_from_url(dsl_url,
                    resources_base_url=None,
                    resolver=None,
-                   validate_version=True):
+                   validate_version=True,
+                   additional_resource_sources=()):
     try:
         with contextlib.closing(urllib2.urlopen(dsl_url)) as f:
             dsl_string = f.read()
@@ -58,7 +59,8 @@ def parse_from_url(dsl_url,
                   resources_base_url=resources_base_url,
                   dsl_location=dsl_url,
                   resolver=resolver,
-                  validate_version=validate_version)
+                  validate_version=validate_version,
+                  additional_resource_sources=additional_resource_sources)
 
 
 def parse(dsl_string,

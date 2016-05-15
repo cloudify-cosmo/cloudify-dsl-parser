@@ -24,11 +24,14 @@ from dsl_parser import (functions,
 def parse_dsl(dsl_location,
               resources_base_url,
               resolver=None,
-              validate_version=True):
-    return parser.parse_from_url(dsl_url=dsl_location,
-                                 resources_base_url=resources_base_url,
-                                 resolver=resolver,
-                                 validate_version=validate_version)
+              validate_version=True,
+              additional_resources=()):
+    return parser.parse_from_url(
+            dsl_url=dsl_location,
+            resources_base_url=resources_base_url,
+            resolver=resolver,
+            validate_version=validate_version,
+            additional_resource_sources=additional_resources)
 
 
 def _set_plan_inputs(plan, inputs=None):
