@@ -228,7 +228,7 @@ node_types:
             prop1:
                 default: 10
 """
-        parsed = prepare_deployment_plan(self.parse_1_2(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_3(yaml))
         node = self.get_node_by_name(parsed, 'node')
         self.assertEqual({
             'default_instances': 10,
@@ -262,7 +262,7 @@ policies:
             default_instances: { get_property: [node, prop1] }
             min_instances: { get_input: my_input }
 """
-        parsed = prepare_deployment_plan(self.parse_1_2(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_3(yaml))
         expected = {
             'default_instances': 10,
             'min_instances': 20,
