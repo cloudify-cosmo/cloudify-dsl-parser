@@ -16,11 +16,13 @@
 import os
 from uuid import uuid4
 from shutil import rmtree
+from yaml import safe_dump
 from itertools import imap
 from tempfile import mkdtemp
 from testtools import TestCase
 
 from tosca_parser import Parser
+from aria.exceptions import DSLParsingException
 
 
 class TempDirectoryTestCase(TestCase):
@@ -81,7 +83,10 @@ class ParserTestCase(TestCase):
             str(self.template), dsl_location=dsl_location)
 
     def assert_parser_raise_exception(
-            self, error_code, exception_types, extra_tests=()):
+            self,
+            error_code,
+            exception_types=DSLParsingException,
+            extra_tests=()):
         try:
             self.parse()
             self.fail()
@@ -144,6 +149,47 @@ class Template(object):
 
     def clear(self):
         self.template = ''
+
+    def from_members(
+            self,
+            groups=None,
+            nodes=None,
+            policies=None,
+            policy_types=None,
+            version=None):
+        groups = groups or {}
+        nodes = nodes or {'node': None}
+        version = 'cloudify_dsl_{0}'.format(version or '1_0')
+
+        node_templates = {}
+        for node, contained_in in nodes.iteritems():
+            node_template = {'type': 'type'}
+            if contained_in:
+                node_template['relationships'] = [
+                    {'type': 'cloudify.relationships.contained_in',
+                     'target': contained_in}
+                ]
+            node_templates[node] = node_template
+
+        blueprint_groups = dict(
+            (group, item if isinstance(item, dict) else {'members': item})
+            for group, item in groups.iteritems())
+
+        blueprint = {
+            'tosca_definitions_version': version,
+            'node_types': {'type': {}},
+            'relationships': {'cloudify.relationships.contained_in': {}},
+            'node_templates': node_templates,
+            'groups': blueprint_groups,
+        }
+
+        if policies:
+            blueprint['policies'] = policies
+        if policy_types is not None:
+            blueprint['policy_types'] = policy_types
+
+        self.clear()
+        self.template += safe_dump(blueprint)
 
     def version_section(self, version, raw=False):
         version_str = (
