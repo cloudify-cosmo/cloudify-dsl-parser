@@ -14,16 +14,30 @@
 #  * limitations under the License.
 
 from aria.parser.extension_tools import ElementExtension
-from .elements import (
-    ImportsLoader, CloudifyImportsLoader,
-)
+from aria.parser.framework.elements.policies import Policies
+from aria.parser.framework.elements.node_templates import NodeTemplateCapabilities
+
+from .elements import ImportsLoader, CloudifyImportsLoader
 
 
 def extend_cloudify_version_1_3():
-    return dict(element_extensions=[cloudify_imports_loader_extension])
+    return dict(element_extensions=[
+        cloudify_imports_loader_extension,
+        cloudify_node_template_capabilities_extension,
+        cloudify_policies_extension,
+    ])
 
 
 cloudify_imports_loader_extension = ElementExtension(
     action=ElementExtension.REPLACE_ELEMENT_ACTION,
     target_element=ImportsLoader,
     new_element=CloudifyImportsLoader)
+
+cloudify_node_template_capabilities_extension = ElementExtension(
+    action=ElementExtension.CHANGE_ELEMENT_VERSION,
+    target_element=NodeTemplateCapabilities)
+
+
+cloudify_policies_extension = ElementExtension(
+    action=ElementExtension.CHANGE_ELEMENT_VERSION,
+    target_element=Policies)

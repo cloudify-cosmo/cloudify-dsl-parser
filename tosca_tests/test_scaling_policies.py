@@ -106,7 +106,7 @@ class TestNodeTemplateDefaultScalableProperties(ParserTestCase):
         groups = {
             'group': ['node']
         }
-        for version in ['1_0', '1_1']:
+        for version in ['1_0', '1_1', '1_2']:
             self.assert_validation(
                 ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH,
                 groups=groups, nodes=nodes,
