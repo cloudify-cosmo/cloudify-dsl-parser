@@ -13,16 +13,31 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import sys
+from setuptools import setup, find_packages
 
-from setuptools import setup
+_PACKAGE_NAME = 'cloudify-dsl-parser'
+_PYTHON_SUPPORTED_VERSIONS = [(2, 6), (2, 7)]
 
+if ((sys.version_info.major, sys.version_info.minor)
+        not in _PYTHON_SUPPORTED_VERSIONS):
+    raise NotImplementedError(
+        '{0} Package support Python version 2.6 & 2.7 Only'.format(
+            _PACKAGE_NAME))
 
-install_requires = [
-    'PyYAML==3.10',
-    'networkx==1.8.1',
-    'requests==2.7.0',
-    'retrying==1.3.3'
-]
+try:
+    with open('requirements.txt') as requirements:
+        install_requires = requirements.readlines()
+except IOError:
+    install_requires = []
+
+# install_requires = [
+#     'PyYAML==3.10',
+#     'networkx==1.8.1',
+#     'requests==2.7.0',
+#     'retrying==1.3.3',
+#     'aria',
+# ]
 
 try:
     from collections import OrderedDict  # NOQA
@@ -35,15 +50,11 @@ except ImportError:
     install_requires.append('importlib')
 
 setup(
-    name='cloudify-dsl-parser',
+    name=_PACKAGE_NAME,
     version='3.4a5',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
-    packages=['dsl_parser',
-              'dsl_parser.interfaces',
-              'dsl_parser.framework',
-              'dsl_parser.elements',
-              'dsl_parser.import_resolver'],
+    packages=find_packages(),
     license='LICENSE',
     description='Cloudify DSL parser',
     zip_safe=False,

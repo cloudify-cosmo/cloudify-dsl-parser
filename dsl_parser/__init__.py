@@ -29,7 +29,6 @@ from functools import partial
 
 from aria.parser import Parser, extend
 from aria.parser.extension_tools import VersionStructure, VersionNumber
-from aria.parser.dsl_supported_versions import add_version_to_database
 
 from .cloudify_profile_v1_0 import extend_cloudify_version_1_0
 from .cloudify_profile_v1_1 import extend_cloudify_version_1_1
