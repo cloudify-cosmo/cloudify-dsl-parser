@@ -14,7 +14,8 @@
 # limitations under the License.
 
 from aria.exceptions import ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH
-from aria.parser.constants import SCALING_POLICY, UNBOUNDED
+from aria.parser.constants import UNBOUNDED
+from aria.parser.framework.elements.policies import PolicyInstanceType
 
 from .suite import ParserTestCase
 
@@ -64,7 +65,7 @@ class TestNodeTemplateDefaultScalableProperties(ParserTestCase):
             },
             policies={
                 'policy': {
-                    'type': SCALING_POLICY,
+                    'type': PolicyInstanceType.SCALING_POLICY,
                     'targets': ['group']
                 }
             },
@@ -119,7 +120,7 @@ class TestNodeTemplateDefaultScalableProperties(ParserTestCase):
         if policies is None:
             policies = {
                 'policy': {
-                    'type': SCALING_POLICY,
+                    'type': PolicyInstanceType.SCALING_POLICY,
                     'targets': groups.keys(),
                 },
             }

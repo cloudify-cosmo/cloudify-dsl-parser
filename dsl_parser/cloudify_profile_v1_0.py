@@ -16,6 +16,7 @@
 from itertools import chain
 
 from aria.parser.extension_tools import ElementExtension
+from aria.parser.framework.elements.policies import PolicyInstanceType
 
 from .elements import (
     PolicyTriggers, PolicyTypes, GroupPolicies, Group,
@@ -46,6 +47,7 @@ def extend_cloudify_version_1_0():
 
 def _unofficial_extensions():
     ImportsLoader.MERGE_NO_OVERRIDE.update((POLICY_TYPES, POLICY_TRIGGERS))
+    PolicyInstanceType.SCALING_POLICY = 'cloudify.policies.scaling'
 
 
 def _blueprint_element_extensions():
