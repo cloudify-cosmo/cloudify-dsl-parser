@@ -56,7 +56,7 @@ class Workflow(Element):
             operation_content=operation_content,
             error_code=21,
             partial_error_message='',
-            resource_base=resource_base,
+            resource_bases=resource_base,
             is_workflows=True)
 
 
