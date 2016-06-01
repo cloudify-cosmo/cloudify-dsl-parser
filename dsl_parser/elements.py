@@ -70,7 +70,7 @@ class CloudifyOperationExecutor(OperationExecutor):
 
 class CloudifyPluginExecutor(Element):
     required = True
-    schema = Leaf(type=str)
+    schema = Leaf(obj_type=str)
 
     def validate(self):
         if self.initial_value not in [CENTRAL_DEPLOYMENT_AGENT, HOST_AGENT]:
@@ -88,7 +88,7 @@ class CloudifyPluginExecutor(Element):
 
 class CloudifyNodeTemplates(NodeTemplates):
     @staticmethod
-    def should_install_plugin_on_compute_node(plugin):
+    def should_install_plugin(plugin):
         return plugin[PLUGIN_EXECUTOR_KEY] == HOST_AGENT
 
 
@@ -118,7 +118,7 @@ class CloudifyImportsLoader(ImportsLoader):
 
 class PolicyTypeSource(Element):
     required = True
-    schema = Leaf(type=str)
+    schema = Leaf(obj_type=str)
 
 
 class PolicyType(DictElement):
@@ -129,12 +129,12 @@ class PolicyType(DictElement):
 
 
 class PolicyTypes(DictElement):
-    schema = Dict(type=PolicyType)
+    schema = Dict(obj_type=PolicyType)
 
 
 class PolicyTriggerSource(Element):
     required = True
-    schema = Leaf(type=str)
+    schema = Leaf(obj_type=str)
 
 
 class PolicyTrigger(DictElement):
@@ -145,12 +145,12 @@ class PolicyTrigger(DictElement):
 
 
 class PolicyTriggers(DictElement):
-    schema = Dict(type=PolicyTrigger)
+    schema = Dict(obj_type=PolicyTrigger)
 
 
 class GroupPolicyTriggerType(Element):
     required = True
-    schema = Leaf(type=str)
+    schema = Leaf(obj_type=str)
     requires = {PolicyTriggers: [Value('policy_triggers')]}
 
     def validate(self, policy_triggers):
@@ -167,7 +167,7 @@ class GroupPolicyTriggerType(Element):
 
 
 class GroupPolicyTriggerParameters(Element):
-    schema = Leaf(type=dict)
+    schema = Leaf(obj_type=dict)
     requires = {
         GroupPolicyTriggerType: [],
         PolicyTriggers: [Value('policy_triggers')],
@@ -202,7 +202,7 @@ class GroupPolicyTrigger(DictElement):
 
 class GroupPolicyType(Element):
     required = True
-    schema = Leaf(type=str)
+    schema = Leaf(obj_type=str)
     requires = {PolicyTypes: [Value('policy_types')]}
 
     def validate(self, policy_types):
@@ -217,7 +217,7 @@ class GroupPolicyType(Element):
 
 
 class GroupPolicyProperties(Element):
-    schema = Leaf(type=dict)
+    schema = Leaf(obj_type=dict)
     requires = {
         GroupPolicyType: [],
         PolicyTypes: [Value('policy_types')],
@@ -242,7 +242,7 @@ class GroupPolicyProperties(Element):
 
 
 class GroupPolicyTriggers(DictElement):
-    schema = Dict(type=GroupPolicyTrigger)
+    schema = Dict(obj_type=GroupPolicyTrigger)
 
 
 class GroupPolicy(DictElement):
@@ -254,4 +254,4 @@ class GroupPolicy(DictElement):
 
 
 class GroupPolicies(DictElement):
-    schema = Dict(type=GroupPolicy)
+    schema = Dict(obj_type=GroupPolicy)
