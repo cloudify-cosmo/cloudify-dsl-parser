@@ -34,8 +34,8 @@ from .cloudify_profile_v1_0 import extend_cloudify_version_1_0
 from .cloudify_profile_v1_1 import extend_cloudify_version_1_1
 from .cloudify_profile_v1_2 import extend_cloudify_version_1_2
 from .cloudify_profile_v1_3 import extend_cloudify_version_1_3
+from .VERSION import version as __version__
 
-__version__ = '0.1.0.0'
 __all__ = [
     'extend',
     'parse',

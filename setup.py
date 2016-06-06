@@ -13,17 +13,21 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import os
 import sys
 from setuptools import setup, find_packages
 
 _PACKAGE_NAME = 'cloudify-dsl-parser'
+_PACKAGE_PATH = 'dsl_parser'
 _PYTHON_SUPPORTED_VERSIONS = [(2, 6), (2, 7)]
 
-if ((sys.version_info.major, sys.version_info.minor)
-        not in _PYTHON_SUPPORTED_VERSIONS):
+if (sys.version_info[0], sys.version_info[1]) not in _PYTHON_SUPPORTED_VERSIONS:
     raise NotImplementedError(
         '{0} Package support Python version 2.6 & 2.7 Only'.format(
             _PACKAGE_NAME))
+
+version = '0.0.1'
+execfile(os.path.join('.', _PACKAGE_PATH, 'VERSION.py'))
 
 try:
     with open('requirements.txt') as requirements:
@@ -31,32 +35,15 @@ try:
 except IOError:
     install_requires = []
 
-# install_requires = [
-#     'PyYAML==3.10',
-#     'networkx==1.8.1',
-#     'requests==2.7.0',
-#     'retrying==1.3.3',
-#     'aria',
-# ]
-
-try:
-    from collections import OrderedDict  # NOQA
-except ImportError, e:
-    install_requires.append('ordereddict==1.1')
-
-try:
-    import importlib  # NOQA
-except ImportError:
-    install_requires.append('importlib')
-
 setup(
     name=_PACKAGE_NAME,
-    version='3.4a5',
+    version=version,
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
-    packages=find_packages(),
+    packages=find_packages(_PACKAGE_PATH),
     license='LICENSE',
     description='Cloudify DSL parser',
     zip_safe=False,
-    install_requires=install_requires
+    install_requires=install_requires,
+    dev_requires=['celery'],
 )

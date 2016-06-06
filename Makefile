@@ -7,14 +7,14 @@ all:
 	@echo "make files - update changelog and todo files"
 	@echo "make test - run tox"
 	@echo "make docs - build docs"
-	@echo "prepare - prepare module for release (CURRENTLY IRRELEVANT)"
+	@echo "prepare - prepare module for release"
 	@echo "make publish - upload to pypi"
 
 release: test docs publish
 
 dev:
-	pip install -rdev-requirements.txt
-	python setup.py develop
+	pip install -r dev-requirements.txt
+	pip install -e $(shell pwd)
 
 install:
 	python setup.py install
@@ -24,16 +24,20 @@ files:
 	git log --oneline --decorate --color > CHANGELOG
 
 test:
-	pip install tox==1.6.1
 	tox
 
 docs:
-	pip install sphinx sphinx-rtd-theme
-	cd docs && make html
+	pip install -r docs/requirements.txt
+	cd docs
+	make html
 	pandoc README.md -f markdown -t rst -s -o README.rst
 
 prepare:
-	python scripts/make-release.py
+	python setup.py sdist
 
-publish:
-	python setup.py sdist upload
+publish: prepare
+	python setup.py upload
+
+cleanup:
+	rm -fr dist/ *.egg-info/ .tox/ .coverage
+	find . -name "*.pyc" -exec rm -rf {} \;
