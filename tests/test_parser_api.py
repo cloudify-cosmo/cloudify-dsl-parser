@@ -16,11 +16,12 @@
 from yaml import safe_dump, safe_load
 
 from aria.parser import models
+from aria.parser.exceptions import DSLParsingLogicException
+from aria.parser.framework.elements.relationships import RelationshipMapping
 from aria.parser.dsl_supported_versions import (
     parse_dsl_version, database,
     VersionNumber, VersionStructure,
 )
-from aria.parser.exceptions import DSLParsingLogicException
 from aria.parser.constants import (
     PLUGIN_NAME_KEY,
     PLUGIN_SOURCE_KEY,
@@ -887,3 +888,31 @@ imports:
         self._create_importable_yaml_for_version_1_3_and_above(importable)
         result = self.parse()
         self._assert_blueprint(result)
+
+    def test_relationship_types_extensions(self):
+        relationship_mapping = RelationshipMapping()
+        self.assertEqual(
+            expected=relationship_mapping.depens_on_relationship_type,
+            observed='cloudify.relationships.depends_on')
+        self.assertEqual(
+            expected=relationship_mapping.contained_in_relationship_type,
+            observed='cloudify.relationships.contained_in')
+        self.assertEqual(
+            expected=relationship_mapping.contained_to_relationship_type,
+            observed='cloudify.relationships.connected_to')
+        self.assertEqual(
+            expected=relationship_mapping.group_contained_in_relationship_type,
+            observed='__group_contained_in__')
+        self.assertEqual(
+            expected=relationship_mapping.connection_type,
+            observed='connection_type')
+
+        self.assertEqual(
+            expected=set(relationship_mapping.type_values()),
+            observed=set([
+                'cloudify.relationships.depends_on',
+                'cloudify.relationships.contained_in',
+                'cloudify.relationships.connected_to',
+                '__group_contained_in__',
+                'connection_type',
+            ]))
