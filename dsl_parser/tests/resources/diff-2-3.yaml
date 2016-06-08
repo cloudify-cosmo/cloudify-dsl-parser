@@ -1,6 +1,0 @@
-node_templates:
-  site_1:
-    interfaces:
-      lifecycle:
-        start: added
-      admin: added
