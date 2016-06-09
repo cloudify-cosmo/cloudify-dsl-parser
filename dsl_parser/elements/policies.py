@@ -475,7 +475,7 @@ class Policies(DictElement):
                     exceptions.ERROR_NON_CONTAINED_GROUP_MEMBERS,
                     "Node '{0}' and '{1}' belong to some shared group but "
                     "they are not contained in any shared node, nor is any "
-                    "ancestor node of theirs.")
+                    "ancestor node of theirs.".format(node_a, node_b))
 
     @staticmethod
     def _remove_contained_nodes_from_scaling_groups(
