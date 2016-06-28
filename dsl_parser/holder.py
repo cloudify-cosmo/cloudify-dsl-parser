@@ -42,6 +42,14 @@ class Holder(object):
     def __repr__(self):
         return self.__str__()
 
+    def __hash__(self):
+        return hash(self.value)
+
+    def __eq__(self, other):
+        if isinstance(other, Holder):
+            return self.value == other.value
+        return self.value == other
+
     def __contains__(self, key):
         key_holder, value_holder = self.get_item(key)
         return value_holder is not None
