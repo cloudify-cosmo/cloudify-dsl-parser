@@ -13,7 +13,6 @@ all:
 release: test docs publish
 
 dev:
-	pip install -rdev-requirements.txt
 	python setup.py develop
 
 install:
