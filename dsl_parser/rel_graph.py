@@ -229,6 +229,7 @@ def extract_node_instances(node_instances_graph,
                            copy_instances=False,
                            contained_graph=None):
     contained_graph = contained_graph or ctx.deployment_contained_graph
+    added_missing_node_instance_ids = set()
     node_instances = []
     for node_instance_id, data in node_instances_graph.nodes_iter(data=True):
         node_instance = data['node']
@@ -270,6 +271,21 @@ def extract_node_instances(node_instances_graph,
                     target_id = target_node_instance['id']
                     relationship_instance['target_name'] = target_name
                     relationship_instance['target_id'] = target_id
+                    # In deployment modification, if an instance is contained
+                    # in a node and that node is not new, it needs to be added
+                    # as a "related" node. Added and removed nodes are marked
+                    # as such, so all we need to do is add this node with
+                    # no relationships
+                    if (target_id not in node_instances_graph and
+                            target_id not in added_missing_node_instance_ids):
+                        target_node_instance = contained_graph.node[target_id][
+                            'node']
+                        if copy_instances:
+                            target_node_instance = copy.deepcopy(
+                                target_node_instance)
+                        target_node_instance[RELATIONSHIPS] = []
+                        node_instances.append(target_node_instance)
+                        added_missing_node_instance_ids.add(target_id)
             if not group_rel:
                 indexed_relationship_instances.append(
                     (relationship_index, relationship_instance))
