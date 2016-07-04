@@ -43,7 +43,7 @@ class AbstractImportResolver(object):
 
     def fetch_import(self, import_url):
         url_parts = import_url.split(':')
-        if url_parts[0] in ['http', 'https', 'ftp']:
+        if url_parts[0] in ['http', 'https', 'ftp', 'file']:
             return self.resolve(import_url)
         return read_import(import_url)
 
