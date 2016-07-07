@@ -15,7 +15,8 @@
 
 import copy
 import collections
-import random
+from random import choice
+from string import ascii_lowercase, digits
 
 import networkx as nx
 
@@ -741,8 +742,8 @@ def _node_instance_id(node_id, ctx):
     return new_node_instance_id
 
 
-def _generate_id():
-    return '%05x' % random.randrange(16 ** 5)
+def _generate_id(id_len=6):
+    return ''.join(choice(digits + ascii_lowercase) for _ in xrange(id_len))
 
 
 def _node_instance_copy(node, node_instance_id):
