@@ -677,7 +677,8 @@ def validate_functions(plan):
                 r = r.evaluate(plan)
                 validate_no_circular_get_property(r)
             else:
-                scan.scan_properties(r, validate_no_circular_get_property)
+                scan.scan_properties(
+                    r, validate_no_circular_get_property, recursive=False)
 
         result = func.evaluate(plan)
         validate_no_circular_get_property(result)
