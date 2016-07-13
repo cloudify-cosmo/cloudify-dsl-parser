@@ -46,9 +46,7 @@ class Holder(object):
         return hash(self.value)
 
     def __eq__(self, other):
-        if isinstance(other, Holder):
-            return self.value == other.value
-        return self.value == other
+        return isinstance(other, Holder) and self.value == other.value
 
     def __contains__(self, key):
         key_holder, value_holder = self.get_item(key)
