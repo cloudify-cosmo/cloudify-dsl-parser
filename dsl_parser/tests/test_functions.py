@@ -717,6 +717,30 @@ node_templates:
                           'vm.b,b0 -> vm.a,a0 -> vm.b,b0',
                           str(e))
 
+    @timeout(seconds=10)
+    def test_not_circular_nested_property_path(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+node_templates:
+    vm1:
+        type: vm_type
+        properties:
+            a: { get_property: [ vm2, a ] }
+            b: bla1
+    vm2:
+        type: vm_type
+        properties:
+            a:
+                b3:
+                    b4: { get_property: [ vm1, b ] }
+            b: bla2
+"""
+        prepare_deployment_plan(self.parse(yaml))
+
 
 class TestGetAttribute(AbstractTestParser):
 
