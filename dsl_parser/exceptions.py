@@ -63,6 +63,10 @@ class DSLParsingFormatException(DSLParsingException):
     pass
 
 
+class DSLParsingInputTypeException(DSLParsingException):
+    pass
+
+
 class DSLParsingElementMatchException(DSLParsingException):
     """
     An error raised when element child/ancestor lookup fails (element not
@@ -100,6 +104,7 @@ ERROR_CODE_DSL_DEFINITIONS_VERSION_MISMATCH = 102
 ERROR_UNKNOWN_TYPE = 103
 ERROR_INVALID_TYPE_NAME = 104
 ERROR_VALUE_DOES_NOT_MATCH_TYPE = 105
+ERROR_INVALID_CHARS = 108
 ERROR_GROUP_CYCLE = 200
 ERROR_MULTIPLE_GROUPS = 201
 ERROR_NON_CONTAINED_GROUP_MEMBERS = 202
