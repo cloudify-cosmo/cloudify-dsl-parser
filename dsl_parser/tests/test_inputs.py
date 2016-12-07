@@ -15,7 +15,9 @@
 
 from dsl_parser.tasks import prepare_deployment_plan
 from dsl_parser.exceptions import (MissingRequiredInputError,
-                                   UnknownInputError, DSLParsingLogicException)
+                                   UnknownInputError,
+                                   DSLParsingLogicException,
+                                   DSLParsingInputTypeException)
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
 
@@ -154,6 +156,44 @@ node_templates:
         msg = str(e).split('-')[0]  # get first part of message
         self.assertTrue('name_i' in msg)
         self.assertTrue('port' in msg)
+
+    def test_unicode_input(self):
+        yaml = """
+inputs:
+    port: {}
+    name_i: {}
+node_types:
+    webserver_type:
+        properties:
+            port: {}
+            name: {}
+node_templates:
+    webserver:
+        type: webserver_type
+        properties:
+            port: { get_input: port }
+            name: { get_input: name_i }
+"""
+
+        u = u'M\xf6tley'
+
+        e = self.assertRaises(
+            DSLParsingInputTypeException,
+            prepare_deployment_plan,
+            self.parse(yaml),
+            inputs={'port': '8080', 'name_i': u}
+        )
+        msg = str(e).split('-')[0]  # get first part of message
+        self.assertTrue('name_i' in msg)
+
+        e = self.assertRaises(
+            DSLParsingInputTypeException,
+            prepare_deployment_plan,
+            self.parse(yaml),
+            inputs={'port': '8080', 'name_i': {'a': [{'a': [u]}]}}
+        )
+        msg = str(e).split('-')[0]  # get first part of message
+        self.assertTrue('name_i' in msg)
 
     def test_inputs_default_value(self):
         yaml = """

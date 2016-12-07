@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import copy
+import json
 
 from dsl_parser import (functions,
                         exceptions,
@@ -47,6 +48,14 @@ def _set_plan_inputs(plan, inputs=None):
     # Verify inputs satisfied
     missing_inputs = []
     for input_name, input_def in plan['inputs'].iteritems():
+        if input_name in inputs:
+            try:
+                str(json.dumps(inputs[input_name], ensure_ascii=False))
+            except UnicodeEncodeError:
+                raise exceptions.DSLParsingInputTypeException(
+                    exceptions.ERROR_INVALID_CHARS,
+                    'Illegal characters in input: {0}. '
+                    'Only valid ascii chars are supported.'.format(input_name))
         if input_name not in inputs:
             if 'default' in input_def and input_def['default'] is not None:
                 inputs[input_name] = input_def['default']
