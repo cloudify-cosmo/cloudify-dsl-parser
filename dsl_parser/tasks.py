@@ -56,7 +56,7 @@ def _set_plan_inputs(plan, inputs=None):
                     exceptions.ERROR_INVALID_CHARS,
                     'Illegal characters in input: {0}. '
                     'Only valid ascii chars are supported.'.format(input_name))
-        if input_name not in inputs:
+        else:
             if 'default' in input_def and input_def['default'] is not None:
                 inputs[input_name] = input_def['default']
             else:
