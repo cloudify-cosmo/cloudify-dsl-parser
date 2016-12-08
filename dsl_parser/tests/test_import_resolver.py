@@ -39,6 +39,7 @@ class CustomImportResolver(AbstractImportResolver):
     def resolve(self, import_url):
         pass
 
+
 custom_resolver_class_path = "%s:%s" % (
     CustomImportResolver.__module__, CustomImportResolver.__name__)
 
@@ -46,6 +47,8 @@ custom_resolver_class_path = "%s:%s" % (
 class CustomImportResolverWithoutInit(AbstractImportResolver):
     def resolve(self, import_url):
         pass
+
+
 custom_no_init_resolver_class_path = "%s:%s" % (
     CustomImportResolverWithoutInit.__module__,
     CustomImportResolverWithoutInit.__name__)
@@ -57,6 +60,7 @@ class FailedToInitializeCustomImportResolver(AbstractImportResolver):
 
     def resolve(self, import_url):
         pass
+
 
 failed_custom_resolver_class_path = "%s:%s" % (
     FailedToInitializeCustomImportResolver.__module__,
