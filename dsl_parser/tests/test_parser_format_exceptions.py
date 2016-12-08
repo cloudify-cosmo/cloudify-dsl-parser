@@ -16,7 +16,8 @@ import dsl_parser.exceptions as exceptions
 
 from dsl_parser.exceptions import (
     DSLParsingFormatException,
-    DSLParsingLogicException)
+    DSLParsingLogicException,
+    DSLParsingInputTypeException)
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 
@@ -927,3 +928,13 @@ description:
   """
         self._assert_dsl_parsing_exception_error_code(
             yaml, 1, DSLParsingFormatException)
+
+    def test_unicode_in_blueprint(self):
+        yaml = self.MINIMAL_BLUEPRINT + u"""
+node_types:
+    test_type:
+        properties:
+            key: "M\xf6tley Cr\xfce"
+  """
+        self._assert_dsl_parsing_exception_error_code(
+            yaml, exceptions.ERROR_INVALID_CHARS, DSLParsingInputTypeException)

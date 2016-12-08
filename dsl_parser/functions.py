@@ -47,6 +47,8 @@ def _register_entry_point_functions():
     for entry_point in pkg_resources.iter_entry_points(
             group='cloudify.tosca.ext.functions'):
         register(fn=entry_point.load(), name=entry_point.name)
+
+
 _register_entry_point_functions()
 
 

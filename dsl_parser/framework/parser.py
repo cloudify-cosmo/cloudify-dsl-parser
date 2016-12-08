@@ -62,6 +62,8 @@ class SchemaAPIValidator(object):
                 raise exceptions.DSLParsingSchemaAPIException(1)
         else:
             raise exceptions.DSLParsingSchemaAPIException(1)
+
+
 _schema_validator = SchemaAPIValidator()
 
 
@@ -404,6 +406,8 @@ class Parser(object):
                     required_args[requirement.name] = result
 
         return required_args
+
+
 _parser = Parser()
 
 

@@ -21,6 +21,7 @@ from yaml.parser import Parser
 from yaml.constructor import SafeConstructor
 
 from dsl_parser import holder
+from .exceptions import DSLParsingInputTypeException, ERROR_INVALID_CHARS
 
 
 class HolderConstructor(SafeConstructor):
@@ -67,6 +68,14 @@ class HolderConstructor(SafeConstructor):
 
     def construct_yaml_str(self, node):
         obj = SafeConstructor.construct_yaml_str(self, node)
+        try:
+            obj = str(obj)
+        except UnicodeEncodeError:
+            raise DSLParsingInputTypeException(
+                ERROR_INVALID_CHARS,
+                'illegal characters in line: {0}, column: {1}. '
+                'Only valid ascii chars are supported.'.format(
+                    node.start_mark.line, node.start_mark.column))
         return self._holder(obj, node)
 
     def construct_yaml_seq(self, node):
@@ -84,6 +93,7 @@ class HolderConstructor(SafeConstructor):
                              end_line=node.end_mark.line,
                              end_column=node.end_mark.column,
                              filename=self.filename)
+
 
 HolderConstructor.add_constructor(
     u'tag:yaml.org,2002:null',
