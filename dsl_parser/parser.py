@@ -20,6 +20,7 @@ from dsl_parser import (functions,
                         utils)
 from dsl_parser.framework import parser
 from dsl_parser.elements import blueprint
+from import_resolver.abstract_import_resolver import get_headers
 from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 
@@ -45,7 +46,8 @@ def parse_from_url(dsl_url,
                    validate_version=True,
                    additional_resource_sources=()):
     try:
-        with contextlib.closing(urllib2.urlopen(dsl_url)) as f:
+        request = urllib2.Request(dsl_url, headers=get_headers())
+        with contextlib.closing(urllib2.urlopen(request)) as f:
             dsl_string = f.read()
     except urllib2.HTTPError as e:
         if e.code == 404:

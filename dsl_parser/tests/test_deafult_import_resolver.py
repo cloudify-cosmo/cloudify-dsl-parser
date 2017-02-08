@@ -185,7 +185,7 @@ class TestDefaultResolver(testtools.TestCase):
 
         class mock_requests_get(object):
 
-            def __init__(self, url, timeout):
+            def __init__(self, url, headers, timeout):
                 self.status_code = 200
                 self.text = 200
                 number_of_attempts.append(1)
