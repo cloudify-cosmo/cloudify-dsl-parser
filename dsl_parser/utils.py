@@ -241,7 +241,7 @@ def load_yaml(raw_yaml, error_message, filename=None):
 
 
 def url_exists(url):
-    request = urllib2.Request(url, headers=get_headers())
+    request = urllib2.Request(url, headers=get_headers(url))
     try:
         with contextlib.closing(urllib2.urlopen(request)):
             return True
