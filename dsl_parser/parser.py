@@ -46,7 +46,7 @@ def parse_from_url(dsl_url,
                    validate_version=True,
                    additional_resource_sources=()):
     try:
-        request = urllib2.Request(dsl_url, headers=get_headers())
+        request = urllib2.Request(dsl_url, headers=get_headers(dsl_url))
         with contextlib.closing(urllib2.urlopen(request)) as f:
             dsl_string = f.read()
     except urllib2.HTTPError as e:
