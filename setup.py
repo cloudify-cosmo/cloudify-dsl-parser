@@ -18,7 +18,6 @@ from setuptools import setup
 
 
 install_requires = [
-    'flask-security==1.7.5',
     'PyYAML==3.10',
     'networkx==1.8.1',
     'requests==2.7.0',

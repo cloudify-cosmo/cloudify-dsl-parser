@@ -14,10 +14,7 @@
 #    * limitations under the License.
 
 import os
-import socket
-import StringIO
 import yaml as yml
-from urllib2 import HTTPError
 from urllib import pathname2url
 
 from dsl_parser import exceptions
@@ -25,7 +22,7 @@ from dsl_parser import constants
 from dsl_parser import version
 from dsl_parser import models
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
-from dsl_parser.parser import parse_from_path, parse_from_url
+from dsl_parser.parser import parse_from_path
 from dsl_parser.parser import parse as dsl_parse
 from dsl_parser.interfaces.constants import NO_OP
 from dsl_parser.interfaces.utils import operation_mapping
@@ -83,31 +80,6 @@ class TestParserApi(AbstractTestParser):
         yaml = self.create_yaml_with_imports([self.MINIMAL_BLUEPRINT])
         result = self.parse(yaml)
         self._assert_minimal_blueprint(result)
-
-    def test_parse_dsl_from_bad_url(self):
-
-        class MockSocket(object):
-            def __init__(self, *args):
-                pass
-
-            def sendall(self, *args):
-                pass
-
-            def makefile(self, *args):
-                return StringIO.StringIO('HTTP/1.1 404\r\n')
-
-            def close(self):
-                pass
-
-        original_create_connection = socket.create_connection
-        try:
-            socket.create_connection = MockSocket
-            parse_from_url('http://www.google.com/bad-dsl')
-        except HTTPError as e:
-            self.assertIn('http://www.google.com/bad-dsl', str(e))
-            self.assertEqual(404, e.code)
-        finally:
-            socket.create_connection = original_create_connection
 
     def _assert_blueprint(self, result):
         node = result['nodes'][0]
@@ -272,12 +244,6 @@ imports:
         filename = self.make_yaml_file(self.BASIC_VERSION_SECTION_DSL_1_0 +
                                        self.MINIMAL_BLUEPRINT)
         result = parse_from_path(filename)
-        self._assert_minimal_blueprint(result)
-
-    def test_parse_dsl_from_url(self):
-        filename_url = self.make_yaml_file(self.BASIC_VERSION_SECTION_DSL_1_0 +
-                                           self.MINIMAL_BLUEPRINT, True)
-        result = parse_from_url(filename_url)
         self._assert_minimal_blueprint(result)
 
     def test_import_empty_list(self):
@@ -1997,29 +1963,13 @@ plugins:
 
     def test_import_resources(self):
         resource_file_name = 'resource_file.yaml'
-        file_name = self.make_file_with_name(
+        file_path = self.make_file_with_name(
             self.MINIMAL_BLUEPRINT, resource_file_name, 'resources')
-        file_url = self._path2url(file_name)
+        resources_base_path = os.path.dirname(file_path)
         yaml = """
 imports:
     -   {0}""".format(resource_file_name)
-        result = self.parse(yaml,
-                            resources_base_url=file_url[:-len(
-                                resource_file_name)])
-        self._assert_minimal_blueprint(result)
-
-    def test_import_resources_from_url(self):
-        resource_file_name = 'resource_file.yaml'
-        file_name = self.make_file_with_name(
-            self.MINIMAL_BLUEPRINT, resource_file_name, 'resources')
-        file_url = self._path2url(file_name)
-        yaml = self.BASIC_VERSION_SECTION_DSL_1_0 + """
-imports:
-    -   {0}""".format(resource_file_name)
-        top_file = self.make_yaml_file(yaml, True)
-        result = parse_from_url(
-            top_file,
-            resources_base_url=file_url[:-len(resource_file_name)])
+        result = self.parse(yaml, resources_base_path=resources_base_path)
         self._assert_minimal_blueprint(result)
 
     def test_recursive_imports_with_inner_circular(self):
