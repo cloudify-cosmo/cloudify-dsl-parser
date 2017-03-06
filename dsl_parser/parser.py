@@ -13,70 +13,41 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import contextlib
-import urllib2
-
 from dsl_parser import (functions,
                         utils)
 from dsl_parser.framework import parser
 from dsl_parser.elements import blueprint
-from import_resolver.abstract_import_resolver import get_headers
 from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 
 
 def parse_from_path(dsl_file_path,
-                    resources_base_url=None,
+                    resources_base_path=None,
                     resolver=None,
                     validate_version=True,
                     additional_resource_sources=()):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
     return _parse(dsl_string,
-                  resources_base_url=resources_base_url,
+                  resources_base_path=resources_base_path,
                   dsl_location=dsl_file_path,
                   resolver=resolver,
                   validate_version=validate_version,
                   additional_resource_sources=additional_resource_sources)
 
 
-def parse_from_url(dsl_url,
-                   resources_base_url=None,
-                   resolver=None,
-                   validate_version=True,
-                   additional_resource_sources=()):
-    try:
-        request = urllib2.Request(dsl_url, headers=get_headers(dsl_url))
-        with contextlib.closing(urllib2.urlopen(request)) as f:
-            dsl_string = f.read()
-    except urllib2.HTTPError as e:
-        if e.code == 404:
-            # HTTPError.__str__ uses the 'msg'.
-            # by default it is set to 'Not Found' for 404 errors, which is not
-            # very helpful, so we override it with a more meaningful message
-            # that specifies the missing url.
-            e.msg = '{0} not found'.format(e.filename)
-        raise
-    return _parse(dsl_string,
-                  resources_base_url=resources_base_url,
-                  dsl_location=dsl_url,
-                  resolver=resolver,
-                  validate_version=validate_version,
-                  additional_resource_sources=additional_resource_sources)
-
-
 def parse(dsl_string,
-          resources_base_url=None,
+          resources_base_path=None,
           resolver=None,
           validate_version=True):
     return _parse(dsl_string,
-                  resources_base_url=resources_base_url,
+                  resources_base_path=resources_base_path,
                   resolver=resolver,
                   validate_version=validate_version)
 
 
 def _parse(dsl_string,
-           resources_base_url,
+           resources_base_path,
            dsl_location=None,
            resolver=None,
            validate_version=True,
@@ -103,7 +74,7 @@ def _parse(dsl_string,
         value=parsed_dsl_holder,
         inputs={
             'main_blueprint_holder': parsed_dsl_holder,
-            'resources_base_url': resources_base_url,
+            'resources_base_path': resources_base_path,
             'blueprint_location': dsl_location,
             'version': version,
             'resolver': resolver,

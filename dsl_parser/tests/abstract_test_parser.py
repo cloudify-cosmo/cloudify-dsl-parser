@@ -173,7 +173,7 @@ imports:"""
         return yaml
 
     def parse(self, dsl_string,
-              resources_base_url=None,
+              resources_base_path=None,
               dsl_version=BASIC_VERSION_SECTION_DSL_1_0,
               resolver=None,
               validate_version=True):
@@ -183,28 +183,28 @@ imports:"""
             if not resolver:
                 resolver = DefaultImportResolver()
         return dsl_parse(dsl_string,
-                         resources_base_url=resources_base_url,
+                         resources_base_path=resources_base_path,
                          resolver=resolver,
                          validate_version=validate_version)
 
-    def parse_1_0(self, dsl_string, resources_base_url=None):
-        return self.parse(dsl_string, resources_base_url,
+    def parse_1_0(self, dsl_string, resources_base_path=None):
+        return self.parse(dsl_string, resources_base_path,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_0)
 
-    def parse_1_1(self, dsl_string, resources_base_url=None):
-        return self.parse(dsl_string, resources_base_url,
+    def parse_1_1(self, dsl_string, resources_base_path=None):
+        return self.parse(dsl_string, resources_base_path,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_1)
 
-    def parse_1_2(self, dsl_string, resources_base_url=None):
-        return self.parse(dsl_string, resources_base_url,
+    def parse_1_2(self, dsl_string, resources_base_path=None):
+        return self.parse(dsl_string, resources_base_path,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_2)
 
-    def parse_1_3(self, dsl_string, resources_base_url=None):
-        return self.parse(dsl_string, resources_base_url,
+    def parse_1_3(self, dsl_string, resources_base_path=None):
+        return self.parse(dsl_string, resources_base_path,
                           dsl_version=self.BASIC_VERSION_SECTION_DSL_1_3)
 
-    def parse_from_path(self, dsl_path, resources_base_url=None):
-        return dsl_parse_from_path(dsl_path, resources_base_url)
+    def parse_from_path(self, dsl_path, resources_base_path=None):
+        return dsl_parse_from_path(dsl_path, resources_base_path)
 
     def parse_multi(self, yaml):
         return create_deployment_plan(self.parse_1_3(yaml))

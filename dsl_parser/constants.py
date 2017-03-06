@@ -61,7 +61,6 @@ DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
 WORKFLOW_PLUGINS_TO_INSTALL = 'workflow_plugins_to_install'
 VERSION = 'version'
 CLOUDIFY = 'cloudify'
-FILE_SERVER_PORT = 53229
 
 SCRIPT_PLUGIN_NAME = 'script'
 SCRIPT_PLUGIN_RUN_TASK = 'script_runner.tasks.run'

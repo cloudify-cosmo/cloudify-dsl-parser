@@ -27,7 +27,6 @@ from dsl_parser import constants
 from dsl_parser.constants import RESOLVER_IMPLEMENTATION_KEY, \
     RESLOVER_PARAMETERS_KEY
 from dsl_parser import exceptions
-from dsl_parser.import_resolver.abstract_import_resolver import get_headers
 from dsl_parser.exceptions import (DSLParsingLogicException,
                                    DSLParsingFormatException)
 from dsl_parser.import_resolver.default_import_resolver import \
@@ -241,7 +240,7 @@ def load_yaml(raw_yaml, error_message, filename=None):
 
 
 def url_exists(url):
-    request = urllib2.Request(url, headers=get_headers(url))
+    request = urllib2.Request(url)
     try:
         with contextlib.closing(urllib2.urlopen(request)):
             return True

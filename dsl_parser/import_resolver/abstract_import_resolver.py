@@ -19,11 +19,8 @@ import urllib2
 
 import requests
 from retrying import retry
-from urlparse import urlparse
-from flask_security import current_user
 
 from dsl_parser import exceptions
-from dsl_parser.constants import FILE_SERVER_PORT
 
 
 DEFAULT_RETRY_DELAY = 1
@@ -52,21 +49,11 @@ class AbstractImportResolver(object):
         return read_import(import_url)
 
 
-def get_headers(url):
-    if urlparse(url).port != FILE_SERVER_PORT:
-        return {}
-    try:
-        return {'Authentication-Token': current_user.get_auth_token()}
-    except AttributeError:
-        return {}
-
-
 def read_import(import_url):
     error_str = 'Import failed: Unable to open import url'
-    headers = get_headers(import_url)
     if import_url.startswith('file:'):
         try:
-            request = urllib2.Request(import_url, headers=headers)
+            request = urllib2.Request(import_url)
             with contextlib.closing(urllib2.urlopen(request)) as f:
                 return f.read()
         except Exception, ex:
@@ -89,8 +76,8 @@ def read_import(import_url):
                retry_on_exception=_is_recoverable_error,
                retry_on_result=_is_internal_error)
         def get_import():
-            response = requests.get(
-                import_url, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT)
+            response = requests.get(import_url,
+                                    timeout=DEFAULT_REQUEST_TIMEOUT)
             # The response is a valid one, and the content should be returned
             if 200 <= response.status_code < 300:
                 return response.text

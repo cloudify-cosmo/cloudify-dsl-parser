@@ -36,7 +36,8 @@ MERGE_NO_OVERRIDE = set([
     constants.POLICY_TYPES,
     constants.GROUPS,
     constants.POLICY_TRIGGERS,
-    constants.DATA_TYPES])
+    constants.DATA_TYPES
+])
 
 MERGEABLE_FROM_DSL_VERSION_1_3 = [
     constants.INPUTS,
@@ -72,7 +73,7 @@ class ImportsLoader(Element):
     provides = ['resource_base']
     requires = {
         'inputs': ['main_blueprint_holder',
-                   'resources_base_url',
+                   'resources_base_path',
                    'blueprint_location',
                    'version',
                    'resolver',
@@ -92,7 +93,7 @@ class ImportsLoader(Element):
 
     def parse(self,
               main_blueprint_holder,
-              resources_base_url,
+              resources_base_path,
               blueprint_location,
               version,
               resolver,
@@ -100,12 +101,12 @@ class ImportsLoader(Element):
         if blueprint_location:
             blueprint_location = _dsl_location_to_url(
                 dsl_location=blueprint_location,
-                resources_base_url=resources_base_url)
+                resources_base_path=resources_base_path)
             slash_index = blueprint_location.rfind('/')
             self.resource_base = blueprint_location[:slash_index]
         return _combine_imports(parsed_dsl_holder=main_blueprint_holder,
                                 dsl_location=blueprint_location,
-                                resources_base_url=resources_base_url,
+                                resources_base_path=resources_base_path,
                                 version=version,
                                 resolver=resolver,
                                 validate_version=validate_version)
@@ -116,9 +117,10 @@ class ImportsLoader(Element):
         }
 
 
-def _dsl_location_to_url(dsl_location, resources_base_url):
+def _dsl_location_to_url(dsl_location, resources_base_path):
     if dsl_location is not None:
-        dsl_location = _get_resource_location(dsl_location, resources_base_url)
+        dsl_location = _get_resource_location(dsl_location,
+                                              resources_base_path)
         if dsl_location is None:
             ex = exceptions.DSLParsingLogicException(
                 30, "Failed converting dsl "
@@ -132,7 +134,7 @@ def _dsl_location_to_url(dsl_location, resources_base_url):
 
 
 def _get_resource_location(resource_name,
-                           resources_base_url,
+                           resources_base_path,
                            current_resource_context=None):
     url_parts = resource_name.split(':')
     if url_parts[0] in ['http', 'https', 'file', 'ftp']:
@@ -148,18 +150,20 @@ def _get_resource_location(resource_name,
         if utils.url_exists(candidate_url):
             return candidate_url
 
-    if resources_base_url:
-        return resources_base_url + resource_name
+    if resources_base_path:
+        full_path = os.path.join(resources_base_path, resource_name)
+        return 'file:{0}'.format(
+            urllib.pathname2url(os.path.abspath(full_path)))
 
     return None
 
 
 def _combine_imports(parsed_dsl_holder, dsl_location,
-                     resources_base_url, version, resolver,
+                     resources_base_path, version, resolver,
                      validate_version):
     ordered_imports = _build_ordered_imports(parsed_dsl_holder,
                                              dsl_location,
-                                             resources_base_url,
+                                             resources_base_path,
                                              resolver)
     holder_result = parsed_dsl_holder.copy()
     version_key_holder, version_value_holder = parsed_dsl_holder.get_item(
@@ -179,7 +183,7 @@ def _combine_imports(parsed_dsl_holder, dsl_location,
 
 def _build_ordered_imports(parsed_dsl_holder,
                            dsl_location,
-                           resources_base_url,
+                           resources_base_path,
                            resolver):
 
     def location(value):
@@ -197,7 +201,7 @@ def _build_ordered_imports(parsed_dsl_holder,
 
         for another_import in imports_value_holder.restore():
             import_url = _get_resource_location(another_import,
-                                                resources_base_url,
+                                                resources_base_path,
                                                 _current_import)
             if import_url is None:
                 ex = exceptions.DSLParsingLogicException(
