@@ -57,14 +57,17 @@ class RuntimeEvaluationStorage(object):
     def __init__(self,
                  get_node_instances_method,
                  get_node_instance_method,
-                 get_node_method):
+                 get_node_method,
+                 get_secret_method):
         self._get_node_instances_method = get_node_instances_method
         self._get_node_instance_method = get_node_instance_method
         self._get_node_method = get_node_method
+        self._get_secret_method = get_secret_method
 
         self._node_to_node_instances = {}
         self._node_instances = {}
         self._nodes = {}
+        self._secrets = {}
 
     def get_node_instances(self, node_id):
         if node_id not in self._node_to_node_instances:
@@ -85,6 +88,12 @@ class RuntimeEvaluationStorage(object):
             node = self._get_node_method(node_id)
             self._nodes[node_id] = node
         return self._nodes[node_id]
+
+    def get_secret(self, secret_key):
+        if secret_key not in self._secrets:
+            secret = self._get_secret_method(secret_key)
+            self._secrets[secret_key] = secret.value
+        return self._secrets[secret_key]
 
 
 class Function(object):
@@ -431,6 +440,31 @@ class GetAttribute(Function):
                                        self.attribute_path))
 
 
+@register(name='get_secret')
+class GetSecret(Function):
+    def __init__(self, args, **kwargs):
+        self.secret_id = None
+        super(GetSecret, self).__init__(args, **kwargs)
+
+    def parse_args(self, args):
+        if not isinstance(args, basestring):
+            raise ValueError(
+                "`get_secret` function argument should be a string. Instead "
+                "it is a {0} with the value: {1}.".format(type(args), args))
+        self.secret_id = args
+
+    def validate(self, plan):
+        pass
+
+    def evaluate(self, plan):
+        if 'operation' in self.context:
+            self.context['operation']['has_intrinsic_functions'] = True
+        return self.raw
+
+    def evaluate_runtime(self, storage):
+        return storage.get_secret(self.secret_id)
+
+
 @register(name='concat')
 class Concat(Function):
 
@@ -551,7 +585,8 @@ def parse(raw_function, scope=None, context=None, path=None):
 def evaluate_functions(payload, context,
                        get_node_instances_method,
                        get_node_instance_method,
-                       get_node_method):
+                       get_node_method,
+                       get_secret_method):
     """Evaluate functions in payload.
 
     :param payload: The payload to evaluate.
@@ -559,11 +594,13 @@ def evaluate_functions(payload, context,
     :param get_node_instances_method: A method for getting node instances.
     :param get_node_instance_method: A method for getting a node instance.
     :param get_node_method: A method for getting a node.
+    :param get_secret_method: A method for getting a secret.
     :return: payload.
     """
     handler = runtime_evaluation_handler(get_node_instances_method,
                                          get_node_instance_method,
-                                         get_node_method)
+                                         get_node_method,
+                                         get_secret_method)
     scan.scan_properties(payload,
                          handler,
                          scope=None,
@@ -576,13 +613,15 @@ def evaluate_functions(payload, context,
 def evaluate_outputs(outputs_def,
                      get_node_instances_method,
                      get_node_instance_method,
-                     get_node_method):
+                     get_node_method,
+                     get_secret_method):
     """Evaluates an outputs definition containing intrinsic functions.
 
     :param outputs_def: Outputs definition.
     :param get_node_instances_method: A method for getting node instances.
     :param get_node_instance_method: A method for getting a node instance.
     :param get_node_method: A method for getting a node.
+    :param get_secret_method: A method for getting a secret.
     :return: Outputs dict.
     """
     outputs = dict((k, v['value']) for k, v in outputs_def.iteritems())
@@ -591,7 +630,8 @@ def evaluate_outputs(outputs_def,
         context={},
         get_node_instances_method=get_node_instances_method,
         get_node_instance_method=get_node_instance_method,
-        get_node_method=get_node_method)
+        get_node_method=get_node_method,
+        get_secret_method=get_secret_method)
 
 
 def _handler(evaluator, **evaluator_kwargs):
@@ -626,12 +666,14 @@ def plan_evaluation_handler(plan):
 
 def runtime_evaluation_handler(get_node_instances_method,
                                get_node_instance_method,
-                               get_node_method):
+                               get_node_method,
+                               get_secret_method):
     return _handler('evaluate_runtime',
                     storage=RuntimeEvaluationStorage(
                         get_node_instances_method=get_node_instances_method,
                         get_node_instance_method=get_node_instance_method,
-                        get_node_method=get_node_method))
+                        get_node_method=get_node_method,
+                        get_secret_method=get_secret_method))
 
 
 def validate_functions(plan):

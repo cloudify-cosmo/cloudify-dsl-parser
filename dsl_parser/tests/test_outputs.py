@@ -122,6 +122,26 @@ outputs:
         except ValueError, e:
             self.assertTrue('Illegal arguments passed' in str(e))
 
+    def test_valid_get_secret(self):
+        yaml = """
+node_types:
+    webserver_type: {}
+node_templates:
+    webserver:
+        type: webserver_type
+outputs:
+    port:
+        description: p0
+        value: { get_secret: secret_key }
+"""
+        parsed = self.parse(yaml)
+        outputs = parsed['outputs']
+        func = functions.parse(outputs['port']['value'])
+        self.assertTrue(isinstance(func, functions.GetSecret))
+        self.assertEqual('secret_key', func.secret_id)
+        prepared = prepare_deployment_plan(parsed)
+        self.assertEqual(parsed['outputs'], prepared['outputs'])
+
     def test_invalid_nested_get_attribute(self):
         yaml = """
 node_types:
@@ -167,7 +187,8 @@ outputs:
                           {get_property: [webserver, property]},
                           {get_attribute: [webserver, attribute]},
                           {get_input: input},
-                          five] }
+                          {get_secret: secret},
+                          six] }
 """
 
         def assertion(tested):
@@ -176,7 +197,8 @@ outputs:
             self.assertEqual({'get_attribute': ['webserver', 'attribute']},
                              tested[2])
             self.assertEqual('input_value', tested[3])
-            self.assertEqual('five', tested[4])
+            self.assertEqual({'get_secret': 'secret'}, tested[4])
+            self.assertEqual('six', tested[5])
 
         parsed = prepare_deployment_plan(self.parse_1_1(yaml))
         concatenated = parsed['outputs']['concatenated']['value']['concat']
@@ -203,10 +225,12 @@ outputs:
         o = functions.evaluate_outputs(parsed['outputs'],
                                        get_node_instances,
                                        get_node_instance,
-                                       get_node)
+                                       get_node,
+                                       self._get_secret_mock)
         self.assertEqual(8080, o['port'])
         self.assertEqual(8080, o['endpoint']['port'])
-        self.assertEqual('oneproperty_valueattribute_valueinput_valuefive',
+        self.assertEqual('oneproperty_valueattribute_'
+                         'valueinput_valuesecret_valuesix',
                          o['concatenated'])
 
     def test_unknown_node_instance_evaluation(self):
@@ -229,7 +253,7 @@ outputs:
         try:
             functions.evaluate_outputs(parsed['outputs'],
                                        get_node_instances,
-                                       None, None)
+                                       None, None, None)
             self.fail()
         except exceptions.FunctionEvaluationError, e:
             self.assertIn('Node specified in function does not exist', str(e))
@@ -269,7 +293,8 @@ outputs:
             functions.evaluate_outputs(parsed['outputs'],
                                        get_node_instances,
                                        get_node_instance,
-                                       get_node)
+                                       get_node,
+                                       None)
             self.fail()
         except exceptions.FunctionEvaluationError, e:
             self.assertIn('unambiguously', str(e))
@@ -316,17 +341,14 @@ outputs:
         outputs = functions.evaluate_outputs(parsed['outputs'],
                                              get_node_instances,
                                              get_node_instance,
-                                             get_node)
+                                             get_node,
+                                             None)
         self.assertEqual(8080, outputs['port'])
         self.assertEqual('http', outputs['protocol'])
         self.assertIsNone(outputs['none'])
 
 
 class NodeInstance(dict):
-
-    def __init__(self, values):
-        self.update(values)
-
     @property
     def id(self):
         return self.get('id')
@@ -341,10 +363,6 @@ class NodeInstance(dict):
 
 
 class Node(dict):
-
-    def __init__(self, values):
-        self.update(values)
-
     @property
     def id(self):
         return self.get('id')

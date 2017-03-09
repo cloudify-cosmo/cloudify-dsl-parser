@@ -22,6 +22,7 @@ from functools import wraps
 from multiprocessing import Process
 
 import testtools
+from mock import MagicMock
 
 from dsl_parser.exceptions import DSLParsingException
 from dsl_parser.parser import parse as dsl_parse
@@ -245,3 +246,9 @@ imports:"""
                     break
 
         return ordered_nodes
+
+    @staticmethod
+    def _get_secret_mock(secret_id):
+        secret_mock = MagicMock()
+        secret_mock.value = secret_id + '_value'
+        return secret_mock

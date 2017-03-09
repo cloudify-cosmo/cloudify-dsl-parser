@@ -65,6 +65,8 @@ outputs:
         value: { to_upper: { get_property: [webserver, property] } }
     output3:
         value: { to_upper: { get_attribute: [webserver, attribute] } }
+    output4:
+        value: { to_upper: { get_secret: secret } }
 """
         parsed = prepare_deployment_plan(self.parse(yaml))
         outputs = parsed['outputs']
@@ -94,18 +96,16 @@ outputs:
         o = functions.evaluate_outputs(parsed['outputs'],
                                        get_node_instances,
                                        get_node_instance,
-                                       get_node)
+                                       get_node,
+                                       self._get_secret_mock)
 
         self.assertEqual('FIRST', o['output1'])
         self.assertEqual('PROPERTY_VALUE', o['output2'])
         self.assertEqual('ATTRIBUTE_VALUE', o['output3'])
+        self.assertEqual('SECRET_VALUE', o['output4'])
 
 
 class NodeInstance(dict):
-
-    def __init__(self, values):
-        self.update(values)
-
     @property
     def id(self):
         return self.get('id')
@@ -120,10 +120,6 @@ class NodeInstance(dict):
 
 
 class Node(dict):
-
-    def __init__(self, values):
-        self.update(values)
-
     @property
     def id(self):
         return self.get('id')
