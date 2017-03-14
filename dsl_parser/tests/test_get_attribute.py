@@ -146,7 +146,8 @@ class TestEvaluateFunctions(AbstractTestParser):
                                      context,
                                      get_node_instances,
                                      get_node_instance,
-                                     get_node)
+                                     get_node,
+                                     None)
 
         self.assertEqual(payload['a'], 'a_val')
         self.assertEqual(payload['b'], 'b_val')
@@ -205,7 +206,8 @@ class TestEvaluateFunctions(AbstractTestParser):
                                          context,
                                          get_node_instances,
                                          get_node_instance,
-                                         get_node)
+                                         get_node,
+                                         None)
             return payload
 
         payload = evaluate()
@@ -364,7 +366,8 @@ class TestEvaluateFunctions(AbstractTestParser):
                                      context,
                                      get_node_instances,
                                      get_node_instance,
-                                     get_node)
+                                     get_node,
+                                     None)
 
         self.assertEqual(payload['a'], 'value6_{0}'.format(index))
 
@@ -408,7 +411,8 @@ class TestEvaluateFunctions(AbstractTestParser):
                                      context,
                                      get_node_instances,
                                      get_node_instance,
-                                     get_node)
+                                     get_node,
+                                     None)
 
         self.assertEqual(payload['a'], 'a_val')
         self.assertEqual(payload['b'], 'b_val')
@@ -440,7 +444,8 @@ class TestEvaluateFunctions(AbstractTestParser):
                                      {},
                                      get_node_instances,
                                      get_node_instance,
-                                     get_node)
+                                     get_node,
+                                     None)
 
         self.assertIsNone(payload['a'])
 
@@ -449,21 +454,21 @@ class TestEvaluateFunctions(AbstractTestParser):
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*SELF is missing.*'):
-            functions.evaluate_functions(payload, {}, None, None, None)
+            functions.evaluate_functions(payload, {}, None, None, None, None)
 
     def test_missing_source_ref(self):
         payload = {'a': {'get_attribute': ['SOURCE', 'a']}}
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*SOURCE is missing.*'):
-            functions.evaluate_functions(payload, {}, None, None, None)
+            functions.evaluate_functions(payload, {}, None, None, None, None)
 
     def test_missing_target_ref(self):
         payload = {'a': {'get_attribute': ['TARGET', 'a']}}
         with testtools.testcase.ExpectedException(
                 exceptions.FunctionEvaluationError,
                 '.*TARGET is missing.*'):
-            functions.evaluate_functions(payload, {}, None, None, None)
+            functions.evaluate_functions(payload, {}, None, None, None, None)
 
     def test_no_instances(self):
         def get_node_instances(node_id):
@@ -473,7 +478,7 @@ class TestEvaluateFunctions(AbstractTestParser):
                 exceptions.FunctionEvaluationError,
                 '.*does not exist.*'):
             functions.evaluate_functions(payload, {}, get_node_instances, None,
-                                         None)
+                                         None, None)
 
     def test_too_many_instances(self):
         instances = [NodeInstance({'id': '1'}), NodeInstance({'id': '2'})]
@@ -491,6 +496,7 @@ class TestEvaluateFunctions(AbstractTestParser):
             functions.evaluate_functions(payload, {},
                                          get_node_instances,
                                          get_node_instance,
+                                         None,
                                          None)
 
 
