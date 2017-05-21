@@ -741,6 +741,102 @@ node_templates:
 """
         prepare_deployment_plan(self.parse(yaml))
 
+    @timeout(seconds=10)
+    def test_get_property_from_get_input(self):
+        yaml = """
+inputs:
+    dict_input: {}
+
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+node_templates:
+    vm1:
+        type: vm_type
+        properties:
+            a: {get_input: dict_input}
+            b: {get_property: [SELF, a, key]}
+"""
+        plan = prepare_deployment_plan(
+            self.parse(yaml), inputs={'dict_input': {'key': 'secret'}})
+        self.assertEqual('secret', plan['nodes'][0]['properties']['b'])
+
+    @timeout(seconds=10)
+    def test_get_property_from_get_input_data_type(self):
+        yaml = """
+inputs:
+    dict_input:
+        type: nested
+        default:
+            key: secret
+
+data_types:
+    nested:
+        properties:
+            key: {}
+
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+node_templates:
+    vm1:
+        type: vm_type
+        properties:
+            a: {get_input: dict_input}
+            b: {get_property: [SELF, a, key]}
+"""
+        plan = prepare_deployment_plan(self.parse_1_2(yaml))
+        self.assertEqual('secret', plan['nodes'][0]['properties']['b'])
+
+    @timeout(seconds=10)
+    def test_get_property_from_get_input_missing_key(self):
+        yaml = """
+inputs:
+    dict_input: {}
+
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+node_templates:
+    vm1:
+        type: vm_type
+        properties:
+            a: {get_input: dict_input}
+            b: {get_property: [SELF, a, key]}
+"""
+        try:
+            prepare_deployment_plan(
+                self.parse(yaml), inputs={'dict_input': {'other_key': 42}})
+            self.fail()
+        except KeyError as e:
+            self.assertIn('vm1.properties.a.key', e.message)
+
+    @timeout(seconds=10)
+    def get_property_from_get_property(self):
+        yaml = """
+node_types:
+    vm_type:
+        properties:
+            a: { type: string }
+            b: { type: string }
+            c: { type: string }
+node_templates:
+    vm1:
+        type: vm_type
+        properties:
+            a: {get_property: [SELF, c]}
+            b: {get_property: [SELF, a]}
+            c: secret
+"""
+        plan = prepare_deployment_plan(self.parse(yaml))
+        self.assertEqual('secret', plan['nodes'][0]['properties']['b'])
+
 
 class TestGetAttribute(AbstractTestParser):
 
