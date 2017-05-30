@@ -580,15 +580,13 @@ def _get_property_value(node_name,
 
 
 def parse(raw_function, scope=None, context=None, path=None):
-    if isinstance(raw_function, dict) and len(raw_function) == 1:
-        func_name = raw_function.keys()[0]
-        if func_name in TEMPLATE_FUNCTIONS:
-            func_args = raw_function.values()[0]
-            return TEMPLATE_FUNCTIONS[func_name](func_args,
-                                                 scope=scope,
-                                                 context=context,
-                                                 path=path,
-                                                 raw=raw_function)
+    if _is_function(raw_function):
+        func_name, func_args = raw_function.items()[0]
+        return TEMPLATE_FUNCTIONS[func_name](func_args,
+                                             scope=scope,
+                                             context=context,
+                                             path=path,
+                                             raw=raw_function)
     return raw_function
 
 
