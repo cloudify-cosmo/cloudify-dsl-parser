@@ -49,6 +49,14 @@ def _register_entry_point_functions():
         register(fn=entry_point.load(), name=entry_point.name)
 
 
+def _is_function(value):
+    """Does the value represent a template function call?"""
+    # functions use the syntax {function_name: args}, so let's look for
+    # dicts of length 1 where the only key was registered as a function
+    return isinstance(value, dict) and len(value) == 1 \
+        and list(value.keys())[0] in TEMPLATE_FUNCTIONS
+
+
 _register_entry_point_functions()
 
 
@@ -521,13 +529,14 @@ def _get_property_value(node_name,
     :param raise_if_not_found: Whether to raise an error if property not found.
     :return: Property value.
     """
-
     def str_list(li):
         return [str(item) for item in li]
 
     value = properties
     for p in property_path:
-        if isinstance(value, dict):
+        if _is_function(value):
+            value = [value, p]
+        elif isinstance(value, dict):
             if p not in value:
                 if raise_if_not_found:
                     raise KeyError(
@@ -536,7 +545,8 @@ def _get_property_value(node_name,
                             node_name, '.'.join(str_list(property_path)),
                             context_path))
                 return None
-            value = value[p]
+            else:
+                value = value[p]
         elif isinstance(value, list):
             try:
                 value = value[p]
@@ -570,15 +580,13 @@ def _get_property_value(node_name,
 
 
 def parse(raw_function, scope=None, context=None, path=None):
-    if isinstance(raw_function, dict) and len(raw_function) == 1:
-        func_name = raw_function.keys()[0]
-        if func_name in TEMPLATE_FUNCTIONS:
-            func_args = raw_function.values()[0]
-            return TEMPLATE_FUNCTIONS[func_name](func_args,
-                                                 scope=scope,
-                                                 context=context,
-                                                 path=path,
-                                                 raw=raw_function)
+    if _is_function(raw_function):
+        func_name, func_args = raw_function.items()[0]
+        return TEMPLATE_FUNCTIONS[func_name](func_args,
+                                             scope=scope,
+                                             context=context,
+                                             path=path,
+                                             raw=raw_function)
     return raw_function
 
 
