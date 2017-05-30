@@ -53,7 +53,8 @@ def _is_function(value):
     """Does the value represent a template function call?"""
     # functions use the syntax {function_name: args}, so let's look for
     # dicts of length 1 where the only key was registered as a function
-    return len(value) == 1 and list(value.keys())[0] in TEMPLATE_FUNCTIONS
+    return isinstance(value, dict) and len(value) == 1 \
+        and list(value.keys())[0] in TEMPLATE_FUNCTIONS
 
 
 _register_entry_point_functions()
@@ -533,10 +534,10 @@ def _get_property_value(node_name,
 
     value = properties
     for p in property_path:
-        if isinstance(value, dict):
-            if _is_function(value):
-                value = [value, p]
-            elif p not in value:
+        if _is_function(value):
+            value = [value, p]
+        elif isinstance(value, dict):
+            if p not in value:
                 if raise_if_not_found:
                     raise KeyError(
                         "Node template property '{0}.properties.{1}' "
