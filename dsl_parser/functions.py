@@ -132,6 +132,11 @@ class Function(object):
     def evaluate_runtime(self, storage):
         pass
 
+    def post_evaluate(self, evaluated_value, path):
+        """Called after this function and its whole subtree has been evaluated
+        """
+        return evaluated_value
+
 
 @register(name='get_input')
 class GetInput(Function):
@@ -224,6 +229,12 @@ class GetProperty(Function):
     def evaluate_runtime(self, storage):
         raise RuntimeError('runtime evaluation for {0} is not supported'
                            .format(self.name))
+
+    def post_evaluate(self, evaluated_value, path):
+        try:
+            return _reduce_evaluated_value(evaluated_value)
+        except KeyError:
+            raise KeyError(path)
 
 
 @register(name='get_attribute')
@@ -646,6 +657,7 @@ def _handler(evaluator, **evaluator_kwargs):
     def handler(v, scope, context, path):
         evaluated_value = v
         scanned = False
+        stored_func = None
         while True:
             func = parse(evaluated_value,
                          scope=scope,
@@ -653,6 +665,8 @@ def _handler(evaluator, **evaluator_kwargs):
                          path=path)
             if not isinstance(func, Function):
                 break
+            else:
+                stored_func = func
             previous_evaluated_value = evaluated_value
             evaluated_value = getattr(func, evaluator)(**evaluator_kwargs)
             if scanned and previous_evaluated_value == evaluated_value:
@@ -664,8 +678,43 @@ def _handler(evaluator, **evaluator_kwargs):
                                  path=path,
                                  replace=True)
             scanned = True
+        if stored_func is not None:
+            evaluated_value = stored_func.post_evaluate(evaluated_value, path)
         return evaluated_value
     return handler
+
+
+def _reduce_evaluated_value(evaluated_value):
+    """If evaluated_value is a list of dict lookups, perform them.
+
+    For example, [{'a': {'b': 5}}, 'a', 'b'] will get transformed to just 5.
+    Only as many substitutions as possible are performed, so
+    [{'a': {'b': 5}}, 'a', 'c'] will return [{'b': 5}, c] (in case of
+    yet-unresolved function calls).
+
+    Other values are returned unchanged.
+    """
+    if not isinstance(evaluated_value, list) or len(evaluated_value) < 2:
+        return evaluated_value
+
+    # reduced is a stack on top of which we'll be pushing items from
+    # evaluated_value, at each step reducing as much as we can
+    reduced = [evaluated_value[0]]
+
+    for next_value in evaluated_value[1:]:
+        reduced.append(next_value)
+        while True:
+            try:
+                # the top item on the stack is the key for the next item
+                retrieved = reduced[-2][reduced[-1]]
+            except (TypeError, IndexError):
+                break
+            else:
+                reduced[-2:] = [retrieved]
+
+    if len(reduced) == 1:
+        reduced = reduced[0]
+    return reduced
 
 
 def plan_evaluation_handler(plan):

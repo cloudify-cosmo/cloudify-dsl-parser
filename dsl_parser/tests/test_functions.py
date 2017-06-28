@@ -14,8 +14,8 @@
 #    * limitations under the License.
 
 from testtools import ExpectedException
-
 from dsl_parser import exceptions
+from dsl_parser.functions import _reduce_evaluated_value
 from dsl_parser.tasks import prepare_deployment_plan
 from dsl_parser.tests.abstract_test_parser import AbstractTestParser
 from dsl_parser.tests.abstract_test_parser import timeout
@@ -759,8 +759,9 @@ node_templates:
             a: {get_input: dict_input}
             b: {get_property: [SELF, a, key]}
 """
+        p = self.parse(yaml)
         plan = prepare_deployment_plan(
-            self.parse(yaml), inputs={'dict_input': {'key': 'secret'}})
+            p, inputs={'dict_input': {'key': 'secret'}})
         self.assertEqual('secret', plan['nodes'][0]['properties']['b'])
 
     @timeout(seconds=10)
@@ -815,7 +816,7 @@ node_templates:
                 self.parse(yaml), inputs={'dict_input': {'other_key': 42}})
             self.fail()
         except KeyError as e:
-            self.assertIn('vm1.properties.a.key', e.message)
+            self.assertIn('vm1.properties.b', e.message)
 
     @timeout(seconds=10)
     def get_property_from_get_property(self):
@@ -1233,3 +1234,25 @@ outputs:
                          ['one', 'value', {'get_attribute': ['node',
                                                              'attribute']}]},
                          outputs['output3']['value'])
+
+
+class TestReduceEvaluatedValue(AbstractTestParser):
+    def test_simple_substitution(self):
+        value = [{'a': 5}, 'a']
+        self.assertEqual(5, _reduce_evaluated_value(value))
+
+    def test_nested_substitution(self):
+        value = [{'a': {'b': 5}}, 'a', 'b']
+        self.assertEqual(5, _reduce_evaluated_value(value))
+
+    def test_missing(self):
+        value = [{'a': 6}, 'missing']
+        try:
+            self.assertEqual(value, _reduce_evaluated_value(value))
+            self.fail()
+        except KeyError as e:
+            self.assertIn('missing', str(e))
+
+    def test_chained(self):
+        value = [{'a': 5}, {'b': 'a'}, 'b']
+        self.assertEqual(5, _reduce_evaluated_value(value))
