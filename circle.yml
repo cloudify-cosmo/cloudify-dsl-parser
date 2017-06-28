@@ -11,10 +11,10 @@ dependencies:
   pre:
     - pyenv local 2.7.9 2.6.8
   override:
-    - pip install tox==1.6.1
+    - pip install tox==1.7.0
 test:
   override:
-    - case $CIRCLE_NODE_INDEX in 0) tox -e py27 ;; 1) tox -e py26 ;; esac:
+    - for i in {1..5}; do case $CIRCLE_NODE_INDEX in 0) tox -e py27 ;; 1) tox -e py26 ;; esac; done:
         parallel: true
     - case $CIRCLE_NODE_INDEX in 0) tox -e flake8 ;; esac:
         parallel: true
