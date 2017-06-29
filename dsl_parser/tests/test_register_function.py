@@ -68,7 +68,8 @@ outputs:
     output4:
         value: { to_upper: { get_secret: secret } }
 """
-        parsed = prepare_deployment_plan(self.parse(yaml))
+        parsed = prepare_deployment_plan(self.parse(yaml),
+                                         self._get_secret_mock)
         outputs = parsed['outputs']
         self.assertEqual('FIRST', outputs['output1']['value'])
         self.assertEqual('PROPERTY_VALUE', outputs['output2']['value'])

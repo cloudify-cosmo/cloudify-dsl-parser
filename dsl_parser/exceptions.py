@@ -42,6 +42,24 @@ class FunctionEvaluationError(Exception):
         super(FunctionEvaluationError, self).__init__(msg)
 
 
+class UnknownSecretError(Exception):
+    """
+    An error raised when a deployment is created and a required secret
+    does not exist.
+    """
+    def __init__(self, *args, **kwargs):
+        super(UnknownSecretError, self).__init__(*args, **kwargs)
+
+
+class UnsupportedGetSecretError(Exception):
+    """
+    An error raised when a deployment is created and the unsupported get_secret
+    intrinsic function appears in the blueprint
+    """
+    def __init__(self, *args, **kwargs):
+        super(UnsupportedGetSecretError, self).__init__(*args, **kwargs)
+
+
 class DSLParsingException(Exception):
     def __init__(self, err_code, *args):
         super(DSLParsingException, self).__init__(*args)

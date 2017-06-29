@@ -139,7 +139,7 @@ outputs:
         func = functions.parse(outputs['port']['value'])
         self.assertTrue(isinstance(func, functions.GetSecret))
         self.assertEqual('secret_key', func.secret_id)
-        prepared = prepare_deployment_plan(parsed)
+        prepared = prepare_deployment_plan(parsed, self._get_secret_mock)
         self.assertEqual(parsed['outputs'], prepared['outputs'])
 
     def test_invalid_nested_get_attribute(self):
@@ -200,7 +200,8 @@ outputs:
             self.assertEqual({'get_secret': 'secret'}, tested[4])
             self.assertEqual('six', tested[5])
 
-        parsed = prepare_deployment_plan(self.parse_1_1(yaml))
+        parsed = prepare_deployment_plan(self.parse_1_1(yaml),
+                                         self._get_secret_mock)
         concatenated = parsed['outputs']['concatenated']['value']['concat']
         assertion(concatenated)
 

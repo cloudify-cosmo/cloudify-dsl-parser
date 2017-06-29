@@ -81,14 +81,45 @@ def _set_plan_inputs(plan, inputs=None):
 
 def _process_functions(plan):
     handler = functions.plan_evaluation_handler(plan)
-    scan.scan_service_template(plan, handler, replace=True)
+    scan.scan_service_template(
+        plan, handler, replace=True, search_secrets=True)
 
 
-def prepare_deployment_plan(plan, inputs=None, **kwargs):
+def _validate_secrets(plan, get_secret_method):
+    if 'secrets' not in plan:
+        return
+
+    # Mainly for local workflow that doesn't support secrets
+    if get_secret_method is None:
+        raise exceptions.UnsupportedGetSecretError(
+            "The get_secret intrinsic function is not supported"
+        )
+
+    invalid_secrets = []
+    for secret_key in plan['secrets']:
+        try:
+            get_secret_method(secret_key)
+        except Exception as exception:
+            if hasattr(exception, 'http_code') and exception.http_code == 404:
+                invalid_secrets.append(secret_key)
+            else:
+                raise
+    plan.pop('secrets')
+
+    if invalid_secrets:
+        raise exceptions.UnknownSecretError(
+            "Required secrets {0} don't exist in this tenant"
+            .format(invalid_secrets)
+        )
+
+
+def prepare_deployment_plan(
+        plan, get_secret_method=None, inputs=None, **kwargs):
     """
     Prepare a plan for deployment
     """
     plan = models.Plan(copy.deepcopy(plan))
     _set_plan_inputs(plan, inputs)
     _process_functions(plan)
+    _validate_secrets(plan, get_secret_method)
     return multi_instance.create_deployment_plan(plan)

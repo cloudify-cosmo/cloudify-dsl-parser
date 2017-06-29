@@ -20,6 +20,11 @@ OUTPUTS_SCOPE = 'outputs'
 POLICIES_SCOPE = 'policies'
 SCALING_GROUPS_SCOPE = 'scaling_groups'
 
+# Searching for secrets in the blueprint only one time of the few times
+# that scan_service_template is called
+collect_secrets = False
+secrets = set()
+
 
 def scan_properties(value,
                     handler,
@@ -49,6 +54,7 @@ def scan_properties(value,
         for k, v in value.iteritems():
             current_path = '{0}.{1}'.format(path, k)
             result = handler(v, scope, context, current_path)
+            _collect_secret(result)
             if replace and result != v:
                 value[k] = result
             if recursive:
@@ -61,6 +67,7 @@ def scan_properties(value,
         for index, item in enumerate(value):
             current_path = '{0}[{1}]'.format(path, index)
             result = handler(item, scope, context, current_path)
+            _collect_secret(result)
             if replace and result != item:
                 value[index] = result
             if recursive:
@@ -70,6 +77,11 @@ def scan_properties(value,
                                 context=context,
                                 path=path,
                                 replace=replace)
+
+
+def _collect_secret(value):
+    if collect_secrets and isinstance(value, dict) and 'get_secret' in value:
+        secrets.add(value['get_secret'])
 
 
 def _scan_operations(operations,
@@ -115,7 +127,10 @@ def scan_node_operation_properties(node_template, handler, replace=False):
                          replace=replace)
 
 
-def scan_service_template(plan, handler, replace=False):
+def scan_service_template(plan, handler, replace=False, search_secrets=False):
+    global collect_secrets
+    collect_secrets = search_secrets
+
     for node_template in plan.node_templates:
         scan_properties(node_template['properties'],
                         handler,
@@ -156,3 +171,7 @@ def scan_service_template(plan, handler, replace=False):
                         path='scaling_groups.{0}.properties'.format(
                             group_name),
                         replace=replace)
+
+    if collect_secrets and len(secrets) > 0:
+        plan['secrets'] = list(secrets)
+        secrets.clear()
