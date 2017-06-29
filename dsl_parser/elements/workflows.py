@@ -71,7 +71,7 @@ class Workflows(DictElement):
     def calculate_provided(self, plugins):
         workflow_plugins = []
         workflow_plugin_names = set()
-        for workflow, op_struct in self.value.items():
+        for workflow, op_struct in sorted(self.value.items()):
             if op_struct['plugin'] not in workflow_plugin_names:
                 plugin_name = op_struct['plugin']
                 workflow_plugins.append(plugins[plugin_name])
