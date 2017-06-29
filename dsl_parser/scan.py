@@ -90,7 +90,9 @@ def _scan_operations(operations,
                      context=None,
                      path='',
                      replace=False):
-    for name, definition in operations.iteritems():
+    for name, definition in sorted(operations.items(),
+                                   key=lambda (k, v): k.count('.'),
+                                   reverse=True):
         if isinstance(definition, dict) and 'inputs' in definition:
             context = context.copy() if context else {}
             context['operation'] = definition
