@@ -51,7 +51,7 @@ def scan_properties(value,
     :param path: The properties base path (for debugging purposes).
     """
     if isinstance(value, dict):
-        for k, v in value.iteritems():
+        for k, v in sorted(value.iteritems()):
             current_path = '{0}.{1}'.format(path, k)
             result = handler(v, scope, context, current_path)
             _collect_secret(result)
