@@ -96,7 +96,7 @@ def _validate_secrets(plan, get_secret_method):
         )
 
     invalid_secrets = []
-    for secret_key in plan['secrets']:
+    for secret_key in sorted(plan['secrets']):
         try:
             get_secret_method(secret_key)
         except Exception as exception:

@@ -170,11 +170,11 @@ node_templates:
         self.assertFalse(hasattr(parsed, 'secrets'))
 
     def test_validate_secrets_all_invalid(self):
-        expected_message = "Required secrets \['target_op_secret_id', " \
-                           "'node_template_secret_id', 'ip', 'agent_key', " \
-                           "'user', 'webserver_port', " \
-                           "'source_op_secret_id'\] don't exist in this tenant"
-
+        expected_message = "Required secrets \['agent_key', " \
+                           "'ip', 'node_template_secret_id', " \
+                           "'source_op_secret_id', 'target_op_secret_id', " \
+                           "'user', 'webserver_port'\] don't exist "\
+                           "in this tenant"
         get_secret_not_found = MagicMock(side_effect=TestNotFoundException)
         self.assertRaisesRegexp(exceptions.UnknownSecretError,
                                 expected_message,
