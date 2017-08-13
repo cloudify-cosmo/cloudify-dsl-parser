@@ -765,6 +765,40 @@ node_templates:
         self.assertEqual('secret', plan['nodes'][0]['properties']['b'])
 
     @timeout(seconds=10)
+    def test_edliu_example(self):
+        yaml = """
+inputs:
+    dict_input: {}
+
+node_types:
+    pgaasdb:
+        properties:
+            user: {}
+    other:
+        properties:
+            a: { type: string }
+
+node_templates:
+    pgaasdb:
+        type: pgaasdb
+        properties:
+            user: { get_input: dict_input}
+    other:
+        type: other
+        properties:
+            a: { get_property: [pgaasdb, user, user] }
+"""
+        p = self.parse(yaml)
+        plan = prepare_deployment_plan(
+            p, inputs={'dict_input': {'user': 'abc'}})
+        for node in plan['nodes']:
+            if 'a' in node['properties']:
+                self.assertEqual('abc', node['properties']['a'])
+                break
+        else:
+            self.fail('Node with attribute "a" not found')
+
+    @timeout(seconds=10)
     def test_get_property_from_get_input_data_type(self):
         yaml = """
 inputs:
