@@ -194,10 +194,11 @@ node_templates:
         expected_message = "Required secrets \['ip', 'source_op_secret_id'\]" \
                            " don't exist in this tenant"
 
-        get_secret_not_found = MagicMock()
-        get_secret_not_found.side_effect = [None, None, TestNotFoundException,
-                                            None, None, None,
-                                            TestNotFoundException]
+        def _mock_get_secret(secret):
+            if secret in ('ip', 'source_op_secret_id'):
+                raise TestNotFoundException
+
+        get_secret_not_found = MagicMock(side_effect=_mock_get_secret)
         self.assertRaisesRegexp(exceptions.UnknownSecretError,
                                 expected_message,
                                 prepare_deployment_plan,
