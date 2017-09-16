@@ -144,15 +144,15 @@ class GetInput(Function):
         valid_args_type = isinstance(args, basestring)
         if not valid_args_type:
             raise ValueError(
-                "get_input function argument should be a string in "
-                "{0} but is '{1}'.".format(self.context, args))
+                "get_input function argument should be a string, "
+                "but is '{0}'.".format(args))
         self.input_name = args
 
     def validate(self, plan):
         if self.input_name not in plan.inputs:
             raise exceptions.UnknownInputError(
-                "{0} get_input function references an "
-                "unknown input '{1}'.".format(self.context, self.input_name))
+                "get_input function references an "
+                "unknown input '{0}'.".format(self.input_name))
 
     def evaluate(self, plan):
         return plan.inputs[self.input_name]
