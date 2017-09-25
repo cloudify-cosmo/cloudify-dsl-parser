@@ -2894,6 +2894,11 @@ class TestMultiInstanceGroups(scaling.BaseTestMultiInstance):
             components = nx.weakly_connected_component_subgraphs(
                 group_subgraph)
 
+            # verify expected number of group instances
+            self.assertEqual(
+                expected_group['instances'],
+                nx.number_weakly_connected_components(group_subgraph))
+
             # export all group instances and for each group instance its
             # its members
             instances_and_ancestors = [
@@ -2918,9 +2923,6 @@ class TestMultiInstanceGroups(scaling.BaseTestMultiInstance):
                 previous_group_instances = initial_group_components[
                     group_name]['instances']
                 self.assertTrue(group_instances <= previous_group_instances)
-
-            # verify expected number of group instances
-            self.assertEqual(expected_group['instances'], len(components))
 
             # for each group instance:
             for component in components:
@@ -3044,7 +3046,9 @@ class TestMultiInstanceGroups(scaling.BaseTestMultiInstance):
                 components = nx.weakly_connected_component_subgraphs(r_graph)
 
                 # assert expected number of components count
-                self.assertEqual(components_count, len(components))
+                self.assertEqual(
+                    components_count,
+                    nx.number_weakly_connected_components(r_graph))
 
                 # for each weakly connected component:
                 for component in components:
