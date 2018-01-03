@@ -137,7 +137,7 @@ def _get_resource_location(resource_name,
                            resources_base_path,
                            current_resource_context=None):
     url_parts = resource_name.split(':')
-    if url_parts[0] in ['http', 'https', 'file', 'ftp']:
+    if url_parts[0] in ['http', 'https', 'file', 'ftp', 'plugin']:
         return resource_name
 
     if os.path.exists(resource_name):
