@@ -495,7 +495,7 @@ def _build_and_update_node_instances(ctx,
         new_instances_num = current_instances_num
 
     new_containers = []
-    for _ in range(new_instances_num):
+    for _ in range(int(new_instances_num)):
         node_instance_id = _node_instance_id(node_id, ctx)
         node_instance = _node_instance_copy(
             node=node,
