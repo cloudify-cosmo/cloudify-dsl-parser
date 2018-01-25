@@ -59,7 +59,7 @@ class Element(object):
         self.context = context
         initial_value = holder.Holder.of(initial_value)
         self.initial_value_holder = initial_value
-        self._initial_value = initial_value.restore()
+        self._initial_value = copy.deepcopy(initial_value.restore())
         self.start_line = initial_value.start_line
         self.start_column = initial_value.start_column
         self.end_line = initial_value.end_line
@@ -103,7 +103,7 @@ class Element(object):
 
     @property
     def initial_value(self):
-        return copy.deepcopy(self._initial_value)
+        return self._initial_value
 
     @property
     def value(self):
@@ -111,11 +111,11 @@ class Element(object):
             raise exceptions.DSLParsingSchemaAPIException(
                 exceptions.ERROR_CODE_ILLEGAL_VALUE_ACCESS,
                 'Cannot access element value before parsing')
-        return copy.deepcopy(self._parsed_value)
+        return self._parsed_value
 
     @value.setter
     def value(self, val):
-        self._parsed_value = val
+        self._parsed_value = copy.deepcopy(val)
 
     def calculate_provided(self, **kwargs):
         return {}
