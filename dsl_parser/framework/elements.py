@@ -12,7 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-
+from collections import Mapping, Sequence
 import copy
 from StringIO import StringIO
 
@@ -48,6 +48,27 @@ class List(ElementType):
     pass
 
 
+class ImmutableSequence(list):
+    def __setitem__(self, i, v):
+        raise RuntimeError()
+
+
+class ImmutableMapping(dict):
+    def __setitem__(self, i, v):
+        raise RuntimeError()
+
+
+def immutable(obj):
+    # return obj
+    if isinstance(obj, (ImmutableMapping, ImmutableSequence)):
+        return obj
+    if type(obj) == dict:
+        return ImmutableMapping(obj)
+    if isinstance(obj, list):
+        return ImmutableSequence(obj)
+    return obj
+
+
 class Element(object):
 
     schema = None
@@ -59,7 +80,7 @@ class Element(object):
         self.context = context
         initial_value = holder.Holder.of(initial_value)
         self.initial_value_holder = initial_value
-        self._initial_value = copy.deepcopy(initial_value.restore())
+        self._initial_value = initial_value.restore()
         self.start_line = initial_value.start_line
         self.start_column = initial_value.start_column
         self.end_line = initial_value.end_line
@@ -115,7 +136,7 @@ class Element(object):
 
     @value.setter
     def value(self, val):
-        self._parsed_value = copy.deepcopy(val)
+        self._parsed_value = immutable(val)
 
     def calculate_provided(self, **kwargs):
         return {}

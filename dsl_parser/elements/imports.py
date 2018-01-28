@@ -169,6 +169,7 @@ def _combine_imports(parsed_dsl_holder, dsl_location,
     version_key_holder, version_value_holder = parsed_dsl_holder.get_item(
         _version.VERSION)
     holder_result.value = {}
+    import pudb; pu.db  # NOQA
     for imported in ordered_imports:
         import_url = imported['import']
         parsed_imported_dsl_holder = imported['parsed']
