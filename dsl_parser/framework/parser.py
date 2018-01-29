@@ -45,7 +45,7 @@ class SchemaAPIValidator(object):
             if len(schema) == 0:
                 raise exceptions.DSLParsingSchemaAPIException(1)
             for value in schema:
-                self._traverse_schema(value, list_nesting+1)
+                self._traverse_schema(value, list_nesting + 1)
         elif isinstance(schema, elements.ElementType):
             if isinstance(schema, elements.Leaf):
                 if not isinstance(schema.type, (type, list, tuple)):
@@ -149,7 +149,7 @@ class Context(object):
             raise ValueError('Illegal state should have been identified'
                              ' by schema API validation')
 
-    def _traverse_dict_schema(self, schema,  parent_element):
+    def _traverse_dict_schema(self, schema, parent_element):
         if not isinstance(parent_element.initial_value, dict):
             return
 
@@ -218,11 +218,20 @@ class Context(object):
                     requirement = element_type
                 dependencies = self.element_type_to_elements.get(
                     requirement, [])
+                predicates = [r.predicate for r in requirement_values
+                              if r.predicate is not None]
+
+                if not predicates:
+                    dep = _BatchDependency(element_type, requirement)
+                    for dependency in dependencies:
+                        self.element_graph.add_edge(dep, dependency)
+                    for element in _elements:
+                        self.element_graph.add_edge(element, dep)
+                    continue
+
                 for dependency in dependencies:
                     for element in _elements:
-                        predicates = [r.predicate for r in requirement_values
-                                      if r.predicate is not None]
-                        add_dependency = not predicates or all([
+                        add_dependency = all([
                             predicate(element, dependency)
                             for predicate in predicates])
                         if add_dependency:
@@ -248,6 +257,19 @@ class Context(object):
             raise ex
 
 
+class _BatchDependency(object):
+    """Marker object to represent dependencies between types of elements.
+
+    To force traversing the graph in order, we add edges between types
+    of elements.
+    This is used if all elements of one type must come before all
+    elements of another type.
+    """
+    def __init__(self, dependent_type, dependency_type):
+        self._dependent_type = dependent_type
+        self._dependency_type = dependency_type
+
+
 class Parser(object):
 
     def parse(self,
@@ -261,7 +283,11 @@ class Parser(object):
             element_cls=element_cls,
             element_name=element_name,
             inputs=inputs)
+
         for element in context.elements_graph_topological_sort():
+
+            if isinstance(element, _BatchDependency):
+                continue
             try:
                 self._validate_element_schema(element, strict=strict)
                 self._process_element(element)
