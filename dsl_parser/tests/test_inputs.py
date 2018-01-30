@@ -495,3 +495,45 @@ plugins:
             yaml, 107, DSLParsingLogicException)
         self.assertIn('some_input', ex.message)
         self.assertIn('another_input', ex.message)
+
+    def test_inputs_datatypes(self):
+        yaml = """
+data_types:
+  type1:
+    properties:
+      x:
+        type: string
+
+inputs:
+  input1:
+    type: type1
+
+node_templates: {}
+"""
+        parsed = self.parse_1_3(yaml)
+        self.assertEqual(1, len(parsed['inputs']))
+
+    def test_operation_inputs_datatypes(self):
+        yaml = """
+data_types:
+  type1:
+    properties:
+      x:
+        type: string
+
+node_types:
+  node_type1:
+    interfaces:
+      interface:
+        op:
+          implementation: plugin.mapping
+          inputs:
+            some_input:
+              type: type1
+
+node_templates:
+    node1:
+        type: node_type1
+"""
+        parsed = self.parse_1_3(yaml)
+        self.assertEqual(1, len(parsed['inputs']))
