@@ -38,10 +38,12 @@ def parse_from_path(dsl_file_path,
 
 def parse(dsl_string,
           resources_base_path=None,
+          dsl_location=None,
           resolver=None,
           validate_version=True):
     return _parse(dsl_string,
                   resources_base_path=resources_base_path,
+                  dsl_location=dsl_location,
                   resolver=resolver,
                   validate_version=validate_version)
 
