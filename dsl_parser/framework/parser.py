@@ -73,9 +73,11 @@ class Context(object):
                  value,
                  element_cls,
                  element_name,
-                 inputs):
+                 inputs,
+                 render):
         self.inputs = inputs or {}
         self.element_type_to_elements = {}
+        self.render = render or {}
         self._root_element = None
         self._element_tree = nx.DiGraph()
         self._element_graph = nx.DiGraph()
@@ -277,15 +279,16 @@ class Parser(object):
               element_cls,
               element_name='root',
               inputs=None,
-              strict=True):
+              strict=True,
+              render=None):
         context = Context(
             value=value,
             element_cls=element_cls,
             element_name=element_name,
-            inputs=inputs)
+            inputs=inputs,
+            render=render)
 
         for element in context.elements_graph_topological_sort():
-
             if isinstance(element, _BatchDependency):
                 continue
             try:
@@ -445,13 +448,15 @@ def parse(value,
           element_cls,
           element_name='root',
           inputs=None,
-          strict=True):
+          strict=True,
+          render=None):
     validate_schema_api(element_cls)
     return _parser.parse(value=value,
                          element_cls=element_cls,
                          element_name=element_name,
                          inputs=inputs,
-                         strict=strict)
+                         strict=strict,
+                         render=render)
 
 
 def _expected_type_message(value, expected_type):

@@ -231,8 +231,13 @@ def parse_value(
             value))
 
 
-def load_yaml(raw_yaml, error_message, filename=None):
+def load_yaml(raw_yaml, error_message, filename=None, render=None):
+    render = render or {}
     try:
+        if render:
+            import jinja2
+            template = jinja2.Template(raw_yaml)
+            raw_yaml = template.render(**render)
         return yaml_loader.load(raw_yaml, filename)
     except yaml.parser.ParserError, ex:
         raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'

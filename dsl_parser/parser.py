@@ -25,7 +25,8 @@ def parse_from_path(dsl_file_path,
                     resources_base_path=None,
                     resolver=None,
                     validate_version=True,
-                    additional_resource_sources=()):
+                    additional_resource_sources=(),
+                    render=None):
     with open(dsl_file_path, 'r') as f:
         dsl_string = f.read()
     return _parse(dsl_string,
@@ -33,19 +34,22 @@ def parse_from_path(dsl_file_path,
                   dsl_location=dsl_file_path,
                   resolver=resolver,
                   validate_version=validate_version,
-                  additional_resource_sources=additional_resource_sources)
+                  additional_resource_sources=additional_resource_sources,
+                  render=render)
 
 
 def parse(dsl_string,
           resources_base_path=None,
           dsl_location=None,
           resolver=None,
-          validate_version=True):
+          validate_version=True,
+          render=None):
     return _parse(dsl_string,
                   resources_base_path=resources_base_path,
                   dsl_location=dsl_location,
                   resolver=resolver,
-                  validate_version=validate_version)
+                  validate_version=validate_version,
+                  render=render)
 
 
 def _parse(dsl_string,
@@ -53,11 +57,12 @@ def _parse(dsl_string,
            dsl_location=None,
            resolver=None,
            validate_version=True,
-           additional_resource_sources=()):
+           additional_resource_sources=(),
+           render=None):
     parsed_dsl_holder = utils.load_yaml(raw_yaml=dsl_string,
                                         error_message='Failed to parse DSL',
-                                        filename=dsl_location)
-
+                                        filename=dsl_location,
+                                        render=render)
     if not resolver:
         resolver = DefaultImportResolver()
 
@@ -68,7 +73,8 @@ def _parse(dsl_string,
         inputs={
             'validate_version': validate_version
         },
-        strict=False)
+        strict=False
+    )
     version = result['plan_version']
 
     # handle imports
@@ -80,7 +86,8 @@ def _parse(dsl_string,
             'blueprint_location': dsl_location,
             'version': version,
             'resolver': resolver,
-            'validate_version': validate_version
+            'validate_version': validate_version,
+            'render': render
         },
         element_cls=blueprint.BlueprintImporter,
         strict=False)

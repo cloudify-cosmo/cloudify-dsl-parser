@@ -77,7 +77,8 @@ class ImportsLoader(Element):
                    'blueprint_location',
                    'version',
                    'resolver',
-                   'validate_version']
+                   'validate_version',
+                   'render']
     }
 
     resource_base = None
@@ -97,7 +98,8 @@ class ImportsLoader(Element):
               blueprint_location,
               version,
               resolver,
-              validate_version):
+              validate_version,
+              render):
         if blueprint_location:
             blueprint_location = _dsl_location_to_url(
                 dsl_location=blueprint_location,
@@ -109,7 +111,8 @@ class ImportsLoader(Element):
                                 resources_base_path=resources_base_path,
                                 version=version,
                                 resolver=resolver,
-                                validate_version=validate_version)
+                                validate_version=validate_version,
+                                render=render)
 
     def calculate_provided(self, **kwargs):
         return {
@@ -160,11 +163,12 @@ def _get_resource_location(resource_name,
 
 def _combine_imports(parsed_dsl_holder, dsl_location,
                      resources_base_path, version, resolver,
-                     validate_version):
+                     validate_version, render):
     ordered_imports = _build_ordered_imports(parsed_dsl_holder,
                                              dsl_location,
                                              resources_base_path,
-                                             resolver)
+                                             resolver,
+                                             render)
     holder_result = parsed_dsl_holder.copy()
     version_key_holder, version_value_holder = parsed_dsl_holder.get_item(
         _version.VERSION)
@@ -184,7 +188,8 @@ def _combine_imports(parsed_dsl_holder, dsl_location,
 def _build_ordered_imports(parsed_dsl_holder,
                            dsl_location,
                            resources_base_path,
-                           resolver):
+                           resolver,
+                           render):
 
     def location(value):
         return value or 'root'
@@ -218,7 +223,8 @@ def _build_ordered_imports(parsed_dsl_holder,
                     raw_yaml=raw_imported_dsl,
                     error_message="Failed to parse import '{0}' (via '{1}')"
                                   .format(another_import, import_url),
-                    filename=another_import)
+                    filename=another_import,
+                    render=render)
                 imports_graph.add(import_url, imported_dsl_holder,
                                   location(_current_import))
                 _build_ordered_imports_recursive(imported_dsl_holder,
