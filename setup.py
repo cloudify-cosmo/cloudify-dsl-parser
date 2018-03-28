@@ -18,7 +18,7 @@ from setuptools import setup
 
 
 install_requires = [
-    'PyYAML==3.10',
+    'PyYAML==3.12',
     'networkx==1.9.1',
     'requests>=2.7.0,<3.0.0',
     'retrying==1.3.3'
