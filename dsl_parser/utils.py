@@ -19,7 +19,9 @@ import importlib
 import urllib2
 import sys
 
+import jinja2
 import yaml.parser
+from collections import Mapping
 
 from dsl_parser import yaml_loader
 from dsl_parser import functions
@@ -31,6 +33,27 @@ from dsl_parser.exceptions import (DSLParsingLogicException,
                                    DSLParsingFormatException)
 from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
+
+
+current_yaml = {}
+
+
+def _dict_merge(dct, merge_dct):
+    """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
+    updating only top-level keys, dict_merge recurses down into dicts nested
+    to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
+    ``dct``.
+    Taken from: https://gist.github.com/angstwad/bf22d1822c38a92ec0a9
+    :param dct: dict onto which the merge is executed
+    :param merge_dct: dct merged into dct
+    :return: None
+    """
+    for k, v in merge_dct.iteritems():
+        if (k in dct and isinstance(dct[k], dict)
+                and isinstance(merge_dct[k], Mapping)):
+            _dict_merge(dct[k], merge_dct[k])
+        else:
+            dct[k] = merge_dct[k]
 
 
 class ResolverInstantiationError(Exception):
@@ -235,9 +258,12 @@ def load_yaml(raw_yaml, error_message, filename=None, render=None):
     render = render or {}
     try:
         if render:
-            import jinja2
+            # render can be passed as True sometimes, when we want to
+            # render the blueprint, but no extra values were supplied
+            render = {} if isinstance(render, bool) else render
             template = jinja2.Template(raw_yaml)
             raw_yaml = template.render(**render)
+        _dict_merge(current_yaml, yaml.load(raw_yaml))
         return yaml_loader.load(raw_yaml, filename)
     except yaml.parser.ParserError, ex:
         raise DSLParsingFormatException(-1, '{0}: Illegal yaml; {1}'

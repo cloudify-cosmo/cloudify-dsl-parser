@@ -59,6 +59,7 @@ def _parse(dsl_string,
            validate_version=True,
            additional_resource_sources=(),
            render=None):
+    utils.current_yaml.clear()
     parsed_dsl_holder = utils.load_yaml(raw_yaml=dsl_string,
                                         error_message='Failed to parse DSL',
                                         filename=dsl_location,
