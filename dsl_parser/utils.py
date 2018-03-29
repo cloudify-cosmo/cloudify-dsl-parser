@@ -36,6 +36,11 @@ from dsl_parser.import_resolver.default_import_resolver import \
 
 
 current_yaml = {}
+env = jinja2.Environment()
+
+
+def set_env_loader(path):
+    env.loader = jinja2.FileSystemLoader(path)
 
 
 def _dict_merge(dct, merge_dct):
@@ -261,7 +266,7 @@ def load_yaml(raw_yaml, error_message, filename=None, render=None):
             # render can be passed as True sometimes, when we want to
             # render the blueprint, but no extra values were supplied
             render = {} if isinstance(render, bool) else render
-            template = jinja2.Template(raw_yaml)
+            template = env.from_string(raw_yaml)
             raw_yaml = template.render(**render)
         _dict_merge(current_yaml, yaml.load(raw_yaml))
         return yaml_loader.load(raw_yaml, filename)

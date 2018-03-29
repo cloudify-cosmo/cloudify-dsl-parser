@@ -13,6 +13,8 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+from os.path import dirname, abspath
+
 from dsl_parser import (functions,
                         utils)
 from dsl_parser.framework import parser
@@ -59,6 +61,7 @@ def _parse(dsl_string,
            validate_version=True,
            additional_resource_sources=(),
            render=None):
+    utils.set_env_loader(dirname(abspath(dsl_location)))
     utils.current_yaml.clear()
     parsed_dsl_holder = utils.load_yaml(raw_yaml=dsl_string,
                                         error_message='Failed to parse DSL',
