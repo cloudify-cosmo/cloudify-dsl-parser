@@ -97,7 +97,7 @@ class DefaultImportResolver(AbstractImportResolver):
                     except DSLParsingLogicException as ex:
                         # failed to resolve current rule,
                         # continue to the next one
-                        failed_urls[url_to_resolve] = ex
+                        failed_urls[url_to_resolve] = str(ex)
 
         # failed to resolve the url using the rules
         # trying to open the original url
