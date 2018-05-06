@@ -76,3 +76,8 @@ class Description(Element):
     def validate(self, version, validate_version):
         if validate_version:
             self.validate_version(version, (1, 2))
+
+
+class Metadata(Element):
+
+    schema = Leaf(type=dict)
