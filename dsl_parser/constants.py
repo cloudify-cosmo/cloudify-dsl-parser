@@ -15,6 +15,7 @@
 
 DSL_DEFINITIONS = 'dsl_definitions'
 DESCRIPTION = 'description'
+METADATA = 'metadata'
 NODE_TEMPLATES = 'node_templates'
 IMPORTS = 'imports'
 NODE_TYPES = 'node_types'

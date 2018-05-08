@@ -71,6 +71,7 @@ class Blueprint(Element):
         'description': misc.Description,
         'imports': imports.Imports,
         'dsl_definitions': misc.DSLDefinitions,
+        'metadata': misc.Metadata,
         'inputs': misc.Inputs,
         'plugins': plugins.Plugins,
         'node_types': node_types.NodeTypes,
@@ -96,6 +97,7 @@ class Blueprint(Element):
               scaling_groups):
         return models.Plan({
             constants.DESCRIPTION: self.child(misc.Description).value,
+            constants.METADATA: self.child(misc.Metadata).value,
             constants.NODES: self.child(node_templates.NodeTemplates).value,
             constants.RELATIONSHIPS: self.child(
                 relationships.Relationships).value,

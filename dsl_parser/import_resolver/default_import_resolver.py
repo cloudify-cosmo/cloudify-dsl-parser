@@ -83,19 +83,18 @@ class DefaultImportResolver(AbstractImportResolver):
         failed_urls = {}
         # trying to find a matching rule that can resolve this url
         for rule in self.rules:
-            key = rule.keys()[0]
-            value = rule.values()[0]
-            prefix = key
-            prefix_len = len(key)
+            # the validate method checks that the dict has exactly 1 element
+            prefix, value = list(rule.items())[0]
+            prefix_len = len(prefix)
             if prefix == import_url[:prefix_len]:
                 # found a matching rule
                 url_to_resolve = value + import_url[prefix_len:]
                 # trying to resolve the resolved_url
-                if url_to_resolve not in failed_urls.keys():
+                if url_to_resolve not in failed_urls:
                     # there is no point to try to resolve the same url twice
                     try:
                         return read_import(url_to_resolve)
-                    except DSLParsingLogicException, ex:
+                    except DSLParsingLogicException as ex:
                         # failed to resolve current rule,
                         # continue to the next one
                         failed_urls[url_to_resolve] = str(ex)
@@ -104,7 +103,7 @@ class DefaultImportResolver(AbstractImportResolver):
         # trying to open the original url
         try:
             return read_import(import_url)
-        except DSLParsingLogicException, ex:
+        except DSLParsingLogicException as ex:
             if not self.rules:
                 raise
             if not failed_urls:
