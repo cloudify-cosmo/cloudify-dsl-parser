@@ -1,0 +1,69 @@
+version: 2
+
+checkout:
+  post:
+    - >
+      if [ -n "$CI_PULL_REQUEST" ]; then
+        PR_ID=${CI_PULL_REQUEST##*/}
+        git fetch origin +refs/pull/$PR_ID/merge:
+        git checkout -qf FETCH_HEAD
+      fi
+
+defaults:
+  - &test_defaults
+    docker:
+      - image: circleci/python:2.7
+    steps:
+      - checkout
+      - run:
+          name: Install tox, NOTICE we use an old version of tox because of CFY-6398 ( relying dict ordering)
+          command: sudo pip install tox==1.6.1
+      - run:
+          name: Run tox of specfic environment
+          command: tox -e $DO_ENV
+
+  - &test_defaults_for_python26
+    docker:
+      - image: circleci/python:2.7
+    steps:
+      - checkout
+      - run:
+          name: Install and set python version with pyenv
+          command: |
+                   git clone https://github.com/yyuu/pyenv.git ~/.pyenv
+                   export PYENV_ROOT="$HOME/.pyenv"
+                   export PATH="$PYENV_ROOT/bin:$PATH"
+                   sudo apt-get install -y build-essential libssl1.0-dev zlib1g-dev xz-utils
+                   pyenv install 2.6.9
+                   pyenv local 2.6.9
+      - run:
+          name: Install tox, NOTICE we use an old version of tox because of CFY-6398 (relying dict ordering)
+          command: sudo pip install tox==1.6.1 tox-pyenv
+      - run:
+          name: Run tox of specfic environment
+          command: tox -e $DO_ENV
+
+jobs:
+  flake8:
+    <<: *test_defaults
+    environment:
+      DO_ENV: flake8
+
+  test_py27:
+    <<: *test_defaults
+    environment:
+      DO_ENV: test_py27
+
+  test_py26:
+    <<: *test_defaults_for_python26
+    environment:
+      DO_ENV: test_py26
+
+workflows:
+  version: 2
+
+  build_and_test:
+    jobs:
+      - flake8
+      - test_py27
+      - test_py26
