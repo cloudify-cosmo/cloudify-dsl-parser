@@ -37,7 +37,8 @@ coverage.xml
 # Translations
 *.mo
 
-# Mr Developer
+# IDE
+.idea/
 .mr.developer.cfg
 .project
 .pydevproject
