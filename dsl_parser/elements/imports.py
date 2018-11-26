@@ -150,11 +150,6 @@ def _get_resource_location(resource_name,
         if utils.url_exists(candidate_url):
             return candidate_url
 
-    if resources_base_path:
-        full_path = os.path.join(resources_base_path, resource_name)
-        return 'file:{0}'.format(
-            urllib.pathname2url(os.path.abspath(full_path)))
-
     return None
 
 
