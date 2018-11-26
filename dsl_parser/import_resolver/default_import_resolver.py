@@ -72,21 +72,24 @@ class DefaultImportResolver(AbstractImportResolver):
         a DSLParsingLogicException will be raise.
     """
 
-    def __init__(self, rules=None):
+    def __init__(self, rules=None, fallback=False):
         # set the rules
         self.rules = rules
         if self.rules is None:
             self.rules = DEFAULT_RULES
         self._validate_rules()
+        self._fallback = fallback
 
     def resolve(self, import_url):
         failed_urls = {}
         # trying to find a matching rule that can resolve this url
+        matched_any_rule = False
         for rule in self.rules:
             # the validate method checks that the dict has exactly 1 element
             prefix, value = list(rule.items())[0]
             prefix_len = len(prefix)
             if prefix == import_url[:prefix_len]:
+                matched_any_rule = True
                 # found a matching rule
                 url_to_resolve = value + import_url[prefix_len:]
                 # trying to resolve the resolved_url
@@ -98,6 +101,13 @@ class DefaultImportResolver(AbstractImportResolver):
                         # failed to resolve current rule,
                         # continue to the next one
                         failed_urls[url_to_resolve] = str(ex)
+
+        if matched_any_rule and not self._fallback:
+            msg = 'Failed to resolve the following urls: {0}'.format(
+                failed_urls)
+            ex = DSLParsingLogicException(13, msg)
+            ex.failed_import = import_url
+            raise ex
 
         # failed to resolve the url using the rules
         # trying to open the original url
