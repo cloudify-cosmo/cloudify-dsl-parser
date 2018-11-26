@@ -147,8 +147,7 @@ def _get_resource_location(resource_name,
     if current_resource_context:
         candidate_url = current_resource_context[
             :current_resource_context.rfind('/') + 1] + resource_name
-        if utils.url_exists(candidate_url):
-            return candidate_url
+        return candidate_url
 
     return None
 
