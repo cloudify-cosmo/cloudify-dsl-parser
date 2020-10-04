@@ -24,8 +24,8 @@ pipeline {
       PATH = "/root/.local/bin:$PATH"
   }
   stages {
-    stage('test_defaults') {
-      parallel {
+    //stage('test_defaults') {
+      //parallel {
         stage('test_default_flake8') {
           steps {
             sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace" 
@@ -64,7 +64,7 @@ pipeline {
             }
           }
         }
-      }
-    }
+      //}
+    //}
   }
 }
