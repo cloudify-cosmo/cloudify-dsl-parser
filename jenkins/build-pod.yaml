@@ -6,9 +6,12 @@ spec:
     image: circleci/python:2.7
     resources:
         requests:
-          cpu: 3
+          cpu: 1
     command:
     - cat
     tty: true
+    securityContext:
+        runAsUser: 0
+        priviliged: true
 nodeSelector:
   instance-type: spot-large
