@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: py27
+    image: circleci/python:2.7
+    resources:
+        requests:
+          cpu: 3
+    command:
+    - cat
+    tty: true
+nodeSelector:
+  instance-type: spot-large
