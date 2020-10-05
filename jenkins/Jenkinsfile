@@ -59,7 +59,10 @@ pipeline {
                 pyenv install 2.6.9
                 pyenv local 2.6.9
                 '''
-                RunTox('test_py26')
+                echo 'Install tox, NOTICE we use an old version of tox because of CFY-6398 ( relying dict ordering)'
+                sh 'sudo pip install tox==1.6.1 tox-pyenv'
+                echo "run tox of test_py26"
+                sh "tox -e test_py26"
               }
             }
           }
